@@ -79,6 +79,7 @@ type Terminal struct {
 	joinNext   bool // the last rune printed was ZWJ
 
 	// parser
+	csiBytes int
 	state    pstate
 	params   []int
 	sub      []bool // sub[i]: params[i] followed a colon
@@ -357,6 +358,7 @@ const (
 	sGround pstate = iota
 	sEscape
 	sCSI
+	sCSIDrop
 	sOSC
 	sOSCEsc
 	sString // SOS, PM, APC, and a DCS that is not tmux: ignored up to ST
@@ -371,6 +373,8 @@ func (t *Terminal) rune(r rune) {
 	switch t.state {
 	case sGround:
 		t.print(r)
+	case sCSIDrop:
+		// An oversized CSI stays discarded even across UTF-8 input.
 	case sOSC:
 		t.osc = utf8.AppendRune(t.osc, r)
 	default:
@@ -381,6 +385,12 @@ func (t *Terminal) rune(r rune) {
 }
 
 func (t *Terminal) byte(b byte) {
+	if t.state == sCSIDrop {
+		if b >= 0x40 && b <= 0x7e {
+			t.state = sGround
+		}
+		return
+	}
 	// C0 controls act in the middle of most sequences.
 	if b < 0x20 && t.state != sOSC && t.state != sString && t.state != sOSCEsc && t.state != sStringEsc && t.state != sDCS && t.state != sDCSEsc {
 		if b == 0x1b {
@@ -515,6 +525,7 @@ func (t *Terminal) escape(b byte) {
 	switch b {
 	case '[':
 		t.state = sCSI
+		t.csiBytes = 0
 		t.params = t.params[:0]
 		t.sub = t.sub[:0]
 		t.inter = t.inter[:0]
@@ -565,7 +576,24 @@ func (t *Terminal) escape(b byte) {
 	}
 }
 
+const (
+	maxCSIBytes         = 4096
+	maxCSIParams        = 64
+	maxCSIIntermediates = 4
+)
+
 func (t *Terminal) csiByte(b byte) {
+	t.csiBytes++
+	if t.csiBytes > maxCSIBytes ||
+		((b == ';' || b == ':') && len(t.params) >= maxCSIParams-1) ||
+		(b >= 0x20 && b <= 0x2f && len(t.inter) >= maxCSIIntermediates) {
+		t.params, t.sub, t.inter = t.params[:0], t.sub[:0], t.inter[:0]
+		t.state = sCSIDrop
+		if b >= 0x40 && b <= 0x7e {
+			t.state = sGround
+		}
+		return
+	}
 	switch {
 	case b >= '0' && b <= '9':
 		t.paramCur = t.paramCur*10 + int(b-'0')
