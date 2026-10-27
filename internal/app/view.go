@@ -101,6 +101,7 @@ func (a *App) View(c *ui.Context) {
 	a.groupView(c, m)
 	a.credView(c, m)
 	a.proxyView(c, m)
+	a.backupView(c, m)
 	a.fwdView(c, m)
 	a.fwdDeleteView(c, m)
 	a.installView(c, m)

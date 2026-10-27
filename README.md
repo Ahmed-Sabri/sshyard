@@ -11,6 +11,7 @@ SSHYard is a cross-platform desktop SSH / SFTP client for macOS, Windows and Lin
 - **AI assistant**: a per-host assistant pane that can run commands and edit files on that host, with permission modes (Ask, Review, Full access).
 - **Shared connections**: every pane on a host shares one authenticated SSH connection, and they all reconnect together after a drop.
 - **Hosts and credentials**: passwords and private keys (OpenSSH, PEM, PuTTY .ppk) stored only in the system keychain; SSH agent; key generation and public-key install.
+- **Backup**: one password-encrypted file (Argon2id, XChaCha20-Poly1305) holding hosts, credentials with their secrets, proxies, port forwards, preferences and trusted host keys, to restore on another device.
 - **Networking**: multi-hop jump hosts, HTTP / SOCKS5 proxies, local / remote / dynamic port forwards.
 - **Convenience**: import from `~/.ssh/config`, quick connect (`user@host:port`), a server metrics bar, light and dark themes, English and Simplified Chinese.
 

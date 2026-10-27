@@ -7551,3 +7551,287 @@ func MaterialUnsupported() string { return In(i18n.Locale()).MaterialUnsupported
 func (msgs Messages) MaterialUnsupported() string {
 	return Catalog.Format(msgs.locale, "materialUnsupported", nil)
 }
+
+// BackupSection says "Backup"
+// in the language the app shows.
+func BackupSection() string { return In(i18n.Locale()).BackupSection() }
+
+// BackupSection says "Backup"
+// in the language of msgs.
+func (msgs Messages) BackupSection() string {
+	return Catalog.Format(msgs.locale, "backupSection", nil)
+}
+
+// BackupDesc says "Keep a copy of SSHYard, or move it to another device, in one encrypted file."
+// in the language the app shows.
+func BackupDesc() string { return In(i18n.Locale()).BackupDesc() }
+
+// BackupDesc says "Keep a copy of SSHYard, or move it to another device, in one encrypted file."
+// in the language of msgs.
+func (msgs Messages) BackupDesc() string {
+	return Catalog.Format(msgs.locale, "backupDesc", nil)
+}
+
+// ExportBackup says "Export Backup"
+// in the language the app shows.
+func ExportBackup() string { return In(i18n.Locale()).ExportBackup() }
+
+// ExportBackup says "Export Backup"
+// in the language of msgs.
+func (msgs Messages) ExportBackup() string {
+	return Catalog.Format(msgs.locale, "exportBackup", nil)
+}
+
+// ExportBackupNote says "Hosts, credentials, proxies, port forwards, preferences and trusted host keys, encrypted with a password you choose."
+// in the language the app shows.
+func ExportBackupNote() string { return In(i18n.Locale()).ExportBackupNote() }
+
+// ExportBackupNote says "Hosts, credentials, proxies, port forwards, preferences and trusted host keys, encrypted with a password you choose."
+// in the language of msgs.
+func (msgs Messages) ExportBackupNote() string {
+	return Catalog.Format(msgs.locale, "exportBackupNote", nil)
+}
+
+// ExportEllipsis says "Export…"
+// in the language the app shows.
+func ExportEllipsis() string { return In(i18n.Locale()).ExportEllipsis() }
+
+// ExportEllipsis says "Export…"
+// in the language of msgs.
+func (msgs Messages) ExportEllipsis() string {
+	return Catalog.Format(msgs.locale, "exportEllipsis", nil)
+}
+
+// RestoreBackup says "Restore from Backup"
+// in the language the app shows.
+func RestoreBackup() string { return In(i18n.Locale()).RestoreBackup() }
+
+// RestoreBackup says "Restore from Backup"
+// in the language of msgs.
+func (msgs Messages) RestoreBackup() string {
+	return Catalog.Format(msgs.locale, "restoreBackup", nil)
+}
+
+// RestoreBackupNote says "Merges a backup into this device. Its secrets go into the system keychain."
+// in the language the app shows.
+func RestoreBackupNote() string { return In(i18n.Locale()).RestoreBackupNote() }
+
+// RestoreBackupNote says "Merges a backup into this device. Its secrets go into the system keychain."
+// in the language of msgs.
+func (msgs Messages) RestoreBackupNote() string {
+	return Catalog.Format(msgs.locale, "restoreBackupNote", nil)
+}
+
+// RestoreBackupMemory says "The system keychain is unavailable: restored secrets are kept only until SSHYard quits."
+// in the language the app shows.
+func RestoreBackupMemory() string { return In(i18n.Locale()).RestoreBackupMemory() }
+
+// RestoreBackupMemory says "The system keychain is unavailable: restored secrets are kept only until SSHYard quits."
+// in the language of msgs.
+func (msgs Messages) RestoreBackupMemory() string {
+	return Catalog.Format(msgs.locale, "restoreBackupMemory", nil)
+}
+
+// BackupPassword says "Backup password"
+// in the language the app shows.
+func BackupPassword() string { return In(i18n.Locale()).BackupPassword() }
+
+// BackupPassword says "Backup password"
+// in the language of msgs.
+func (msgs Messages) BackupPassword() string {
+	return Catalog.Format(msgs.locale, "backupPassword", nil)
+}
+
+// ConfirmPassword says "Confirm password"
+// in the language the app shows.
+func ConfirmPassword() string { return In(i18n.Locale()).ConfirmPassword() }
+
+// ConfirmPassword says "Confirm password"
+// in the language of msgs.
+func (msgs Messages) ConfirmPassword() string {
+	return Catalog.Format(msgs.locale, "confirmPassword", nil)
+}
+
+// BackupIncludeSecrets says "Include passwords and keys"
+// in the language the app shows.
+func BackupIncludeSecrets() string { return In(i18n.Locale()).BackupIncludeSecrets() }
+
+// BackupIncludeSecrets says "Include passwords and keys"
+// in the language of msgs.
+func (msgs Messages) BackupIncludeSecrets() string {
+	return Catalog.Format(msgs.locale, "backupIncludeSecrets", nil)
+}
+
+// BackupIncludeSecretsNote says "Passwords, private keys, passphrases and API keys from the keychain."
+// in the language the app shows.
+func BackupIncludeSecretsNote() string { return In(i18n.Locale()).BackupIncludeSecretsNote() }
+
+// BackupIncludeSecretsNote says "Passwords, private keys, passphrases and API keys from the keychain."
+// in the language of msgs.
+func (msgs Messages) BackupIncludeSecretsNote() string {
+	return Catalog.Format(msgs.locale, "backupIncludeSecretsNote", nil)
+}
+
+// BackupExportWarning says "Anyone with this file and its password can read everything in it. The password can’t be recovered: without it, the …"
+// in the language the app shows.
+func BackupExportWarning() string { return In(i18n.Locale()).BackupExportWarning() }
+
+// BackupExportWarning says "Anyone with this file and its password can read everything in it. The password can’t be recovered: without it, the …"
+// in the language of msgs.
+func (msgs Messages) BackupExportWarning() string {
+	return Catalog.Format(msgs.locale, "backupExportWarning", nil)
+}
+
+// BackupRestoreNote says "Entries in the backup replace those with the same ID on this device. Nothing else is removed."
+// in the language the app shows.
+func BackupRestoreNote() string { return In(i18n.Locale()).BackupRestoreNote() }
+
+// BackupRestoreNote says "Entries in the backup replace those with the same ID on this device. Nothing else is removed."
+// in the language of msgs.
+func (msgs Messages) BackupRestoreNote() string {
+	return Catalog.Format(msgs.locale, "backupRestoreNote", nil)
+}
+
+// BackupMadeOn says "Made {date}"
+// in the language the app shows.
+func BackupMadeOn(date string) string { return In(i18n.Locale()).BackupMadeOn(date) }
+
+// BackupMadeOn says "Made {date}"
+// in the language of msgs.
+func (msgs Messages) BackupMadeOn(date string) string {
+	return Catalog.Format(msgs.locale, "backupMadeOn", map[string]any{"date": date})
+}
+
+// BackupPasswordShort says "The password needs at least {count} characters."
+// in the language the app shows.
+func BackupPasswordShort(count string) string { return In(i18n.Locale()).BackupPasswordShort(count) }
+
+// BackupPasswordShort says "The password needs at least {count} characters."
+// in the language of msgs.
+func (msgs Messages) BackupPasswordShort(count string) string {
+	return Catalog.Format(msgs.locale, "backupPasswordShort", map[string]any{"count": count})
+}
+
+// BackupPasswordMismatch says "The passwords don’t match."
+// in the language the app shows.
+func BackupPasswordMismatch() string { return In(i18n.Locale()).BackupPasswordMismatch() }
+
+// BackupPasswordMismatch says "The passwords don’t match."
+// in the language of msgs.
+func (msgs Messages) BackupPasswordMismatch() string {
+	return Catalog.Format(msgs.locale, "backupPasswordMismatch", nil)
+}
+
+// BackupExporting says "Exporting…"
+// in the language the app shows.
+func BackupExporting() string { return In(i18n.Locale()).BackupExporting() }
+
+// BackupExporting says "Exporting…"
+// in the language of msgs.
+func (msgs Messages) BackupExporting() string {
+	return Catalog.Format(msgs.locale, "backupExporting", nil)
+}
+
+// BackupRestoring says "Restoring…"
+// in the language the app shows.
+func BackupRestoring() string { return In(i18n.Locale()).BackupRestoring() }
+
+// BackupRestoring says "Restoring…"
+// in the language of msgs.
+func (msgs Messages) BackupRestoring() string {
+	return Catalog.Format(msgs.locale, "backupRestoring", nil)
+}
+
+// Restore says "Restore"
+// in the language the app shows.
+func Restore() string { return In(i18n.Locale()).Restore() }
+
+// Restore says "Restore"
+// in the language of msgs.
+func (msgs Messages) Restore() string {
+	return Catalog.Format(msgs.locale, "restore", nil)
+}
+
+// BackupSaved says "Backup saved to {name}"
+// in the language the app shows.
+func BackupSaved(name string) string { return In(i18n.Locale()).BackupSaved(name) }
+
+// BackupSaved says "Backup saved to {name}"
+// in the language of msgs.
+func (msgs Messages) BackupSaved(name string) string {
+	return Catalog.Format(msgs.locale, "backupSaved", map[string]any{"name": name})
+}
+
+// BackupRestored says "Restored {hosts, plural, one {# host} other {# hosts}} and {creds, plural, one {# credential} other {# credentials}}"
+// in the language the app shows.
+func BackupRestored(hosts int, creds int) string {
+	return In(i18n.Locale()).BackupRestored(hosts, creds)
+}
+
+// BackupRestored says "Restored {hosts, plural, one {# host} other {# hosts}} and {creds, plural, one {# credential} other {# credentials}}"
+// in the language of msgs.
+func (msgs Messages) BackupRestored(hosts int, creds int) string {
+	return Catalog.Format(msgs.locale, "backupRestored", map[string]any{"hosts": hosts, "creds": creds})
+}
+
+// BackupExportFailed says "Couldn’t export the backup: {detail}"
+// in the language the app shows.
+func BackupExportFailed(detail string) string { return In(i18n.Locale()).BackupExportFailed(detail) }
+
+// BackupExportFailed says "Couldn’t export the backup: {detail}"
+// in the language of msgs.
+func (msgs Messages) BackupExportFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "backupExportFailed", map[string]any{"detail": detail})
+}
+
+// BackupOpenFailed says "Couldn’t open {name}: {detail}"
+// in the language the app shows.
+func BackupOpenFailed(name string, detail string) string {
+	return In(i18n.Locale()).BackupOpenFailed(name, detail)
+}
+
+// BackupOpenFailed says "Couldn’t open {name}: {detail}"
+// in the language of msgs.
+func (msgs Messages) BackupOpenFailed(name string, detail string) string {
+	return Catalog.Format(msgs.locale, "backupOpenFailed", map[string]any{"name": name, "detail": detail})
+}
+
+// BackupNotBackup says "This isn’t an SSHYard backup."
+// in the language the app shows.
+func BackupNotBackup() string { return In(i18n.Locale()).BackupNotBackup() }
+
+// BackupNotBackup says "This isn’t an SSHYard backup."
+// in the language of msgs.
+func (msgs Messages) BackupNotBackup() string {
+	return Catalog.Format(msgs.locale, "backupNotBackup", nil)
+}
+
+// BackupNewer says "This backup was made by a newer version of SSHYard. Update SSHYard to restore it."
+// in the language the app shows.
+func BackupNewer() string { return In(i18n.Locale()).BackupNewer() }
+
+// BackupNewer says "This backup was made by a newer version of SSHYard. Update SSHYard to restore it."
+// in the language of msgs.
+func (msgs Messages) BackupNewer() string {
+	return Catalog.Format(msgs.locale, "backupNewer", nil)
+}
+
+// BackupWrongPassword says "Wrong password."
+// in the language the app shows.
+func BackupWrongPassword() string { return In(i18n.Locale()).BackupWrongPassword() }
+
+// BackupWrongPassword says "Wrong password."
+// in the language of msgs.
+func (msgs Messages) BackupWrongPassword() string {
+	return Catalog.Format(msgs.locale, "backupWrongPassword", nil)
+}
+
+// BackupDamaged says "The backup is damaged or was changed."
+// in the language the app shows.
+func BackupDamaged() string { return In(i18n.Locale()).BackupDamaged() }
+
+// BackupDamaged says "The backup is damaged or was changed."
+// in the language of msgs.
+func (msgs Messages) BackupDamaged() string {
+	return Catalog.Format(msgs.locale, "backupDamaged", nil)
+}

@@ -2,8 +2,9 @@
 // passphrases of credentials, proxy and forward passwords, and AI provider
 // API keys) in the operating system's keychain: the macOS
 // Keychain, the Windows Credential Manager, or the Secret Service on
-// Linux, through mygo.Secrets. SSHYard has no vault or master password of
-// its own and never writes a credential to disk.
+// Linux, through mygo.Secrets. SSHYard never writes a credential to disk
+// but sealed in a backup under a password the user sets (package vault),
+// and has no master password that unlocks the app.
 //
 // Keychains limit the size of a secret (mygo.MaxSecretSize, 2560 bytes),
 // and a private key with its comment can exceed it, so a longer secret is

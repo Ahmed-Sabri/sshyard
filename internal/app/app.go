@@ -29,6 +29,7 @@ import (
 	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/internal/updater"
+	"github.com/Licoy/sshyard/internal/vault"
 	"github.com/Licoy/sshyard/internal/vt"
 	"github.com/Licoy/sshyard/locales"
 	"github.com/egoist/mygo/ui"
@@ -56,6 +57,9 @@ type Platform struct {
 	SetLocale func(tag string)
 	// PickFile shows the system's open dialog; it may block.
 	PickFile func(title string) (string, error)
+	// SaveFile shows the system's save dialog, at path to begin with; it
+	// may block. "" with no error is a cancel.
+	SaveFile func(title, path string) (string, error)
 	// Dial replaces net.Dialer, for tests.
 	Dial func(ctx context.Context, network, addr string) (net.Conn, error)
 	// HomeDir is where the local side of a files pane starts, and whose
@@ -339,12 +343,19 @@ type App struct {
 	groupHold     focusHold
 	groupDeleting bool
 	groupDelete   string
+	// backup is the backup sheet open, to export or to restore; kdf is
+	// what its password is derived with (cheaper in tests)
+	backup     *backupForm
+	backingUp  bool
+	backupHold focusHold
+	kdf        vault.Params
 }
 
 // New opens the app's data.
 func New(p Platform) (*App, error) {
 	a := &App{p: p, ws: layout.New(), conns: map[int]*conn{}, pool: session.NewPool(), typed: map[string]string{}, typedGen: map[string]int{}, sections: map[string]*bool{}, temps: map[string]assets.Host{}, pct: map[int]*float32{}, fwds: map[string]*fwdRun{}, fwdOpen: map[string]bool{}, paneBounds: map[int]ui.Rect{}, metrics: map[string]*session.Collector{}, aiRecent: map[string]int{}}
 	a.settings = settings.Default()
+	a.kdf = vault.DefaultParams
 	var errs []error
 	path := func(name string) string {
 		if p.DataDir == "" {

@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"golang.org/x/crypto/ssh"
@@ -93,6 +94,56 @@ func (k *KnownHosts) Callback() ssh.HostKeyCallback {
 		}
 		return err
 	}
+}
+
+// Contents is the file as it is.
+func (k *KnownHosts) Contents() ([]byte, error) { return os.ReadFile(k.path) }
+
+// Merge adds the lines of data, another known_hosts file, that this one
+// does not have, and returns how many. Comments, blank lines and lines
+// that do not parse are left out, so the file stays readable.
+func (k *KnownHosts) Merge(data []byte) (int, error) {
+	cur, err := os.ReadFile(k.path)
+	if err != nil {
+		return 0, err
+	}
+	have := map[string]bool{}
+	for _, l := range strings.Split(string(cur), "\n") {
+		have[strings.TrimSpace(l)] = true
+	}
+	var add strings.Builder
+	n := 0
+	for _, l := range strings.Split(string(data), "\n") {
+		l = strings.TrimSpace(l)
+		if l == "" || strings.HasPrefix(l, "#") || have[l] {
+			continue
+		}
+		if _, _, _, _, _, err := ssh.ParseKnownHosts([]byte(l)); err != nil {
+			continue
+		}
+		have[l] = true
+		add.WriteString(l + "\n")
+		n++
+	}
+	if n == 0 {
+		return 0, nil
+	}
+	f, err := os.OpenFile(k.path, os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		return 0, err
+	}
+	prefix := ""
+	if len(cur) > 0 && !strings.HasSuffix(string(cur), "\n") {
+		prefix = "\n"
+	}
+	if _, err := f.WriteString(prefix + add.String()); err != nil {
+		f.Close()
+		return 0, err
+	}
+	if err := f.Close(); err != nil {
+		return 0, err
+	}
+	return n, k.reload()
 }
 
 // Add trusts key for host (host:port as dialed).

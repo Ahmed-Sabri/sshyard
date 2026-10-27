@@ -51,6 +51,9 @@ func platform() app.Platform {
 			}
 			return paths[0], nil
 		},
+		SaveFile: func(title, path string) (string, error) {
+			return mygo.Dialog.Save(mygo.SaveDialogOptions{Title: title, DefaultPath: path, CreateDirectories: true})
+		},
 	}
 }
 

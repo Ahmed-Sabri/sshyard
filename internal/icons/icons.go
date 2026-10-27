@@ -134,6 +134,7 @@ var (
 	DockerOn    = load("ship-2-fill")
 	Halt        = load("stop-line")
 	Logs        = load("file-list-3-line")
+	Backup      = load("safe-2-line")
 )
 
 // HostIcon is an icon a host can be given, by the key it is saved under.
