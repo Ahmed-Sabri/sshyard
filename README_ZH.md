@@ -23,6 +23,10 @@ SSHYard 是一款跨平台桌面 SSH / SFTP 客户端，支持 macOS、Windows �
 # 运行
 go run .
 
+# 运行开发版 app；macOS 上用本地 "SSHYard-Dev" 证书签名，
+# 钥匙串的“始终允许”在重新构建后依然有效
+scripts/run-dev-app.sh
+
 # 把数据放到单独的目录
 SSHYARD_DATA_DIR=/tmp/demo go run .
 

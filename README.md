@@ -23,6 +23,10 @@ Requires Go 1.27.3 (`GOTOOLCHAIN` can download it). No cgo is needed.
 # run
 go run .
 
+# run the development app; on macOS signed with the local "SSHYard-Dev"
+# identity, so the keychain's "Always Allow" lasts across rebuilds
+scripts/run-dev-app.sh
+
 # keep data in a separate directory
 SSHYARD_DATA_DIR=/tmp/demo go run .
 
