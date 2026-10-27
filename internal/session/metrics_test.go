@@ -484,8 +484,8 @@ func TestMetricsScriptInterval(t *testing.T) {
 	if len(marks) < 3 {
 		t.Fatalf("frames %d", len(marks))
 	}
-	// The 2s df swallows the one-second warmup, so the second frame follows
-	// by about that sample. The next gap is still the interval.
+	// The second frame follows the one-second warmup and its own 2s df.
+	// The next gap still includes the slow sample inside the interval.
 	first := marks[1].Sub(marks[0])
 	if first > 5*time.Second {
 		t.Fatalf("second frame waited a full interval: %s", first)
@@ -493,6 +493,37 @@ func TestMetricsScriptInterval(t *testing.T) {
 	gap := marks[2].Sub(marks[1])
 	if gap < 9*time.Second || gap > 11*time.Second {
 		t.Fatalf("gap %s", gap)
+	}
+}
+
+// A first emit can cross an epoch-second boundary even when it is quick.
+// Exercise the actual scheduling loop with that clock transition, rather than
+// relying on the host clock landing near a second boundary during the test.
+func TestMetricsScriptWarmupWaitsAcrossSecondBoundary(t *testing.T) {
+	sh := skipNoSh(t)
+	const loop = "while :; do\n  start=$(date +%s"
+	at := strings.LastIndex(metricsScript, loop)
+	if at < 0 {
+		t.Fatal("sampling loop not found")
+	}
+	clock := `
+# The first sample starts in second 100 and completes in second 101.
+date() {
+  if [ "$sent" -eq 0 ]; then printf '100\n'; else printf '101\n'; fi
+}
+emit() {
+  printf 'frame\n'
+  if [ "$sent" -gt 0 ]; then exit 0; fi
+}
+sleep() { printf 'sleep %s\n' "$1"; }
+`
+	cmd := exec.Command(sh, "-c", metricsScript[:at]+clock+metricsScript[at:], "_", "10", "")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("script: %v %s", err, out)
+	}
+	if got, want := string(out), "frame\n.\nsleep 1\nframe\n"; got != want {
+		t.Fatalf("first sample must wait one real second before the next emit: %q, want %q", got, want)
 	}
 }
 

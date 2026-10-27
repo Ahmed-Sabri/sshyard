@@ -1238,9 +1238,9 @@ while :; do
   start=$(date +%s 2>/dev/null || echo 0)
   num_ok "$start" || start=0
   emit
-  # The second frame is one second after the first, so CPU and network
-  # deltas exist about a second after start. Later frames keep the interval,
-  # counted from before emit so a slow sample stays inside it.
+  # Always wait a real second after the first frame: emit may cross an
+  # epoch-second boundary without taking a full second. Later frames keep
+  # the interval counted from before emit, including the time of a slow sample.
   gap=$interval
   if [ "$sent" -eq 0 ]; then
     gap=1
@@ -1248,7 +1248,7 @@ while :; do
   sent=$((sent + 1))
   step=0
   while [ "$step" -lt "$gap" ]; do
-    if [ "$start" -ne 0 ]; then
+    if [ "$sent" -gt 1 ] && [ "$start" -ne 0 ]; then
       now=$(date +%s 2>/dev/null || echo 0)
       num_ok "$now" || now=0
       if [ "$now" -ge "$((start + gap))" ]; then
