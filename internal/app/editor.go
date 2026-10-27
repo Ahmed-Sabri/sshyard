@@ -244,11 +244,11 @@ func (a *App) reloadEditor(cn *conn) {
 // editorActions are an editor pane's header buttons.
 func (a *App) editorActions(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, m locales.Messages) {
 	ed := cn.ed
-	if (IconButton{Icon: icons.Refresh, Label: m.EditorReloadFromServer(), Size: Small, Disabled: ed.loading || ed.saving}).Clicked(c, "reload") {
+	if (IconButton{Icon: icons.Refresh, Label: m.EditorReloadFromServer(), Size: Tiny, Disabled: ed.loading || ed.saving}).Clicked(c, "reload") {
 		t.Focus = n.ID
 		a.reloadEditor(cn)
 	}
-	if (IconButton{Icon: icons.Save, Label: m.EditorSave(), Size: Small, Disabled: ed.saving || !ed.st.Buffer.Modified()}).Clicked(c, "save") {
+	if (IconButton{Icon: icons.Save, Label: m.EditorSave(), Size: Tiny, Disabled: ed.saving || !ed.st.Buffer.Modified()}).Clicked(c, "save") {
 		t.Focus = n.ID
 		a.saveEditor(cn, false)
 	}

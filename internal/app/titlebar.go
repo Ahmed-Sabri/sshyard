@@ -1,8 +1,11 @@
 package app
 
 import (
+	"context"
+
 	"github.com/Licoy/sshyard/internal/icons"
 	"github.com/Licoy/sshyard/internal/theme"
+	"github.com/Licoy/sshyard/internal/updater"
 	"github.com/Licoy/sshyard/locales"
 	"github.com/egoist/mygo/ui"
 )
@@ -23,10 +26,9 @@ func (a *App) SetWindow(w WindowControls) { a.post(func() { a.win = &w }) }
 func (a *App) SetMaximized(on bool) { a.post(func() { a.maximized = on }) }
 
 // titleBar is the window's one band across the top, which drags it: over
-// the sidebar the app's name after the traffic lights (macOS), or the
-// settings' title; over the content the tabs and the actions on the
-// focused session, or in the settings only the button closing them; at
-// the end the window's buttons where the app draws them.
+// the sidebar room for the traffic lights (macOS); over the content the
+// tabs, joining it, and at the end the app's own buttons, then the
+// window's buttons where the app draws them.
 func (a *App) titleBar(c *ui.Context, m locales.Messages, tok theme.Tokens, clear bool) {
 	bar := c.TitleBar()
 	row := ui.Row(c.Key("titlebar")).Height(bandHeight(c)).Shrink(0).FillWidth().AlignItems(ui.Center).DragWindow()
@@ -39,19 +41,44 @@ func (a *App) titleBar(c *ui.Context, m locales.Messages, tok theme.Tokens, clea
 		p.Line(r.X, y, r.X+r.W, y, 1, tok.Line)
 	})
 	row.Children(func() {
-		// Level with the sidebar, and its separator, below.
-		ui.Row(c.Key("tblead")).Width(a.sbWidth+1).Shrink(0).FillHeight().Padding(0, 10, 0, max(bar.Left+4, 14)).Gap(8).
-			AlignItems(ui.Center).Children(func() {
-			if a.page == pageSettings {
-				ui.Text(c, m.Settings()).FontSize(theme.Title3).FontWeight(600).SingleLine().Shrink(1)
-				return
-			}
-			tile(c, icons.Terminal, theme.Brand, 22)
-			ui.Text(c, m.AppName()).FontSize(theme.Body).FontWeight(600).SingleLine().Shrink(1)
-		})
+		// Level with the sidebar, and its separator, below, so that the
+		// tabs start where the content does.
+		ui.Box(c.Key("tblead")).Width(max(a.sbWidth+1, bar.Left)).Shrink(0).FillHeight()
 		a.tabStrip(c, m, tok)
 		a.windowButtons(c, m, tok)
 	})
+}
+
+// appButtons are the app's own IconButtons in the title bar: updates, its
+// source on GitHub and the settings. Updates show in the accent while one
+// is to install; a click checks again, unless one is under way or found,
+// and shows where the settings tell of it.
+func (a *App) appButtons(c *ui.Context, m locales.Messages) {
+	st := a.upd.Status()
+	found := st.State == updater.Available || st.State == updater.Ready
+	label := m.CheckForUpdates()
+	if found || st.State == updater.Checking || st.State == updater.Downloading {
+		label = updateText(m, st)
+	}
+	if (IconButton{Icon: icons.Update, Label: label, Active: found}).Clicked(c, "update") {
+		switch st.State {
+		case updater.Disabled, updater.Checking, updater.Downloading, updater.Available, updater.Ready:
+		default:
+			go a.upd.Check(context.Background())
+		}
+		a.openSettings(prefAbout)
+	}
+	if iconButton(c, "github", icons.GitHub, m.GitHubRepo()) {
+		c.OpenURL(repoURL)
+	}
+	on := a.page == pageSettings
+	if (IconButton{Icon: icons.Settings, On: icons.SettingsOn, Label: m.Settings(), Active: on, Toggle: true}).Clicked(c, "settings") {
+		if on {
+			a.closeSettings()
+		} else {
+			a.openSettings(a.prefNow())
+		}
+	}
 }
 
 // windowButtons minimize, maximize or restore, and close the window, where

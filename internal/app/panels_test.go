@@ -46,7 +46,7 @@ func TestSettingsNav(t *testing.T) {
 	if tt.HasText(en.SystemMonitor()) {
 		t.Error("the rail shows over the settings")
 	}
-	mustClick(t, tt, "Close Settings")
+	mustClick(t, tt, "Settings")
 	if a.page != pageWorkspace || !tt.HasText(en.SystemMonitor()) {
 		t.Fatalf("back: page %v %q", a.page, tt.Texts())
 	}
@@ -149,9 +149,7 @@ func TestStatusBar(t *testing.T) {
 	if err := tt.Click("Theme"); err != nil {
 		t.Fatal(err)
 	}
-	if err := tt.ChooseMenuItem("Dark"); err != nil {
-		t.Fatalf("%v menu %q", err, tt.Menu())
-	}
+	mustClick(t, tt, "Dark")
 	tt.Frame()
 	if a.Settings().Theme != theme.Dark {
 		t.Fatalf("theme %q", a.Settings().Theme)
@@ -163,7 +161,7 @@ func TestStatusBar(t *testing.T) {
 	}
 	mustClick(t, tt, "Settings")
 	if a.page != pageSettings {
-		t.Fatal("the status bar's settings did not open them")
+		t.Fatal("the title bar's settings did not open them")
 	}
 	if !tt.HasText("No active session") {
 		t.Fatal("the status bar left the settings")
@@ -182,6 +180,14 @@ func TestRailAndMonitor(t *testing.T) {
 	waitSample(t, tt)
 	if !tt.HasText("1 session") || !hasExact(tt, "box") {
 		t.Fatalf("status bar: %q", tt.Texts())
+	}
+	// The latency shows in the metrics bar only, not the status bar too.
+	if n := textCount(tt, "Latency"); n != 1 {
+		t.Errorf("latency shows %d times: %q", n, tt.Texts())
+	}
+	// The rail is as wide as the status bar is high.
+	if r := mustFind(t, tt, "System Monitor"); r.X < 1400-railWidth || r.X+r.W > 1400 {
+		t.Errorf("rail button at %v, not in a rail %v wide", r, railWidth)
 	}
 	mustClick(t, tt, "System Monitor")
 	tt.Frame()

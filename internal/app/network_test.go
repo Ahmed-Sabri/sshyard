@@ -163,7 +163,7 @@ func TestProxySheetAndEditor(t *testing.T) {
 		t.Errorf("proxy row: %q", tt.Texts())
 	}
 	// The host editor makes one in place, and comes back with it chosen.
-	mustClick(t, tt, "Close Settings")
+	mustClick(t, tt, "Settings")
 	a.openEditor(nil)
 	tt.Frame()
 	a.form.name, a.form.address, a.form.user = "web", "10.0.0.5", "root"

@@ -201,7 +201,7 @@ func (a *App) followButton(c *ui.Context, t *layout.Tab, n *layout.Node, cn *con
 		return
 	}
 	on := !cn.fs.noFollow
-	if (IconButton{Icon: icons.Follow, On: icons.FollowOn, Label: m.FollowTerminal(), Active: on, Toggle: true, Size: Small}).Clicked(c, "follow") {
+	if (IconButton{Icon: icons.Follow, On: icons.FollowOn, Label: m.FollowTerminal(), Active: on, Toggle: true, Size: Tiny}).Clicked(c, "follow") {
 		t.Focus = n.ID
 		cn.fs.noFollow = on
 		cn.fs.followed = ""

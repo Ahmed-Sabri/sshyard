@@ -129,8 +129,9 @@ type conn struct {
 	// of that host is open; the count starts over when the last one
 	// closes. Files panes are not numbered. 0 is not a terminal pane.
 	termNo int
-	// metCPU, metDisk, metNet and metGPU are this pane's metrics popovers.
-	metCPU, metDisk, metNet, metGPU bool
+	// metCPU, metDisk, metNet, metGPU and metLoad are this pane's metrics
+	// popovers.
+	metCPU, metDisk, metNet, metGPU, metLoad bool
 	// metCompact drops the words of the metrics bar, for a pane too
 	// narrow for them (metricsCompact)
 	metCompact bool
@@ -202,6 +203,8 @@ type App struct {
 	tabRoom  float32
 	// tabsOpen shows the popover of the tabs that do not fit
 	tabsOpen bool
+	// menu is the drop-down menu open (menuButton)
+	menu dropMenu
 	// clearContent is set while the content shows the window's material,
 	// as the appearance settings ask (see contentFill)
 	clearContent bool

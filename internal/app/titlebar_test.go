@@ -10,13 +10,15 @@ import (
 	"github.com/Licoy/sshyard/internal/assets"
 	"github.com/Licoy/sshyard/internal/layout"
 	"github.com/Licoy/sshyard/internal/session"
+	"github.com/Licoy/sshyard/internal/sshtest"
 	"github.com/egoist/mygo/ui"
 )
 
-// TestTitleBar runs one band across the window: the app's name over the
-// sidebar, and while the settings show their title, no tabs and the
-// button closing them at the end; the window's own buttons where the app
-// draws them.
+// TestTitleBar runs one band across the window: no name over the
+// sidebar; at the end the app's buttons, updates, GitHub and the
+// settings, in that order; while the settings show, no tabs, and the
+// settings button closes them; the window's own buttons, last, where the
+// app draws them.
 func TestTitleBar(t *testing.T) {
 	a, tt := newTestApp(t)
 	band := float32(toolbarHeight)
@@ -24,8 +26,34 @@ func TestTitleBar(t *testing.T) {
 		r, ok := tt.Find(s)
 		return ok && r.Y+r.H <= band
 	}
-	if !in("SSHYard") {
-		t.Errorf("app name not in the title bar")
+	if in("SSHYard") {
+		t.Errorf("app name in the title bar")
+	}
+	prev := ui.Rect{X: 1200 - 160}
+	for _, s := range []string{"Check for Updates", "GitHub Repository", "Settings"} {
+		r, ok := tt.Find(s)
+		if !ok || !in(s) || r.X < prev.X+prev.W {
+			t.Errorf("%s at %v, not after %v at the end", s, r, prev)
+		}
+		prev = r
+	}
+	if tt.HasText("Split Right") {
+		t.Error("split buttons in the title bar")
+	}
+	mustClick(t, tt, "GitHub Repository")
+	if got := tt.OpenedURLs(); !slices.Equal(got, []string{repoURL}) {
+		t.Errorf("GitHub opened %q", got)
+	}
+	mustClick(t, tt, "Check for Updates")
+	if a.page != pageSettings || a.prefNow() != prefAbout {
+		t.Errorf("updates show %v %v, not the about page", a.page, a.prefNow())
+	}
+	if !in("Settings") {
+		t.Error("no settings button in the settings")
+	}
+	mustClick(t, tt, "Settings")
+	if a.page == pageSettings {
+		t.Error("the settings button did not close them")
 	}
 	if r, ok := tt.Find("Search hosts"); !ok || r.Y < band {
 		t.Errorf("search at %v, in the title bar", r)
@@ -70,14 +98,14 @@ func TestTitleBar(t *testing.T) {
 	}
 	a.openSettings(a.prefNow())
 	tt.Frame()
-	if !in("Close Settings") || in("SSHYard") || in("Local terminal") || in("Close Tab") {
-		t.Errorf("settings head not in the title bar, or tabs in it: %q", tt.Texts())
+	if in("Local terminal") || in("Close Tab") {
+		t.Errorf("tabs in the title bar over the settings: %q", tt.Texts())
 	}
-	// At the end, just before the window's buttons.
-	if cl, _ := tt.Find("Close Settings"); cl.X < 1200-200 {
-		t.Errorf("close settings at %v, not at the end", cl)
+	// Just before the window's buttons.
+	if st, cl := mustFind(t, tt, "Settings"), mustFind(t, tt, "Minimize"); st.X > cl.X {
+		t.Errorf("settings at %v, after the window's buttons at %v", st, cl)
 	}
-	mustClick(t, tt, "Close Settings")
+	mustClick(t, tt, "Settings")
 	if a.page == pageSettings {
 		t.Error("still in the settings")
 	}
@@ -131,9 +159,9 @@ func TestTabs(t *testing.T) {
 	if !ok {
 		t.Fatalf("no tabs in %q", tt.Texts())
 	}
-	// Centred in the band.
-	if mid := first.Y + first.H/2; math.Abs(float64(mid-toolbarHeight/2)) > 1 {
-		t.Errorf("tab text at %v, not centred in the bar", first)
+	// Centred in the tab, which stands on the band's foot.
+	if mid := first.Y + first.H/2; math.Abs(float64(mid-(toolbarHeight-tabHeight/2))) > 1 {
+		t.Errorf("tab text at %v, not centred in the tab", first)
 	}
 	// One close button, the active tab's; the other's with the pointer.
 	closes := func() (n int) {
@@ -188,14 +216,17 @@ func TestHostActions(t *testing.T) {
 	a.selected = h.ID
 	tt.Frame()
 	name, ok1 := tt.Find("web")
-	conn, ok2 := tt.Find("Connect")
+	files, ok2 := tt.Find("Open Files")
 	more, ok3 := tt.Find("More Actions")
 	if !ok1 || !ok2 || !ok3 {
 		t.Fatalf("row misses something: %q", tt.Texts())
 	}
+	if hasExact(tt, "Connect") {
+		t.Error("a connect button on the row: a double click connects")
+	}
 	mid := func(r ui.Rect) float32 { return r.Y + r.H/2 }
-	if math.Abs(float64(mid(conn)-mid(name))) > 2 || math.Abs(float64(mid(more)-mid(name))) > 2 || conn.X < name.X {
-		t.Errorf("actions not on the host's row: name %v, connect %v, more %v", name, conn, more)
+	if math.Abs(float64(mid(files)-mid(name))) > 2 || math.Abs(float64(mid(more)-mid(name))) > 2 || files.X < name.X {
+		t.Errorf("actions not on the host's row: name %v, files %v, more %v", name, files, more)
 	}
 	if more.X+more.W > a.sbWidth {
 		t.Errorf("more at %v, past the sidebar", more)
@@ -219,9 +250,7 @@ func TestHostActions(t *testing.T) {
 	tt.Frame()
 	tt.Frame()
 	mustClick(t, tt, "More Actions")
-	if err := tt.ChooseMenuItem("Favorite"); err != nil {
-		t.Fatalf("%v menu %q", err, tt.Menu())
-	}
+	mustClick(t, tt, "Favorite")
 	tt.Frame()
 	if got, _ := a.Store().Get(h.ID); !got.Favorite {
 		t.Error("not a favorite")
@@ -230,9 +259,7 @@ func TestHostActions(t *testing.T) {
 	a.selected = "fav:" + h.ID
 	tt.Frame()
 	mustClick(t, tt, "More Actions")
-	if err := tt.ChooseMenuItem("Edit"); err != nil {
-		t.Fatalf("%v menu %q", err, tt.Menu())
-	}
+	mustClick(t, tt, "Edit")
 	tt.Frame()
 	if !a.editing || a.form == nil || a.form.orig.ID != h.ID {
 		t.Error("editor not open")
@@ -434,5 +461,73 @@ func TestTabTipAndMenu(t *testing.T) {
 	menu("web", "Close All Tabs")
 	if len(a.ws.Tabs) != 0 {
 		t.Fatalf("all closed: %s", hosts())
+	}
+}
+
+// TestNewTabButton puts the "+" right after the tabs, in the band; it
+// opens a drop-down, never a tab of the focused session's host at once:
+// a new connection or a saved host, each host with its tile.
+func TestNewTabButton(t *testing.T) {
+	a, tt := newTestApp(t)
+	if _, err := a.Store().Add(assets.Host{Name: "web", Address: "10.0.0.5", User: "root"}); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if tt.HasText("New Tab") {
+		t.Fatal("a + with no tab")
+	}
+	if _, err := a.OpenLocalTerminal(); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	cl := mustFind(t, tt, "Close Tab")
+	add := mustFind(t, tt, "New Tab")
+	if add.Y+add.H > toolbarHeight || add.X < cl.X+cl.W || add.X > cl.X+cl.W+40 {
+		t.Fatalf("new tab at %v, not right after the tab's close at %v", add, cl)
+	}
+	mustClick(t, tt, "New Tab")
+	if len(a.ws.Tabs) != 1 || a.menu.key != "newtab" {
+		t.Fatalf("%d tabs, menu %q: the + did not open its menu", len(a.ws.Tabs), a.menu.key)
+	}
+	for _, s := range []string{"Quick Connect…", "New Host"} {
+		if r := mustFind(t, tt, s); r.Y < add.Y+add.H {
+			t.Errorf("%q at %v, not in the menu", s, r)
+		}
+	}
+	if n := textCount(tt, "web"); n != 2 {
+		t.Errorf("web shows %d times, want in the sidebar and the menu", n)
+	}
+	mustClick(t, tt, "Quick Connect…")
+	tt.Frame()
+	if a.quick == nil || a.menu.key != "" || len(a.ws.Tabs) != 1 {
+		t.Fatalf("quick %v, menu %q, %d tabs", a.quick != nil, a.menu.key, len(a.ws.Tabs))
+	}
+}
+
+// TestHostDot marks a sidebar host's tile with how its sessions are, on
+// its top right corner, and with no session, not at all.
+func TestHostDot(t *testing.T) {
+	srv, err := sshtest.Start("127.0.0.1:0", "demo", "secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer srv.Close()
+	a, tt := newTestApp(t)
+	h := addHost(t, a, srv, "box", "secret")
+	a.known.Add(srv.Addr, srv.HostKey.PublicKey())
+	tt.Frame()
+	if hasExact(tt, "Connected") {
+		t.Fatal("a dot with no session")
+	}
+	id, err := a.Connect(h.ID, openAt{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	waitConnected(t, a, tt, id)
+	tt.Frame()
+	// The first "box" is the tab's; the tile starts the sidebar's row.
+	d := mustFind(t, tt, "Connected")
+	if d.Y < toolbarHeight || d.X > 60 {
+		t.Errorf("dot at %v, not on the corner of the sidebar's tile", d)
 	}
 }

@@ -13,7 +13,7 @@ import (
 // hairlines for groups, tiles for identity.
 
 // toolbarHeight is the height of the unified title and toolbar band.
-const toolbarHeight = 52
+const toolbarHeight = 40
 
 // bandHeight is the toolbar band's height, at least what the window
 // controls take.

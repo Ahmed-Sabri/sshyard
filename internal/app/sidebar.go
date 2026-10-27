@@ -4,33 +4,24 @@ import (
 	"github.com/Licoy/sshyard/internal/assets"
 	"github.com/Licoy/sshyard/internal/icons"
 	"github.com/Licoy/sshyard/internal/layout"
+	"github.com/Licoy/sshyard/internal/session"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/locales"
 	"github.com/egoist/mygo/ui"
 	"strings"
 )
 
-// addMenu is the sidebar's "+": a new host or group, quick connect, a
-// local terminal, import.
-func (a *App) addMenu(menu *ui.Menu, m locales.Messages) {
-	if menu.Item(m.NewHost()).Chosen() {
-		a.openEditor(nil)
-	}
-	if menu.Item(m.NewGroup()).Chosen() {
-		a.openGroupForm("", "")
-	}
-	if menu.Item(m.QuickConnectMenu()).Shortcut(appMods, ui.KeyK).Chosen() {
-		a.OpenQuickConnect()
-	}
-	if menu.Item(m.NewForwardMenu()).Disabled(a.store.Len() == 0).Chosen() {
-		a.openFwdForm(m, nil, a.selectedHost())
-	}
-	if menu.Item(m.LocalTerminal()).Chosen() {
-		a.OpenLocalTerminal()
-	}
-	menu.Separator()
-	if menu.Item(m.ImportSSHConfigMenu()).Chosen() {
-		a.OpenImport(m, "")
+// addEntries are the entries of the sidebar's "+": a new host or group,
+// quick connect, a local terminal, import.
+func (a *App) addEntries(m locales.Messages) []menuEntry {
+	return []menuEntry{
+		{Icon: icons.Host, Label: m.NewHost(), Do: func() { a.openEditor(nil) }},
+		{Icon: icons.NewFolder, Label: m.NewGroup(), Do: func() { a.openGroupForm("", "") }},
+		{Icon: icons.Quick, Label: m.QuickConnectMenu(), Mods: appMods, Key: ui.KeyK, Do: a.OpenQuickConnect},
+		{Icon: icons.Forward, Label: m.NewForwardMenu(), Disabled: a.store.Len() == 0, Do: func() { a.openFwdForm(m, nil, a.selectedHost()) }},
+		{Icon: icons.LocalShell, Label: m.LocalTerminal(), Do: func() { a.OpenLocalTerminal() }},
+		menuSep,
+		{Icon: icons.Import, Label: m.ImportSSHConfigMenu(), Do: func() { a.OpenImport(m, "") }},
 	}
 }
 
@@ -52,8 +43,8 @@ func (a *App) sidebarView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 		// typed on the spot, or the hosts of ~/.ssh/config.
 		ui.Row(c.Key("sbtools")).Padding(8, 8, 6, 12).Gap(4).AlignItems(ui.Center).Children(func() {
 			a.searchBox(c, m, tok)
-			(IconButton{Icon: icons.Add, Label: m.AddMenu()}).Show(c, "newhost").Menu(func(menu *ui.Menu) {
-				a.addMenu(menu, m)
+			a.menuButton(c, "newhost", IconButton{Icon: icons.Add, Label: m.AddMenu()}, func() []menuEntry {
+				return a.addEntries(m)
 			})
 		})
 		if a.store.Len() == 0 {
@@ -191,12 +182,13 @@ func (a *App) selectedHost() string {
 }
 
 // hostActionsWidth is the room the actions of a sidebar host take at the
-// end of its row: three small IconButtons and the gaps between them.
-const hostActionsWidth = 3*24 + 2*2 + 4
+// end of its row: two small IconButtons and the gap between them.
+const hostActionsWidth = 2*24 + 2 + 4
 
 // hostItem is a host of the sidebar: its tile, then its name, and while
 // the pointer is over it or it is chosen, what to do with it at the end
-// (connect, files, and the rest in its menu, as on a right click). The
+// (files, and the rest in its menu, as on a right click; a double click
+// connects). A dot on the tile's corner tells how its sessions are. The
 // item lays its children out reversed, so that the tile it is given
 // (after its label, as a badge) comes first.
 func (a *App) hostItem(c *ui.Context, m locales.Messages, h assets.Host, prefix string) {
@@ -208,89 +200,110 @@ func (a *App) hostItem(c *ui.Context, m locales.Messages, h assets.Host, prefix 
 		// it are drawn for the sidebar's ground, not the accent.
 		it.Background(tok.Press).TextColor(tok.Text)
 	}
-	shown := chosen || it.Hovered()
+	more := "more:" + prefix + h.ID
+	shown := chosen || it.Hovered() || a.menu.key == more
 	if shown {
 		it.Padding(theme.Space(1.5), hostActionsWidth, theme.Space(1.5), theme.Space(2))
 	}
 	it.Children(func() {
-		hostAvatar(c, tok, h, 20)
-		// Kept, unseen, while not shown: its menu outlives the hover.
+		ui.Box(c.Key("avatar")).Shrink(0).Children(func() {
+			hostAvatar(c, tok, h, 20)
+			if st, ok := a.hostState(h.ID); ok {
+				dot(c, stateColor(tok, st)).Absolute().Top(-2).Right(-2).Border(1.5, tok.Sidebar).Size(9, 9).Radius(4.5).
+					Label(a.statusText(m, h, session.Status{State: st}, c.Now()))
+			}
+		})
+		// Shown while its menu is open, which outlives the hover.
 		acts := ui.Row(c.Key("acts")).Absolute().Top(0).Bottom(0).Right(4).Gap(2).AlignItems(ui.Center)
 		if !shown {
 			acts.Invisible()
 		}
 		acts.Children(func() {
-			if (IconButton{Icon: icons.Run, On: icons.RunOn, Label: m.Connect(), Active: true, Size: Small}).Clicked(c, "connect") {
-				a.Connect(h.ID, openAt{})
-			}
 			if (IconButton{Icon: icons.Folder, Label: m.OpenFiles(), Size: Small}).Clicked(c, "files") {
 				a.OpenFiles(h.ID, openAt{}, nil)
 			}
-			(IconButton{Icon: icons.More, Label: m.MoreActions(), Size: Small}).Show(c, "more").Menu(func(menu *ui.Menu) {
-				a.hostMenu(menu, m, h)
+			a.menuButton(c, more, IconButton{Icon: icons.More, Label: m.MoreActions(), Size: Small}, func() []menuEntry {
+				return a.hostEntries(m, h)
 			})
 		})
 	})
 	if it.DoubleClicked() {
 		a.Connect(h.ID, openAt{})
 	}
-	it.ContextMenu(func(menu *ui.Menu) { a.hostMenu(menu, m, h) })
+	it.ContextMenu(func(menu *ui.Menu) { nativeMenu(menu, a.hostEntries(m, h)) })
 }
 
-// hostMenu is what can be done with a sidebar host: its context menu,
-// and the menu of its "more" button.
-func (a *App) hostMenu(menu *ui.Menu, m locales.Messages, h assets.Host) {
-	if menu.Item(m.Connect()).Chosen() {
-		a.Connect(h.ID, openAt{})
-	}
-	if menu.Item(m.SplitRight()).Disabled(a.ws.ActiveTab() == nil).Chosen() {
-		if t := a.ws.ActiveTab(); t != nil {
-			a.Connect(h.ID, openAt{pane: t.Focus, edge: layout.Right})
-		}
-	}
-	if menu.Item(m.OpenFiles()).Chosen() {
-		a.OpenFiles(h.ID, openAt{}, nil)
-	}
-	if menu.Item(m.OpenAI()).Chosen() {
-		a.OpenAI(h.ID, openAt{}, 0)
-	}
-	if menu.Item(m.OpenFilesBeside()).Disabled(a.ws.ActiveTab() == nil).Chosen() {
-		if t := a.ws.ActiveTab(); t != nil {
-			a.OpenFiles(h.ID, openAt{pane: t.Focus, edge: layout.Right}, nil)
-		}
-	}
-	menu.Separator()
-	if menu.Item(m.Favorite()).Checked(h.Favorite).Chosen() {
-		a.store.SetFavorite(h.ID, !h.Favorite)
-	}
-	menu.Submenu(m.MoveToGroup(), func(sub *ui.Menu) {
-		if sub.Item(m.NoGroup()).Checked(h.Group == "").Chosen() && h.Group != "" {
-			a.store.SetGroup(h.ID, "")
-		}
-		sub.Separator()
-		for _, g := range a.store.Groups() {
-			if sub.Item(g).Checked(h.Group == g).Chosen() && h.Group != g {
-				a.store.SetGroup(h.ID, g)
+// hostEntries are what can be done with a sidebar host: its context
+// menu, and the menu of its "more" button.
+func (a *App) hostEntries(m locales.Messages, h assets.Host) []menuEntry {
+	noTab := a.ws.ActiveTab() == nil
+	beside := func(open func(at openAt)) func() {
+		return func() {
+			if t := a.ws.ActiveTab(); t != nil {
+				open(openAt{pane: t.Focus, edge: layout.Right})
 			}
 		}
-		sub.Separator()
-		if sub.Item(m.NewGroupEllipsis()).Chosen() {
-			a.openGroupForm("", h.ID)
+	}
+	groups := []menuEntry{
+		{Icon: icons.Folder, Label: m.NoGroup(), Checked: h.Group == "", Do: func() {
+			if h.Group != "" {
+				a.store.SetGroup(h.ID, "")
+			}
+		}},
+		menuSep,
+	}
+	for _, g := range a.store.Groups() {
+		groups = append(groups, menuEntry{Icon: icons.Folder, Label: g, Checked: h.Group == g, Do: func() {
+			if h.Group != g {
+				a.store.SetGroup(h.ID, g)
+			}
+		}})
+	}
+	groups = append(groups, menuSep, menuEntry{Icon: icons.NewFolder, Label: m.NewGroupEllipsis(), Do: func() { a.openGroupForm("", h.ID) }})
+	return []menuEntry{
+		{Icon: icons.Run, Label: m.Connect(), Do: func() { a.Connect(h.ID, openAt{}) }},
+		{Icon: icons.SplitRight, Label: m.SplitRight(), Disabled: noTab, Do: beside(func(at openAt) { a.Connect(h.ID, at) })},
+		{Icon: icons.Folder, Label: m.OpenFiles(), Do: func() { a.OpenFiles(h.ID, openAt{}, nil) }},
+		{Icon: icons.Robot, Label: m.OpenAI(), Do: func() { a.OpenAI(h.ID, openAt{}, 0) }},
+		{Icon: icons.OpenFile, Label: m.OpenFilesBeside(), Disabled: noTab, Do: beside(func(at openAt) { a.OpenFiles(h.ID, at, nil) })},
+		menuSep,
+		{Icon: icons.Star, Label: m.Favorite(), Checked: h.Favorite, Do: func() { a.store.SetFavorite(h.ID, !h.Favorite) }},
+		{Icon: icons.MoveTo, Label: m.MoveToGroup(), Sub: groups},
+		{Icon: icons.Edit, Label: m.Edit(), Do: func() {
+			hh := h
+			a.openEditor(&hh)
+		}},
+		{Icon: icons.InstallKey, Label: m.InstallPublicKey(), Do: func() { a.openInstall(h.ID) }},
+		{Icon: icons.Forward, Label: m.NewForwardMenu(), Do: func() { a.openFwdForm(m, nil, h.ID) }},
+		{Icon: icons.Delete, Label: m.Delete(), Danger: true, Do: func() { a.deleteID, a.deleting = h.ID, true }},
+	}
+}
+
+// hostState is how the sessions open on host id are, the best of them
+// (connected, then on the way, then failed), and false with none.
+func (a *App) hostState(id string) (session.State, bool) {
+	rank := func(st session.State) int {
+		switch st {
+		case session.Connected:
+			return 3
+		case session.Connecting, session.Reconnecting:
+			return 2
+		case session.Failed, session.Disconnected:
+			return 1
 		}
-	})
-	if menu.Item(m.Edit()).Chosen() {
-		hh := h
-		a.openEditor(&hh)
+		return 0
 	}
-	if menu.Item(m.InstallPublicKey()).Chosen() {
-		a.openInstall(h.ID)
+	best, ok := session.State(0), false
+	for _, cn := range a.conns {
+		if cn.host.ID != id || cn.s == nil || cn.fw != nil {
+			continue
+		}
+		st := cn.s.Status().State
+		if rank(st) > 0 && (!ok || rank(st) > rank(best)) {
+			best, ok = st, true
+		}
 	}
-	if menu.Item(m.NewForwardMenu()).Chosen() {
-		a.openFwdForm(m, nil, h.ID)
-	}
-	if menu.Item(m.Delete()).Chosen() {
-		a.deleteID, a.deleting = h.ID, true
-	}
+	return best, ok
 }
 
 // hostTip is a sidebar host's tooltip: where it logs in, and the proxy

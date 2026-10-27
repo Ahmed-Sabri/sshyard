@@ -4622,6 +4622,38 @@ func (msgs Messages) MetricsCore(n string, pct string) string {
 	return Catalog.Format(msgs.locale, "metricsCore", map[string]any{"n": n, "pct": pct})
 }
 
+// MetricsLoadTitle says "Load average"
+// in the language the app shows.
+func MetricsLoadTitle() string { return In(i18n.Locale()).MetricsLoadTitle() }
+
+// MetricsLoadTitle says "Load average"
+// in the language of msgs.
+func (msgs Messages) MetricsLoadTitle() string {
+	return Catalog.Format(msgs.locale, "metricsLoadTitle", nil)
+}
+
+// MetricsLoadLine says "{minutes, plural, one {# minute} other {# minutes}}  {value}"
+// in the language the app shows.
+func MetricsLoadLine(minutes int, value string) string {
+	return In(i18n.Locale()).MetricsLoadLine(minutes, value)
+}
+
+// MetricsLoadLine says "{minutes, plural, one {# minute} other {# minutes}}  {value}"
+// in the language of msgs.
+func (msgs Messages) MetricsLoadLine(minutes int, value string) string {
+	return Catalog.Format(msgs.locale, "metricsLoadLine", map[string]any{"minutes": minutes, "value": value})
+}
+
+// MetricsLoadCPUs says "{count, plural, one {Shared by # CPU} other {Shared by # CPUs}}"
+// in the language the app shows.
+func MetricsLoadCPUs(count int) string { return In(i18n.Locale()).MetricsLoadCPUs(count) }
+
+// MetricsLoadCPUs says "{count, plural, one {Shared by # CPU} other {Shared by # CPUs}}"
+// in the language of msgs.
+func (msgs Messages) MetricsLoadCPUs(count int) string {
+	return Catalog.Format(msgs.locale, "metricsLoadCPUs", map[string]any{"count": count})
+}
+
 // MetricsCores says "CPU cores"
 // in the language the app shows.
 func MetricsCores() string { return In(i18n.Locale()).MetricsCores() }
@@ -7944,4 +7976,14 @@ func SecuritySftpOperationsBusy() string { return In(i18n.Locale()).SecuritySftp
 // in the language of msgs.
 func (msgs Messages) SecuritySftpOperationsBusy() string {
 	return Catalog.Format(msgs.locale, "securitySftpOperationsBusy", nil)
+}
+
+// GitHubRepo says "GitHub Repository"
+// in the language the app shows.
+func GitHubRepo() string { return In(i18n.Locale()).GitHubRepo() }
+
+// GitHubRepo says "GitHub Repository"
+// in the language of msgs.
+func (msgs Messages) GitHubRepo() string {
+	return Catalog.Format(msgs.locale, "gitHubRepo", nil)
 }

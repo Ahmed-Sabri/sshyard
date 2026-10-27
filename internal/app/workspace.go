@@ -213,64 +213,27 @@ func toolbarTrail(bar ui.TitleBar) float32 {
 	return 12
 }
 
+// paneHeadHeight is the height of a pane's header: its title's line and
+// room round it; paneHeadIcon the size of its host's tile.
+const (
+	paneHeadHeight = 28
+	paneHeadIcon   = 16
+)
+
 func (a *App) tabStrip(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	// The title bar's part over the content: the tabs on its foot, the
-	// actions grouped on the right, clear of the window buttons.
+	// app's own buttons at the end, clear of the window buttons. The
+	// settings cover the sessions: no tabs while they show, and the
+	// settings button, lit, closes them.
 	bar := c.TitleBar()
-	ui.Row(c.Key("toolbar")).Grow(1).Shrink(1).MinWidth(0).FillHeight().Padding(0, toolbarTrail(bar), 0, 12).Gap(8).AlignItems(ui.Center).Children(func() {
+	ui.Row(c.Key("toolbar")).Grow(1).Shrink(1).MinWidth(0).FillHeight().Padding(0, toolbarTrail(bar), 0, 0).Gap(8).AlignItems(ui.Center).Children(func() {
 		if a.page == pageSettings {
-			// The settings cover the sessions: no tabs, and their way
-			// out at the end.
 			ui.Spacer(c)
-			if (IconButton{Icon: icons.Close, Label: m.CloseSettings()}).Clicked(c, "closesettings") {
-				a.closeSettings()
-			}
-			return
+		} else {
+			a.tabs(c, m, tok)
 		}
-		a.tabs(c, m, tok)
-		// One capsule of the actions on the focused session. The settings
-		// are in the status bar, the panels in the rail.
-		cn := a.focused()
-		if cn == nil || a.page != pageWorkspace {
-			return
-		}
-		ui.Row(c.Key("actions")).Gap(0).Padding((tabHeight + 2*tabInset - 28) / 2).Radius(theme.Capsule).Background(tok.Fill).AlignItems(ui.Center).Children(func() {
-			add := (IconButton{Icon: icons.Add, Label: m.NewTab()}).Show(c, "newtab")
-			if add.Clicked() {
-				a.Connect(cn.host.ID, openAt{})
-			}
-			add.ContextMenu(func(menu *ui.Menu) {
-				if menu.Item(m.NewTab()).Shortcut(appMods, ui.KeyT).Chosen() {
-					a.Connect(cn.host.ID, openAt{})
-				}
-				if menu.Item(m.OpenAI()).Disabled(!remoteOnly(cn)).Chosen() {
-					a.OpenAI(cn.host.ID, openAt{}, 0)
-				}
-				link := 0
-				if cn.kind == layout.Terminal {
-					link = cn.id
-				}
-				if menu.Item(m.OpenAIRight()).Disabled(!remoteOnly(cn)).Chosen() {
-					if t := a.ws.ActiveTab(); t != nil {
-						a.OpenAI(cn.host.ID, openAt{pane: t.Focus, edge: layout.Right}, link)
-					}
-				}
-				if menu.Item(m.OpenAIBelow()).Disabled(!remoteOnly(cn)).Chosen() {
-					if t := a.ws.ActiveTab(); t != nil {
-						a.OpenAI(cn.host.ID, openAt{pane: t.Focus, edge: layout.Bottom}, link)
-					}
-				}
-				menu.Separator()
-				if menu.Item(m.StopAllAI()).Shortcut(stopAllMods, ui.KeyPeriod).Chosen() {
-					a.StopAllAI()
-				}
-			})
-			if iconButton(c, "splitright", icons.SplitRight, m.SplitRight()) {
-				a.SplitFocused(layout.Right)
-			}
-			if iconButton(c, "splitdown", icons.SplitDown, m.SplitDown()) {
-				a.SplitFocused(layout.Bottom)
-			}
+		ui.Row(c.Key("appbtns")).Shrink(0).Gap(theme.Space(1)).AlignItems(ui.Center).Children(func() {
+			a.appButtons(c, m)
 		})
 	})
 }
@@ -399,14 +362,18 @@ func (a *App) paneView(c *ui.Context, t *layout.Tab, n *layout.Node, tok theme.T
 				a.aiPane(c, t, n, cn, tok, m)
 				return
 			}
-			head := ui.Row(c.Key("head")).Height(36).Shrink(0).Padding(0, 6, 0, 10).Gap(8).AlignItems(ui.Center).Drag(dragSession{cn.id}).Label(m.PaneActions())
+			head := ui.Row(c.Key("head")).Height(paneHeadHeight).Shrink(0).Padding(0, 6, 0, 10).Gap(8).AlignItems(ui.Center).Drag(dragSession{cn.id}).Label(m.PaneActions())
 			head.Children(func() {
-				// A terminal shows its host as the sidebar does; the others
-				// what they are, in its color.
+				// How its session is first; then a terminal shows its host
+				// as the sidebar does, the others what they are, in its
+				// color.
+				if cn.s != nil {
+					dot(c, stateColor(tok, st.State))
+				}
 				if cn.kind == layout.Terminal {
-					hostAvatar(c, tok, a.liveHost(cn.host), 22)
+					hostAvatar(c, tok, a.liveHost(cn.host), paneHeadIcon)
 				} else {
-					softTile(c, kindIcon(cn.kind, focused), hostTint(tok, a.liveHost(cn.host)), 22)
+					softTile(c, kindIcon(cn.kind, focused), hostTint(tok, a.liveHost(cn.host)), paneHeadIcon)
 				}
 				title := a.pv(cn.host.Label())
 				switch cn.kind {
@@ -419,13 +386,10 @@ func (a *App) paneView(c *ui.Context, t *layout.Tab, n *layout.Node, tok theme.T
 				if !focused && multi {
 					tt.TextColor(tok.TextMuted)
 				}
-				if cn.s != nil {
-					dot(c, stateColor(tok, st.State))
-				}
 				if cn.kind == layout.Terminal && cn.s != nil && cn.s.Term.Modes().MouseTracking {
 					// The program takes the mouse: say so, and how to select.
 					ui.Row(c.Key("mouse")).Shrink(0).AlignItems(ui.Center).Label(m.MouseReporting()).Tooltip(m.MouseReporting()).Children(func() {
-						ui.Icon(c, icons.Mouse.SVG).Size(14, 14).TextColor(tok.Accent)
+						ui.Icon(c, icons.Mouse.SVG).Size(Tiny, Tiny).TextColor(tok.Accent)
 					})
 				}
 				if isTemp(cn.host.ID) {
@@ -437,17 +401,17 @@ func (a *App) paneView(c *ui.Context, t *layout.Tab, n *layout.Node, tok theme.T
 				ui.Text(c, a.pv(cn.host.Target())).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine().Shrink(1)
 				ui.Spacer(c)
 				if isTemp(cn.host.ID) {
-					if (IconButton{Icon: icons.Save, Label: m.SaveAsHost(), Size: Small}).Clicked(c, "saveas") {
+					if (IconButton{Icon: icons.Save, Label: m.SaveAsHost(), Size: Tiny}).Clicked(c, "saveas") {
 						t.Focus = n.ID
 						a.SaveTempAs(cn.id)
 					}
 				}
 				if cn.kind == layout.Terminal {
-					if (IconButton{Icon: icons.Search, Label: m.Find(), Size: Small, Active: a.finding && focused}).Clicked(c, "find") {
+					if (IconButton{Icon: icons.Search, Label: m.Find(), Size: Tiny, Active: a.finding && focused}).Clicked(c, "find") {
 						t.Focus = n.ID
 						a.finding = !(a.finding && focused)
 					}
-					if (IconButton{Icon: icons.Folder, Label: m.OpenFilesHere(), Size: Small, Disabled: !remoteOnly(cn)}).Clicked(c, "files") {
+					if (IconButton{Icon: icons.Folder, Label: m.OpenFilesHere(), Size: Tiny, Disabled: !remoteOnly(cn)}).Clicked(c, "files") {
 						t.Focus = n.ID
 						a.OpenFiles(cn.host.ID, openAt{pane: n.ID, edge: layout.Right}, cn)
 					}
@@ -456,20 +420,20 @@ func (a *App) paneView(c *ui.Context, t *layout.Tab, n *layout.Node, tok theme.T
 				} else {
 					a.transfersButton(c, cn, m)
 					a.followButton(c, t, n, cn, m)
-					if (IconButton{Icon: icons.Terminal, Label: m.OpenTerminalBeside(), Size: Small}).Clicked(c, "term") {
+					if (IconButton{Icon: icons.Terminal, Label: m.OpenTerminalBeside(), Size: Tiny}).Clicked(c, "term") {
 						t.Focus = n.ID
 						a.Connect(cn.host.ID, openAt{pane: n.ID, edge: layout.Right})
 					}
 				}
-				if (IconButton{Icon: icons.SplitRight, Label: m.SplitRight(), Size: Small}).Clicked(c, "splitright") {
+				if (IconButton{Icon: icons.SplitRight, Label: m.SplitRight(), Size: Tiny}).Clicked(c, "splitright") {
 					t.Focus = n.ID
 					a.SplitFocused(layout.Right)
 				}
-				if (IconButton{Icon: icons.SplitDown, Label: m.SplitDown(), Size: Small}).Clicked(c, "splitdown") {
+				if (IconButton{Icon: icons.SplitDown, Label: m.SplitDown(), Size: Tiny}).Clicked(c, "splitdown") {
 					t.Focus = n.ID
 					a.SplitFocused(layout.Bottom)
 				}
-				if (IconButton{Icon: icons.Close, Label: m.ClosePane(), Size: Small, Danger: true}).Clicked(c, "close") {
+				if (IconButton{Icon: icons.Close, Label: m.ClosePane(), Size: Tiny, Danger: true}).Clicked(c, "close") {
 					a.closeSoon(cn.id)
 				}
 			})

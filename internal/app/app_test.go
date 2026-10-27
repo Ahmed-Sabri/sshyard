@@ -59,6 +59,15 @@ func waitForIn(t *testing.T, tt *ui.Tester, d time.Duration, what string, cond f
 	}
 }
 
+func mustFind(t *testing.T, tt *ui.Tester, s string) ui.Rect {
+	t.Helper()
+	r, ok := tt.Find(s)
+	if !ok {
+		t.Fatalf("no %q in %q", s, tt.Texts())
+	}
+	return r
+}
+
 func mustClick(t *testing.T, tt *ui.Tester, s string) {
 	t.Helper()
 	if err := tt.Click(s); err != nil {
@@ -431,7 +440,7 @@ func TestSettingsToggle(t *testing.T) {
 	if a.page != pageSettings || a.prefNow() != prefAppearance {
 		t.Fatal("settings did not open")
 	}
-	mustClick(t, tt, "Close Settings")
+	mustClick(t, tt, "Settings")
 	if a.page != pageWorkspace {
 		t.Fatal("settings did not close")
 	}
@@ -449,11 +458,10 @@ func TestPromptTakesTypingAtOnce(t *testing.T) {
 	a, tt := newTestApp(t)
 	h := addHost(t, a, srv, "nopw", "")
 	a.known.Add(srv.Addr, srv.HostKey.PublicKey())
-	_ = h
 	tt.Frame()
 	mustClick(t, tt, "nopw")
 	tt.Frame()
-	mustClick(t, tt, "Connect")
+	a.Connect(h.ID, openAt{})
 	waitFor(t, tt, "password prompt", func() bool { return a.prompting })
 	for i := 0; i < 3; i++ {
 		tt.Frame()

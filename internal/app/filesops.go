@@ -432,7 +432,7 @@ func countTransfers(ts []sftpsvc.Transfer) transferCounts {
 // queue, with how many are still to go on it.
 func (a *App) transfersButton(c *ui.Context, cn *conn, m locales.Messages) {
 	n := countTransfers(cn.fs.transfers.List())
-	b := IconButton{Icon: icons.Transfers, Label: m.Transfers(), Active: cn.fs.queueOpen, Size: Small}
+	b := IconButton{Icon: icons.Transfers, Label: m.Transfers(), Active: cn.fs.queueOpen, Size: Tiny}
 	if n.active > 0 {
 		b.Badge = strconv.Itoa(n.active)
 	} else if n.failed > 0 {

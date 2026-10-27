@@ -28,10 +28,11 @@ const (
 	inspectDocker  inspectorKind = "docker"
 )
 
-// railWidth is the rail's width; inspectorWidth the panel's, and
-// tableInspectorWidth that of a panel of tables (usage, Docker).
+// railWidth is the rail's width, the status bar's height; inspectorWidth
+// the panel's, and tableInspectorWidth that of a panel of tables (usage,
+// Docker).
 const (
-	railWidth           = 44
+	railWidth           = statusBarHeight
 	inspectorWidth      = 300
 	tableInspectorWidth = 460
 )
@@ -43,7 +44,7 @@ func (a *App) railView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	ui.Column(c.Key("rail")).Width(railWidth).Shrink(0).FillHeight().Padding(theme.Space(2), 0).Gap(theme.Space(1)).
 		AlignItems(ui.Center).Background(tok.Glass).Children(func() {
 		toggle := func(k inspectorKind, ic, on *icons.Icon, label string) {
-			if (IconButton{Icon: ic, On: on, Label: label, Active: a.inspector == k, Toggle: true}).Clicked(c, "insp:"+string(k)) {
+			if (IconButton{Icon: ic, On: on, Label: label, Active: a.inspector == k, Toggle: true, Size: Small}).Clicked(c, "insp:"+string(k)) {
 				if a.inspector == k {
 					a.inspector = ""
 				} else {
@@ -54,15 +55,15 @@ func (a *App) railView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 		toggle(inspectMonitor, icons.Monitor, icons.MonitorOn, m.SystemMonitor())
 		toggle(inspectUsage, icons.Usage, icons.UsageOn, m.ProcessUsage())
 		toggle(inspectHost, icons.Info, icons.InfoOn, m.HostDetails())
-		ui.Box(c.Key("sep")).Width(16).Height(1).Shrink(0).MarginY(theme.Space(1)).Background(tok.Line)
-		if (IconButton{Icon: icons.Folder, Label: m.OpenFilesBeside(), Disabled: !remoteOnly(cn)}).Clicked(c, "files") {
+		ui.Box(c.Key("sep")).Width(14).Height(1).Shrink(0).MarginY(theme.Space(1)).Background(tok.Line)
+		if (IconButton{Icon: icons.Folder, Label: m.OpenFilesBeside(), Disabled: !remoteOnly(cn), Size: Small}).Clicked(c, "files") {
 			a.OpenFilesBeside()
 		}
 		toggle(inspectDocker, icons.Docker, icons.DockerOn, m.DockerManager())
-		if (IconButton{Icon: icons.Robot, Label: m.OpenAIRight(), Disabled: !remoteOnly(cn)}).Clicked(c, "ai") {
+		if (IconButton{Icon: icons.Robot, Label: m.OpenAIRight(), Disabled: !remoteOnly(cn), Size: Small}).Clicked(c, "ai") {
 			a.OpenAIBeside()
 		}
-		if (IconButton{Icon: icons.Forward, Label: m.NewForwardMenu(), Disabled: a.store.Len() == 0}).Clicked(c, "fwd") {
+		if (IconButton{Icon: icons.Forward, Label: m.NewForwardMenu(), Disabled: a.store.Len() == 0, Size: Small}).Clicked(c, "fwd") {
 			id := a.selectedHost()
 			if cn != nil && !isTemp(cn.host.ID) {
 				id = cn.host.ID
@@ -70,10 +71,10 @@ func (a *App) railView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 			a.openFwdForm(m, nil, id)
 		}
 		ui.Spacer(c)
-		if iconButton(c, "quick", icons.Quick, m.QuickConnect()) {
+		if (IconButton{Icon: icons.Quick, Label: m.QuickConnect(), Size: Small}).Clicked(c, "quick") {
 			a.OpenQuickConnect()
 		}
-		if iconButton(c, "import", icons.Import, m.ImportSSHConfig()) {
+		if (IconButton{Icon: icons.Import, Label: m.ImportSSHConfig(), Size: Small}).Clicked(c, "import") {
 			a.OpenImport(m, "")
 		}
 	})

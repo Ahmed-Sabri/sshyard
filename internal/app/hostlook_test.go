@@ -69,9 +69,7 @@ func TestSidebarToolsAndGroups(t *testing.T) {
 
 	// A new group, from the add menu: it shows while empty.
 	mustClick(t, tt, "Add")
-	if err := tt.ChooseMenuItem("New group"); err != nil {
-		t.Fatalf("%v menu %q", err, tt.Menu())
-	}
+	mustClick(t, tt, "New group")
 	tt.Frame()
 	if a.group == nil || !tt.HasText("New group") {
 		t.Fatalf("no group sheet in %q", tt.Texts())

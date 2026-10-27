@@ -135,6 +135,11 @@ var (
 	Halt        = load("stop-line")
 	Logs        = load("file-list-3-line")
 	Backup      = load("safe-2-line")
+	Update      = load("download-cloud-2-line")
+	GitHub      = load("github-line")
+	Check       = load("check-line")
+	MoveTo      = load("folder-transfer-line")
+	Submenu     = load("arrow-right-s-line")
 )
 
 // HostIcon is an icon a host can be given, by the key it is saved under.

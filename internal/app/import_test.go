@@ -245,9 +245,7 @@ func TestQuickConnect(t *testing.T) {
 	a.quick, a.quicking = nil, false
 	tt.Frame()
 	mustClick(t, tt, "Add")
-	if err := tt.ChooseMenuItem("Quick Connect…"); err != nil {
-		t.Fatalf("%v: %q", err, tt.Menu())
-	}
+	mustClick(t, tt, "Quick Connect…")
 	tt.Frame()
 	if a.quick == nil {
 		t.Fatal("menu did not open quick connect")

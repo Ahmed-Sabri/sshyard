@@ -454,6 +454,9 @@
   "metricsLatency": "{n} ms",
   "metricsLatencyLabel": "Latency {n}",
   "metricsCore": "Core {n} {pct}",
+  "metricsLoadTitle": "Load average",
+  "metricsLoadLine": "{minutes, plural, one {# minute} other {# minutes}}  {value}",
+  "metricsLoadCPUs": "{count, plural, one {Shared by # CPU} other {Shared by # CPUs}}",
   "metricsCores": "CPU cores",
   "metricsNoCores": "Per-core figures are not available.",
   "metricsDiskTitle": "Disk",
@@ -784,5 +787,6 @@
   "backupNewer": "This backup was made by a newer version of SSHYard. Update SSHYard to restore it.",
   "backupWrongPassword": "Wrong password.",
   "backupDamaged": "The backup is damaged or was changed.",
-  "securitySftpOperationsBusy": "Too many SFTP operations are pending; try again later"
+  "securitySftpOperationsBusy": "Too many SFTP operations are pending; try again later",
+  "gitHubRepo": "GitHub Repository"
 }

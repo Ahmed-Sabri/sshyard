@@ -29,7 +29,8 @@ type IconButton struct {
 	Disabled bool
 	// Danger tints the hover red, for a destructive action.
 	Danger bool
-	// Size is the icon's size; 0 is 16. Small is 14, for dense rows.
+	// Size is the icon's size; 0 is 16. Small is 14, for dense rows, Tiny
+	// 12, for pane headers.
 	Size float32
 	// Badge is a count shown on the button's corner, as transfers to go;
 	// "" shows none. BadgeDanger draws it red, for failures.
@@ -37,8 +38,12 @@ type IconButton struct {
 	BadgeDanger bool
 }
 
-// Small is the icon size of IconButtons in dense rows (tabs, pane headers).
-const Small = 14
+// Small is the icon size of IconButtons in dense rows (tabs, sidebar
+// rows), Tiny in the slimmest (pane headers).
+const (
+	Small = 14
+	Tiny  = 12
+)
 
 // Show builds the button under key and returns it, for Clicked.
 func (b IconButton) Show(c *ui.Context, key string) ui.Element {
@@ -47,9 +52,13 @@ func (b IconButton) Show(c *ui.Context, key string) ui.Element {
 	if size == 0 {
 		size = 16
 	}
-	// 28 DIPs round for the 16 icon, 24 for the small one: a circle.
+	// 28 DIPs round for the 16 icon, 24 for the small one, 20 for the
+	// tiny one: a circle.
 	pad := float32(6)
-	if size <= Small {
+	switch {
+	case size <= Tiny:
+		pad = 4
+	case size <= Small:
 		pad = 5
 	}
 	el := ui.ButtonBase(c.Key("ib:" + key)).Label(b.Label).Tooltip(b.Label).Padding(pad).Radius(theme.Capsule).Disabled(b.Disabled)

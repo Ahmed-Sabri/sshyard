@@ -209,6 +209,19 @@ func TestMetricsBarAndCollector(t *testing.T) {
 	}
 	clickContaining(t, tt, "Network up")
 	tt.Frame()
+	// The load is one share of the CPUs; its averages in the popover.
+	if hasExact(tt, "0.15 0.10 0.05") || !hasExact(tt, "8%") {
+		t.Fatalf("load not as a percent: %q", tt.Texts())
+	}
+	mustClick(t, tt, "Load 0.15 0.10 0.05")
+	tt.Frame()
+	for _, s := range []string{"Load average", "1 minute  0.15", "5 minutes  0.10", "15 minutes  0.05", "Shared by 2 CPUs"} {
+		if !tt.HasText(s) {
+			t.Fatalf("load popover misses %q: %q", s, tt.Texts())
+		}
+	}
+	mustClick(t, tt, "Load 0.15 0.10 0.05")
+	tt.Frame()
 
 	a.SplitFocused(layout.Right)
 	tt.Frame()

@@ -91,8 +91,8 @@ func main() {
 			// One unified toolbar: the page draws the title area, the
 			// window controls sit over it, inset on macOS.
 			TitleBarStyle:        mygo.TitleBarHiddenInset,
-			TitleBarHeight:       52,
-			TrafficLightPosition: &mygo.Point{X: 18, Y: 18},
+			TitleBarHeight:       40,
+			TrafficLightPosition: &mygo.Point{X: 14, Y: 13},
 			// Linux and Windows: the title bar draws the window's
 			// buttons, in the app's look (app.WindowControls).
 			HideWindowButtons: ownWindowButtons(),

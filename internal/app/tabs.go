@@ -12,20 +12,27 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
-// tabHeight and tabWidth size a tab; tabs narrow alike when there are
-// many, as a browser's, down to tabMinWidth. tabInset is the track's
-// padding round them, tabGap the room between two.
+// tabHeight and tabWidth size a tab, which stands on the title bar's
+// foot; tabs narrow alike when there are many, as a browser's, down to
+// tabMinWidth. tabInset is the track's padding at its sides, room for the
+// active tab's flare; tabGap the room between two; tabRadius rounds a
+// tab's top and its flare.
 const (
-	tabHeight   = 30
+	tabHeight   = 32
 	tabWidth    = 200
 	tabMinWidth = 132
-	tabInset    = 3
+	tabInset    = 8
 	tabGap      = 2
+	tabRadius   = theme.RadiusControl
 )
 
 // tabMoreWidth is the room the button listing the tabs that do not fit
-// takes after the track: a 28 DIP IconButton and its gap.
-const tabMoreWidth = 28 + 6
+// takes after the track, and tabAddWidth the new tab's: a 28 DIP
+// IconButton and its gap.
+const (
+	tabMoreWidth = 28 + tabGap
+	tabAddWidth  = 28 + tabGap
+)
 
 // tabsShown is the first tab and how many the title bar shows in room
 // DIPs (0 before it was measured: all), keeping the active one among them
@@ -47,23 +54,20 @@ func tabsShown(n, active, start int, room float32) (int, int) {
 	return min(max(start, 0), n-k), k
 }
 
-// tabs sit in one capsule track, as a segmented control and as the
-// actions beside them: the active one raised on it (TabActive, a hairline
-// and the card's shadow), the others flat and apart by short lines, lit
-// on hover in the same shape. Each shows the host as the sidebar does,
-// its close button while it is active or under the pointer, and at once
-// as the pointer comes, a tip of where its panes are. The tabs that do
-// not fit go in the popover of a button after them.
+// tabs stand on the title bar's foot as a browser's: the active one in
+// the content's fill, its top rounded and its foot flared into the
+// content it joins; the others flat, muted and apart by short lines, lit
+// on hover in a rounded box clear of the foot. Each shows the host as the sidebar does, its close button
+// while it is active or under the pointer, and at once as the pointer
+// comes, a tip of where its panes are. The tabs that do not fit go in the
+// popover of a button after them, and the button for a new tab follows.
 func (a *App) tabs(c *ui.Context, m locales.Messages, tok theme.Tokens) {
-	area := ui.Row(c.Key("tabarea")).Grow(1).Shrink(1).MinWidth(0).FillHeight().Gap(6).AlignItems(ui.Center).ClipX()
-	if len(a.ws.Tabs) == 0 {
-		return
-	}
+	area := ui.Row(c.Key("tabarea")).Grow(1).Shrink(1).MinWidth(0).FillHeight().Gap(tabGap).AlignItems(ui.End).ClipX()
 	active := -1
 	if a.page == pageWorkspace {
 		active = a.ws.Active
 	}
-	room := area.Bounds().W
+	room := area.Bounds().W - tabAddWidth
 	start, k := tabsShown(len(a.ws.Tabs), active, a.tabStart, room)
 	a.tabStart = start
 	if room != a.tabRoom {
@@ -75,41 +79,128 @@ func (a *App) tabs(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	shown := slices.Clone(a.ws.Tabs[start : start+k])
 	// Read when the tabs paint, once all have been built.
 	hovered := make([]bool, len(shown))
+	fill := a.contentFill(tok.Canvas, canvasAlpha)
 	area.Children(func() {
-		track := ui.Row(c.Key("tabs")).Shrink(1).MinWidth(0).Height(tabHeight + 2*tabInset).Padding(tabInset).Gap(tabGap).
-			AlignItems(ui.Center).Radius(theme.Capsule).Background(tok.Fill)
-		track.Children(func() {
-			for j, t := range shown {
-				i := start + j
-				a.tab(c, m, tok, t, i, i == active, j, hovered, active-start)
+		if len(shown) > 0 {
+			track := ui.Row(c.Key("tabs")).Shrink(1).MinWidth(0).Height(tabHeight).Padding(0, tabInset).Gap(tabGap).AlignItems(ui.End)
+			track.Children(func() {
+				for j, t := range shown {
+					i := start + j
+					a.tab(c, m, tok, fill, t, i, i == active, j, hovered, active-start)
+				}
+			})
+		}
+		// The buttons after the tabs, level with their text.
+		ui.Row(c.Key("tabbtns")).Shrink(0).Height(tabHeight).Gap(tabGap).AlignItems(ui.Center).Children(func() {
+			if k < len(a.ws.Tabs) {
+				a.moreTabs(c, m, tok, start, k)
+			} else {
+				a.tabsOpen = false
+			}
+			// With no tab, the welcome page leads to a new one.
+			if len(a.ws.Tabs) > 0 {
+				a.newTabButton(c, m)
 			}
 		})
-		if k < len(a.ws.Tabs) {
-			a.moreTabs(c, m, tok, start, k)
-		} else {
-			a.tabsOpen = false
+	})
+}
+
+// newTabButton is the "+" after the tabs, whose drop-down opens a new
+// tab: a new connection (quick connect, a new host, a local terminal) or
+// one to a saved host. Its context menu opens the AI on the focused
+// session's host.
+func (a *App) newTabButton(c *ui.Context, m locales.Messages) {
+	cn := a.focused()
+	add := a.menuButton(c, "newtab", IconButton{Icon: icons.Add, Label: m.NewTab()}, func() []menuEntry {
+		return a.newTabEntries(c, m)
+	})
+	if cn == nil {
+		return
+	}
+	add.ContextMenu(func(menu *ui.Menu) {
+		if menu.Item(m.NewTab()).Shortcut(appMods, ui.KeyT).Chosen() {
+			a.Connect(cn.host.ID, openAt{})
+		}
+		if menu.Item(m.OpenAI()).Disabled(!remoteOnly(cn)).Chosen() {
+			a.OpenAI(cn.host.ID, openAt{}, 0)
+		}
+		link := 0
+		if cn.kind == layout.Terminal {
+			link = cn.id
+		}
+		if menu.Item(m.OpenAIRight()).Disabled(!remoteOnly(cn)).Chosen() {
+			if t := a.ws.ActiveTab(); t != nil {
+				a.OpenAI(cn.host.ID, openAt{pane: t.Focus, edge: layout.Right}, link)
+			}
+		}
+		if menu.Item(m.OpenAIBelow()).Disabled(!remoteOnly(cn)).Chosen() {
+			if t := a.ws.ActiveTab(); t != nil {
+				a.OpenAI(cn.host.ID, openAt{pane: t.Focus, edge: layout.Bottom}, link)
+			}
+		}
+		menu.Separator()
+		if menu.Item(m.StopAllAI()).Shortcut(stopAllMods, ui.KeyPeriod).Chosen() {
+			a.StopAllAI()
 		}
 	})
 }
 
+// newTabEntries are the entries of the "+" after the tabs: a new
+// connection, then the saved hosts, each with its tile.
+func (a *App) newTabEntries(c *ui.Context, m locales.Messages) []menuEntry {
+	tok := currentTokens(c)
+	entries := []menuEntry{
+		{Icon: icons.Quick, Label: m.QuickConnectMenu(), Mods: appMods, Key: ui.KeyK, Do: a.OpenQuickConnect},
+		{Icon: icons.Host, Label: m.NewHost(), Do: func() { a.openEditor(nil) }},
+		{Icon: icons.LocalShell, Label: m.LocalTerminal(), Do: func() {
+			if _, err := a.OpenLocalTerminal(); err != nil {
+				c.AddToast(ui.Toast{Title: m.ErrGeneric(err.Error()), Type: "error"})
+			}
+		}},
+	}
+	hosts := a.store.List()
+	if len(hosts) > 0 {
+		entries = append(entries, menuSep)
+	}
+	for _, h := range hosts {
+		entries = append(entries, menuEntry{
+			Lead:  func() { hostAvatar(c, tok, h, 16) },
+			Label: a.pv(h.Label()),
+			Do:    func() { a.Connect(h.ID, openAt{}) },
+		})
+	}
+	return entries
+}
+
 // tab is the tab t, the i-th, the j-th of those shown, whose hover it
-// keeps in hovered[j]; activeAt is the place of the active one among them.
-func (a *App) tab(c *ui.Context, m locales.Messages, tok theme.Tokens, t *layout.Tab, i int, on bool, j int, hovered []bool, activeAt int) {
+// keeps in hovered[j]; activeAt is the place of the active one among them,
+// fill the content's, which the active one takes.
+func (a *App) tab(c *ui.Context, m locales.Messages, tok theme.Tokens, fill ui.Color, t *layout.Tab, i int, on bool, j int, hovered []bool, activeAt int) {
 	cn := a.conns[t.Focused().ID]
-	chip := ui.Row(c.Key("tab:"+strconv.Itoa(t.ID))).Height(tabHeight).Gap(8).Padding(0, 4, 0, 6).Width(tabWidth).Shrink(1).MinWidth(tabMinWidth).
-		AlignItems(ui.Center).Radius(theme.Capsule).Cursor(ui.CursorPointer)
+	chip := ui.Row(c.Key("tab:"+strconv.Itoa(t.ID))).Height(tabHeight).Gap(8).Padding(0, 6, 0, 10).Width(tabWidth).Shrink(1).MinWidth(tabMinWidth).
+		AlignItems(ui.Center).Radius(tabRadius, tabRadius, 0, 0).Cursor(ui.CursorPointer)
 	if cn != nil {
 		chip.Drag(dragSession{cn.id})
 	}
 	hovered[j] = chip.Hovered()
-	switch {
-	case on:
-		tok.Card.On(chip.Background(tok.TabActive).Border(1, tok.GlassEdge))
-	case hovered[j]:
-		chip.Background(tok.Hover)
+	lit := tok.Hover
+	if chip.Pressed() {
+		lit = tok.Press
+	}
+	if on {
+		chip.Background(fill)
 	}
 	chip.Draw(func(p *ui.Painter, r ui.Rect) {
-		if next := j + 1; next < len(hovered) && !on && next != activeAt && !hovered[j] && !hovered[next] {
+		switch {
+		case on:
+			tabEdge(p, r, fill, tok.Line)
+			return
+		case hovered[j]:
+			// Lit as a capsule clear of the foot, not joining the content.
+			p.Fill(ui.Rect{X: r.X, Y: r.Y + 3, W: r.W, H: r.H - 6}, lit, tabRadius)
+			return
+		}
+		if next := j + 1; next < len(hovered) && next != activeAt && !hovered[j] && !hovered[next] {
 			x := r.X + r.W + tabGap/2
 			p.Line(x, r.Y+r.H/2-7, x, r.Y+r.H/2+7, 1, tok.Line)
 		}
@@ -149,6 +240,23 @@ func (a *App) tab(c *ui.Context, m locales.Messages, tok theme.Tokens, t *layout
 	if hovered[j] && !chip.Pressed() && !chip.Dragging() {
 		a.tabTip(c, m, tok, chip, t)
 	}
+}
+
+// tabEdge draws the active tab in r into the content below it: its flare,
+// in the content's fill, curving out on to the title bar's foot either
+// side, and its hairline round the sides and the top, where it stands on
+// the title bar.
+func tabEdge(p *ui.Painter, r ui.Rect, fill, line ui.Color) {
+	const R = tabRadius
+	l, rt, top, b := r.X, r.X+r.W, r.Y, r.Y+r.H
+	var flare ui.Path
+	flare.MoveTo(l-R, b).QuadTo(l, b, l, b-R).LineTo(l, b).Close()
+	flare.MoveTo(rt+R, b).QuadTo(rt, b, rt, b-R).LineTo(rt, b).Close()
+	p.FillPath(&flare, fill)
+	var edge ui.Path
+	edge.MoveTo(l-R, b-0.5).QuadTo(l+0.5, b-0.5, l+0.5, b-R).LineTo(l+0.5, top+R).QuadTo(l+0.5, top+0.5, l+R, top+0.5).
+		LineTo(rt-R, top+0.5).QuadTo(rt-0.5, top+0.5, rt-0.5, top+R).LineTo(rt-0.5, b-R).QuadTo(rt-0.5, b-0.5, rt+R, b-0.5)
+	p.StrokePath(&edge, 1, line)
 }
 
 // tabTip is a tab's tip, shown at once under it: the host of each of its

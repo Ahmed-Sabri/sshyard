@@ -13,9 +13,10 @@ import (
 const statusBarHeight = 30
 
 // statusBar is the band along the bottom of the content: on the left the
-// focused session (its state, latency, time connected, directory) and
+// focused session (its state, time connected, directory) and
 // what runs (sessions, forwards, an update); on the right IconButtons to
-// the theme, the shortcuts and the settings.
+// a local terminal, the theme, privacy and the shortcuts. The settings
+// are in the title bar.
 func (a *App) statusBar(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	ui.Box(c).Height(1).Shrink(0).FillWidth().Background(tok.GlassEdge)
 	ui.Row(c.Key("statusbar")).Height(statusBarHeight).Shrink(0).FillWidth().Padding(0, 6, 0, 12).Gap(theme.Space(3)).
@@ -58,10 +59,6 @@ func (a *App) statusSession(c *ui.Context, m locales.Messages, tok theme.Tokens)
 	})
 	if cn.s == nil || st.State != session.Connected {
 		return
-	}
-	if !isLocal(h.ID) {
-		d, ok := cn.s.Latency()
-		statusItem(c, "lat", icons.Monitor, latencyValue(m, d, ok), latencyText(m, d, ok), latencyColor(tok, d, ok))
 	}
 	if tc := a.monitorConn(cn); tc != nil && !tc.up.IsZero() {
 		since := c.Now().Sub(tc.up)
@@ -126,17 +123,26 @@ func (a *App) statusActions(c *ui.Context, m locales.Messages, tok theme.Tokens)
 				c.AddToast(ui.Toast{Title: m.ErrGeneric(err.Error()), Type: "error"})
 			}
 		}
-		(IconButton{Icon: themeIcon(a.settings.Theme), Label: m.Theme(), Size: Small}).Show(c, "theme").Menu(func(menu *ui.Menu) {
+		a.menuButton(c, "theme", IconButton{Icon: themeIcon(a.settings.Theme), Label: m.Theme(), Size: Small}, func() []menuEntry {
+			var entries []menuEntry
 			for i, md := range theme.Modes {
-				label := []string{m.ThemeAuto(), m.ThemeLight(), m.ThemeDark()}[i]
-				if menu.Item(label).Checked(a.settings.Theme == md).Chosen() && a.settings.Theme != md {
-					s := a.settings
-					s.Theme = md
-					if err := a.ApplySettings(s); err != nil {
-						c.AddToast(ui.Toast{Title: m.ErrGeneric(err.Error()), Type: "error"})
-					}
-				}
+				entries = append(entries, menuEntry{
+					Icon:    themeIcon(md),
+					Label:   []string{m.ThemeAuto(), m.ThemeLight(), m.ThemeDark()}[i],
+					Checked: a.settings.Theme == md,
+					Do: func() {
+						if a.settings.Theme == md {
+							return
+						}
+						s := a.settings
+						s.Theme = md
+						if err := a.ApplySettings(s); err != nil {
+							c.AddToast(ui.Toast{Title: m.ErrGeneric(err.Error()), Type: "error"})
+						}
+					},
+				})
 			}
+			return entries
 		})
 		if (IconButton{Icon: icons.Privacy, On: icons.PrivacyOn, Label: m.PrivacyMode(), Size: Small, Active: a.settings.Privacy, Toggle: true}).Clicked(c, "privacy") {
 			if err := a.TogglePrivacy(); err != nil {
@@ -146,14 +152,6 @@ func (a *App) statusActions(c *ui.Context, m locales.Messages, tok theme.Tokens)
 		short := a.page == pageSettings && a.prefNow() == prefShortcuts
 		if (IconButton{Icon: icons.Shortcuts, Label: m.ShortcutsSection(), Size: Small, Active: short}).Clicked(c, "shortcuts") {
 			a.openSettings(prefShortcuts)
-		}
-		on := a.page == pageSettings
-		if (IconButton{Icon: icons.Settings, On: icons.SettingsOn, Label: m.Settings(), Size: Small, Active: on, Toggle: true}).Clicked(c, "settings") {
-			if on {
-				a.closeSettings()
-			} else {
-				a.openSettings(a.prefNow())
-			}
 		}
 	})
 }

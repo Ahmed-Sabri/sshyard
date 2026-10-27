@@ -20,9 +20,9 @@ func (a *App) aiPane(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, tok
 	}
 	head := ui.Column(c.Key("aihead")).Shrink(0).FillWidth()
 	head.Children(func() {
-		row := ui.Row(c.Key("head")).Height(36).Shrink(0).Padding(0, 6, 0, 10).Gap(8).AlignItems(ui.Center).Drag(dragSession{cn.id}).Label(m.PaneActions())
+		row := ui.Row(c.Key("head")).Height(paneHeadHeight).Shrink(0).Padding(0, 6, 0, 10).Gap(8).AlignItems(ui.Center).Drag(dragSession{cn.id}).Label(m.PaneActions())
 		row.Children(func() {
-			softTile(c, kindIcon(layout.AI, t.Focus == n.ID), hostTint(tok, a.liveHost(cn.host)), 22)
+			softTile(c, kindIcon(layout.AI, t.Focus == n.ID), hostTint(tok, a.liveHost(cn.host)), paneHeadIcon)
 			title := ui.Text(c, m.AiPane(a.pv(cn.host.Label()))).FontWeight(600).FontSize(theme.Footnote).SingleLine().Shrink(1)
 			if t.Focus != n.ID && len(t.Panes()) > 1 {
 				title.TextColor(tok.TextMuted)
@@ -31,18 +31,18 @@ func (a *App) aiPane(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, tok
 				tempBadge(c, m, tok)
 			}
 			ui.Spacer(c)
-			if (IconButton{Icon: icons.Stop, Label: m.StopAI(), Size: Small, Danger: true}).Clicked(c, "stop") {
+			if (IconButton{Icon: icons.Stop, Label: m.StopAI(), Size: Tiny, Danger: true}).Clicked(c, "stop") {
 				a.StopAI(cn.id)
 			}
-			if (IconButton{Icon: icons.SplitRight, Label: m.SplitRight(), Size: Small}).Clicked(c, "splitright") {
+			if (IconButton{Icon: icons.SplitRight, Label: m.SplitRight(), Size: Tiny}).Clicked(c, "splitright") {
 				t.Focus = n.ID
 				a.SplitFocused(layout.Right)
 			}
-			if (IconButton{Icon: icons.SplitDown, Label: m.SplitDown(), Size: Small}).Clicked(c, "splitdown") {
+			if (IconButton{Icon: icons.SplitDown, Label: m.SplitDown(), Size: Tiny}).Clicked(c, "splitdown") {
 				t.Focus = n.ID
 				a.SplitFocused(layout.Bottom)
 			}
-			if (IconButton{Icon: icons.Close, Label: m.ClosePane(), Size: Small, Danger: true}).Clicked(c, "close") {
+			if (IconButton{Icon: icons.Close, Label: m.ClosePane(), Size: Tiny, Danger: true}).Clicked(c, "close") {
 				a.closeSoon(cn.id)
 			}
 		})

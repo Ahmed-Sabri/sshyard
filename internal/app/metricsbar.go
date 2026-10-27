@@ -455,7 +455,7 @@ func (a *App) metricItem(c *ui.Context, cn *conn, m locales.Messages, tok theme.
 		}
 		if el.Clicked() {
 			was := *it.open
-			cn.metCPU, cn.metDisk, cn.metNet, cn.metGPU = false, false, false, false
+			cn.metCPU, cn.metDisk, cn.metNet, cn.metGPU, cn.metLoad = false, false, false, false, false
 			*it.open = !was
 		}
 	} else {
@@ -560,21 +560,21 @@ func (a *App) metricsBar(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 			parts: []metricPart{{icons.Sent, "", up, netCol}, {icons.Received, "", down, netCol}},
 			pop:   func() { a.netPop(c, m, fam, rd) }})
 
+		// The load as a share of the CPUs; its three averages in the
+		// popover, and as the figure itself where the CPUs are unknown.
 		load := loadText(m, rd)
-		loads := dash
-		switch {
-		case rd.LoadOK && cn.metCompact:
-			loads = fmtLoad(rd.Load1) // the others in its tip
-		case rd.LoadOK:
-			loads = fmtLoad(rd.Load1) + " " + fmtLoad(rd.Load5) + " " + fmtLoad(rd.Load15)
-		}
 		lp, lok := loadPct(rd)
+		loads := dash
 		loadCol := meterColor(tok, lp, lok)
-		if rd.LoadOK && !lok {
-			loadCol = tok.Text
+		switch {
+		case lok:
+			loads = fmtPct(lp)
+		case rd.LoadOK:
+			loads, loadCol = fmtLoad(rd.Load1), tok.Text
 		}
-		a.metricItem(c, cn, m, tok, fam, metric{key: "mload", label: load, tip: load,
-			parts: []metricPart{{icons.Load, m.BarLoad(), loads, loadCol}}})
+		a.metricItem(c, cn, m, tok, fam, metric{key: "mload", label: load, tip: load, open: &cn.metLoad,
+			parts: []metricPart{{icons.Load, m.BarLoad(), loads, loadCol}},
+			pop:   func() { a.loadPop(c, m, fam, rd) }})
 
 		if len(rd.GPUs) > 0 {
 			gp := dash
@@ -639,6 +639,27 @@ func (a *App) diskPop(c *ui.Context, m locales.Messages, fam string, rd session.
 	for _, v := range rd.Vols {
 		line := m.MetricsVol(v.Mount, fmtKB(v.UsedKB), fmtKB(v.TotalKB), fmtPct(v.Pct))
 		ui.Text(c, line).Font(fam).FontSize(theme.Caption).Label(line)
+	}
+}
+
+// loadPop lists the load averages over 1, 5 and 15 minutes, and how many
+// CPUs share them.
+func (a *App) loadPop(c *ui.Context, m locales.Messages, fam string, rd session.Reading) {
+	ui.Text(c, m.MetricsLoadTitle()).Font(fam).FontSize(theme.Caption).FontWeight(600)
+	if !rd.LoadOK {
+		ui.Text(c, m.MetricsDash()).Font(fam).FontSize(theme.Caption)
+		return
+	}
+	for _, l := range []struct {
+		min int
+		v   float64
+	}{{1, rd.Load1}, {5, rd.Load5}, {15, rd.Load15}} {
+		line := m.MetricsLoadLine(l.min, fmtLoad(l.v))
+		ui.Text(c, line).Font(fam).FontSize(theme.Caption).Label(line)
+	}
+	if n := len(rd.Cores); n > 0 {
+		line := m.MetricsLoadCPUs(n)
+		ui.Text(c, line).Font(fam).FontSize(theme.Caption).TextColor(currentTokens(c).TextMuted).Label(line)
 	}
 }
 
