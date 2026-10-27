@@ -1,8 +1,10 @@
-// Package mcp serves tools to AI agents over the Model Context Protocol's
-// Streamable HTTP transport, on this computer only. It answers JSON (no
-// event stream and no sessions): initialize, ping, tools/list and
-// tools/call. Every request needs the bearer token, and a Host or Origin
-// that is not this computer is refused, against DNS rebinding.
+// Package mcp serves tools to AI agents on this computer only, three ways:
+// the Model Context Protocol's Streamable HTTP transport at Path (JSON
+// only, no event stream and no sessions: initialize, ping, tools/list and
+// tools/call), the same tools as a plain HTTP API under APIPath, and a
+// skill telling an agent how to use that API at SkillPath. Every request
+// needs the bearer token, and a Host or Origin that is not this computer
+// is refused, against DNS rebinding.
 package mcp
 
 import (
@@ -20,8 +22,12 @@ import (
 	"time"
 )
 
-// Path is where the endpoint is served.
-const Path = "/mcp"
+// Where each way in is served.
+const (
+	Path      = "/mcp"
+	APIPath   = "/api/v1"
+	SkillPath = "/skill"
+)
 
 // MaxBody is the largest request accepted.
 const MaxBody = 1 << 20
@@ -48,6 +54,8 @@ type Handler struct {
 	// Token is the bearer token every request carries. Empty refuses all.
 	Token string
 	Tools []Tool
+	// Skill is the skill's SKILL.md; nil serves none.
+	Skill func() string
 }
 
 type message struct {
@@ -78,10 +86,6 @@ const (
 )
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != Path {
-		http.NotFound(w, r)
-		return
-	}
 	if !loopbackHost(r.Host) || !originOK(r.Header.Get("Origin")) {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
@@ -91,18 +95,61 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	if r.Method != http.MethodPost {
-		w.Header().Set("Allow", http.MethodPost)
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
+	switch p := r.URL.Path; {
+	case p == Path:
+		h.serveMCP(w, r)
+	case p == APIPath || p == APIPath+"/":
+		if !allow(w, r, http.MethodGet) {
+			return
+		}
+		tools := make([]map[string]any, 0, len(h.Tools))
+		for _, t := range h.Tools {
+			tools = append(tools, map[string]any{"name": t.Name, "description": t.Description, "input_schema": t.Schema})
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"tools": tools})
+	case strings.HasPrefix(p, APIPath+"/"):
+		h.serveAPI(w, r, strings.TrimPrefix(p, APIPath+"/"))
+	case p == SkillPath && h.Skill != nil:
+		if !allow(w, r, http.MethodGet) {
+			return
+		}
+		w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+		io.WriteString(w, h.Skill())
+	default:
+		http.NotFound(w, r)
+	}
+}
+
+// allow answers 405 unless r uses method.
+func allow(w http.ResponseWriter, r *http.Request, method string) bool {
+	if r.Method == method {
+		return true
+	}
+	w.Header().Set("Allow", method)
+	http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	return false
+}
+
+// readJSON is a POST's JSON body, or false with the error answered.
+func readJSON(w http.ResponseWriter, r *http.Request) ([]byte, bool) {
+	if !allow(w, r, http.MethodPost) {
+		return nil, false
 	}
 	if ct, _, _ := strings.Cut(r.Header.Get("Content-Type"), ";"); !strings.EqualFold(strings.TrimSpace(ct), "application/json") {
 		http.Error(w, "content type must be application/json", http.StatusUnsupportedMediaType)
-		return
+		return nil, false
 	}
 	body, err := io.ReadAll(io.LimitReader(r.Body, MaxBody+1))
 	if err != nil || len(body) > MaxBody {
 		http.Error(w, "request too large", http.StatusRequestEntityTooLarge)
+		return nil, false
+	}
+	return body, true
+}
+
+func (h *Handler) serveMCP(w http.ResponseWriter, r *http.Request) {
+	body, ok := readJSON(w, r)
+	if !ok {
 		return
 	}
 	var msg message
@@ -121,6 +168,38 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		out.Result = struct{}{}
 	}
 	writeJSON(w, http.StatusOK, out)
+}
+
+// serveAPI calls a tool by name with the JSON body as its arguments. The
+// result is {"result": …}, the tool's JSON as is (or its text as a
+// string); a failure is {"error": "…"} with status 400.
+func (h *Handler) serveAPI(w http.ResponseWriter, r *http.Request, name string) {
+	i := slices.IndexFunc(h.Tools, func(t Tool) bool { return t.Name == name })
+	if i < 0 {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "unknown tool: " + name})
+		return
+	}
+	body, ok := readJSON(w, r)
+	if !ok {
+		return
+	}
+	if len(strings.TrimSpace(string(body))) == 0 {
+		body = []byte("{}")
+	}
+	if !json.Valid(body) {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "the body is not JSON"})
+		return
+	}
+	text, err := h.Tools[i].Call(r.Context(), body)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	var res any = text
+	if json.Valid([]byte(text)) {
+		res = json.RawMessage(text)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"result": res})
 }
 
 func (h *Handler) authorized(header string) bool {
@@ -241,8 +320,11 @@ func Listen(port int, h http.Handler) (*Server, error) {
 // Port is the port it listens on.
 func (s *Server) Port() int { return s.ln.Addr().(*net.TCPAddr).Port }
 
-// URL is the endpoint's address.
-func (s *Server) URL() string { return "http://127.0.0.1:" + strconv.Itoa(s.Port()) + Path }
+// Base is the server's address, without a path.
+func (s *Server) Base() string { return "http://127.0.0.1:" + strconv.Itoa(s.Port()) }
+
+// URL is the MCP endpoint's address.
+func (s *Server) URL() string { return s.Base() + Path }
 
 // Close stops listening and drops every connection, which cancels the
 // tools running for them.

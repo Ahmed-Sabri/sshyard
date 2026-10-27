@@ -337,7 +337,8 @@ type App struct {
 	provDeleteID string
 	askOpen      bool
 	askFor       int
-	// mcp is the MCP endpoint for agents on this computer; mcpAsk the
+	// mcp is the agents' server on this computer (open API, MCP and
+	// skill); mcpAsk the
 	// risk notice shown before it is turned on, mcpPort the port as edited
 	mcp     mcpState
 	mcpAsk  *mcpAsk

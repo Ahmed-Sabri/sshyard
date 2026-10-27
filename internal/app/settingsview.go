@@ -51,6 +51,7 @@ const (
 	prefMonitoring  prefPage = "monitoring"
 	prefFiles       prefPage = "files"
 	prefAI          prefPage = "ai"
+	prefAgents      prefPage = "agents"
 	prefCredentials prefPage = "credentials"
 	prefProxies     prefPage = "proxies"
 	prefBackup      prefPage = "backup"
@@ -81,6 +82,7 @@ func prefGroups(m locales.Messages, tok theme.Tokens) []prefGroup {
 			{prefMonitoring, icons.Monitor, tok.TintAt(5), m.MonitoringSection(), m.MonitoringDesc()},
 			{prefFiles, icons.Folder, tok.TintAt(2), m.FilesSection(), m.FilesDesc()},
 			{prefAI, icons.Robot, tok.TintAt(3), m.AiSettings(), m.AiDesc()},
+			{prefAgents, icons.MCP, tok.TintAt(5), m.AgentsPage(), m.AgentsDesc()},
 		}},
 		{m.SettingsGroupManage(), []prefItem{
 			{prefCredentials, icons.Key, tok.TintAt(1), m.Credentials(), m.CredentialsDesc()},
@@ -259,6 +261,8 @@ func (a *App) settingsPage(c *ui.Context, m locales.Messages, tok theme.Tokens) 
 				a.prefFiles(c, m, tok, &s, &changed)
 			case prefAI:
 				a.aiSettings(c, m, tok, &s, &changed)
+			case prefAgents:
+				a.prefAgents(c, m, tok, &s, &changed)
 			case prefCredentials:
 				a.credentialsSection(c, m, tok)
 			case prefProxies:

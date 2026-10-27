@@ -126,6 +126,63 @@ func TestProtocol(t *testing.T) {
 	}
 }
 
+func TestAPIAndSkill(t *testing.T) {
+	h := testHandler()
+	h.Skill = func() string { return "# skill" }
+	do := func(method, path, body string, edit func(*http.Request)) *httptest.ResponseRecorder {
+		t.Helper()
+		r := httptest.NewRequest(method, "http://127.0.0.1:4000"+path, strings.NewReader(body))
+		r.Header.Set("Content-Type", "application/json")
+		r.Header.Set("Authorization", "Bearer secret-token")
+		if edit != nil {
+			edit(r)
+		}
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		return w
+	}
+	out := decode(t, do(http.MethodGet, APIPath, "", nil))
+	if tools := out["tools"].([]any); len(tools) != 2 || tools[1].(map[string]any)["name"] != "fail" {
+		t.Fatalf("list %v", out)
+	}
+	out = decode(t, do(http.MethodPost, APIPath+"/echo", `{"a":1}`, nil))
+	if out["result"].(map[string]any)["a"] != float64(1) {
+		t.Fatalf("echo %v", out)
+	}
+	if w := do(http.MethodPost, APIPath+"/echo", "", nil); w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"result":{}`) {
+		t.Fatalf("no body %d %s", w.Code, w.Body)
+	}
+	if w := do(http.MethodPost, APIPath+"/fail", `{}`, nil); w.Code != http.StatusBadRequest || decode(t, w)["error"] != "it failed" {
+		t.Fatalf("fail %d %s", w.Code, w.Body)
+	}
+	for _, tc := range []struct {
+		method, path, body string
+		edit               func(*http.Request)
+		want               int
+	}{
+		{http.MethodPost, APIPath + "/nope", `{}`, nil, http.StatusNotFound},
+		{http.MethodGet, APIPath + "/echo", "", nil, http.StatusMethodNotAllowed},
+		{http.MethodPost, APIPath + "/echo", `{`, nil, http.StatusBadRequest},
+		{http.MethodPost, APIPath + "/echo", `{}`, func(r *http.Request) { r.Header.Set("Content-Type", "text/plain") }, http.StatusUnsupportedMediaType},
+		{http.MethodPost, APIPath + "/echo", `{}`, func(r *http.Request) { r.Header.Del("Authorization") }, http.StatusUnauthorized},
+		{http.MethodGet, SkillPath, "", func(r *http.Request) { r.Header.Del("Authorization") }, http.StatusUnauthorized},
+		{http.MethodGet, SkillPath, "", func(r *http.Request) { r.Host = "evil.example" }, http.StatusForbidden},
+		{http.MethodPost, SkillPath, "", nil, http.StatusMethodNotAllowed},
+	} {
+		if w := do(tc.method, tc.path, tc.body, tc.edit); w.Code != tc.want {
+			t.Errorf("%s %s: %d, want %d", tc.method, tc.path, w.Code, tc.want)
+		}
+	}
+	w := do(http.MethodGet, SkillPath, "", nil)
+	if w.Code != http.StatusOK || w.Body.String() != "# skill" || !strings.HasPrefix(w.Header().Get("Content-Type"), "text/markdown") {
+		t.Fatalf("skill %d %q", w.Code, w.Body)
+	}
+	h.Skill = nil
+	if w := do(http.MethodGet, SkillPath, "", nil); w.Code != http.StatusNotFound {
+		t.Fatalf("no skill %d", w.Code)
+	}
+}
+
 func TestListenLoopbackOnly(t *testing.T) {
 	s, err := Listen(0, testHandler())
 	if err != nil {

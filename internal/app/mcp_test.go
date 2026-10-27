@@ -2,6 +2,7 @@ package app
 
 import (
 	"net"
+	"slices"
 	"testing"
 	"time"
 
@@ -10,17 +11,20 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
-// clickRowControl clicks along the settings row labeled label, right of
-// the label, until done holds: the row's control carries the same
-// accessible label, which Find gives to the row's text first.
+// clickRowControl clicks over the settings row labeled label, right of
+// the label and down past its note, until done holds: the row's control
+// carries the same accessible label, which Find gives to the row's text
+// first.
 func clickRowControl(t *testing.T, tt *ui.Tester, label string, done func() bool) {
 	t.Helper()
 	r := mustFind(t, tt, label)
-	for x := float32(1090); x > r.X+r.W; x -= 6 {
-		tt.ClickAt(x, r.Y+r.H/2)
-		tt.Frame()
-		if done() {
-			return
+	for y := r.Y + r.H/2; y < r.Y+48; y += 8 {
+		for x := float32(1090); x > r.X+r.W; x -= 6 {
+			tt.ClickAt(x, y)
+			tt.Frame()
+			if done() {
+				return
+			}
 		}
 	}
 	t.Fatalf("no control on the row %q", label)
@@ -48,16 +52,17 @@ func TestMCPAsksBeforeTurningOn(t *testing.T) {
 	if err := a.ApplySettings(s); err != nil {
 		t.Fatal(err)
 	}
-	a.openSettings(prefAI)
+	a.openSettings(prefAgents)
 	tt.Frame()
-	if !tt.HasText("Allow AI agents to connect") || tt.HasText("Copy Client Config") || a.mcp.srv != nil {
+	if !tt.HasText("Allow AI agents to connect") || tt.HasText("Copy Client Config") || a.mcp.srv != nil ||
+		!slices.Contains(tt.Texts(), "Turn on agent access above to use this.") {
 		t.Fatalf("off: srv %v texts %q", a.mcp.srv, tt.Texts())
 	}
 
 	// Cancel turns nothing on.
 	a.mcpAsk = &mcpAsk{open: true}
 	tt.Frame()
-	if !tt.HasText("Turn on the MCP server?") || !tt.HasText("Turn On (3)") {
+	if !tt.HasText("Turn on AI agent access?") || !tt.HasText("Turn On (3)") {
 		t.Fatalf("notice: %q", tt.Texts())
 	}
 	mustClick(t, tt, "Cancel")
@@ -87,8 +92,8 @@ func TestMCPAsksBeforeTurningOn(t *testing.T) {
 	if !a.Settings().MCPEnabled || a.mcp.srv == nil || a.mcp.err != nil {
 		t.Fatalf("not on: %v %v", a.mcp.srv, a.mcp.err)
 	}
-	if !tt.HasText("Listening on "+a.mcp.srv.URL()) || !tt.HasText("Copy Client Config") ||
-		!tt.HasText("MCP is on: agents with the token can run commands on your hosts without asking.") ||
+	if !tt.HasText(a.mcp.srv.URL()) || !tt.HasText(a.mcp.srv.Base()+"/api/v1") || !tt.HasText("Copy Client Config") ||
+		!tt.HasText("Agent access is on: agents with the token can run commands on your hosts without asking.") ||
 		!tt.HasText("No agent has an SSH connection open.") {
 		t.Fatalf("on: %q", tt.Texts())
 	}

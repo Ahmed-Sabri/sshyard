@@ -23,13 +23,16 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// mcpState is the MCP endpoint and the SSH connections agents opened
-// through it. srv, err and token belong to the UI thread; the sessions,
-// which the tools change on the server's goroutines, are under mu.
+// mcpState is the agents' server (open API, MCP and skill) and the SSH
+// connections agents opened through it. srv, err, token and skill belong
+// to the UI thread; the sessions, which the tools change on the server's
+// goroutines, are under mu.
 type mcpState struct {
 	srv   *mcp.Server
 	err   error
 	token string
+	// skill is the SKILL.md served and installed, for this token and port.
+	skill string
 
 	mu       sync.Mutex
 	sessions []*mcpSession
@@ -76,10 +79,16 @@ func (a *App) syncMCP() {
 	}
 	tok, err := a.mcpToken()
 	if err == nil {
-		a.mcp.token = tok
-		a.mcp.srv, err = mcp.Listen(a.settings.MCPPort, a.mcpHandler(tok))
+		h := a.mcpHandler(tok)
+		skill := skillText("http://127.0.0.1:"+strconv.Itoa(a.settings.MCPPort), tok, h.Tools)
+		h.Skill = func() string { return skill }
+		a.mcp.token, a.mcp.skill = tok, skill
+		a.mcp.srv, err = mcp.Listen(a.settings.MCPPort, h)
 	}
 	a.mcp.err = err
+	if err == nil {
+		a.refreshSkills()
+	}
 }
 
 // stopMCP closes the endpoint, which cancels the commands running, and
@@ -89,7 +98,7 @@ func (a *App) stopMCP() {
 		a.mcp.srv.Close()
 		a.mcp.srv = nil
 	}
-	a.mcp.err = nil
+	a.mcp.err, a.mcp.skill = nil, ""
 	a.mcp.mu.Lock()
 	ss := a.mcp.sessions
 	a.mcp.sessions = nil
@@ -228,7 +237,7 @@ func (a *App) mcpHandler(token string) *mcp.Handler {
 			},
 			{
 				Name:        "run_command",
-				Description: "Run a shell command (sh -c) on a connected host and return its exit code and combined output (at most 1 MiB). The command is stopped when it times out or the request is cancelled.",
+				Description: "Run a shell command (sh -c) on a connected host and return its exit_code and combined output (at most 1 MiB). The command is stopped when it times out or the request is cancelled.",
 				Schema: schema(`"session_id":{"type":"string"},`+
 					`"command":{"type":"string","description":"The shell command"},`+
 					`"cwd":{"type":"string","description":"Remote working directory; empty keeps the login directory"},`+
@@ -470,7 +479,7 @@ func (a *App) mcpRun(ctx context.Context, raw json.RawMessage, aud *audit.Log) (
 	case err != nil:
 		return "", errors.New(joinOut(err.Error(), text))
 	}
-	return joinOut("exit_code: "+strconv.Itoa(code), text), nil
+	return toJSON(map[string]any{"exit_code": code, "output": text}), nil
 }
 
 func (a *App) mcpSessions() string {
@@ -496,5 +505,5 @@ func (a *App) mcpDisconnect(_ context.Context, raw json.RawMessage) (string, err
 	if !a.dropMCPSession(args.SessionID) {
 		return "", fmt.Errorf("no session %q", args.SessionID)
 	}
-	return "disconnected " + args.SessionID, nil
+	return toJSON(map[string]any{"disconnected": args.SessionID}), nil
 }

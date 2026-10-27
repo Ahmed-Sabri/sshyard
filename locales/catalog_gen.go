@@ -5100,11 +5100,11 @@ func (msgs Messages) AiPlaceholder() string {
 	return Catalog.Format(msgs.locale, "aiPlaceholder", nil)
 }
 
-// AiSettings says "AI"
+// AiSettings says "AI Assistant"
 // in the language the app shows.
 func AiSettings() string { return In(i18n.Locale()).AiSettings() }
 
-// AiSettings says "AI"
+// AiSettings says "AI Assistant"
 // in the language of msgs.
 func (msgs Messages) AiSettings() string {
 	return Catalog.Format(msgs.locale, "aiSettings", nil)
@@ -5612,11 +5612,11 @@ func (msgs Messages) AiNoKey() string {
 	return Catalog.Format(msgs.locale, "aiNoKey", nil)
 }
 
-// AiNoModel says "Choose a provider in Settings → AI before asking."
+// AiNoModel says "Choose a provider in Settings → AI Assistant before asking."
 // in the language the app shows.
 func AiNoModel() string { return In(i18n.Locale()).AiNoModel() }
 
-// AiNoModel says "Choose a provider in Settings → AI before asking."
+// AiNoModel says "Choose a provider in Settings → AI Assistant before asking."
 // in the language of msgs.
 func (msgs Messages) AiNoModel() string {
 	return Catalog.Format(msgs.locale, "aiNoModel", nil)
@@ -8362,11 +8362,11 @@ func (msgs Messages) ClosePreview() string {
 	return Catalog.Format(msgs.locale, "closePreview", nil)
 }
 
-// McpSection says "MCP server"
+// McpSection says "MCP"
 // in the language the app shows.
 func McpSection() string { return In(i18n.Locale()).McpSection() }
 
-// McpSection says "MCP server"
+// McpSection says "MCP"
 // in the language of msgs.
 func (msgs Messages) McpSection() string {
 	return Catalog.Format(msgs.locale, "mcpSection", nil)
@@ -8382,24 +8382,14 @@ func (msgs Messages) McpEnable() string {
 	return Catalog.Format(msgs.locale, "mcpEnable", nil)
 }
 
-// McpEnableNote says "Serves MCP on this computer: agents can list groups and hosts, open SSH connections and run commands."
+// McpEnableNote says "Serves the open API, MCP and the skill on this computer: agents can list groups and hosts, open SSH connections and r…"
 // in the language the app shows.
 func McpEnableNote() string { return In(i18n.Locale()).McpEnableNote() }
 
-// McpEnableNote says "Serves MCP on this computer: agents can list groups and hosts, open SSH connections and run commands."
+// McpEnableNote says "Serves the open API, MCP and the skill on this computer: agents can list groups and hosts, open SSH connections and r…"
 // in the language of msgs.
 func (msgs Messages) McpEnableNote() string {
 	return Catalog.Format(msgs.locale, "mcpEnableNote", nil)
-}
-
-// McpListening says "Listening on {url}"
-// in the language the app shows.
-func McpListening(url string) string { return In(i18n.Locale()).McpListening(url) }
-
-// McpListening says "Listening on {url}"
-// in the language of msgs.
-func (msgs Messages) McpListening(url string) string {
-	return Catalog.Format(msgs.locale, "mcpListening", map[string]any{"url": url})
 }
 
 // McpFailed says "Couldn’t start: {detail}"
@@ -8422,21 +8412,21 @@ func (msgs Messages) McpToken() string {
 	return Catalog.Format(msgs.locale, "mcpToken", nil)
 }
 
-// McpTokenNote says "Saved only in the encrypted local credential store. Agents send it as a Bearer token."
+// McpTokenNote says "Kept in the encrypted local credential store, and in the skills you inject. Agents send it as a Bearer token."
 // in the language the app shows.
 func McpTokenNote() string { return In(i18n.Locale()).McpTokenNote() }
 
-// McpTokenNote says "Saved only in the encrypted local credential store. Agents send it as a Bearer token."
+// McpTokenNote says "Kept in the encrypted local credential store, and in the skills you inject. Agents send it as a Bearer token."
 // in the language of msgs.
 func (msgs Messages) McpTokenNote() string {
 	return Catalog.Format(msgs.locale, "mcpTokenNote", nil)
 }
 
-// McpCopyURL says "Copy Endpoint URL"
+// McpCopyURL says "Copy MCP Endpoint"
 // in the language the app shows.
 func McpCopyURL() string { return In(i18n.Locale()).McpCopyURL() }
 
-// McpCopyURL says "Copy Endpoint URL"
+// McpCopyURL says "Copy MCP Endpoint"
 // in the language of msgs.
 func (msgs Messages) McpCopyURL() string {
 	return Catalog.Format(msgs.locale, "mcpCopyURL", nil)
@@ -8462,11 +8452,11 @@ func (msgs Messages) McpNewToken() string {
 	return Catalog.Format(msgs.locale, "mcpNewToken", nil)
 }
 
-// McpNewTokenDone says "New token generated. Agents using the old one were disconnected."
+// McpNewTokenDone says "New token generated. Agents using the old one were disconnected and injected skills were updated."
 // in the language the app shows.
 func McpNewTokenDone() string { return In(i18n.Locale()).McpNewTokenDone() }
 
-// McpNewTokenDone says "New token generated. Agents using the old one were disconnected."
+// McpNewTokenDone says "New token generated. Agents using the old one were disconnected and injected skills were updated."
 // in the language of msgs.
 func (msgs Messages) McpNewTokenDone() string {
 	return Catalog.Format(msgs.locale, "mcpNewTokenDone", nil)
@@ -8512,21 +8502,21 @@ func (msgs Messages) McpDisconnect() string {
 	return Catalog.Format(msgs.locale, "mcpDisconnect", nil)
 }
 
-// McpOnBanner says "MCP is on: agents with the token can run commands on your hosts without asking."
+// McpOnBanner says "Agent access is on: agents with the token can run commands on your hosts without asking."
 // in the language the app shows.
 func McpOnBanner() string { return In(i18n.Locale()).McpOnBanner() }
 
-// McpOnBanner says "MCP is on: agents with the token can run commands on your hosts without asking."
+// McpOnBanner says "Agent access is on: agents with the token can run commands on your hosts without asking."
 // in the language of msgs.
 func (msgs Messages) McpOnBanner() string {
 	return Catalog.Format(msgs.locale, "mcpOnBanner", nil)
 }
 
-// McpRiskTitle says "Turn on the MCP server?"
+// McpRiskTitle says "Turn on AI agent access?"
 // in the language the app shows.
 func McpRiskTitle() string { return In(i18n.Locale()).McpRiskTitle() }
 
-// McpRiskTitle says "Turn on the MCP server?"
+// McpRiskTitle says "Turn on AI agent access?"
 // in the language of msgs.
 func (msgs Messages) McpRiskTitle() string {
 	return Catalog.Format(msgs.locale, "mcpRiskTitle", nil)
@@ -8552,11 +8542,11 @@ func (msgs Messages) McpRiskCommands() string {
 	return Catalog.Format(msgs.locale, "mcpRiskCommands", nil)
 }
 
-// McpRiskNoAsk says "Commands from MCP do not go through the AI permission modes. They run without asking you and are only recorded in the…"
+// McpRiskNoAsk says "Commands from the open API, MCP or the skill do not go through the AI permission modes. They run without asking you a…"
 // in the language the app shows.
 func McpRiskNoAsk() string { return In(i18n.Locale()).McpRiskNoAsk() }
 
-// McpRiskNoAsk says "Commands from MCP do not go through the AI permission modes. They run without asking you and are only recorded in the…"
+// McpRiskNoAsk says "Commands from the open API, MCP or the skill do not go through the AI permission modes. They run without asking you a…"
 // in the language of msgs.
 func (msgs Messages) McpRiskNoAsk() string {
 	return Catalog.Format(msgs.locale, "mcpRiskNoAsk", nil)
@@ -8610,6 +8600,246 @@ func McpConfirm() string { return In(i18n.Locale()).McpConfirm() }
 // in the language of msgs.
 func (msgs Messages) McpConfirm() string {
 	return Catalog.Format(msgs.locale, "mcpConfirm", nil)
+}
+
+// AgentsPage says "MCP / Skill"
+// in the language the app shows.
+func AgentsPage() string { return In(i18n.Locale()).AgentsPage() }
+
+// AgentsPage says "MCP / Skill"
+// in the language of msgs.
+func (msgs Messages) AgentsPage() string {
+	return Catalog.Format(msgs.locale, "agentsPage", nil)
+}
+
+// AgentsDesc says "Let AI agents on this computer use your hosts through an open API, MCP or a skill."
+// in the language the app shows.
+func AgentsDesc() string { return In(i18n.Locale()).AgentsDesc() }
+
+// AgentsDesc says "Let AI agents on this computer use your hosts through an open API, MCP or a skill."
+// in the language of msgs.
+func (msgs Messages) AgentsDesc() string {
+	return Catalog.Format(msgs.locale, "agentsDesc", nil)
+}
+
+// AgentsOffNote says "Turn on agent access above to use this."
+// in the language the app shows.
+func AgentsOffNote() string { return In(i18n.Locale()).AgentsOffNote() }
+
+// AgentsOffNote says "Turn on agent access above to use this."
+// in the language of msgs.
+func (msgs Messages) AgentsOffNote() string {
+	return Catalog.Format(msgs.locale, "agentsOffNote", nil)
+}
+
+// ApiSection says "Open API"
+// in the language the app shows.
+func ApiSection() string { return In(i18n.Locale()).ApiSection() }
+
+// ApiSection says "Open API"
+// in the language of msgs.
+func (msgs Messages) ApiSection() string {
+	return Catalog.Format(msgs.locale, "apiSection", nil)
+}
+
+// ApiAddress says "API address"
+// in the language the app shows.
+func ApiAddress() string { return In(i18n.Locale()).ApiAddress() }
+
+// ApiAddress says "API address"
+// in the language of msgs.
+func (msgs Messages) ApiAddress() string {
+	return Catalog.Format(msgs.locale, "apiAddress", nil)
+}
+
+// ApiCopyURL says "Copy API Address"
+// in the language the app shows.
+func ApiCopyURL() string { return In(i18n.Locale()).ApiCopyURL() }
+
+// ApiCopyURL says "Copy API Address"
+// in the language of msgs.
+func (msgs Messages) ApiCopyURL() string {
+	return Catalog.Format(msgs.locale, "apiCopyURL", nil)
+}
+
+// ApiCopyCurl says "Copy curl Example"
+// in the language the app shows.
+func ApiCopyCurl() string { return In(i18n.Locale()).ApiCopyCurl() }
+
+// ApiCopyCurl says "Copy curl Example"
+// in the language of msgs.
+func (msgs Messages) ApiCopyCurl() string {
+	return Catalog.Format(msgs.locale, "apiCopyCurl", nil)
+}
+
+// McpAddress says "MCP endpoint"
+// in the language the app shows.
+func McpAddress() string { return In(i18n.Locale()).McpAddress() }
+
+// McpAddress says "MCP endpoint"
+// in the language of msgs.
+func (msgs Messages) McpAddress() string {
+	return Catalog.Format(msgs.locale, "mcpAddress", nil)
+}
+
+// McpRiskSkill says "An injected skill keeps the token in a file in the agent’s folder, which programs running as you can read. Remove i…"
+// in the language the app shows.
+func McpRiskSkill() string { return In(i18n.Locale()).McpRiskSkill() }
+
+// McpRiskSkill says "An injected skill keeps the token in a file in the agent’s folder, which programs running as you can read. Remove i…"
+// in the language of msgs.
+func (msgs Messages) McpRiskSkill() string {
+	return Catalog.Format(msgs.locale, "mcpRiskSkill", nil)
+}
+
+// SkillSection says "Skill"
+// in the language the app shows.
+func SkillSection() string { return In(i18n.Locale()).SkillSection() }
+
+// SkillSection says "Skill"
+// in the language of msgs.
+func (msgs Messages) SkillSection() string {
+	return Catalog.Format(msgs.locale, "skillSection", nil)
+}
+
+// SkillAbout says "SSHYard skill"
+// in the language the app shows.
+func SkillAbout() string { return In(i18n.Locale()).SkillAbout() }
+
+// SkillAbout says "SSHYard skill"
+// in the language of msgs.
+func (msgs Messages) SkillAbout() string {
+	return Catalog.Format(msgs.locale, "skillAbout", nil)
+}
+
+// SkillAboutNote says "Teaches an agent to use your hosts through the open API, token included. Copy the prompt to have an agent install it …"
+// in the language the app shows.
+func SkillAboutNote() string { return In(i18n.Locale()).SkillAboutNote() }
+
+// SkillAboutNote says "Teaches an agent to use your hosts through the open API, token included. Copy the prompt to have an agent install it …"
+// in the language of msgs.
+func (msgs Messages) SkillAboutNote() string {
+	return Catalog.Format(msgs.locale, "skillAboutNote", nil)
+}
+
+// SkillCopyPrompt says "Copy Install Prompt"
+// in the language the app shows.
+func SkillCopyPrompt() string { return In(i18n.Locale()).SkillCopyPrompt() }
+
+// SkillCopyPrompt says "Copy Install Prompt"
+// in the language of msgs.
+func (msgs Messages) SkillCopyPrompt() string {
+	return Catalog.Format(msgs.locale, "skillCopyPrompt", nil)
+}
+
+// SkillNoAgent says "Not found"
+// in the language the app shows.
+func SkillNoAgent() string { return In(i18n.Locale()).SkillNoAgent() }
+
+// SkillNoAgent says "Not found"
+// in the language of msgs.
+func (msgs Messages) SkillNoAgent() string {
+	return Catalog.Format(msgs.locale, "skillNoAgent", nil)
+}
+
+// SkillMissing says "Not installed"
+// in the language the app shows.
+func SkillMissing() string { return In(i18n.Locale()).SkillMissing() }
+
+// SkillMissing says "Not installed"
+// in the language of msgs.
+func (msgs Messages) SkillMissing() string {
+	return Catalog.Format(msgs.locale, "skillMissing", nil)
+}
+
+// SkillCurrent says "Installed"
+// in the language the app shows.
+func SkillCurrent() string { return In(i18n.Locale()).SkillCurrent() }
+
+// SkillCurrent says "Installed"
+// in the language of msgs.
+func (msgs Messages) SkillCurrent() string {
+	return Catalog.Format(msgs.locale, "skillCurrent", nil)
+}
+
+// SkillStale says "Out of date"
+// in the language the app shows.
+func SkillStale() string { return In(i18n.Locale()).SkillStale() }
+
+// SkillStale says "Out of date"
+// in the language of msgs.
+func (msgs Messages) SkillStale() string {
+	return Catalog.Format(msgs.locale, "skillStale", nil)
+}
+
+// SkillInstallTo says "Inject into {name}"
+// in the language the app shows.
+func SkillInstallTo(name string) string { return In(i18n.Locale()).SkillInstallTo(name) }
+
+// SkillInstallTo says "Inject into {name}"
+// in the language of msgs.
+func (msgs Messages) SkillInstallTo(name string) string {
+	return Catalog.Format(msgs.locale, "skillInstallTo", map[string]any{"name": name})
+}
+
+// SkillUpdateIn says "Update in {name}"
+// in the language the app shows.
+func SkillUpdateIn(name string) string { return In(i18n.Locale()).SkillUpdateIn(name) }
+
+// SkillUpdateIn says "Update in {name}"
+// in the language of msgs.
+func (msgs Messages) SkillUpdateIn(name string) string {
+	return Catalog.Format(msgs.locale, "skillUpdateIn", map[string]any{"name": name})
+}
+
+// SkillRemoveFrom says "Remove from {name}"
+// in the language the app shows.
+func SkillRemoveFrom(name string) string { return In(i18n.Locale()).SkillRemoveFrom(name) }
+
+// SkillRemoveFrom says "Remove from {name}"
+// in the language of msgs.
+func (msgs Messages) SkillRemoveFrom(name string) string {
+	return Catalog.Format(msgs.locale, "skillRemoveFrom", map[string]any{"name": name})
+}
+
+// SkillInstallAll says "Inject into All Found Agents"
+// in the language the app shows.
+func SkillInstallAll() string { return In(i18n.Locale()).SkillInstallAll() }
+
+// SkillInstallAll says "Inject into All Found Agents"
+// in the language of msgs.
+func (msgs Messages) SkillInstallAll() string {
+	return Catalog.Format(msgs.locale, "skillInstallAll", nil)
+}
+
+// SkillInstalled says "Skill injected into {name}."
+// in the language the app shows.
+func SkillInstalled(name string) string { return In(i18n.Locale()).SkillInstalled(name) }
+
+// SkillInstalled says "Skill injected into {name}."
+// in the language of msgs.
+func (msgs Messages) SkillInstalled(name string) string {
+	return Catalog.Format(msgs.locale, "skillInstalled", map[string]any{"name": name})
+}
+
+// SkillInstalledAll says "Skill injected into {count} agents."
+// in the language the app shows.
+func SkillInstalledAll(count string) string { return In(i18n.Locale()).SkillInstalledAll(count) }
+
+// SkillInstalledAll says "Skill injected into {count} agents."
+// in the language of msgs.
+func (msgs Messages) SkillInstalledAll(count string) string {
+	return Catalog.Format(msgs.locale, "skillInstalledAll", map[string]any{"count": count})
+}
+
+// SkillRemoved says "Skill removed from {name}."
+// in the language the app shows.
+func SkillRemoved(name string) string { return In(i18n.Locale()).SkillRemoved(name) }
+
+// SkillRemoved says "Skill removed from {name}."
+// in the language of msgs.
+func (msgs Messages) SkillRemoved(name string) string {
+	return Catalog.Format(msgs.locale, "skillRemoved", map[string]any{"name": name})
 }
 
 // SecretsLockedTitle says "Credentials are locked"

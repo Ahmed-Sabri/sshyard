@@ -150,6 +150,8 @@ var (
 	Send        = load("send-plane-2-line")
 	Model       = load("brain-line")
 	MCP         = load("plug-line")
+	API         = load("code-s-slash-line")
+	Skill       = load("tools-line")
 	// The AI permission modes: asks first, reviewed, full access.
 	ModeAsk    = InstallKey
 	ModeReview = load("eye-line")

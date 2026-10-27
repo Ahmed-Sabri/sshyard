@@ -1,25 +1,44 @@
 package app
 
 import (
+	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Licoy/sshyard/internal/icons"
+	"github.com/Licoy/sshyard/internal/mcp"
 	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/locales"
 	"github.com/egoist/mygo/ui"
 )
 
-// mcpSettings is the AI page's MCP section: the switch, which asks
-// first (mcpSheet), and while on, where it listens, the token and the
-// connections agents hold.
-func (a *App) mcpSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, s *settings.Settings, changed *bool) {
+// prefAgents is the MCP / Skill page: the switch for agent access,
+// which asks first (mcpSheet), and while on, the open API, the MCP
+// endpoint, the skill and the connections agents hold.
+func (a *App) prefAgents(c *ui.Context, m locales.Messages, tok theme.Tokens, s *settings.Settings, changed *bool) {
 	on := s.MCPEnabled
+	srv := a.mcp.srv
 	if on {
 		aiBanner(c, tok.Warning, icons.Warning, m.McpOnBanner())
 	}
-	settingsSection(c, tok, icons.MCP, tok.TintAt(5), m.McpSection(), func(g *settingsGroup) {
+	offNote := func(g *settingsGroup) {
+		ui.Row(c).MinHeight(44).Padding(8, 14).Children(func() {
+			ui.Text(c, m.AgentsOffNote()).FontSize(theme.Body).TextColor(tok.TextMuted)
+		})
+	}
+	copyRow := func(g *settingsGroup, label, value, key, copyLabel string) {
+		g.row(label, value, func() {
+			if iconButton(c, key, icons.Copy, copyLabel) {
+				c.WriteClipboard(value)
+				c.AddToast(ui.Toast{Title: m.Copied(), Type: "success"})
+			}
+		})
+	}
+
+	settingsSection(c, tok, icons.API, tok.TintAt(0), m.ApiSection(), func(g *settingsGroup) {
 		g.row(m.McpEnable(), m.McpEnableNote(), func() {
 			sw := on
 			if ui.Switch(c.Key("mcpon"), &sw).Label(m.McpEnable()).Changed() {
@@ -40,40 +59,53 @@ func (a *App) mcpSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, s
 				*changed = true
 			}
 		})
-		switch {
-		case a.mcp.err != nil:
+		if a.mcp.err != nil {
 			g.row(m.McpFailed(a.mcp.err.Error()), "", func() {})
-		case a.mcp.srv != nil:
-			url := a.mcp.srv.URL()
-			g.row(m.McpListening(url), "", func() {
-				if iconButton(c, "mcp:url", icons.Copy, m.McpCopyURL()) {
-					c.WriteClipboard(url)
-					c.AddToast(ui.Toast{Title: m.Copied(), Type: "success"})
-				}
-			})
-			g.row(m.McpToken(), m.McpTokenNote(), func() {
-				ui.Text(c, "••••••••••••").FontSize(theme.Body).TextColor(tok.TextMuted)
-				if iconButton(c, "mcp:token", icons.Copy, m.McpCopyToken()) {
-					c.WriteClipboard(a.mcp.token)
-					c.AddToast(ui.Toast{Title: m.Copied(), Type: "success"})
-				}
-				if (IconButton{Icon: icons.Refresh, Label: m.McpNewToken(), Danger: true}).Clicked(c, "mcp:newtoken") {
-					if err := a.newMCPToken(); err != nil {
-						c.AddToast(ui.Toast{Title: m.ErrGeneric(err.Error()), Type: "error"})
-					} else {
-						c.AddToast(ui.Toast{Title: m.McpNewTokenDone(), Type: "success"})
-					}
-				}
-			})
-			g.divider()
-			ui.Row(c).Padding(8, 14).Children(func() {
-				if pill(c, m.McpCopyConfig(), false, false, false) {
-					c.WriteClipboard(a.mcpConfig())
-					c.AddToast(ui.Toast{Title: m.Copied(), Type: "success"})
-				}
-			})
 		}
+		if srv == nil {
+			return
+		}
+		copyRow(g, m.ApiAddress(), srv.Base()+mcp.APIPath, "api:url", m.ApiCopyURL())
+		g.row(m.McpToken(), m.McpTokenNote(), func() {
+			ui.Text(c, "••••••••••••").FontSize(theme.Body).TextColor(tok.TextMuted)
+			if iconButton(c, "mcp:token", icons.Copy, m.McpCopyToken()) {
+				c.WriteClipboard(a.mcp.token)
+				c.AddToast(ui.Toast{Title: m.Copied(), Type: "success"})
+			}
+			if (IconButton{Icon: icons.Refresh, Label: m.McpNewToken(), Danger: true}).Clicked(c, "mcp:newtoken") {
+				if err := a.newMCPToken(); err != nil {
+					c.AddToast(ui.Toast{Title: m.ErrGeneric(err.Error()), Type: "error"})
+				} else {
+					c.AddToast(ui.Toast{Title: m.McpNewTokenDone(), Type: "success"})
+				}
+			}
+		})
+		g.divider()
+		ui.Row(c).Padding(8, 14).Children(func() {
+			if pill(c, m.ApiCopyCurl(), false, false, false) {
+				c.WriteClipboard(a.apiExample())
+				c.AddToast(ui.Toast{Title: m.Copied(), Type: "success"})
+			}
+		})
 	})
+
+	settingsSection(c, tok, icons.MCP, tok.TintAt(5), m.McpSection(), func(g *settingsGroup) {
+		if srv == nil {
+			offNote(g)
+			return
+		}
+		copyRow(g, m.McpAddress(), srv.URL(), "mcp:url", m.McpCopyURL())
+		g.divider()
+		ui.Row(c).Padding(8, 14).Children(func() {
+			if pill(c, m.McpCopyConfig(), false, false, false) {
+				c.WriteClipboard(a.mcpConfig())
+				c.AddToast(ui.Toast{Title: m.Copied(), Type: "success"})
+			}
+		})
+	})
+
+	a.skillSettings(c, m, tok, srv != nil)
+
 	if !on {
 		return
 	}
@@ -93,6 +125,76 @@ func (a *App) mcpSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, s
 			})
 		}
 	})
+}
+
+// skillSettings is the skill's section: a prompt to install it from the
+// server, and for each agent found, where it stands with a button to
+// inject, update or remove it. Injecting needs the server on; removing
+// does not.
+func (a *App) skillSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, serving bool) {
+	settingsSection(c, tok, icons.Skill, tok.TintAt(3), m.SkillSection(), func(g *settingsGroup) {
+		g.row(m.SkillAbout(), m.SkillAboutNote(), func() {
+			if (IconButton{Icon: icons.Copy, Label: m.SkillCopyPrompt(), Disabled: !serving}).Clicked(c, "skill:prompt") {
+				c.WriteClipboard(a.skillPrompt())
+				c.AddToast(ui.Toast{Title: m.Copied(), Type: "success"})
+			}
+		})
+		found := 0
+		for _, t := range a.skillTargets() {
+			st := a.skillStateOf(t)
+			if st != skillNoAgent {
+				found++
+			}
+			note := map[skillState]string{skillNoAgent: m.SkillNoAgent(), skillMissing: m.SkillMissing(),
+				skillCurrent: m.SkillCurrent(), skillStale: m.SkillStale()}[st]
+			g.row(t.name, a.homePath(filepath.Dir(t.file()))+" · "+note, func() {
+				in := IconButton{Icon: icons.Download, Label: m.SkillInstallTo(t.name), Size: Small,
+					Disabled: !serving || st == skillNoAgent || st == skillCurrent}
+				if st == skillStale {
+					in.Icon, in.Label = icons.Refresh, m.SkillUpdateIn(t.name)
+				}
+				if in.Clicked(c, "skill:in:"+t.id) {
+					if err := a.installSkill(t); err != nil {
+						c.AddToast(ui.Toast{Title: m.ErrGeneric(err.Error()), Type: "error"})
+					} else {
+						c.AddToast(ui.Toast{Title: m.SkillInstalled(t.name), Type: "success"})
+					}
+				}
+				rm := IconButton{Icon: icons.Delete, Label: m.SkillRemoveFrom(t.name), Size: Small, Danger: true,
+					Disabled: st != skillCurrent && st != skillStale}
+				if rm.Clicked(c, "skill:rm:"+t.id) {
+					if err := a.removeSkill(t); err != nil {
+						c.AddToast(ui.Toast{Title: m.ErrGeneric(err.Error()), Type: "error"})
+					} else {
+						c.AddToast(ui.Toast{Title: m.SkillRemoved(t.name), Type: "success"})
+					}
+				}
+			})
+		}
+		g.divider()
+		ui.Row(c).Padding(8, 14).Children(func() {
+			if pill(c, m.SkillInstallAll(), true, false, !serving || found == 0) {
+				n, err := a.installSkills()
+				if err != nil {
+					c.AddToast(ui.Toast{Title: m.ErrGeneric(err.Error()), Type: "error"})
+				} else {
+					c.AddToast(ui.Toast{Title: m.SkillInstalledAll(strconv.Itoa(n)), Type: "success"})
+				}
+			}
+		})
+	})
+}
+
+// homePath is p with the home folder written ~.
+func (a *App) homePath(p string) string {
+	home := a.p.HomeDir
+	if home == "" {
+		home, _ = os.UserHomeDir()
+	}
+	if rel, err := filepath.Rel(home, p); err == nil && home != "" && !strings.HasPrefix(rel, "..") {
+		return filepath.Join("~", rel)
+	}
+	return p
 }
 
 // mcpSheet lays out the risks of the endpoint before it is turned on.
@@ -122,7 +224,7 @@ func (a *App) mcpSheet(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 			ui.Text(c, m.McpRiskIntro()).FontSize(theme.Body).FillWidth()
 			ui.Column(c).Gap(10).FillWidth().Padding(12, 14).Radius(theme.RadiusControl).
 				Background(tok.Danger.Alpha(0.12)).Border(1, tok.Danger.Alpha(0.22)).Children(func() {
-				for _, risk := range []string{m.McpRiskCommands(), m.McpRiskNoAsk(), m.McpRiskInjection(), m.McpRiskSecrets(), m.McpRiskLocal()} {
+				for _, risk := range []string{m.McpRiskCommands(), m.McpRiskNoAsk(), m.McpRiskInjection(), m.McpRiskSkill(), m.McpRiskSecrets(), m.McpRiskLocal()} {
 					ui.Row(c).Gap(theme.Space(2)).FillWidth().Children(func() {
 						ui.Icon(c, icons.Warning.SVG).Size(14, 14).Shrink(0).TextColor(tok.Danger).Margin(2, 0, 0, 0)
 						ui.Text(c, risk).FontSize(theme.Footnote).Grow(1).Shrink(1)

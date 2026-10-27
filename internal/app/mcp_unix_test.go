@@ -119,7 +119,7 @@ func TestMCPConnectAndRun(t *testing.T) {
 		t.Fatalf("connect %v %s", failed, text)
 	}
 	tt.SetSize(1100, 2600)
-	a.openSettings(prefAI)
+	a.openSettings(prefAgents)
 	tt.Frame()
 	if !tt.HasText("Agent connections") || tt.HasText("No agent has an SSH connection open.") || !tt.HasText("Disconnect Agent Connection") {
 		t.Fatalf("session row: %q", tt.Texts())
@@ -127,7 +127,11 @@ func TestMCPConnectAndRun(t *testing.T) {
 
 	text, failed = c.call("run_command", map[string]any{"session_id": sess.SessionID, "command": "echo hello; echo oops >&2; exit 3"})
 	seen.WriteString(text)
-	if failed || !strings.HasPrefix(text, "exit_code: 3\n") || !strings.Contains(text, "hello") || !strings.Contains(text, "oops") {
+	var ran struct {
+		ExitCode int    `json:"exit_code"`
+		Output   string `json:"output"`
+	}
+	if failed || json.Unmarshal([]byte(text), &ran) != nil || ran.ExitCode != 3 || !strings.Contains(ran.Output, "hello") || !strings.Contains(ran.Output, "oops") {
 		t.Fatalf("run %v %q", failed, text)
 	}
 	if text, failed := c.call("run_command", map[string]any{"session_id": "nope", "command": "true"}); !failed || !strings.Contains(text, "connect first") {
@@ -145,6 +149,43 @@ func TestMCPConnectAndRun(t *testing.T) {
 	recs, err := audit.New(a.p.DataDir).Read(audit.Filter{Host: h.ID})
 	if err != nil || len(recs) != 1 || recs[0].Agent != "mcp" || recs[0].Command != "echo hello; echo oops >&2; exit 3" || recs[0].ExitCode == nil || *recs[0].ExitCode != 3 {
 		t.Fatalf("audit %+v %v", recs, err)
+	}
+
+	// The open API calls the same tools, on the same sessions.
+	api := func(method, path, body string) (int, map[string]any) {
+		t.Helper()
+		req, _ := http.NewRequest(method, a.mcp.srv.Base()+path, strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+c.token)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		var out map[string]any
+		_ = json.NewDecoder(resp.Body).Decode(&out)
+		return resp.StatusCode, out
+	}
+	if code, out := api(http.MethodPost, "/api/v1/run_command", `{"session_id":"`+sess.SessionID+`","command":"echo via-api"}`); code != http.StatusOK ||
+		out["result"].(map[string]any)["exit_code"] != float64(0) || !strings.Contains(out["result"].(map[string]any)["output"].(string), "via-api") {
+		t.Fatalf("api run %d %v", code, out)
+	}
+	if code, out := api(http.MethodPost, "/api/v1/connect", `{"host_id":"`+asked.ID+`"}`); code != http.StatusBadRequest || !strings.Contains(out["error"].(string), "refused") {
+		t.Fatalf("api refusal %d %v", code, out)
+	}
+	if code, out := api(http.MethodGet, "/api/v1", ""); code != http.StatusOK || len(out["tools"].([]any)) != 6 {
+		t.Fatalf("api tools %d %v", code, out)
+	}
+	req, _ := http.NewRequest(http.MethodGet, a.mcp.srv.Base()+"/skill", nil)
+	req.Header.Set("Authorization", "Bearer "+c.token)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	skill, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if string(skill) != a.mcp.skill || !strings.Contains(string(skill), a.mcp.srv.Base()+"/api/v1") || !strings.Contains(string(skill), c.token) {
+		t.Fatalf("skill %q", skill)
 	}
 
 	if text, failed := c.call("disconnect", map[string]any{"session_id": sess.SessionID}); failed || len(a.mcpSessionList()) != 0 {
