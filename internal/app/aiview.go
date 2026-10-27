@@ -565,6 +565,7 @@ func (a *App) aiSheets(c *ui.Context, m locales.Messages) {
 	a.askSheet(c, m, tok)
 	a.providerSheet(c, m, tok)
 	a.providerDelete(c, m)
+	a.mcpSheet(c, m, tok)
 }
 
 func (a *App) consentSheet(c *ui.Context, m locales.Messages, tok theme.Tokens) {

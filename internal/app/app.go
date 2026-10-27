@@ -334,6 +334,12 @@ type App struct {
 	provDeleteID string
 	askOpen      bool
 	askFor       int
+	// mcp is the MCP endpoint for agents on this computer; mcpAsk the
+	// risk notice shown before it is turned on, mcpPort the port as edited
+	mcp     mcpState
+	mcpAsk  *mcpAsk
+	mcpHold focusHold
+	mcpPort float64
 	// closing is set while Close saves the layout, so each pane does not.
 	closing bool
 	// restoring is set while a saved layout is opened, so it is not saved
@@ -445,6 +451,7 @@ func (a *App) syncChoices() {
 	a.metMount = a.settings.MetricsMount
 	a.aiLines = float64(a.settings.AIContextLines)
 	a.aiDays = float64(a.settings.AIAuditRetentionDays)
+	a.mcpPort = float64(a.settings.MCPPort)
 }
 
 // Settings returns the settings in effect.
@@ -491,6 +498,9 @@ func (a *App) ApplySettings(s settings.Settings) error {
 	if uiF, termF := s.UIFont != old.UIFont, s.TerminalFont != old.TerminalFont; uiF || termF {
 		a.resolveFonts(uiF, termF)
 	}
+	if s.MCPEnabled != old.MCPEnabled || s.MCPPort != old.MCPPort {
+		a.syncMCP()
+	}
 	a.syncChoices()
 	if a.p.DataDir == "" {
 		return nil
@@ -508,6 +518,7 @@ func (a *App) Start() {
 		a.p.SetLocale(a.settings.Language)
 	}
 	a.autoStartForwards()
+	a.syncMCP()
 	a.loadLayout()
 	if root, err := a.cacheDir(); err == nil {
 		go cleanCache(root)
@@ -544,6 +555,7 @@ func (a *App) drain() {
 // Close ends every session and port forward.
 func (a *App) Close() {
 	a.stopCollectors()
+	a.stopMCP()
 	if !a.closing {
 		a.closing = true
 		a.saveLayout()

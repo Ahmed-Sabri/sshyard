@@ -8391,3 +8391,253 @@ func ClosePreview() string { return In(i18n.Locale()).ClosePreview() }
 func (msgs Messages) ClosePreview() string {
 	return Catalog.Format(msgs.locale, "closePreview", nil)
 }
+
+// McpSection says "MCP server"
+// in the language the app shows.
+func McpSection() string { return In(i18n.Locale()).McpSection() }
+
+// McpSection says "MCP server"
+// in the language of msgs.
+func (msgs Messages) McpSection() string {
+	return Catalog.Format(msgs.locale, "mcpSection", nil)
+}
+
+// McpEnable says "Allow AI agents to connect"
+// in the language the app shows.
+func McpEnable() string { return In(i18n.Locale()).McpEnable() }
+
+// McpEnable says "Allow AI agents to connect"
+// in the language of msgs.
+func (msgs Messages) McpEnable() string {
+	return Catalog.Format(msgs.locale, "mcpEnable", nil)
+}
+
+// McpEnableNote says "Serves MCP on this computer: agents can list groups and hosts, open SSH connections and run commands."
+// in the language the app shows.
+func McpEnableNote() string { return In(i18n.Locale()).McpEnableNote() }
+
+// McpEnableNote says "Serves MCP on this computer: agents can list groups and hosts, open SSH connections and run commands."
+// in the language of msgs.
+func (msgs Messages) McpEnableNote() string {
+	return Catalog.Format(msgs.locale, "mcpEnableNote", nil)
+}
+
+// McpListening says "Listening on {url}"
+// in the language the app shows.
+func McpListening(url string) string { return In(i18n.Locale()).McpListening(url) }
+
+// McpListening says "Listening on {url}"
+// in the language of msgs.
+func (msgs Messages) McpListening(url string) string {
+	return Catalog.Format(msgs.locale, "mcpListening", map[string]any{"url": url})
+}
+
+// McpFailed says "Couldn’t start: {detail}"
+// in the language the app shows.
+func McpFailed(detail string) string { return In(i18n.Locale()).McpFailed(detail) }
+
+// McpFailed says "Couldn’t start: {detail}"
+// in the language of msgs.
+func (msgs Messages) McpFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "mcpFailed", map[string]any{"detail": detail})
+}
+
+// McpToken says "Access token"
+// in the language the app shows.
+func McpToken() string { return In(i18n.Locale()).McpToken() }
+
+// McpToken says "Access token"
+// in the language of msgs.
+func (msgs Messages) McpToken() string {
+	return Catalog.Format(msgs.locale, "mcpToken", nil)
+}
+
+// McpTokenNote says "Saved only in the keychain. Agents send it as a Bearer token."
+// in the language the app shows.
+func McpTokenNote() string { return In(i18n.Locale()).McpTokenNote() }
+
+// McpTokenNote says "Saved only in the keychain. Agents send it as a Bearer token."
+// in the language of msgs.
+func (msgs Messages) McpTokenNote() string {
+	return Catalog.Format(msgs.locale, "mcpTokenNote", nil)
+}
+
+// McpCopyURL says "Copy Endpoint URL"
+// in the language the app shows.
+func McpCopyURL() string { return In(i18n.Locale()).McpCopyURL() }
+
+// McpCopyURL says "Copy Endpoint URL"
+// in the language of msgs.
+func (msgs Messages) McpCopyURL() string {
+	return Catalog.Format(msgs.locale, "mcpCopyURL", nil)
+}
+
+// McpCopyToken says "Copy Access Token"
+// in the language the app shows.
+func McpCopyToken() string { return In(i18n.Locale()).McpCopyToken() }
+
+// McpCopyToken says "Copy Access Token"
+// in the language of msgs.
+func (msgs Messages) McpCopyToken() string {
+	return Catalog.Format(msgs.locale, "mcpCopyToken", nil)
+}
+
+// McpNewToken says "Generate New Token"
+// in the language the app shows.
+func McpNewToken() string { return In(i18n.Locale()).McpNewToken() }
+
+// McpNewToken says "Generate New Token"
+// in the language of msgs.
+func (msgs Messages) McpNewToken() string {
+	return Catalog.Format(msgs.locale, "mcpNewToken", nil)
+}
+
+// McpNewTokenDone says "New token generated. Agents using the old one were disconnected."
+// in the language the app shows.
+func McpNewTokenDone() string { return In(i18n.Locale()).McpNewTokenDone() }
+
+// McpNewTokenDone says "New token generated. Agents using the old one were disconnected."
+// in the language of msgs.
+func (msgs Messages) McpNewTokenDone() string {
+	return Catalog.Format(msgs.locale, "mcpNewTokenDone", nil)
+}
+
+// McpCopyConfig says "Copy Client Config"
+// in the language the app shows.
+func McpCopyConfig() string { return In(i18n.Locale()).McpCopyConfig() }
+
+// McpCopyConfig says "Copy Client Config"
+// in the language of msgs.
+func (msgs Messages) McpCopyConfig() string {
+	return Catalog.Format(msgs.locale, "mcpCopyConfig", nil)
+}
+
+// McpSessions says "Agent connections"
+// in the language the app shows.
+func McpSessions() string { return In(i18n.Locale()).McpSessions() }
+
+// McpSessions says "Agent connections"
+// in the language of msgs.
+func (msgs Messages) McpSessions() string {
+	return Catalog.Format(msgs.locale, "mcpSessions", nil)
+}
+
+// McpNoSessions says "No agent has an SSH connection open."
+// in the language the app shows.
+func McpNoSessions() string { return In(i18n.Locale()).McpNoSessions() }
+
+// McpNoSessions says "No agent has an SSH connection open."
+// in the language of msgs.
+func (msgs Messages) McpNoSessions() string {
+	return Catalog.Format(msgs.locale, "mcpNoSessions", nil)
+}
+
+// McpDisconnect says "Disconnect Agent Connection"
+// in the language the app shows.
+func McpDisconnect() string { return In(i18n.Locale()).McpDisconnect() }
+
+// McpDisconnect says "Disconnect Agent Connection"
+// in the language of msgs.
+func (msgs Messages) McpDisconnect() string {
+	return Catalog.Format(msgs.locale, "mcpDisconnect", nil)
+}
+
+// McpOnBanner says "MCP is on: agents with the token can run commands on your hosts without asking."
+// in the language the app shows.
+func McpOnBanner() string { return In(i18n.Locale()).McpOnBanner() }
+
+// McpOnBanner says "MCP is on: agents with the token can run commands on your hosts without asking."
+// in the language of msgs.
+func (msgs Messages) McpOnBanner() string {
+	return Catalog.Format(msgs.locale, "mcpOnBanner", nil)
+}
+
+// McpRiskTitle says "Turn on the MCP server?"
+// in the language the app shows.
+func McpRiskTitle() string { return In(i18n.Locale()).McpRiskTitle() }
+
+// McpRiskTitle says "Turn on the MCP server?"
+// in the language of msgs.
+func (msgs Messages) McpRiskTitle() string {
+	return Catalog.Format(msgs.locale, "mcpRiskTitle", nil)
+}
+
+// McpRiskIntro says "Read these risks before you turn it on:"
+// in the language the app shows.
+func McpRiskIntro() string { return In(i18n.Locale()).McpRiskIntro() }
+
+// McpRiskIntro says "Read these risks before you turn it on:"
+// in the language of msgs.
+func (msgs Messages) McpRiskIntro() string {
+	return Catalog.Format(msgs.locale, "mcpRiskIntro", nil)
+}
+
+// McpRiskCommands says "Any program on this computer that has the access token can list your hosts and run any command on them, including del…"
+// in the language the app shows.
+func McpRiskCommands() string { return In(i18n.Locale()).McpRiskCommands() }
+
+// McpRiskCommands says "Any program on this computer that has the access token can list your hosts and run any command on them, including del…"
+// in the language of msgs.
+func (msgs Messages) McpRiskCommands() string {
+	return Catalog.Format(msgs.locale, "mcpRiskCommands", nil)
+}
+
+// McpRiskNoAsk says "Commands from MCP do not go through the AI permission modes. They run without asking you and are only recorded in the…"
+// in the language the app shows.
+func McpRiskNoAsk() string { return In(i18n.Locale()).McpRiskNoAsk() }
+
+// McpRiskNoAsk says "Commands from MCP do not go through the AI permission modes. They run without asking you and are only recorded in the…"
+// in the language of msgs.
+func (msgs Messages) McpRiskNoAsk() string {
+	return Catalog.Format(msgs.locale, "mcpRiskNoAsk", nil)
+}
+
+// McpRiskInjection says "An agent can be steered by prompt injection in web pages, files or command output into running commands you never ask…"
+// in the language the app shows.
+func McpRiskInjection() string { return In(i18n.Locale()).McpRiskInjection() }
+
+// McpRiskInjection says "An agent can be steered by prompt injection in web pages, files or command output into running commands you never ask…"
+// in the language of msgs.
+func (msgs Messages) McpRiskInjection() string {
+	return Catalog.Format(msgs.locale, "mcpRiskInjection", nil)
+}
+
+// McpRiskSecrets says "Passwords, keys and passphrases are never sent to agents. Hosts that need one typed are refused."
+// in the language the app shows.
+func McpRiskSecrets() string { return In(i18n.Locale()).McpRiskSecrets() }
+
+// McpRiskSecrets says "Passwords, keys and passphrases are never sent to agents. Hosts that need one typed are refused."
+// in the language of msgs.
+func (msgs Messages) McpRiskSecrets() string {
+	return Catalog.Format(msgs.locale, "mcpRiskSecrets", nil)
+}
+
+// McpRiskLocal says "The server listens on 127.0.0.1 only. Keep the token secret, make a new one if it leaks, and turn the server off when…"
+// in the language the app shows.
+func McpRiskLocal() string { return In(i18n.Locale()).McpRiskLocal() }
+
+// McpRiskLocal says "The server listens on 127.0.0.1 only. Keep the token secret, make a new one if it leaks, and turn the server off when…"
+// in the language of msgs.
+func (msgs Messages) McpRiskLocal() string {
+	return Catalog.Format(msgs.locale, "mcpRiskLocal", nil)
+}
+
+// McpConfirmWait says "Turn On ({seconds})"
+// in the language the app shows.
+func McpConfirmWait(seconds string) string { return In(i18n.Locale()).McpConfirmWait(seconds) }
+
+// McpConfirmWait says "Turn On ({seconds})"
+// in the language of msgs.
+func (msgs Messages) McpConfirmWait(seconds string) string {
+	return Catalog.Format(msgs.locale, "mcpConfirmWait", map[string]any{"seconds": seconds})
+}
+
+// McpConfirm says "I Understand, Turn On"
+// in the language the app shows.
+func McpConfirm() string { return In(i18n.Locale()).McpConfirm() }
+
+// McpConfirm says "I Understand, Turn On"
+// in the language of msgs.
+func (msgs Messages) McpConfirm() string {
+	return Catalog.Format(msgs.locale, "mcpConfirm", nil)
+}

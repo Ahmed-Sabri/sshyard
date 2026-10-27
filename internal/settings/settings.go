@@ -87,6 +87,12 @@ type Settings struct {
 	// AIConsentHosts are host IDs whose first-use AI notice the user
 	// already confirmed. Nothing is sent for a host that is not listed.
 	AIConsentHosts []string `json:"aiConsentHosts,omitempty"`
+	// MCPEnabled serves the MCP endpoint on 127.0.0.1:MCPPort, for AI
+	// agents on this computer. Off by default; the UI shows the risks
+	// before turning it on. Its bearer token lives in the keychain.
+	MCPEnabled bool `json:"mcpEnabled,omitempty"`
+	// MCPPort is the endpoint's port, 1024 to 65535.
+	MCPPort int `json:"mcpPort,omitempty"`
 }
 
 // AIProvider is one built-in agent profile. Headers are non-secret;
@@ -123,13 +129,16 @@ const (
 
 func materialOK(s string) bool { return s == MaterialTranslucent || s == MaterialOpaque }
 
+// MCPPortDefault is the MCP endpoint's port unless the user picks one.
+const MCPPortDefault = 47320
+
 // Languages are the languages SSHYard ships, besides following the system.
 var Languages = []string{"en", "zh-Hans"}
 
 // Default returns the defaults.
 func Default() Settings {
 	return Settings{Theme: theme.Auto, CheckUpdates: true, TerminalFontSize: 13, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, OSC52Write: OSC52Ask, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
-		AIDefaultAgent: "builtin", AIDefaultMode: "ask", AIContextLines: 200, AIAuditRetentionDays: 90, AIRedact: true}
+		AIDefaultAgent: "builtin", AIDefaultMode: "ask", AIContextLines: 200, AIAuditRetentionDays: 90, AIRedact: true, MCPPort: MCPPortDefault}
 }
 
 // ResolveOSC52Write is the write policy in effect. A host value of allow,
@@ -239,6 +248,9 @@ func (s *Settings) normalizeAI(d Settings) {
 		s.AIDefaultProvider = ""
 	}
 	s.AIConsentHosts = cleanList(s.AIConsentHosts)
+	if s.MCPPort < 1024 || s.MCPPort > 65535 {
+		s.MCPPort = d.MCPPort
+	}
 }
 
 func (p *AIProvider) normalize() {

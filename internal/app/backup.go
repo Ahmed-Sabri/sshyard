@@ -175,12 +175,14 @@ func backupIDs(snap assets.Snapshot, provs []settings.AIProvider) []string {
 
 // mergeSettings are the preferences of a backup, in, over those of this
 // device, cur: what belongs to this device stays (the window's layout and
-// materials, the fonts installed here), AI providers are merged by ID and
-// the hosts that confirmed AI use are joined.
+// materials, the fonts installed here, the MCP endpoint), AI providers
+// are merged by ID and the hosts that confirmed AI use are joined.
 func mergeSettings(cur, in settings.Settings) settings.Settings {
 	out := in
 	out.SidebarWidth, out.ChromeMaterial, out.ContentMaterial = cur.SidebarWidth, cur.ChromeMaterial, cur.ContentMaterial
 	out.UIFont, out.TerminalFont = cur.UIFont, cur.TerminalFont
+	// A backup never turns the MCP endpoint on: that is asked here.
+	out.MCPEnabled, out.MCPPort = cur.MCPEnabled, cur.MCPPort
 	out.AIProviders = slices.Clone(cur.AIProviders)
 	for _, p := range in.AIProviders {
 		if i := slices.IndexFunc(out.AIProviders, func(o settings.AIProvider) bool { return o.ID == p.ID }); i >= 0 {

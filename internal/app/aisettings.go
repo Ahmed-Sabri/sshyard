@@ -161,6 +161,7 @@ func (a *App) aiSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, s 
 			}
 		})
 	})
+	a.mcpSettings(c, m, tok, s, changed)
 }
 
 // forgetConsent drops one host's first-use confirmation and saves it.

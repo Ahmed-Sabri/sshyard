@@ -149,6 +149,7 @@ var (
 	SelectAll   = load("checkbox-multiple-line")
 	Send        = load("send-plane-2-line")
 	Model       = load("brain-line")
+	MCP         = load("plug-line")
 	// The AI permission modes: asks first, reviewed, full access.
 	ModeAsk    = InstallKey
 	ModeReview = load("eye-line")
