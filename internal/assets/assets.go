@@ -1,0 +1,625 @@
+// Package assets is SSHYard's asset store: the hosts the user saved, with
+// their groups and favorites, and the credentials, proxies and port
+// forwards they use, kept as JSON in the user's data directory.
+// Secrets are never stored here; they live in the system keychain
+// (package keychain), under the ID of the credential, proxy or forward
+// they belong to.
+package assets
+
+import (
+	"crypto/rand"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/fs"
+	"os"
+	"slices"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/Licoy/sshyard/internal/settings"
+)
+
+// MetricsMode is a host's metrics bar: follow the global setting, on, or off.
+// Off hides the bar while the global setting is on. The global setting off
+// hides every host, including one set to on.
+type MetricsMode string
+
+const (
+	// MetricsFollow uses the global metrics setting.
+	MetricsFollow MetricsMode = ""
+	// MetricsOn shows the bar while the global setting is on.
+	MetricsOn MetricsMode = "on"
+	// MetricsOff never collects or shows the bar for this host.
+	MetricsOff MetricsMode = "off"
+)
+
+// AuthMethod is how a host authenticates.
+type AuthMethod string
+
+const (
+	// AuthCredential uses the credential of the host's CredentialID.
+	AuthCredential AuthMethod = "credential"
+	// AuthAgent signs with the keys of the system's SSH agent.
+	AuthAgent AuthMethod = "agent"
+	// AuthAsk keeps nothing: the password is asked at each connection
+	// and held in memory only.
+	AuthAsk AuthMethod = "ask"
+)
+
+// Host is a saved SSH host: where it is and how to reach it. It holds no
+// secret; those belong to credentials, proxies and forwards, and live in
+// the keychain.
+type Host struct {
+	ID       string     `json:"id"`
+	Name     string     `json:"name"`
+	Address  string     `json:"address"`
+	Port     int        `json:"port"`
+	User     string     `json:"user"`
+	Group    string     `json:"group,omitempty"`
+	Favorite bool       `json:"favorite,omitempty"`
+	Auth     AuthMethod `json:"auth"`
+	// CredentialID is the credential of AuthCredential.
+	CredentialID string `json:"credentialId,omitempty"`
+	// JumpChain are the hosts connected through, in order, before this
+	// one (ProxyJump); each with its own credential and host key check.
+	JumpChain []string `json:"jumpChain,omitempty"`
+	// ProxyID is the proxy the first hop is dialed through.
+	ProxyID string `json:"proxyId,omitempty"`
+	// CwdFollow lets a Files pane follow the directory the terminal of
+	// the same tab reports (OSC 7). New hosts have it on.
+	CwdFollow bool `json:"cwdFollow"`
+	// OSC52 overrides the global OSC 52 write policy (allow, ask or
+	// deny). Empty follows the global setting.
+	OSC52 string `json:"osc52,omitempty"`
+	// Metrics is whether this host shows the metrics bar: follow the
+	// global setting, always, or never.
+	Metrics MetricsMode `json:"metrics,omitempty"`
+	// AIPolicy is the host's AI permission override. An empty mode
+	// inherits the global default.
+	AIPolicy AIPolicy  `json:"aiPolicy,omitempty"`
+	Created  time.Time `json:"created"`
+	Updated  time.Time `json:"updated"`
+	LastUsed time.Time `json:"lastUsed,omitzero"`
+}
+
+// AIPolicy is how an AI pane on this host may act. Paths are remote
+// POSIX paths. Mode empty means inherit.
+type AIPolicy struct {
+	Mode          string   `json:"mode,omitempty"`
+	WritableRoots []string `json:"writableRoots,omitempty"`
+	Sensitive     []string `json:"sensitive,omitempty"`
+}
+
+// Label is the name shown for the host.
+func (h Host) Label() string {
+	if h.Name != "" {
+		return h.Name
+	}
+	return h.Address
+}
+
+// Target is user@address, with :port when it is not 22.
+func (h Host) Target() string {
+	s := h.Address
+	if h.User != "" {
+		s = h.User + "@" + s
+	}
+	if h.Port != 0 && h.Port != 22 {
+		s += ":" + strconv.Itoa(h.Port)
+	}
+	return s
+}
+
+// Addr is address:port for dialing.
+func (h Host) Addr() string {
+	port := h.Port
+	if port == 0 {
+		port = 22
+	}
+	addr := h.Address
+	if strings.Contains(addr, ":") && !strings.HasPrefix(addr, "[") {
+		addr = "[" + addr + "]"
+	}
+	return addr + ":" + strconv.Itoa(port)
+}
+
+// FieldError reports an invalid field of a host.
+type FieldError struct {
+	Field  string // "name", "address", "port", "user", "auth", "credential", "kind", "target", …
+	Reason string
+}
+
+func (e *FieldError) Error() string { return fmt.Sprintf("assets: %s: %s", e.Field, e.Reason) }
+
+// Normalize trims the host's fields and fills defaults.
+func (h *Host) Normalize() {
+	h.Name = strings.TrimSpace(h.Name)
+	h.Address = strings.TrimSpace(h.Address)
+	h.User = strings.TrimSpace(h.User)
+	h.Group = strings.TrimSpace(h.Group)
+	if h.Port == 0 {
+		h.Port = 22
+	}
+	if h.Auth == "" {
+		h.Auth = AuthAsk
+	}
+	if h.Auth != AuthCredential {
+		h.CredentialID = ""
+	}
+	h.JumpChain = slices.DeleteFunc(slices.Clone(h.JumpChain), func(id string) bool { return id == "" })
+	if len(h.JumpChain) == 0 {
+		h.JumpChain = nil
+	}
+	switch h.OSC52 {
+	case "", settings.OSC52Allow, settings.OSC52Ask, settings.OSC52Deny:
+	default:
+		h.OSC52 = ""
+	}
+	switch h.Metrics {
+	case MetricsFollow, MetricsOn, MetricsOff:
+	default:
+		h.Metrics = MetricsFollow
+	}
+	h.AIPolicy.normalize()
+}
+
+func (p *AIPolicy) normalize() {
+	p.Mode = strings.TrimSpace(strings.ToLower(p.Mode))
+	switch p.Mode {
+	case "", "ask", "review", "full":
+	default:
+		p.Mode = ""
+	}
+	p.WritableRoots = cleanRemotePaths(p.WritableRoots)
+	p.Sensitive = cleanRemotePaths(p.Sensitive)
+}
+
+// cleanRemotePaths trims remote POSIX paths, drops blanks, NULs and
+// duplicates, and keeps the order.
+func cleanRemotePaths(in []string) []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, s := range in {
+		s = strings.TrimSpace(s)
+		if s == "" || strings.ContainsRune(s, 0) || seen[s] {
+			continue
+		}
+		seen[s] = true
+		out = append(out, s)
+	}
+	return out
+}
+
+// Validate checks a normalized host.
+func (h Host) Validate() error {
+	switch {
+	case h.Address == "":
+		return &FieldError{"address", "required"}
+	case strings.ContainsAny(h.Address, " \t/@"):
+		return &FieldError{"address", "invalid"}
+	case h.Port < 1 || h.Port > 65535:
+		return &FieldError{"port", "out of range"}
+	case h.User == "":
+		return &FieldError{"user", "required"}
+	case h.Auth != AuthCredential && h.Auth != AuthAgent && h.Auth != AuthAsk:
+		return &FieldError{"auth", "unknown method"}
+	case h.Auth == AuthCredential && h.CredentialID == "":
+		return &FieldError{"credential", "required"}
+	}
+	return nil
+}
+
+// ErrNotFound reports an ID the store does not have.
+var ErrNotFound = errors.New("assets: not found")
+
+// ErrExists is AddCredential's or AddProxy's error for an ID in use.
+var ErrExists = errors.New("assets: ID in use")
+
+// ErrJumpLoop reports a jump chain that comes back to a host already on
+// it (A through B, B through A), or reaches one host twice (A through B
+// and C, with C through B too).
+var ErrJumpLoop = errors.New("assets: the jump chain loops")
+
+// InUseError reports an entry other entries still use, so it can not be
+// deleted: the hosts (and forwards) using it.
+type InUseError struct {
+	Hosts    []string // IDs
+	Forwards []string // IDs
+}
+
+func (e *InUseError) Error() string {
+	return fmt.Sprintf("assets: in use by %d hosts and %d forwards", len(e.Hosts), len(e.Forwards))
+}
+
+// SchemaVersion is the version of the data file. A file of any other
+// (older) version is discarded, not migrated.
+const SchemaVersion = 2
+
+// Store keeps hosts, credentials, proxies and port forwards in a JSON
+// file. It is safe for concurrent use.
+type Store struct {
+	path string
+	now  func() time.Time
+
+	mu       sync.Mutex
+	hosts    []Host
+	creds    []Credential
+	proxies  []Proxy
+	forwards []Forward
+	// discarded are the host IDs of an older file Open threw away.
+	discarded []string
+}
+
+type file struct {
+	Version     int          `json:"version"`
+	Hosts       []Host       `json:"hosts"`
+	Credentials []Credential `json:"credentials"`
+	Proxies     []Proxy      `json:"proxies"`
+	Forwards    []Forward    `json:"forwards"`
+}
+
+// Open reads the store at path; a missing file is an empty store. A file
+// of an older schema version is discarded and an empty store written in
+// its place: there is no migration. An empty path keeps the store in
+// memory only.
+func Open(path string) (*Store, error) {
+	s := &Store{path: path, now: time.Now}
+	if path == "" {
+		return s, nil
+	}
+	b, err := os.ReadFile(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		return s, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var f file
+	if err := json.Unmarshal(b, &f); err != nil {
+		return nil, fmt.Errorf("assets: %s: %w", path, err)
+	}
+	switch {
+	case f.Version > SchemaVersion:
+		return nil, fmt.Errorf("assets: %s has version %d, newer than this app reads", path, f.Version)
+	case f.Version < SchemaVersion:
+		var old struct {
+			Hosts []struct {
+				ID string `json:"id"`
+			} `json:"hosts"`
+		}
+		json.Unmarshal(b, &old)
+		for _, h := range old.Hosts {
+			if h.ID != "" {
+				s.discarded = append(s.discarded, h.ID)
+			}
+		}
+		if err := s.save(); err != nil {
+			return nil, err
+		}
+		return s, nil
+	}
+	s.hosts, s.creds, s.proxies, s.forwards = f.Hosts, f.Credentials, f.Proxies, f.Forwards
+	return s, nil
+}
+
+// Discarded are the IDs of the hosts of an older data file Open threw
+// away, so that the caller can drop what it kept for them elsewhere.
+func (s *Store) Discarded() []string { return slices.Clone(s.discarded) }
+
+func (s *Store) save() error {
+	if s.path == "" {
+		return nil
+	}
+	f := file{Version: SchemaVersion, Hosts: s.hosts, Credentials: s.creds, Proxies: s.proxies, Forwards: s.forwards}
+	// Empty lists are written as [], not null.
+	if f.Hosts == nil {
+		f.Hosts = []Host{}
+	}
+	if f.Credentials == nil {
+		f.Credentials = []Credential{}
+	}
+	if f.Proxies == nil {
+		f.Proxies = []Proxy{}
+	}
+	if f.Forwards == nil {
+		f.Forwards = []Forward{}
+	}
+	b, err := json.MarshalIndent(f, "", "  ")
+	if err != nil {
+		return err
+	}
+	return settings.WriteFileAtomic(s.path, b, 0o600)
+}
+
+// commit saves, or undoes what fn changed when saving fails.
+func (s *Store) commit(fn func()) error {
+	h, c, p, f := slices.Clone(s.hosts), slices.Clone(s.creds), slices.Clone(s.proxies), slices.Clone(s.forwards)
+	fn()
+	if err := s.save(); err != nil {
+		s.hosts, s.creds, s.proxies, s.forwards = h, c, p, f
+		return err
+	}
+	return nil
+}
+
+// NewID makes a fresh entry ID.
+func NewID() string { return newID() }
+
+func newID() string {
+	var b [8]byte
+	rand.Read(b[:])
+	return hex.EncodeToString(b[:])
+}
+
+func (s *Store) index(id string) int {
+	return slices.IndexFunc(s.hosts, func(h Host) bool { return h.ID == id })
+}
+
+func sorted(hs []Host) []Host {
+	out := slices.Clone(hs)
+	slices.SortStableFunc(out, func(a, b Host) int {
+		if c := strings.Compare(strings.ToLower(a.Label()), strings.ToLower(b.Label())); c != 0 {
+			return c
+		}
+		return strings.Compare(a.ID, b.ID)
+	})
+	return out
+}
+
+// List returns every host, sorted by label.
+func (s *Store) List() []Host {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return sorted(s.hosts)
+}
+
+// Len is the number of hosts.
+func (s *Store) Len() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.hosts)
+}
+
+// Get returns the host of id.
+func (s *Store) Get(id string) (Host, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if i := s.index(id); i >= 0 {
+		return s.hosts[i], true
+	}
+	return Host{}, false
+}
+
+// checkRefs checks what a host refers to: its credential, its proxy and
+// the hosts of its jump chain, which must exist and not loop back.
+func (s *Store) checkRefs(h Host) error {
+	if h.Auth == AuthCredential && s.credIndex(h.CredentialID) < 0 {
+		return &FieldError{"credential", "unknown"}
+	}
+	if h.ProxyID != "" && s.proxyIndex(h.ProxyID) < 0 {
+		return &FieldError{"proxy", "unknown"}
+	}
+	for _, j := range h.JumpChain {
+		if j != h.ID && s.index(j) < 0 {
+			return &FieldError{"jump", "unknown"}
+		}
+	}
+	// Walk every chain from h, with h as it is to be saved.
+	get := func(id string) (Host, bool) {
+		if id == h.ID {
+			return h, true
+		}
+		if i := s.index(id); i >= 0 {
+			return s.hosts[i], true
+		}
+		return Host{}, false
+	}
+	// A host met twice on the expanded path, by a loop or by two routes
+	// to it, is refused alike.
+	seen := map[string]bool{}
+	var walk func(id string) error
+	walk = func(id string) error {
+		if seen[id] {
+			return ErrJumpLoop
+		}
+		seen[id] = true
+		x, ok := get(id)
+		if !ok {
+			return nil
+		}
+		for _, j := range x.JumpChain {
+			if err := walk(j); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	return walk(h.ID)
+}
+
+// JumpPath is the hosts dialed through to reach id, first hop first,
+// each jump host's own chain expanded before it.
+func (s *Store) JumpPath(id string) ([]Host, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var out []Host
+	seen := map[string]bool{}
+	var walk func(id string) error
+	walk = func(id string) error {
+		if seen[id] {
+			return ErrJumpLoop
+		}
+		seen[id] = true
+		i := s.index(id)
+		if i < 0 {
+			return ErrNotFound
+		}
+		for _, j := range s.hosts[i].JumpChain {
+			if err := walk(j); err != nil {
+				return err
+			}
+			if k := s.index(j); k >= 0 {
+				out = append(out, s.hosts[k])
+			}
+		}
+		return nil
+	}
+	if err := walk(id); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// Add validates and adds a host, giving it an ID.
+func (s *Store) Add(h Host) (Host, error) {
+	h.Normalize()
+	if err := h.Validate(); err != nil {
+		return Host{}, err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	h.ID = newID()
+	if err := s.checkRefs(h); err != nil {
+		return Host{}, err
+	}
+	now := s.now()
+	h.Created, h.Updated = now, now
+	if err := s.commit(func() { s.hosts = append(s.hosts, h) }); err != nil {
+		return Host{}, err
+	}
+	return h, nil
+}
+
+// Update replaces the host with h's ID.
+func (s *Store) Update(h Host) (Host, error) {
+	h.Normalize()
+	if err := h.Validate(); err != nil {
+		return Host{}, err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	i := s.index(h.ID)
+	if i < 0 {
+		return Host{}, ErrNotFound
+	}
+	if err := s.checkRefs(h); err != nil {
+		return Host{}, err
+	}
+	old := s.hosts[i]
+	h.Created, h.Updated = old.Created, s.now()
+	if h.LastUsed.IsZero() {
+		h.LastUsed = old.LastUsed
+	}
+	if err := s.commit(func() { s.hosts[i] = h }); err != nil {
+		return Host{}, err
+	}
+	return h, nil
+}
+
+// Delete removes the host of id. A host other hosts jump through, or
+// port forwards enter by, is in use and not deleted (an *InUseError).
+func (s *Store) Delete(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	i := s.index(id)
+	if i < 0 {
+		return ErrNotFound
+	}
+	use := &InUseError{}
+	for _, h := range s.hosts {
+		if slices.Contains(h.JumpChain, id) && h.ID != id {
+			use.Hosts = append(use.Hosts, h.ID)
+		}
+	}
+	for _, f := range s.forwards {
+		if f.HostID == id {
+			use.Forwards = append(use.Forwards, f.ID)
+		}
+	}
+	if len(use.Hosts)+len(use.Forwards) > 0 {
+		return use
+	}
+	return s.commit(func() { s.hosts = slices.Delete(s.hosts, i, i+1) })
+}
+
+func (s *Store) modify(id string, fn func(h *Host)) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	i := s.index(id)
+	if i < 0 {
+		return ErrNotFound
+	}
+	return s.commit(func() { fn(&s.hosts[i]) })
+}
+
+// SetFavorite marks or unmarks a host as a favorite.
+func (s *Store) SetFavorite(id string, fav bool) error {
+	return s.modify(id, func(h *Host) { h.Favorite = fav })
+}
+
+// Touch records that the host was just connected to.
+func (s *Store) Touch(id string) error {
+	return s.modify(id, func(h *Host) { h.LastUsed = s.now() })
+}
+
+// Favorites returns the favorite hosts, sorted.
+func (s *Store) Favorites() []Host {
+	var out []Host
+	for _, h := range s.List() {
+		if h.Favorite {
+			out = append(out, h)
+		}
+	}
+	return out
+}
+
+// Groups returns the names of the groups, sorted; hosts without a group
+// are in none of them.
+func (s *Store) Groups() []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, h := range s.List() {
+		if h.Group != "" && !seen[h.Group] {
+			seen[h.Group] = true
+			out = append(out, h.Group)
+		}
+	}
+	slices.SortFunc(out, func(a, b string) int { return strings.Compare(strings.ToLower(a), strings.ToLower(b)) })
+	return out
+}
+
+// InGroup returns the hosts of a group, "" for those without one.
+func (s *Store) InGroup(group string) []Host {
+	var out []Host
+	for _, h := range s.List() {
+		if h.Group == group {
+			out = append(out, h)
+		}
+	}
+	return out
+}
+
+// Search returns the hosts whose name, address, user or group contain
+// every word of q, ignoring case.
+func (s *Store) Search(q string) []Host {
+	words := strings.Fields(strings.ToLower(q))
+	var out []Host
+	for _, h := range s.List() {
+		hay := strings.ToLower(strings.Join([]string{h.Name, h.Address, h.User, h.Group}, " "))
+		ok := true
+		for _, w := range words {
+			if !strings.Contains(hay, w) {
+				ok = false
+				break
+			}
+		}
+		if ok {
+			out = append(out, h)
+		}
+	}
+	return out
+}

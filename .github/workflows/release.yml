@@ -1,0 +1,128 @@
+name: Release
+
+# Builds every platform, signs the update manifests and uploads them with the
+# installers to a DRAFT GitHub Release of the version in mygo.json (MyGo's
+# GitHub Releases channel: apps read update-<os>-<arch>.json from
+# releases/latest/download/ once the draft is published).
+#
+# Needs the repository secret MYGO_UPDATER_PRIVATE_KEY: the contents of
+# mygo-update.key, the pair of updates.publicKey in mygo.json. Installed apps
+# reject unsigned updates, so without the secret this workflow fails.
+
+# Internal beta tags (v<version>-beta-<yyyymmddhhmmss>) never make a
+# release: they are excluded here, and only ci.yml builds them (as
+# artifacts, with updates disabled).
+on:
+  push:
+    tags: ["v*", "!v*-beta-*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write # the draft release and its uploads
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  draft-release:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      tag: ${{ steps.v.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check the version and the signing key
+        id: v
+        env:
+          MYGO_UPDATER_PRIVATE_KEY: ${{ secrets.MYGO_UPDATER_PRIVATE_KEY }}
+        run: |
+          version="$(jq -r .version mygo.json)"
+          tag="v$version"
+          if [[ "$GITHUB_REF_NAME" == *-beta-* ]]; then
+            echo "::error::$GITHUB_REF_NAME is an internal beta: betas are built by ci.yml only, never released."
+            exit 1
+          fi
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "$tag" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match mygo.json version $version (expected $tag)."
+            exit 1
+          fi
+          if [ -z "$MYGO_UPDATER_PRIVATE_KEY" ]; then
+            echo "::error::Secret MYGO_UPDATER_PRIVATE_KEY is not set. Add the contents of mygo-update.key: gh secret set MYGO_UPDATER_PRIVATE_KEY < mygo-update.key. Installed apps only accept signed updates, so the release is not built without it."
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.v.outputs.tag }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "Release $TAG exists; its files are replaced."
+          elif [ "$GITHUB_REF_TYPE" = tag ]; then
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --verify-tag --title "$TAG" --generate-notes
+          else
+            # workflow_dispatch: the tag is created at this commit when the draft is published.
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --target "$GITHUB_SHA" --title "$TAG" --generate-notes
+          fi
+
+  build:
+    needs: draft-release
+    name: build ${{ matrix.goos }}/${{ matrix.goarch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, goos: linux, goarch: amd64 }
+          - { os: windows-latest, goos: windows, goarch: amd64 }
+          - { os: macos-latest, goos: darwin, goarch: arm64 }
+          - { os: macos-latest, goos: darwin, goarch: amd64 }
+    defaults:
+      run:
+        shell: bash
+    env:
+      VERSION: ${{ needs.draft-release.outputs.version }}
+      TAG: ${{ needs.draft-release.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Cache NSIS
+        if: runner.os == 'Windows'
+        uses: actions/cache@v6
+        with:
+          path: ~\AppData\Local\mygo\nsis-*
+          key: nsis-${{ hashFiles('go.sum') }}
+      - name: Build, sign updates, upload to the draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MYGO_UPDATER_PRIVATE_KEY: ${{ secrets.MYGO_UPDATER_PRIVATE_KEY }}
+        run: go tool mygo build -platform "${{ matrix.goos }}/${{ matrix.goarch }}" -upload
+      - name: Check the manifest is signed
+        run: |
+          m="build/${{ matrix.goos }}-${{ matrix.goarch }}/update-${{ matrix.goos }}-${{ matrix.goarch }}.json"
+          jq -e '.signature | length > 0' "$m" > /dev/null || { echo "::error::$m is not signed"; exit 1; }
+      - name: Package and upload extras
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          bash .github/package-extras.sh "${{ matrix.goos }}" "${{ matrix.goarch }}" "$VERSION"
+          shopt -s nullglob
+          extras=(build/*/*.zip)
+          if [ ${#extras[@]} -gt 0 ]; then gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber "${extras[@]}"; fi
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sshyard-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}
+          if-no-files-found: error
+          path: |
+            build/*/*.tar.gz
+            build/*/*.deb
+            build/*/*.dmg
+            build/*/*.zip
+            build/*/*Setup*.exe
+            build/*/install.sh
+            build/*/update-*.json
+            build/*/*.delta

@@ -1,0 +1,15 @@
+{
+  "name": "SSHYard",
+  "identifier": "com.licoy.sshyard",
+  "version": "0.0.1",
+  "icon": "resources/icon.png",
+  "out": "build",
+  "i18n": { "dir": "locales", "source": "en" },
+  "updates": {
+    "publicKey": "sxsIDXdLgpDiPmfJFlbTrJGl6sAvwIQbz6oC6WGKxsQ=",
+    "github": "Licoy/sshyard"
+  },
+  "macos": {
+    "icon": "icon/Assets.car"
+  }
+}

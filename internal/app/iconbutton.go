@@ -1,0 +1,98 @@
+package app
+
+import (
+	"github.com/Licoy/sshyard/internal/icons"
+	"github.com/Licoy/sshyard/internal/theme"
+	"github.com/egoist/mygo/ui"
+)
+
+// IconButton is the app's one icon-only button: every action shown as an
+// icon (toolbar, tab, pane header, sidebar row, files toolbar) is one, and
+// a text Button is kept only for the primary actions of a dialog or form.
+// Label is required and localized: it is both the tooltip and the name
+// assistive technology reads. The look follows the theme in use (light or
+// dark): a circle, clear and muted at rest; a quiet tint of the brand
+// accent (#1984FC) with the icon in the accent on hover, press and while
+// Active; MyGo's focus ring in the accent's focus color from the keyboard.
+type IconButton struct {
+	Icon *icons.Icon
+	// On is the icon while Active, as the "-fill" of a "-line" icon; nil
+	// keeps Icon.
+	On *icons.Icon
+	// Label names the action, from the locale catalog.
+	Label string
+	// Active shows the button on: a toggle that is set, a view that shows.
+	Active bool
+	// Toggle reports Active to assistive technology as a toggle's state.
+	Toggle bool
+	// Disabled dims the button; it reports no clicks.
+	Disabled bool
+	// Danger tints the hover red, for a destructive action.
+	Danger bool
+	// Size is the icon's size; 0 is 16. Small is 14, for dense rows.
+	Size float32
+}
+
+// Small is the icon size of IconButtons in dense rows (tabs, pane headers).
+const Small = 14
+
+// Show builds the button under key and returns it, for Clicked.
+func (b IconButton) Show(c *ui.Context, key string) ui.Element {
+	th := c.Theme()
+	size := b.Size
+	if size == 0 {
+		size = 16
+	}
+	// 28 DIPs round for the 16 icon, 24 for the small one: a circle.
+	pad := float32(6)
+	if size <= Small {
+		pad = 5
+	}
+	el := ui.ButtonBase(c.Key("ib:" + key)).Label(b.Label).Tooltip(b.Label).Padding(pad).Radius(theme.Capsule).Disabled(b.Disabled)
+	if b.Toggle {
+		el.Checked(b.Active)
+	}
+	strong := float32(0.12)
+	if th.Dark {
+		strong = 0.22
+	}
+	hue := th.Accent
+	if b.Danger {
+		hue = th.Danger
+	}
+	fg := th.TextMuted
+	switch {
+	case b.Disabled:
+		el.Opacity(0.4)
+	case el.Pressed():
+		el.Background(hue.Alpha(strong * 1.8))
+		fg = hue
+	case el.Hovered():
+		el.Background(hue.Alpha(strong)).Cursor(ui.CursorPointer)
+		fg = hue
+	case b.Active:
+		el.Background(th.Accent.Alpha(strong))
+		fg = th.Accent
+	}
+	if b.Active && !b.Disabled {
+		fg = th.Accent
+	}
+	ic := b.Icon
+	if b.Active && b.On != nil {
+		ic = b.On
+	}
+	el.Children(func() { ui.Icon(c, ic.SVG).Width(size).Height(size).TextColor(fg) })
+	return el
+}
+
+// Clicked reports whether an enabled button was clicked; it saves callers
+// from checking Disabled again.
+func (b IconButton) Clicked(c *ui.Context, key string) bool {
+	el := b.Show(c, key)
+	return el.Clicked() && !b.Disabled
+}
+
+// iconButton is the common case: an icon and its label.
+func iconButton(c *ui.Context, key string, ic *icons.Icon, label string) bool {
+	return IconButton{Icon: ic, Label: label}.Clicked(c, key)
+}

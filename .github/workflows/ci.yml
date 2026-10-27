@@ -1,0 +1,138 @@
+name: CI
+
+# The repository is private and Actions minutes are billed: CI runs only
+# on version tags and by hand, not on every push or pull request. Run the
+# checks locally before pushing (see AGENTS.md).
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: gofmt, vet, test (race)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: gofmt
+        run: |
+          out="$(gofmt -l .)"
+          if [ -n "$out" ]; then echo "::error::gofmt needed on:"; echo "$out"; exit 1; fi
+      - run: go vet ./...
+      - run: go test -race -count=1 ./...
+
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - run: go test -count=1 ./...
+
+  build:
+    name: build ${{ matrix.goos }}/${{ matrix.goarch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, goos: linux, goarch: amd64 }
+          - { os: windows-latest, goos: windows, goarch: amd64 }
+          - { os: macos-latest, goos: darwin, goarch: arm64 }
+          - { os: macos-latest, goos: darwin, goarch: amd64 } # cross-compiled on Apple silicon (no cgo)
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Cache NSIS
+        if: runner.os == 'Windows'
+        uses: actions/cache@v6
+        with:
+          path: ~\AppData\Local\mygo\nsis-*
+          key: nsis-${{ hashFiles('go.sum') }}
+      # Tags: v<version> (the version in mygo.json), or an internal beta
+      # v<version>-beta-<yyyymmddhhmmss>, whose base must be the version in
+      # mygo.json. A beta build carries its full version (About, file
+      # names, installers) and no update channel: "updates" is dropped from
+      # mygo.json for the build, so it never checks for, is offered or
+      # makes update manifests, and stable manifests are never touched.
+      - name: Version
+        id: v
+        run: |
+          version="$(jq -r .version mygo.json)"
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            tag="$GITHUB_REF_NAME"
+            if [[ "$tag" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)-beta-([0-9]{14})$ ]]; then
+              base="${BASH_REMATCH[1]}" ts="${BASH_REMATCH[2]}"
+              if [ "$base" != "$version" ]; then
+                echo "::error::Beta tag $tag is not of mygo.json version $version (expected v$version-beta-<yyyymmddhhmmss>)."
+                exit 1
+              fi
+              # The timestamp must be a real UTC time: parse it and print it
+              # back; an impossible one (month 13, 30 February, 24:00) fails
+              # or comes back different. GNU date on Linux and Windows (Git
+              # Bash), BSD date on macOS.
+              if date --version >/dev/null 2>&1; then
+                back="$(date -u -d "${ts:0:4}-${ts:4:2}-${ts:6:2} ${ts:8:2}:${ts:10:2}:${ts:12:2} UTC" +%Y%m%d%H%M%S 2>/dev/null || true)"
+              else
+                back="$(date -u -j -f %Y%m%d%H%M%S "$ts" +%Y%m%d%H%M%S 2>/dev/null || true)"
+              fi
+              # The year must be 2020-2099 too: date takes year 0000.
+              if [ "$back" != "$ts" ] || [[ ! "$ts" =~ ^20[2-9][0-9] ]]; then
+                echo "::error::Beta tag $tag: $ts is not a valid UTC time (yyyymmddhhmmss, year 2020-2099)."
+                exit 1
+              fi
+              version="${tag#v}"
+              # macOS: CFBundleShortVersionString (what About shows) carries
+              # the full version; CFBundleVersion must be numeric, so it is
+              # the timestamp (unique per build, increasing across betas).
+              # mygo's macos.infoPlist keys override the ones it derives.
+              jq --arg v "$version" --arg n "$ts" '.version = $v | del(.updates)
+                | .macos.infoPlist.CFBundleShortVersionString = $v
+                | .macos.infoPlist.CFBundleVersion = $n' mygo.json > mygo.json.beta
+              mv mygo.json.beta mygo.json
+              echo "Beta build $version: updates disabled."
+            elif [ "$tag" != "v$version" ]; then
+              echo "::error::Tag $tag matches neither v$version nor v$version-beta-<yyyymmddhhmmss>."
+              exit 1
+            fi
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Build (unsigned updates; no MYGO_UPDATER_PRIVATE_KEY in CI)
+        run: go tool mygo build -platform "${{ matrix.goos }}/${{ matrix.goarch }}"
+      - name: Package extras
+        run: bash .github/package-extras.sh "${{ matrix.goos }}" "${{ matrix.goarch }}" "${{ steps.v.outputs.version }}"
+      - name: List outputs
+        run: ls -la "build/${{ matrix.goos }}-${{ matrix.goarch }}"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sshyard-${{ steps.v.outputs.version }}-${{ matrix.goos }}-${{ matrix.goarch }}
+          if-no-files-found: error
+          path: |
+            build/*/*.tar.gz
+            build/*/*.deb
+            build/*/*.dmg
+            build/*/*.zip
+            build/*/*Setup*.exe
+            build/*/install.sh
+            build/*/update-*.json

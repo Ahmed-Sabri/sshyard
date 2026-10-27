@@ -1,0 +1,215 @@
+package vt
+
+import (
+	"bytes"
+	"encoding/base64"
+	"strings"
+	"testing"
+)
+
+func b64(s string) string { return base64.StdEncoding.EncodeToString([]byte(s)) }
+
+// tmuxWrap is ESC P tmux ; <payload with ESC doubled> ST.
+func tmuxWrap(inner string) string {
+	var b strings.Builder
+	b.WriteString("\x1bPtmux;")
+	for i := 0; i < len(inner); i++ {
+		if inner[i] == 0x1b {
+			b.WriteByte(0x1b)
+		}
+		b.WriteByte(inner[i])
+	}
+	b.WriteString("\x1b\\")
+	return b.String()
+}
+
+type clip struct {
+	sel   string
+	data  string
+	query bool
+}
+
+func collect(t *testing.T) (*Terminal, *[]clip, *int) {
+	t.Helper()
+	term := New(40, 6)
+	term.SetOSC52Max(OSC52MaxDefault)
+	var got []clip
+	var drops int
+	term.OnClipboard = func(sel, data string, query bool) {
+		got = append(got, clip{sel, data, query})
+	}
+	term.OnClipboardDrop = func() { drops++ }
+	return term, &got, &drops
+}
+
+func TestOSC52BELAndST(t *testing.T) {
+	for _, end := range []string{"\x07", "\x1b\\"} {
+		term, got, drops := collect(t)
+		term.WriteString("A\x1b]52;c;" + b64("hello") + end + "Z")
+		if len(*got) != 1 || (*got)[0].data != "hello" || (*got)[0].query || (*got)[0].sel != "c" {
+			t.Fatalf("end %q: %+v", end, *got)
+		}
+		if *drops != 0 {
+			t.Fatalf("dropped a short write")
+		}
+		if !strings.Contains(term.ScreenText(), "AZ") {
+			t.Fatalf("screen %q", term.ScreenText())
+		}
+	}
+	// No padding is still the same text.
+	term, got, _ := collect(t)
+	term.WriteString("\x1b]52;c;aGVsbG8\x07")
+	if len(*got) != 1 || (*got)[0].data != "hello" {
+		t.Fatalf("unpadded %+v", *got)
+	}
+}
+
+func TestOSC52Selections(t *testing.T) {
+	for _, pc := range []string{"c", "p", "s", "0", "1", "2", "3", "4", "5", "6", "7", "cp"} {
+		term, got, _ := collect(t)
+		term.WriteString("\x1b]52;" + pc + ";" + b64("x") + "\x07")
+		if len(*got) != 1 || (*got)[0].sel != pc || (*got)[0].data != "x" {
+			t.Fatalf("Pc %q: %+v", pc, *got)
+		}
+	}
+	// An empty Pc is the system clipboard too.
+	term, got, _ := collect(t)
+	term.WriteString("\x1b]52;;" + b64("x") + "\x07")
+	if len(*got) != 1 || (*got)[0].sel != "c" || (*got)[0].data != "x" {
+		t.Fatalf("empty Pc: %+v", *got)
+	}
+	term, got, _ = collect(t)
+	term.WriteString("\x1b]52;q;" + b64("x") + "\x07OK")
+	if len(*got) != 0 || !strings.Contains(term.ScreenText(), "OK") {
+		t.Fatalf("unknown Pc wrote %+v screen %q", *got, term.ScreenText())
+	}
+}
+
+func TestOSC52TextCleaning(t *testing.T) {
+	term, got, _ := collect(t)
+	raw := []byte{'a', 0, 'b', 0xff, 'c'}
+	term.WriteString("\x1b]52;c;" + base64.StdEncoding.EncodeToString(raw) + "\x07")
+	if len(*got) != 1 || (*got)[0].data != "ab\uFFFDc" {
+		t.Fatalf("%+v", *got)
+	}
+	// Only NULs is a clear, which is ignored.
+	term, got, _ = collect(t)
+	term.WriteString("\x1b]52;c;" + base64.StdEncoding.EncodeToString([]byte{0, 0}) + "\x07")
+	if len(*got) != 0 {
+		t.Fatalf("nul-only wrote %+v", *got)
+	}
+	// An empty payload clears the clipboard; ignore it.
+	term, got, _ = collect(t)
+	term.WriteString("\x1b]52;c;\x07")
+	if len(*got) != 0 {
+		t.Fatalf("empty payload %+v", *got)
+	}
+}
+
+func TestOSC52InvalidBase64(t *testing.T) {
+	term, got, drops := collect(t)
+	term.WriteString("\x1b]52;c;!!!!\x07NEXT")
+	if len(*got) != 0 || *drops != 0 {
+		t.Fatalf("invalid base64 got %+v drops %d", *got, *drops)
+	}
+	if !strings.Contains(term.ScreenText(), "NEXT") {
+		t.Fatalf("screen %q", term.ScreenText())
+	}
+}
+
+func TestOSC52QueryNeverReplies(t *testing.T) {
+	term, got, _ := collect(t)
+	var replies []string
+	term.Reply = func(b []byte) { replies = append(replies, string(b)) }
+	term.WriteString("\x1b]52;c;?\x07\x1b]52;p;?\x1b\\AFTER")
+	if len(*got) != 2 || !(*got)[0].query || !(*got)[1].query || (*got)[0].data != "" || (*got)[0].sel != "c" || (*got)[1].sel != "p" {
+		t.Fatalf("%+v", *got)
+	}
+	if len(replies) != 0 {
+		t.Fatalf("replied %q", replies)
+	}
+	if strings.Contains(term.ScreenText(), "?") || !strings.Contains(term.ScreenText(), "AFTER") {
+		t.Fatalf("screen %q", term.ScreenText())
+	}
+}
+
+func TestOSC52SizeLimit(t *testing.T) {
+	term, got, drops := collect(t)
+	ok := bytes.Repeat([]byte("B"), 900<<10)
+	term.WriteString("PRE\x1b]52;c;" + base64.StdEncoding.EncodeToString(ok) + "\x07MID")
+	if *drops != 0 || len(*got) != 1 || (*got)[0].data != string(ok) {
+		t.Fatalf("900 KiB: drops %d writes %d len %d", *drops, len(*got), clipLen(*got))
+	}
+	if !strings.Contains(term.ScreenText(), "PRE") || !strings.Contains(term.ScreenText(), "MID") {
+		t.Fatalf("screen %q", term.ScreenText())
+	}
+
+	big := bytes.Repeat([]byte("A"), 2<<20)
+	term.WriteString("\x1b]52;c;" + base64.StdEncoding.EncodeToString(big) + "\x07POST")
+	if *drops != 1 || len(*got) != 1 {
+		t.Fatalf("2 MiB: drops %d writes %d", *drops, len(*got))
+	}
+	if !strings.Contains(term.ScreenText(), "POST") || strings.Contains(term.ScreenText(), "QUFB") {
+		t.Fatalf("screen after drop %q", term.ScreenText())
+	}
+	// A later short write still works, so the parser is back in ground.
+	term.WriteString("\x1b]52;c;" + b64("z") + "\x07")
+	if len(*got) != 2 || (*got)[1].data != "z" {
+		t.Fatalf("after drop %+v", *got)
+	}
+}
+
+func clipLen(g []clip) int {
+	if len(g) == 0 {
+		return 0
+	}
+	return len(g[0].data)
+}
+
+func TestOSC52TmuxPassthrough(t *testing.T) {
+	term, got, drops := collect(t)
+	term.WriteString("\x1b]7;file://box/home\x07")
+	if term.Cwd() != "/home" {
+		t.Fatalf("cwd %q", term.Cwd())
+	}
+	// The spec's shape: inner OSC ends with BEL.
+	term.WriteString("X" + tmuxWrap("\x1b]52;c;"+b64("via-tmux")+"\x07") + "Y")
+	if len(*got) != 1 || (*got)[0].data != "via-tmux" || *drops != 0 {
+		t.Fatalf("bel passthrough %+v drops %d", *got, *drops)
+	}
+	if strings.Contains(term.ScreenText(), "tmux") || strings.Contains(term.ScreenText(), "via") || !strings.Contains(term.ScreenText(), "XY") {
+		t.Fatalf("screen %q", term.ScreenText())
+	}
+	// Inner ST: ESC in the payload is doubled, then the DCS ends.
+	term.WriteString(tmuxWrap("\x1b]52;c;" + b64("st") + "\x1b\\"))
+	if len(*got) != 2 || (*got)[1].data != "st" {
+		t.Fatalf("st passthrough %+v", *got)
+	}
+	// A title is allowed through. A directory report is not, nor plain text.
+	term.WriteString(tmuxWrap("\x1b]0;from-tmux\x07"))
+	if term.Title() != "from-tmux" {
+		t.Fatalf("title %q", term.Title())
+	}
+	term.WriteString(tmuxWrap("\x1b]7;file://box/tmp\x07"))
+	if term.Cwd() != "/home" {
+		t.Fatalf("inner osc 7 changed cwd to %q", term.Cwd())
+	}
+	term.WriteString(tmuxWrap("\x1b]8;;http://example\x07nope\x1b]8;;\x07"))
+	if strings.Contains(term.ScreenText(), "nope") || strings.Contains(term.ScreenText(), "example") {
+		t.Fatalf("inner osc 8 leaked %q", term.ScreenText())
+	}
+	term.WriteString(tmuxWrap("hello"))
+	if strings.Contains(term.ScreenText(), "hello") {
+		t.Fatalf("inner text leaked %q", term.ScreenText())
+	}
+
+	// Over the limit inside a passthrough is dropped, and the screen continues.
+	term.SetOSC52Max(8)
+	term.WriteString(tmuxWrap("\x1b]52;c;"+b64("hello world")+"\x07") + "OK")
+	if *drops != 1 || len(*got) != 2 {
+		t.Fatalf("tmux too big drops %d writes %d", *drops, len(*got))
+	}
+	if !strings.Contains(term.ScreenText(), "OK") {
+		t.Fatalf("screen %q", term.ScreenText())
+	}
+}

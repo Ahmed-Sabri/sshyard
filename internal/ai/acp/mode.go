@@ -1,0 +1,72 @@
+package acp
+
+import "strings"
+
+// skipTokens are matched against a mode id after lowercasing and removing
+// '-' and '_'. See the package comment for why the list is wider than the
+// four words in the spec.
+var skipTokens = []string{
+	"bypass", "fullaccess", "auto", "agent",
+	"acceptedits", "alwaysapprove", "skippermission",
+}
+
+// SkipApproval reports whether a mode id would let the agent act without
+// SSHYard's approval.
+func SkipApproval(id string) bool {
+	s := normalizeMode(id)
+	if s == "" {
+		return false
+	}
+	for _, tok := range skipTokens {
+		if strings.Contains(s, tok) {
+			return true
+		}
+	}
+	return false
+}
+
+func normalizeMode(id string) string {
+	s := strings.ToLower(id)
+	s = strings.ReplaceAll(s, "-", "")
+	s = strings.ReplaceAll(s, "_", "")
+	return s
+}
+
+// PickMode chooses the one session/set_mode call made after session/new.
+// set is false when the current mode should be left alone.
+// stop is true when the only modes skip approval: the session must not run.
+//
+// codex always requests workspace-write. claude and grok are left as they
+// are. custom prefers read-only, then plan, then default, then the first
+// remaining mode that does not skip approval.
+func PickMode(kind, current string, available []string) (mode string, set, stop bool) {
+	switch kind {
+	case "codex":
+		return "workspace-write", true, false
+	case "claude", "grok", "builtin", "":
+		return "", false, false
+	}
+	var keep []string
+	for _, id := range available {
+		if id != "" && !SkipApproval(id) {
+			keep = append(keep, id)
+		}
+	}
+	if len(keep) == 0 {
+		return "", false, SkipApproval(current)
+	}
+	for _, want := range []string{"readonly", "plan", "default"} {
+		for _, id := range keep {
+			if normalizeMode(id) == want {
+				if id == current {
+					return id, false, false
+				}
+				return id, true, false
+			}
+		}
+	}
+	if keep[0] == current {
+		return current, false, false
+	}
+	return keep[0], true, false
+}

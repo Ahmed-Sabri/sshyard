@@ -1,0 +1,1263 @@
+package session
+
+import (
+	"context"
+	"errors"
+	"math"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
+	"golang.org/x/crypto/ssh"
+)
+
+// Reason codes for a collector that will not try again on this connection.
+// The bar translates them; they are not the remote error text (that text
+// includes the script).
+const (
+	ReasonExec  = "exec"  // the server refused the exec channel
+	ReasonShell = "shell" // sh was not found
+	ReasonParse = "parse" // the output was not a metrics frame
+)
+
+// ErrTruncated is a frame that was cut off or longer than 4 KB.
+// ErrGarbage is output that is not a metrics frame.
+var (
+	ErrTruncated = errors.New("session: metrics frame truncated")
+	ErrGarbage   = errors.New("session: metrics frame unreadable")
+)
+
+const maxFrame = 4096
+
+// CPU counters are cumulative jiffies (or ticks) since boot.
+type CPU struct {
+	User, Nice, System, Idle, IOWait, IRQ, SoftIRQ, Steal uint64
+}
+
+// NIC counters are cumulative bytes since boot.
+type NIC struct {
+	Name   string
+	RX, TX uint64
+}
+
+// Vol is one filesystem, in kibibytes.
+type Vol struct {
+	TotalKB, UsedKB uint64
+	Mount           string
+}
+
+// GPU is one NVIDIA device. An OK flag is false when that field was "-".
+type GPU struct {
+	Util, MemUsed, MemTotal, Temp int64
+	UtilOK, MemOK, TempOK         bool
+}
+
+// Sample is one metrics frame. OK flags are false when that line was absent.
+type Sample struct {
+	OS                   string
+	CPU                  CPU
+	CPUOK                bool
+	CPUPct               float64
+	CPUPctOK             bool // set by a cpupct line, which is already a percent
+	Cores                []CPU
+	MemTotal, MemAvail   uint64
+	SwapTotal, SwapFree  uint64
+	MemOK                bool
+	Load1, Load5, Load15 float64
+	LoadOK               bool
+	NICs                 []NIC
+	Vols                 []Vol
+	GPUs                 []GPU
+}
+
+// Core is one core's busy percent since the previous sample.
+type Core struct {
+	Pct float64
+	OK  bool
+}
+
+// NICRate is one interface's bytes per second since the previous sample.
+type NICRate struct {
+	Name     string
+	Up, Down float64
+	OK       bool
+}
+
+// VolUse is one filesystem. Pct may be over 100 when used exceeds total.
+type VolUse struct {
+	Mount           string
+	TotalKB, UsedKB uint64
+	Pct             float64
+}
+
+// Reading is what the bar shows. Tick-based CPU and network stay unknown
+// until a second sample. A cpupct line is already a percent. Memory, disk,
+// load and GPU come from the latest sample.
+type Reading struct {
+	OS                      string
+	CPU                     float64
+	CPUOK                   bool
+	Cores                   []Core
+	MemUsedKB, MemTotalKB   uint64
+	MemPct                  float64
+	MemOK                   bool
+	SwapUsedKB, SwapTotalKB uint64
+	SwapPct                 float64
+	SwapOK                  bool
+	Vols                    []VolUse
+	Load1, Load5, Load15    float64
+	LoadOK                  bool
+	NetUp, NetDown          float64 // bytes per second, non-loopback
+	NetOK                   bool
+	NICs                    []NICRate
+	GPUs                    []GPU
+}
+
+// MetricsInterval returns n when it is 1, 2, 5 or 10, and 2 otherwise.
+func MetricsInterval(n int) int {
+	switch n {
+	case 1, 2, 5, 10:
+		return n
+	default:
+		return 2
+	}
+}
+
+// MetricsMountOK reports whether mount may be passed to the remote
+// script. Empty is fine. Anything else must be an absolute path with no
+// shell metacharacters; the command quotes it as well.
+func MetricsMountOK(mount string) bool {
+	if mount == "" {
+		return true
+	}
+	if len(mount) > 256 || mount[0] != '/' {
+		return false
+	}
+	for _, r := range mount {
+		if r < 0x20 || r == 0x7f {
+			return false
+		}
+		switch r {
+		case '\'', '"', '\\', '$', ';', '&', '|', '<', '>', '(', ')', '{', '}', '[', ']', '*', '?', '!', '~', '#':
+			return false
+		}
+	}
+	return true
+}
+
+func shellQuote(s string) string { return "'" + s + "'" }
+
+// MetricsCommand is the remote command: sh -c of the fixed script, then
+// the interval and the mount as arguments. It re-checks both, so a caller
+// that skipped Normalize still cannot interpolate them.
+func MetricsCommand(interval int, mount string) string {
+	interval = MetricsInterval(interval)
+	if !MetricsMountOK(mount) {
+		mount = ""
+	}
+	return "sh -c " + shellQuote(metricsScript) + " _ " + strconv.Itoa(interval) + " " + shellQuote(mount)
+}
+
+// ParseFrame parses one frame body (without the <<<SSHYARD / >>> markers).
+func ParseFrame(body string) (Sample, error) {
+	body = strings.ReplaceAll(body, "\r", "")
+	if strings.TrimSpace(body) == "" {
+		return Sample{}, ErrGarbage
+	}
+	var s Sample
+	saw := false
+	for _, line := range strings.Split(body, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		key, rest, _ := strings.Cut(line, " ")
+		switch key {
+		case "os":
+			if rest == "" || strings.ContainsAny(rest, " \t") {
+				return Sample{}, ErrGarbage
+			}
+			s.OS = rest
+		case "cpu":
+			c, err := parseCPU(rest)
+			if err != nil {
+				return Sample{}, ErrGarbage
+			}
+			s.CPU, s.CPUOK = c, true
+		case "cpupct":
+			p, err := parsePct(rest)
+			if err != nil {
+				return Sample{}, ErrGarbage
+			}
+			s.CPUPct, s.CPUPctOK = p, true
+		case "core":
+			c, err := parseCPU(rest)
+			if err != nil {
+				return Sample{}, ErrGarbage
+			}
+			s.Cores = append(s.Cores, c)
+		case "mem":
+			f, err := parseU64s(rest, 4)
+			if err != nil {
+				return Sample{}, ErrGarbage
+			}
+			s.MemTotal, s.MemAvail, s.SwapTotal, s.SwapFree = f[0], f[1], f[2], f[3]
+			s.MemOK = true
+		case "load":
+			a, b, c, err := parseLoad(rest)
+			if err != nil {
+				return Sample{}, ErrGarbage
+			}
+			s.Load1, s.Load5, s.Load15, s.LoadOK = a, b, c, true
+		case "nic":
+			n, err := parseNIC(rest)
+			if err != nil {
+				return Sample{}, ErrGarbage
+			}
+			putNIC(&s, n)
+		case "vol":
+			v, err := parseVol(rest)
+			if err != nil {
+				return Sample{}, ErrGarbage
+			}
+			putVol(&s, v)
+		case "gpu":
+			g, err := parseGPU(rest)
+			if err != nil {
+				return Sample{}, ErrGarbage
+			}
+			s.GPUs = append(s.GPUs, g)
+		default:
+			return Sample{}, ErrGarbage
+		}
+		saw = true
+	}
+	if !saw {
+		return Sample{}, ErrGarbage
+	}
+	return s, nil
+}
+
+func parsePct(rest string) (float64, error) {
+	f := strings.Fields(rest)
+	if len(f) != 1 {
+		return 0, ErrGarbage
+	}
+	v, err := strconv.ParseFloat(f[0], 64)
+	if err != nil || math.IsNaN(v) || math.IsInf(v, 0) || v < 0 {
+		return 0, ErrGarbage
+	}
+	if v > 100 {
+		v = 100
+	}
+	return v, nil
+}
+
+func parseCPU(rest string) (CPU, error) {
+	f, err := parseU64s(rest, 8)
+	if err != nil {
+		return CPU{}, err
+	}
+	return CPU{f[0], f[1], f[2], f[3], f[4], f[5], f[6], f[7]}, nil
+}
+
+func parseU64s(rest string, n int) ([]uint64, error) {
+	f := strings.Fields(rest)
+	if len(f) != n {
+		return nil, ErrGarbage
+	}
+	out := make([]uint64, n)
+	for i, s := range f {
+		v, err := strconv.ParseUint(s, 10, 64)
+		if err != nil {
+			return nil, ErrGarbage
+		}
+		out[i] = v
+	}
+	return out, nil
+}
+
+func parseLoad(rest string) (float64, float64, float64, error) {
+	f := strings.Fields(rest)
+	if len(f) != 3 {
+		return 0, 0, 0, ErrGarbage
+	}
+	out := [3]float64{}
+	for i, s := range f {
+		v, err := strconv.ParseFloat(s, 64)
+		if err != nil || math.IsNaN(v) || math.IsInf(v, 0) {
+			return 0, 0, 0, ErrGarbage
+		}
+		out[i] = v
+	}
+	return out[0], out[1], out[2], nil
+}
+
+func parseNIC(rest string) (NIC, error) {
+	f := strings.Fields(rest)
+	if len(f) != 3 || f[0] == "" {
+		return NIC{}, ErrGarbage
+	}
+	rx, err1 := strconv.ParseUint(f[1], 10, 64)
+	tx, err2 := strconv.ParseUint(f[2], 10, 64)
+	if err1 != nil || err2 != nil {
+		return NIC{}, ErrGarbage
+	}
+	return NIC{Name: f[0], RX: rx, TX: tx}, nil
+}
+
+func parseVol(rest string) (Vol, error) {
+	f := strings.Fields(rest)
+	if len(f) < 3 {
+		return Vol{}, ErrGarbage
+	}
+	total, err1 := strconv.ParseUint(f[0], 10, 64)
+	used, err2 := strconv.ParseUint(f[1], 10, 64)
+	if err1 != nil || err2 != nil {
+		return Vol{}, ErrGarbage
+	}
+	return Vol{TotalKB: total, UsedKB: used, Mount: strings.Join(f[2:], " ")}, nil
+}
+
+func parseGPU(rest string) (GPU, error) {
+	f := strings.Fields(rest)
+	if len(f) != 4 {
+		return GPU{}, ErrGarbage
+	}
+	var g GPU
+	var err error
+	if g.Util, g.UtilOK, err = parseOpt(f[0]); err != nil {
+		return GPU{}, ErrGarbage
+	}
+	if g.MemUsed, g.MemOK, err = parseOpt(f[1]); err != nil {
+		return GPU{}, ErrGarbage
+	}
+	var totalOK bool
+	if g.MemTotal, totalOK, err = parseOpt(f[2]); err != nil {
+		return GPU{}, ErrGarbage
+	}
+	g.MemOK = g.MemOK && totalOK
+	if g.Temp, g.TempOK, err = parseOpt(f[3]); err != nil {
+		return GPU{}, ErrGarbage
+	}
+	return g, nil
+}
+
+func parseOpt(s string) (int64, bool, error) {
+	if s == "-" {
+		return 0, false, nil
+	}
+	v, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return 0, false, err
+	}
+	return v, true, nil
+}
+
+func putNIC(s *Sample, n NIC) {
+	for i := range s.NICs {
+		if s.NICs[i].Name == n.Name {
+			s.NICs[i] = n
+			return
+		}
+	}
+	s.NICs = append(s.NICs, n)
+}
+
+func putVol(s *Sample, v Vol) {
+	for i := range s.Vols {
+		if s.Vols[i].Mount == v.Mount {
+			s.Vols[i] = v
+			return
+		}
+	}
+	s.Vols = append(s.Vols, v)
+}
+
+// Decoder splits a byte stream into frames. A line "." between frames is
+// a heartbeat and is ignored. Write returns every complete sample before
+// the first error.
+type Decoder struct {
+	buf  []byte
+	body []byte
+	in   bool
+}
+
+// Write appends p and returns the frames that finished with this write.
+func (d *Decoder) Write(p []byte) ([]Sample, error) {
+	var out []Sample
+	d.buf = append(d.buf, p...)
+	for {
+		if !d.in {
+			line, ok, err := d.nextLine()
+			if err != nil {
+				return out, err
+			}
+			if !ok {
+				return out, nil
+			}
+			switch line {
+			case "", ".":
+				continue
+			case "<<<SSHYARD":
+				d.in = true
+				d.body = d.body[:0]
+			default:
+				return out, ErrGarbage
+			}
+			continue
+		}
+		line, ok, err := d.nextLine()
+		if err != nil {
+			return out, err
+		}
+		if !ok {
+			if len(d.body)+len(d.buf) > maxFrame {
+				return out, ErrTruncated
+			}
+			return out, nil
+		}
+		if line == ">>>" {
+			s, perr := ParseFrame(string(d.body))
+			d.body = d.body[:0]
+			d.in = false
+			if perr != nil {
+				return out, perr
+			}
+			out = append(out, s)
+			continue
+		}
+		if len(d.body)+len(line)+1 > maxFrame {
+			return out, ErrTruncated
+		}
+		d.body = append(d.body, line...)
+		d.body = append(d.body, '\n')
+	}
+}
+
+// Close reports a frame that was still open, or a half-read line.
+func (d *Decoder) Close() error {
+	if d.in || len(strings.TrimSpace(string(d.buf))) > 0 {
+		return ErrTruncated
+	}
+	return nil
+}
+
+// nextLine returns the next line. ok is false when the line is not
+// finished yet. A line over 4 KB, or an unfinished buffer over 4 KB
+// outside a frame, is truncated.
+func (d *Decoder) nextLine() (string, bool, error) {
+	i := strings.IndexByte(string(d.buf), '\n')
+	if i < 0 {
+		if !d.in && len(d.buf) > maxFrame {
+			return "", false, ErrTruncated
+		}
+		return "", false, nil
+	}
+	line := strings.TrimRight(string(d.buf[:i]), "\r")
+	d.buf = append([]byte(nil), d.buf[i+1:]...)
+	if len(line) > maxFrame {
+		return "", false, ErrTruncated
+	}
+	return line, true, nil
+}
+
+func cpuParts(c CPU) (total, idle uint64) {
+	idle = c.Idle + c.IOWait
+	total = c.User + c.Nice + c.System + idle + c.IRQ + c.SoftIRQ + c.Steal
+	return total, idle
+}
+
+func cpuPct(prev, cur CPU) (float64, bool) {
+	pt, pi := cpuParts(prev)
+	ct, ci := cpuParts(cur)
+	if ct <= pt || ci < pi {
+		return 0, false
+	}
+	dT := ct - pt
+	dI := ci - pi
+	if dI > dT {
+		return 0, false
+	}
+	return float64(dT-dI) / float64(dT) * 100, true
+}
+
+func loopback(name string) bool { return name == "lo" || name == "lo0" }
+
+// Delta turns two samples into bar figures. dt is the time from prev to
+// cur; network rates need it, CPU percent does not. A counter that goes
+// backwards is a reset: that CPU is unknown, and that interface's rate
+// for the interval is 0.
+func Delta(prev, cur Sample, dt time.Duration) Reading {
+	r := Reading{OS: cur.OS, GPUs: cur.GPUs}
+	if prev.CPUOK && cur.CPUOK {
+		r.CPU, r.CPUOK = cpuPct(prev.CPU, cur.CPU)
+	} else if cur.CPUPctOK {
+		r.CPU, r.CPUOK = cur.CPUPct, true
+	}
+	if len(cur.Cores) > 0 {
+		r.Cores = make([]Core, len(cur.Cores))
+		for i := range cur.Cores {
+			if prev.CPUOK && i < len(prev.Cores) {
+				r.Cores[i].Pct, r.Cores[i].OK = cpuPct(prev.Cores[i], cur.Cores[i])
+			}
+		}
+	}
+	if cur.MemOK {
+		r.MemOK, r.SwapOK = true, true
+		r.MemTotalKB = cur.MemTotal
+		if cur.MemTotal > cur.MemAvail {
+			r.MemUsedKB = cur.MemTotal - cur.MemAvail
+		}
+		if cur.MemTotal > 0 {
+			r.MemPct = float64(r.MemUsedKB) / float64(cur.MemTotal) * 100
+		}
+		r.SwapTotalKB = cur.SwapTotal
+		if cur.SwapTotal > cur.SwapFree {
+			r.SwapUsedKB = cur.SwapTotal - cur.SwapFree
+		}
+		if cur.SwapTotal > 0 {
+			r.SwapPct = float64(r.SwapUsedKB) / float64(cur.SwapTotal) * 100
+		}
+	}
+	for _, v := range cur.Vols {
+		u := VolUse{Mount: v.Mount, TotalKB: v.TotalKB, UsedKB: v.UsedKB}
+		if v.TotalKB > 0 {
+			u.Pct = float64(v.UsedKB) / float64(v.TotalKB) * 100
+		}
+		r.Vols = append(r.Vols, u)
+	}
+	if cur.LoadOK {
+		r.Load1, r.Load5, r.Load15, r.LoadOK = cur.Load1, cur.Load5, cur.Load15, true
+	}
+	sec := dt.Seconds()
+	if sec > 0 {
+		for _, n := range cur.NICs {
+			if loopback(n.Name) {
+				continue
+			}
+			rate := NICRate{Name: n.Name}
+			p, ok := findNIC(prev.NICs, n.Name)
+			if ok {
+				rate.OK = true
+				rate.Down = byteRate(n.RX, p.RX, sec)
+				rate.Up = byteRate(n.TX, p.TX, sec)
+				r.NetDown += rate.Down
+				r.NetUp += rate.Up
+				r.NetOK = true
+			}
+			r.NICs = append(r.NICs, rate)
+		}
+	}
+	return r
+}
+
+func findNIC(nics []NIC, name string) (NIC, bool) {
+	for _, n := range nics {
+		if n.Name == name {
+			return n, true
+		}
+	}
+	return NIC{}, false
+}
+
+func byteRate(cur, prev uint64, sec float64) float64 {
+	if cur < prev {
+		return 0
+	}
+	return float64(cur-prev) / sec
+}
+
+// Collector runs one metrics command on a client it does not own and does
+// not dial. One host's panes share one Collector. A failure sticks to
+// that client; a later Start with a different client (a reconnect) tries
+// once more.
+type Collector struct {
+	gate sync.Mutex
+	mu   sync.Mutex
+
+	client   *ssh.Client
+	interval int
+	mount    string
+	running  bool
+	failed   bool
+	reason   string
+	reading  Reading
+	prev     Sample
+	prevAt   time.Time
+	havePrev bool
+	cancel   context.CancelFunc
+	done     chan struct{}
+	gen      int
+}
+
+// NewCollector returns a collector that is not running.
+func NewCollector() *Collector { return &Collector{} }
+
+// Start runs the metrics command on client. It does nothing when client
+// is nil, when this client already failed, or when the same command is
+// already running. A new client replaces the previous run. Start does not
+// wait: the new command waits, on its own goroutine, until the previous
+// one has left its channel, and a command cancelled before that opens nothing.
+func (c *Collector) Start(client *ssh.Client, interval int, mount string) {
+	if client == nil {
+		return
+	}
+	interval = MetricsInterval(interval)
+	if !MetricsMountOK(mount) {
+		mount = ""
+	}
+	c.gate.Lock()
+	defer c.gate.Unlock()
+
+	c.mu.Lock()
+	same := c.client == client
+	if same && c.failed {
+		c.interval, c.mount = interval, mount
+		c.mu.Unlock()
+		return
+	}
+	if same && c.running && c.interval == interval && c.mount == mount {
+		c.mu.Unlock()
+		return
+	}
+	if !same {
+		c.failed = false
+		c.reason = ""
+		c.reading = Reading{}
+		c.havePrev = false
+		c.prev = Sample{}
+	}
+	c.client, c.interval, c.mount = client, interval, mount
+	c.gen++
+	gen := c.gen
+	prev := c.done
+	if c.cancel != nil {
+		c.cancel()
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	c.cancel, c.done, c.running = cancel, done, true
+	c.mu.Unlock()
+	go c.launch(ctx, cancel, client, interval, mount, gen, prev, done)
+}
+
+// Stop cancels the command and returns without waiting for the channel.
+// It does not mark the collector failed, so a later Start runs again.
+func (c *Collector) Stop() {
+	c.gate.Lock()
+	defer c.gate.Unlock()
+	c.mu.Lock()
+	cancel := c.cancel
+	c.running = false
+	c.mu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+}
+
+// Wait blocks until the latest command has finished or ctx ends.
+// A nil ctx waits until the command finishes.
+func (c *Collector) Wait(ctx context.Context) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	c.mu.Lock()
+	done := c.done
+	c.mu.Unlock()
+	if done == nil {
+		return nil
+	}
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// View returns the latest reading. reason is a Reason constant when this
+// client has failed and is empty otherwise.
+func (c *Collector) View() (Reading, string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.failed {
+		return Reading{}, c.reason
+	}
+	return c.reading, ""
+}
+
+func (c *Collector) fail(gen int, reason string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.gen != gen || c.failed {
+		return
+	}
+	c.failed = true
+	c.reason = reason
+	c.running = false
+	c.reading = Reading{}
+	c.havePrev = false
+	c.prev = Sample{}
+}
+
+func (c *Collector) failedNow() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.failed
+}
+
+func (c *Collector) observe(gen int, s Sample) {
+	now := time.Now()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.gen != gen || c.failed {
+		return
+	}
+	if c.havePrev {
+		c.reading = Delta(c.prev, s, now.Sub(c.prevAt))
+	} else {
+		c.reading = Delta(Sample{}, s, 0)
+	}
+	c.prev, c.prevAt, c.havePrev = s, now, true
+}
+
+type frameWriter struct {
+	c      *Collector
+	cancel context.CancelFunc
+	dec    Decoder
+	gen    int
+}
+
+func (w *frameWriter) Write(p []byte) (int, error) {
+	samples, err := w.dec.Write(p)
+	for _, s := range samples {
+		w.c.observe(w.gen, s)
+	}
+	if err != nil {
+		// Returning the error would deadlock the SSH copy if it
+		// then failed the write that reports it. Cancel instead.
+		w.c.fail(w.gen, ReasonParse)
+		w.cancel()
+	}
+	return len(p), nil
+}
+
+// launch waits for the previous command to leave its channel, then runs
+// this one unless it was cancelled first.
+func (c *Collector) launch(ctx context.Context, cancel context.CancelFunc, client *ssh.Client, interval int, mount string, gen int, prev, done chan struct{}) {
+	defer func() {
+		c.mu.Lock()
+		if c.gen == gen {
+			c.running = false
+			c.cancel = nil
+		}
+		c.mu.Unlock()
+		close(done)
+	}()
+	if prev != nil {
+		<-prev
+	}
+	if ctx.Err() != nil {
+		return
+	}
+	c.mu.Lock()
+	ok := c.gen == gen && !c.failed
+	c.mu.Unlock()
+	if !ok {
+		return
+	}
+	fw := &frameWriter{c: c, cancel: cancel, gen: gen}
+	err := Exec(ctx, client, MetricsCommand(interval, mount), fw, nil)
+	if c.failedNow() || ctx.Err() != nil {
+		return
+	}
+	if cerr := fw.dec.Close(); cerr != nil {
+		c.fail(gen, ReasonParse)
+		return
+	}
+	c.fail(gen, execReason(err))
+}
+
+func execReason(err error) string {
+	var exit *ssh.ExitError
+	if errors.As(err, &exit) {
+		if exit.ExitStatus() == 127 {
+			return ReasonShell
+		}
+		return ReasonParse
+	}
+	if err == nil {
+		return ReasonParse
+	}
+	return ReasonExec
+}
+
+// shortcut: frames keep at most 64 cores, 32 interfaces and 8 GPUs so they stay under 4 KB; raise those caps for a bigger host.
+const metricsScript = `
+interval=$1
+mount=$2
+case $interval in
+1|2|5|10) ;;
+*) interval=2 ;;
+esac
+# bash writes a here-document to a temp file; keep every sample in the shell.
+set -f
+nl=$(printf "\nx")
+nl=${nl%x}
+uname_s=$(uname -s 2>/dev/null || echo other)
+case $uname_s in
+Linux) kind=linux ;;
+Darwin) kind=darwin ;;
+*BSD|DragonFly) kind=bsd ;;
+*) kind=other ;;
+esac
+has_gpu=0
+command -v nvidia-smi >/dev/null 2>&1 && has_gpu=1
+gpu_cache=
+frame_n=0
+sent=0
+body=
+
+add() {
+  n=${#body}
+  if [ "$n" -ge 3500 ]; then
+    return 0
+  fi
+  body="$body$1
+"
+}
+
+num_ok() {
+  case $1 in
+  ""|*[!0-9]*) return 1 ;;
+  esac
+  return 0
+}
+
+to_kb() {
+  v=$1
+  unit=${v##*[0-9.]}
+  num=${v%$unit}
+  num=${num%%.*}
+  num_ok "$num" || num=0
+  case $unit in
+  G|g) printf "%s" $((num * 1024 * 1024)) ;;
+  M|m) printf "%s" $((num * 1024)) ;;
+  K|k) printf "%s" "$num" ;;
+  *) printf "%s" $((num / 1024)) ;;
+  esac
+}
+
+gpu_field() {
+  v=$1
+  while :; do
+    case $v in
+    " "*) v=${v# } ;;
+    *" ") v=${v% } ;;
+    *) break ;;
+    esac
+  done
+  case $v in
+  ""|*[!0-9]*) printf "%s" "-" ;;
+  *) printf "%s" "$v" ;;
+  esac
+}
+
+read_stat() {
+  [ -r /proc/stat ] || return 0
+  cores=0
+  while IFS= read -r line; do
+    set -- $line
+    case $1 in
+    cpu)
+      add "cpu ${2:-0} ${3:-0} ${4:-0} ${5:-0} ${6:-0} ${7:-0} ${8:-0} ${9:-0}"
+      ;;
+    cpu[0-9]*)
+      if [ "$cores" -ge 64 ]; then
+        continue
+      fi
+      cores=$((cores + 1))
+      add "core ${2:-0} ${3:-0} ${4:-0} ${5:-0} ${6:-0} ${7:-0} ${8:-0} ${9:-0}"
+      ;;
+    *)
+      break
+      ;;
+    esac
+  done < /proc/stat
+}
+
+read_mem() {
+  [ -r /proc/meminfo ] || return 0
+  total=0
+  avail=0
+  free_kb=0
+  buffers=0
+  cached=0
+  swapt=0
+  swapf=0
+  have_avail=0
+  while IFS= read -r line; do
+    set -- $line
+    case $1 in
+    MemTotal:) total=$2 ;;
+    MemAvailable:) avail=$2; have_avail=1 ;;
+    MemFree:) free_kb=$2 ;;
+    Buffers:) buffers=$2 ;;
+    Cached:) cached=$2 ;;
+    SwapTotal:) swapt=$2 ;;
+    SwapFree:) swapf=$2 ;;
+    esac
+  done < /proc/meminfo
+  num_ok "$total" || return 0
+  [ "$total" -gt 0 ] || return 0
+  if [ "$have_avail" -eq 0 ]; then
+    num_ok "$free_kb" || free_kb=0
+    num_ok "$buffers" || buffers=0
+    num_ok "$cached" || cached=0
+    avail=$((free_kb + buffers + cached))
+    if [ "$avail" -gt "$total" ]; then
+      avail=$total
+    fi
+  fi
+  num_ok "$avail" || avail=0
+  num_ok "$swapt" || swapt=0
+  num_ok "$swapf" || swapf=0
+  add "mem $total $avail $swapt $swapf"
+}
+
+read_load() {
+  [ -r /proc/loadavg ] || return 0
+  IFS= read -r line < /proc/loadavg || return 0
+  set -- $line
+  [ "$#" -ge 3 ] || return 0
+  add "load $1 $2 $3"
+}
+
+read_net() {
+  [ -r /proc/net/dev ] || return 0
+  nics=0
+  while IFS= read -r line; do
+    set -- $line
+    name=$1
+    case $name in
+    *:*) ;;
+    *) continue ;;
+    esac
+    name=${name%:}
+    case $name in
+    lo|lo0|"") continue ;;
+    esac
+    if [ "$#" -lt 10 ]; then
+      continue
+    fi
+    if [ "$nics" -ge 32 ]; then
+      break
+    fi
+    rx=$2
+    tx=${10}
+    num_ok "$rx" || continue
+    num_ok "$tx" || continue
+    nics=$((nics + 1))
+    add "nic $name $rx $tx"
+  done < /proc/net/dev
+}
+
+df_path() {
+  p=$1
+  [ -n "$p" ] || return 0
+  data=$(df -P -k "$p" 2>/dev/null) || data=$(df -k "$p" 2>/dev/null) || return 0
+  last=
+  _ifs=$IFS
+  IFS=$nl
+  for line in $data; do
+    IFS=$_ifs
+    [ -n "$line" ] || continue
+    last=$line
+  done
+  IFS=$_ifs
+  [ -n "$last" ] || return 0
+  set -- $last
+  num_ok "$2" || return 0
+  num_ok "$3" || return 0
+  add "vol $2 $3 $p"
+}
+
+read_cpu_bsd() {
+  t=$(sysctl -n kern.cp_time 2>/dev/null) || t=
+  if [ -z "$t" ]; then
+    read_cpu_darwin
+    return 0
+  fi
+  set -- $t
+  [ "$#" -ge 4 ] || return 0
+  add "cpu $1 $2 $3 $4 0 0 0 0"
+  ct=$(sysctl -n kern.cp_times 2>/dev/null) || return 0
+  set -- $ct
+  cores=0
+  while [ "$#" -ge 5 ]; do
+    if [ "$cores" -ge 64 ]; then
+      break
+    fi
+    cores=$((cores + 1))
+    add "core $1 $2 $3 $5 0 $4 0 0"
+    shift 5
+  done
+}
+
+# Darwin has no cumulative CPU ticks. ps %cpu is one snapshot (a decaying
+# average), so the frame stays inside the interval. iostat and top each
+# wait a second. The sum is percent of one CPU; divide by logical CPUs.
+# Per-core figures stay absent.
+read_cpu_darwin() {
+  ncpu=$(sysctl -n hw.logicalcpu 2>/dev/null) || return 0
+  num_ok "$ncpu" || return 0
+  [ "$ncpu" -gt 0 ] || return 0
+  data=$(LC_ALL=C ps -A -o %cpu= 2>/dev/null) || return 0
+  sum=0
+  n=0
+  _ifs=$IFS
+  IFS=$nl
+  for line in $data; do
+    IFS=$_ifs
+    v=$line
+    while :; do
+      case $v in
+      " "*) v=${v# } ;;
+      *" ") v=${v% } ;;
+      *) break ;;
+      esac
+    done
+    [ -n "$v" ] || continue
+    case $v in
+    *.*)
+      whole=${v%%.*}
+      frac=${v#*.}
+      ;;
+    *)
+      whole=$v
+      frac=0
+      ;;
+    esac
+    num_ok "$whole" || continue
+    one=${frac%${frac#?}}
+    num_ok "$one" || one=0
+    sum=$((sum + whole * 10 + one))
+    n=$((n + 1))
+  done
+  IFS=$_ifs
+  [ "$n" -gt 0 ] || return 0
+  tenths=$((sum / ncpu))
+  pct=$(((tenths + 5) / 10))
+  if [ "$pct" -gt 100 ]; then
+    pct=100
+  fi
+  add "cpupct $pct"
+}
+
+read_mem_bsd() {
+  bytes=$(sysctl -n hw.memsize 2>/dev/null) || bytes=0
+  num_ok "$bytes" || bytes=0
+  total=$((bytes / 1024))
+  [ "$total" -gt 0 ] || return 0
+  page=4096
+  active_p=0
+  spec_p=0
+  wired_p=0
+  got_pages=0
+  data=$(vm_stat 2>/dev/null) || data=
+  _ifs=$IFS
+  IFS=$nl
+  for line in $data; do
+    IFS=$_ifs
+    case $line in
+    *"page size of "*)
+      rest=${line#*page size of }
+      set -- $rest
+      num_ok "$1" && page=$1
+      ;;
+    esac
+    set -- $line
+    case $2 in
+    active:) num_ok "${3%.}" && active_p=${3%.} && got_pages=1 ;;
+    speculative:) num_ok "${3%.}" && spec_p=${3%.} && got_pages=1 ;;
+    wired) num_ok "${4%.}" && wired_p=${4%.} && got_pages=1 ;;
+    esac
+  done
+  IFS=$_ifs
+  [ "$got_pages" -eq 1 ] || return 0
+  used_pages=$((active_p + wired_p + spec_p))
+  used_kb=$((used_pages * page / 1024))
+  if [ "$used_kb" -lt "$total" ]; then
+    avail=$((total - used_kb))
+  else
+    avail=0
+  fi
+  swapt=0
+  swapf=0
+  swap=$(sysctl -n vm.swapusage 2>/dev/null) || swap=
+  if [ -n "$swap" ]; then
+    stripped=
+    rest=$swap
+    while [ -n "$rest" ]; do
+      case $rest in
+      *"="*)
+        stripped="$stripped${rest%%=*}"
+        rest=${rest#*=}
+        ;;
+      *)
+        stripped="$stripped$rest"
+        rest=
+        ;;
+      esac
+    done
+    set -- $stripped
+    if [ "$1" = "total" ]; then
+      swapt=$(to_kb "$2")
+      swapu=$(to_kb "$4")
+      if [ "$swapt" -ge "$swapu" ]; then
+        swapf=$((swapt - swapu))
+      fi
+    fi
+  fi
+  add "mem $total $avail $swapt $swapf"
+}
+
+read_load_bsd() {
+  load=$(sysctl -n vm.loadavg 2>/dev/null) || return 0
+  set -- $load
+  [ "$#" -ge 4 ] || return 0
+  add "load $2 $3 $4"
+}
+
+read_net_bsd() {
+  data=$(netstat -ib 2>/dev/null) || return 0
+  nics=0
+  _ifs=$IFS
+  IFS=$nl
+  for line in $data; do
+    IFS=$_ifs
+    case $line in
+    *"<Link"*) ;;
+    *) continue ;;
+    esac
+    set -- $line
+    name=$1
+    case $name in
+    lo|lo0|"") continue ;;
+    esac
+    if [ "$nics" -ge 32 ]; then
+      break
+    fi
+    case $4 in
+    ""|*[!0-9]*)
+      ib=$7
+      ob=${10}
+      ;;
+    *)
+      ib=$6
+      ob=$9
+      ;;
+    esac
+    num_ok "$ib" || continue
+    num_ok "$ob" || continue
+    nics=$((nics + 1))
+    add "nic $name $ib $ob"
+  done
+  IFS=$_ifs
+}
+
+read_gpu() {
+  [ "$has_gpu" -eq 1 ] || return 0
+  frame_n=$((frame_n + 1))
+  if [ "$((frame_n % 3))" -eq 1 ]; then
+    gpu_cache=$(nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu --format=csv,noheader,nounits 2>/dev/null) || gpu_cache=
+  fi
+  [ -n "$gpu_cache" ] || return 0
+  gpus=0
+  _ifs=$IFS
+  IFS=$nl
+  for line in $gpu_cache; do
+    IFS=$_ifs
+    [ -n "$line" ] || continue
+    if [ "$gpus" -ge 8 ]; then
+      break
+    fi
+    old_ifs=$IFS
+    IFS=,
+    set -- $line
+    IFS=$old_ifs
+    u=$(gpu_field "$1")
+    mu=$(gpu_field "$2")
+    mt=$(gpu_field "$3")
+    tp=$(gpu_field "$4")
+    gpus=$((gpus + 1))
+    add "gpu $u $mu $mt $tp"
+  done
+  IFS=$_ifs
+}
+
+emit_disks() {
+  df_path /
+  if [ -n "$mount" ] && [ "$mount" != "/" ]; then
+    df_path "$mount"
+  fi
+}
+
+emit() {
+  body=
+  add "os $kind"
+  case $kind in
+  linux)
+    read_stat
+    read_mem
+    read_load
+    read_net
+    emit_disks
+    read_gpu
+    ;;
+  darwin|bsd)
+    read_cpu_bsd
+    read_mem_bsd
+    read_load_bsd
+    read_net_bsd
+    emit_disks
+    read_gpu
+    ;;
+  *)
+    emit_disks
+    ;;
+  esac
+  printf "%s\n" "<<<SSHYARD" || exit
+  printf "%s" "$body" || exit
+  printf "%s\n" ">>>" || exit
+}
+
+while :; do
+  start=$(date +%s 2>/dev/null || echo 0)
+  num_ok "$start" || start=0
+  emit
+  # The second frame is one second after the first, so CPU and network
+  # deltas exist about a second after start. Later frames keep the interval,
+  # counted from before emit so a slow sample stays inside it.
+  gap=$interval
+  if [ "$sent" -eq 0 ]; then
+    gap=1
+  fi
+  sent=$((sent + 1))
+  step=0
+  while [ "$step" -lt "$gap" ]; do
+    if [ "$start" -ne 0 ]; then
+      now=$(date +%s 2>/dev/null || echo 0)
+      num_ok "$now" || now=0
+      if [ "$now" -ge "$((start + gap))" ]; then
+        break
+      fi
+    fi
+    printf ".\n" || exit
+    sleep 1
+    step=$((step + 1))
+  done
+done
+`
