@@ -95,8 +95,8 @@ func TestSidebarToolsAndGroups(t *testing.T) {
 	if err := tt.RightClick("web"); err != nil {
 		t.Fatal(err)
 	}
-	if err := tt.ChooseMenuItem("Move to group", "Prod"); err != nil {
-		t.Fatalf("%v menu %q", err, tt.Menu())
+	if err := chooseMenu(a, tt, "Move to group", "Prod"); err != nil {
+		t.Fatalf("%v menu %q", err, menuOf(a))
 	}
 	tt.Frame()
 	if got, _ := a.Store().Get(h.ID); got.Group != "Prod" || tt.HasText("No hosts. Drag hosts here.") {
@@ -107,8 +107,8 @@ func TestSidebarToolsAndGroups(t *testing.T) {
 	if err := tt.RightClick("Prod"); err != nil {
 		t.Fatal(err)
 	}
-	if err := tt.ChooseMenuItem("Rename group"); err != nil {
-		t.Fatalf("%v menu %q", err, tt.Menu())
+	if err := chooseMenu(a, tt, "Rename group"); err != nil {
+		t.Fatalf("%v menu %q", err, menuOf(a))
 	}
 	tt.Frame()
 	if a.group == nil || a.group.old != "Prod" {
@@ -127,8 +127,8 @@ func TestSidebarToolsAndGroups(t *testing.T) {
 	if err := tt.RightClick("Live"); err != nil {
 		t.Fatal(err)
 	}
-	if err := tt.ChooseMenuItem("Delete group"); err != nil {
-		t.Fatalf("%v menu %q", err, tt.Menu())
+	if err := chooseMenu(a, tt, "Delete group"); err != nil {
+		t.Fatalf("%v menu %q", err, menuOf(a))
 	}
 	tt.Frame()
 	if !tt.HasText("Delete the group Live? Its hosts are kept, without a group.") {

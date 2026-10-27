@@ -308,8 +308,8 @@ func TestTabsOverflow(t *testing.T) {
 	}
 	tt.Frame()
 	// The popover, not a native menu: a row for each tab not shown.
-	if !a.tabsOpen || tt.Menu() != nil {
-		t.Fatalf("no popover: open %v, menu %q", a.tabsOpen, tt.Menu())
+	if !a.tabsOpen || menuOf(a) != nil {
+		t.Fatalf("no popover: open %v, menu %q", a.tabsOpen, menuOf(a))
 	}
 	if n := textCount(tt, "Local terminal") - before; n < 12-a.tabRoomShown() {
 		t.Fatalf("%d rows for %d tabs: %q", n, 12-a.tabRoomShown(), tt.Texts())
@@ -388,8 +388,8 @@ func TestTabTipAndMenu(t *testing.T) {
 		if err := tt.RightClick(label); err != nil {
 			t.Fatal(err)
 		}
-		if err := tt.ChooseMenuItem(item); err != nil {
-			t.Fatalf("%v: %q", err, tt.Menu())
+		if err := chooseMenu(a, tt, item); err != nil {
+			t.Fatalf("%v: %q", err, menuOf(a))
 		}
 		tt.Frame()
 		tt.Frame()
@@ -424,11 +424,11 @@ func TestTabTipAndMenu(t *testing.T) {
 	}
 	for _, want := range []string{"Close Tab", "Close Other Tabs", "Close Tabs to the Left", "Close Tabs to the Right",
 		"Close All Tabs of This Host", "Close Tabs of Other Hosts", "Close All Tabs"} {
-		if !slices.Contains(tt.Menu(), want) {
-			t.Errorf("no %q in %q", want, tt.Menu())
+		if !slices.Contains(menuOf(a), want) {
+			t.Errorf("no %q in %q", want, menuOf(a))
 		}
 	}
-	if err := tt.ChooseMenuItem("Close Tabs of Other Hosts"); err != nil {
+	if err := chooseMenu(a, tt, "Close Tabs of Other Hosts"); err != nil {
 		t.Fatal(err)
 	}
 	tt.Frame()

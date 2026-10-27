@@ -132,7 +132,7 @@ func TestMouseReporting(t *testing.T) {
 	// the right button goes to the program, not to the context menu
 	tt.RightClickAt(x, y)
 	expectRead(t, tt, sh, "\x1b[<2;3;2m")
-	if m := tt.Menu(); m != nil {
+	if m := menuOf(a); m != nil {
 		t.Errorf("menu %q opened on a reported right click", m)
 	}
 

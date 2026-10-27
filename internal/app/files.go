@@ -5,6 +5,8 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -18,8 +20,109 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
+// sideList is what each side of a files pane lists: its folder, the
+// entries in it, those chosen, by name, and the row last chosen (sel),
+// which the keys move from.
+type sideList struct {
+	dir     string
+	entries []sftpsvc.Entry
+	sel     int
+	chosen  ui.Selection[string]
+	list    ui.ListState
+	// reveal is the name chosen once the folder lists, for an entry gone
+	// to from the breadcrumbs.
+	reveal string
+	// rows are where the rows showed in the last frame, for the row a
+	// right-click is on.
+	rows []rowMark
+	// refocus gives the rows the keys back as their menu closes.
+	refocus bool
+}
+
+// rowMark is where a row of a side showed: its entry's name and the top
+// and bottom of its name, in the window's DIPs.
+type rowMark struct {
+	name        string
+	top, bottom float32
+}
+
+// show lists es as the side's folder dir. The entries chosen stay chosen
+// in the folder they were chosen in, while they are there; reveal, when
+// set, is chosen instead.
+func (sd *sideList) show(dir string, es []sftpsvc.Entry) {
+	if dir != sd.dir {
+		sd.chosen.Clear()
+	} else {
+		there := make(map[string]bool, len(es))
+		for _, e := range es {
+			there[e.Name] = true
+		}
+		for name := range sd.chosen.All() {
+			if !there[name] {
+				sd.chosen.Remove(name)
+			}
+		}
+	}
+	sd.dir, sd.entries, sd.sel = dir, es, -1
+	if name := sd.reveal; name != "" {
+		sd.reveal = ""
+		if i := slices.IndexFunc(es, func(e sftpsvc.Entry) bool { return e.Name == name }); i >= 0 {
+			sd.only(i)
+			sd.list.ScrollTo(i, ui.Center)
+		}
+	}
+}
+
+// only chooses row i alone.
+func (sd *sideList) only(i int) {
+	sd.chosen.Clear()
+	if i >= 0 && i < len(sd.entries) {
+		sd.chosen.Add(sd.entries[i].Name)
+	}
+	sd.sel = i
+}
+
+// picked are the entries chosen, in the order the side lists them.
+func (sd *sideList) picked() []sftpsvc.Entry {
+	if sd.chosen.Len() == 0 {
+		return nil
+	}
+	var out []sftpsvc.Entry
+	for _, e := range sd.entries {
+		if sd.chosen.Has(e.Name) {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+// paths are the paths of es in the side's folder.
+func (sd *sideList) paths(remote bool, es []sftpsvc.Entry) []string {
+	out := make([]string, len(es))
+	for i, e := range es {
+		out[i] = sidePath(remote, sd.dir, e.Name)
+	}
+	return out
+}
+
+// rowAt is the entry of the row at the window's y, from where the rows
+// showed in the last frame: the row whose name is nearest, within the
+// room around a name in its row.
+func (sd *sideList) rowAt(y float32) (string, bool) {
+	const room = 8
+	best, dist := "", float32(room+1)
+	for _, r := range sd.rows {
+		d := max(r.top-y, y-r.bottom, 0)
+		if d < dist {
+			best, dist = r.name, d
+		}
+	}
+	return best, dist <= room
+}
+
 // remoteSide is the remote half of a files pane, on its SFTP client.
 type remoteSide struct {
+	sideList
 	client   *sftpsvc.Client
 	connects int // the connection the client is on
 	opening  bool
@@ -29,10 +132,6 @@ type remoteSide struct {
 	// a finished transfer triggers in the same frame.
 	// shortcut: it also stays across a later folder change, until the next plan, delete, or reconnect.
 	listErr bool
-	dir     string
-	entries []sftpsvc.Entry
-	sel     int
-	list    ui.ListState
 	// unfinished are saves in dir a cut left undone: the file missing,
 	// its old version at a backup, to restore or discard.
 	unfinished []sftpsvc.Unfinished
@@ -42,11 +141,8 @@ type remoteSide struct {
 
 // localSide is the local half of a files pane.
 type localSide struct {
-	dir     string
-	entries []sftpsvc.Entry
-	sel     int
-	list    ui.ListState
-	err     string
+	sideList
+	err string
 	// listErr says err came from listing this side. A list that works
 	// clears only that, so a plan or transfer error survives the refresh
 	// a finished transfer triggers in the same frame.
@@ -99,14 +195,32 @@ type filesState struct {
 	// queueOpen is the transfers sheet, queue its list.
 	queueOpen bool
 	queue     ui.ListState
-	// opening is set, per side (local, remote), from a double click on a
-	// row's name, which opens on the press, to its release, whose click
-	// is not a choice in the folder just opened.
-	opening [2]bool
 	// done is how many transfers were done when the sides were last
 	// listed again for them, at refreshed.
 	done      int
 	refreshed time.Time
+	// working is the compression or extraction under way; compress,
+	// info and preview are their dialogs.
+	working      *fileWork
+	compress     *compressAsk
+	compressOpen bool
+	info         *infoAsk
+	infoOpen     bool
+	preview      *previewState
+	previewOpen  bool
+	// crumbHover is the crumb the pointer rests on, since crumbSince;
+	// crumbLeft when it left the crumb whose menu shows and the menu;
+	// crumbHold a crumb clicked, which shows no menu until left. peek is
+	// the folder a crumb's menu lists.
+	crumbHover string
+	crumbSince time.Time
+	crumbLeft  time.Time
+	crumbHold  string
+	peek       peekList
+	// opening is set, per side (local, remote), from a double click on a
+	// chosen row's name, which opens on the press, to its release, whose
+	// click is not a choice in the folder just opened.
+	opening [2]bool
 	// pub is the SFTP client for the transfers, which run off the UI
 	// thread.
 	pub struct {
@@ -118,15 +232,31 @@ type filesState struct {
 
 func newFilesState(onChange func()) *filesState {
 	fs := &filesState{transfers: &sftpsvc.Transfers{OnChange: onChange}}
-	fs.remote.sel, fs.local.sel = -1, -1
-	fs.remote.list.Selected = &fs.remote.sel
-	fs.local.list.Selected = &fs.local.sel
-	fs.remote.list.RoundRows, fs.local.list.RoundRows = true, true
+	for _, sd := range []*sideList{&fs.remote.sideList, &fs.local.sideList} {
+		sd.sel = -1
+		sd.list.Selected, sd.list.Selection = &sd.sel, &sd.chosen
+		sd.list.DragSelect, sd.list.RoundRows = true, true
+	}
 	return fs
+}
+
+// side is the local or the remote side's list.
+func (fs *filesState) side(remote bool) *sideList {
+	if remote {
+		return &fs.remote.sideList
+	}
+	return &fs.local.sideList
 }
 
 func (fs *filesState) close() {
 	fs.transfers.CancelAll()
+	if fs.working != nil {
+		fs.working.cancel()
+	}
+	if fs.info != nil && fs.info.cancel != nil {
+		fs.info.cancel()
+	}
+	fs.closePreview()
 	fs.edits.close()
 	fs.pub.Lock()
 	fs.pub.client = nil
@@ -220,7 +350,8 @@ func (a *App) ensureSFTP(cn *conn) {
 				s.connects = connects
 				return
 			}
-			s.client, s.connects, s.dir, s.entries, s.sel, s.unfinished = c, connects, dir, es, -1, un
+			s.client, s.connects, s.unfinished = c, connects, un
+			s.show(dir, es)
 			cn.fs.publish(c, connects)
 		})
 	}()
@@ -241,7 +372,8 @@ func (a *App) listRemote(s *remoteSide, dir string) {
 			if s.listErr {
 				s.err, s.listErr = "", false
 			}
-			s.dir, s.entries, s.sel, s.unfinished = dir, es, -1, un
+			s.unfinished = un
+			s.show(dir, es)
 		})
 	}()
 }
@@ -262,7 +394,21 @@ func (a *App) listLocal(l *localSide, dir string) {
 	if l.listErr {
 		l.err, l.listErr = "", false
 	}
-	l.dir, l.entries, l.sel = dir, es, -1
+	l.show(dir, es)
+}
+
+// goTo lists the folder dir on a side.
+func (a *App) goTo(cn *conn, remote bool, dir string) {
+	if remote {
+		a.listRemote(&cn.fs.remote, dir)
+	} else {
+		a.listLocal(&cn.fs.local, dir)
+	}
+}
+
+// listAgain lists a side's folder again.
+func (a *App) listAgain(cn *conn, remote bool) {
+	a.goTo(cn, remote, cn.fs.side(remote).dir)
 }
 
 // Upload copies local files and folders into the remote folder dir,
@@ -468,90 +614,207 @@ func sidePath(remote bool, dir, name string) string {
 	return filepath.Join(dir, name)
 }
 
-// fileTable is one side's entries. Each row drags to the other side and
-// has a menu of what can be done to it (rowMenu). opened reports a double
-// click on a row's name, which opens the chosen row as Submitted does.
-func (a *App) fileTable(c *ui.Context, cn *conn, remote bool, m locales.Messages, list *ui.ListState, dir string, es []sftpsvc.Entry, tok theme.Tokens, narrow bool) (tb ui.Element, opened bool) {
+// toggleMods add a row to the rows chosen or take it out with a click, as
+// lists do: Cmd on macOS, Ctrl elsewhere.
+var toggleMods = func() ui.Modifiers {
+	if runtime.GOOS == "darwin" {
+		return ui.Super
+	}
+	return ui.Ctrl
+}()
+
+// deleteMods and deleteKey delete the entries chosen: Cmd+Backspace on
+// macOS, as the system does, Delete elsewhere.
+var deleteMods, deleteKey = func() (ui.Modifiers, ui.Key) {
+	if runtime.GOOS == "darwin" {
+		return ui.Super, ui.KeyBackspace
+	}
+	return 0, ui.KeyDelete
+}()
+
+// fileTable is one side's entries, several of which are chosen by clicks
+// (with Shift or toggleMods), the keys or a drag over the rows. The name
+// of a row chosen drags the entries chosen to the other side. A right
+// click opens the menu of the entries chosen (fileEntries), or of the
+// folder off the rows. opened reports a double click on a chosen row's
+// name, which opens the row as Submitted does.
+func (a *App) fileTable(c *ui.Context, cn *conn, remote bool, m locales.Messages, tok theme.Tokens, narrow bool) (tb ui.Element, opened bool) {
+	fs := cn.fs
+	sd := fs.side(remote)
+	es, list := sd.entries, &sd.list
+	list.Key = func(i int) any { return es[i].Name }
+	list.Label = func(i int) string { return es[i].Name }
 	cols := []ui.TableColumn{{Title: m.ColName()}, {Title: m.ColSize(), Width: 80, Align: ui.End}}
 	if !narrow {
 		cols = append(cols, ui.TableColumn{Title: m.ColModified(), Width: 130})
 	}
-	key := "ltable"
+	key, side := "ltable", 0
 	if remote {
-		key = "rtable"
+		key, side = "rtable", 1
 	}
+	entries := func() []menuEntry { return a.fileEntries(cn, remote, m) }
+	// menu opens the menu at the window's (x, y) for a right press: on a
+	// row not chosen, it chooses that row; off the rows, it
+	// chooses none, for the folder's menu.
+	menu := func(x, y float32) {
+		if name, ok := sd.rowAt(y); !ok {
+			sd.chosen.Clear()
+			sd.sel = -1
+		} else if !sd.chosen.Has(name) {
+			sd.only(slices.IndexFunc(sd.entries, func(e sftpsvc.Entry) bool { return e.Name == name }))
+		}
+		a.openContext(x, y, entries)
+		sd.refocus = true
+	}
+	var chosen []string // the paths a chosen row drags
+	if sd.chosen.Len() > 0 {
+		chosen = sd.paths(remote, sd.picked())
+	}
+	extend := -1
+	sd.rows = sd.rows[:0]
 	tb = ui.Table(c.Key(key), list, cols, len(es), func(row, col int) {
 		e := es[row]
+		on := sd.chosen.Has(e.Name)
 		muted := tok.TextMuted
-		if list.Selected != nil && *list.Selected == row {
-			muted = tok.AccentText // readable on the selection
+		if on {
+			muted = tok.AccentText // readable on the choice
 		}
-		var cell ui.Element
 		switch col {
 		case 0:
-			cell = ui.Row(c).Gap(6).AlignItems(ui.Center).Grow(1).Children(func() {
-				ic := icons.File
-				if e.IsDir {
-					ic = icons.Folder
-				}
-				col := muted
-				if e.IsDir && muted == tok.TextMuted {
-					col = tok.Accent
-				}
-				ui.Icon(c, ic.SVG).Width(15).Height(15).Shrink(0).TextColor(col)
-				ui.Text(c, e.Name).SingleLine()
-			})
-			cell.Drag(filesDrag{pane: cn.id, remote: remote, paths: []string{sidePath(remote, dir, e.Name)}})
-			// The name takes the press to drag the row, so it chooses
-			// and opens the row itself, as the rest of the row does.
-			side := 0
-			if remote {
-				side = 1
-			}
-			dbl, clk := cell.DoubleClicked(), cell.Clicked()
-			if dbl && list.Selected != nil {
-				*list.Selected = row
-				opened, cn.fs.opening[side] = true, !clk // released yet?
-			} else if clk && list.Selected != nil {
-				if cn.fs.opening[side] {
-					cn.fs.opening[side] = false
+			ui.Row(c).Grow(1).MinWidth(0).AlignItems(ui.Center).Children(func() {
+				name := ui.Row(c).Gap(6).Shrink(1).MinWidth(0).AlignItems(ui.Center).Children(func() {
+					ic, col := entryIcon(e), muted
+					if e.IsDir && !on {
+						col = tok.Accent
+					}
+					ui.Icon(c, ic.SVG).Width(15).Height(15).Shrink(0).TextColor(col)
+					ui.Text(c, e.Name).SingleLine().Shrink(1)
+				})
+				nb := name.Bounds()
+				if nb.H > 0 {
+					sd.rows = append(sd.rows, rowMark{e.Name, nb.Y, nb.Y + nb.H})
 				} else {
-					*list.Selected = row
+					c.Invalidate() // a row new here: where it is shows next frame
+				}
+				// The name counts the clicks on it whether its row is chosen
+				// or not, so that a double click opens a row the first
+				// click chose, and takes the right clicks over it.
+				name.HandleInput(func(ev ui.InputEvent) bool {
+					if ev.Kind != ui.InputPointerDown || ev.Button != 1 {
+						return false
+					}
+					menu(nb.X+ev.X, nb.Y+ev.Y)
+					return true
+				})
+				if !on {
+					return // the list chooses it, or drags a choice over the rows
+				}
+				// Chosen, the name drags the rows chosen, and takes its clicks.
+				name.Drag(filesDrag{pane: cn.id, remote: remote, paths: chosen})
+				dbl, clk := name.DoubleClicked(), name.Clicked()
+				switch {
+				case dbl:
+					sd.only(row)
+					opened, fs.opening[side] = true, !clk // released yet?
+				case clk && fs.opening[side]:
+					fs.opening[side] = false
+				case clk:
+					switch mods := name.ClickModifiers(); {
+					case mods&ui.Shift != 0:
+						extend = row
+					case mods&toggleMods != 0:
+						sd.chosen.Remove(e.Name)
+						sd.sel = row
+					default:
+						sd.only(row)
+					}
 					list.Focus(c)
 				}
-			}
+			})
 		case 1:
-			cell = ui.Row(c).Grow(1).Justify(ui.End).Children(func() {
+			ui.Row(c).Grow(1).Justify(ui.End).Children(func() {
 				if !e.IsDir {
 					ui.Text(c, humanSize(e.Size)).TextColor(muted).SingleLine()
 				}
 			})
 		case 2:
-			cell = ui.Text(c, e.ModTime.Format("2006-01-02 15:04")).TextColor(muted).SingleLine().Grow(1)
+			ui.Text(c, e.ModTime.Format("2006-01-02 15:04")).TextColor(muted).SingleLine().Grow(1)
 		}
-		cell.ContextMenu(func(mn *ui.Menu) { a.rowMenu(c, mn, cn, remote, row, e) })
 	}).Grow(1).FillWidth()
-	tb.ContextMenu(func(mn *ui.Menu) { a.folderMenu(c, mn, cn, remote) })
+	if extend >= 0 {
+		list.ExtendTo(extend)
+	}
+	b := tb.Bounds()
+	tb.HandleInput(func(ev ui.InputEvent) bool {
+		if ev.Kind != ui.InputPointerDown || ev.Button != 1 {
+			return false
+		}
+		menu(b.X+ev.X, b.Y+ev.Y)
+		return true
+	})
+	if sd.refocus && a.menu.key != ctxMenuKey {
+		// The menu closed: the keys go back to the rows, unless a dialog
+		// it opened takes them.
+		sd.refocus = false
+		if !fs.askOpen && !fs.delOpen && !fs.compressOpen && !fs.infoOpen && !fs.previewOpen {
+			tb.Focus()
+		}
+	}
+	a.fileKeys(c, cn, remote, tb, entries)
 	return tb, opened
 }
 
+// fileKeys are the keys of a side's table while it has the focus: Delete
+// (Cmd+Backspace on macOS), Cmd+I (Ctrl+I elsewhere) for the entries'
+// information, Space to preview an image, F2 to rename, Escape to choose
+// none and Shift+F10 for the menu.
+func (a *App) fileKeys(c *ui.Context, cn *conn, remote bool, tb ui.Element, entries func() []menuEntry) {
+	fs := cn.fs
+	sd := fs.side(remote)
+	es := sd.picked()
+	switch {
+	case len(es) == 0:
+	case tb.Shortcut(deleteMods, deleteKey) || deleteKey != ui.KeyDelete && tb.Shortcut(0, ui.KeyDelete):
+		a.askDelete(cn, remote, es)
+	case tb.Shortcut(toggleMods, ui.KeyI):
+		a.openInfo(cn, remote, es)
+	case len(es) == 1 && isImage(es[0]) && tb.Shortcut(0, ui.KeySpace):
+		a.openPreview(cn, remote, es[0].Name)
+	case len(es) == 1 && tb.Shortcut(0, ui.KeyF2):
+		fs.ask, fs.askOpen = &nameAsk{kind: askRename, remote: remote, path: sidePath(remote, sd.dir, es[0].Name), value: es[0].Name}, true
+	case tb.Shortcut(0, ui.KeyEscape):
+		sd.chosen.Clear()
+	}
+	if tb.Shortcut(ui.Shift, ui.KeyF10) {
+		b := tb.Bounds()
+		a.openContext(b.X+theme.Space(6), b.Y+theme.Space(8), entries)
+	}
+}
+
+// entryIcon is the icon of an entry's row: a folder, an image, an archive
+// or another file.
+func entryIcon(e sftpsvc.Entry) *icons.Icon {
+	switch {
+	case e.IsDir:
+		return icons.Folder
+	case isImage(e):
+		return icons.Image
+	case sftpsvc.IsArchive(e.Name, true):
+		return icons.Compress
+	}
+	return icons.File
+}
+
 // sideHeader is the title row of one side of a files pane: an icon, the
-// side's name, its folder and its IconButtons.
-func sideHeader(c *ui.Context, tok theme.Tokens, ic *icons.Icon, title, dir string, actions func()) {
+// side's name and its IconButtons. The folder shows in the breadcrumbs
+// below.
+func sideHeader(c *ui.Context, tok theme.Tokens, ic *icons.Icon, title string, actions func()) {
 	ui.Row(c).Gap(8).Height(32).Padding(0, 2, 0, 4).AlignItems(ui.Center).Children(func() {
 		softTile(c, ic, tok.Accent, 22)
 		ui.Text(c, title).FontWeight(600).FontSize(theme.Footnote).SingleLine()
-		ui.Text(c, dir).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine().Shrink(1).Grow(1)
+		ui.Spacer(c)
 		actions()
 	})
-}
-
-// selected is the entry chosen on a side, if any.
-func selected(sel int, es []sftpsvc.Entry) (sftpsvc.Entry, bool) {
-	if sel < 0 || sel >= len(es) {
-		return sftpsvc.Entry{}, false
-	}
-	return es[sel], true
 }
 
 // filesBody is a files pane below its header: local and remote side by
@@ -571,6 +834,7 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 		a.unfinishedView(c, cn, tok, m)
 		a.noReportView(c, t, cn, tok, m)
 		a.planningView(c, cn, tok, m)
+		a.workingView(c, cn, tok, m)
 		a.skippedView(c, cn, tok, m)
 		if fs.split <= 0 || fs.split >= 100 {
 			fs.split = 50
@@ -587,13 +851,17 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 			}
 			return 0, 0, 0, 5
 		}
+		// sideCard is a side's card: its header, the breadcrumbs of its
+		// folder and its rows, kept inside its rounded edge.
+		sideCard := func(key string) ui.Element {
+			return ui.Column(c.Key(key)).Fill().Gap(4).Padding(6, 8, 8, 8).Radius(theme.RadiusCard-2).Border(1, tok.Line).Clip()
+		}
 		localPane := func() {
 			ui.Box(c.Key("lpad")).Fill().Padding(gap(true)).Children(func() {
-				// local
-				local := ui.Column(c.Key("local")).Fill().Gap(4).Padding(6).Radius(theme.RadiusCard-2).Border(1, tok.Line)
+				local := sideCard("local")
 				local.Children(func() {
-					le, lok := selected(l.sel, l.entries)
-					sideHeader(c, tok, icons.LocalDisk, m.Local(), l.dir, func() {
+					picked := l.picked()
+					sideHeader(c, tok, icons.LocalDisk, m.Local(), func() {
 						if iconButton(c, "lup", icons.GoUp, m.LocalUp()) {
 							a.listLocal(l, filepath.Dir(l.dir))
 						}
@@ -603,17 +871,14 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 						if iconButton(c, "lmkdir", icons.NewFolder, m.LocalNewFolder()) {
 							fs.ask, fs.askOpen = &nameAsk{kind: askMkdir}, true
 						}
-						if (IconButton{Icon: icons.Upload, Label: m.UploadSelected(), Disabled: s.client == nil || !lok}).Clicked(c, "upload") {
-							a.Upload(cn, []string{filepath.Join(l.dir, le.Name)}, s.dir)
+						if (IconButton{Icon: icons.Upload, Label: m.UploadSelected(), Disabled: s.client == nil || len(picked) == 0}).Clicked(c, "upload") {
+							a.Upload(cn, l.paths(false, picked), s.dir)
 						}
 					})
-					tb, opened := a.fileTable(c, cn, false, m, &l.list, l.dir, l.entries, tok, narrow)
+					a.crumbsBar(c, cn, false, tok, m)
+					tb, opened := a.fileTable(c, cn, false, m, tok, narrow)
 					if e, ok := selected(l.sel, l.entries); (tb.Submitted() || opened) && ok {
-						if e.IsDir {
-							a.listLocal(l, filepath.Join(l.dir, e.Name))
-						} else if s.client != nil {
-							a.Upload(cn, []string{filepath.Join(l.dir, e.Name)}, s.dir)
-						}
+						a.openEntry(cn, false, e)
 					}
 					if l.err != "" {
 						ui.Text(c, securityText(m, l.err)).TextColor(tok.Danger).FontSize(theme.Footnote)
@@ -633,10 +898,10 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 		}
 		remotePane := func() {
 			ui.Box(c.Key("rpad")).Fill().Padding(gap(false)).Children(func() {
-				remote := ui.Column(c.Key("remote")).Fill().Gap(4).Padding(6).Radius(theme.RadiusCard-2).Border(1, tok.Line)
+				remote := sideCard("remote")
 				remote.Children(func() {
-					re, rok := selected(s.sel, s.entries)
-					sideHeader(c, tok, icons.Host, m.Remote(), s.dir, func() {
+					picked := s.picked()
+					sideHeader(c, tok, icons.Host, m.Remote(), func() {
 						if s.opening {
 							ui.Spinner(c)
 						}
@@ -650,8 +915,8 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 						if (IconButton{Icon: icons.NewFolder, Label: m.RemoteNewFolder(), Disabled: off}).Clicked(c, "rmkdir") {
 							fs.ask, fs.askOpen = &nameAsk{kind: askMkdir, remote: true}, true
 						}
-						if (IconButton{Icon: icons.Download, Label: m.DownloadSelected(), Disabled: off || !rok}).Clicked(c, "download") {
-							a.Download(cn, []string{sftpsvc.RemoteJoin(s.dir, re.Name)}, l.dir)
+						if (IconButton{Icon: icons.Download, Label: m.DownloadSelected(), Disabled: off || len(picked) == 0}).Clicked(c, "download") {
+							a.Download(cn, s.paths(true, picked), l.dir)
 						}
 					})
 					if s.client == nil {
@@ -665,17 +930,14 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 						})
 						return
 					}
-					tb, opened := a.fileTable(c, cn, true, m, &s.list, s.dir, s.entries, tok, narrow)
+					a.crumbsBar(c, cn, true, tok, m)
+					tb, opened := a.fileTable(c, cn, true, m, tok, narrow)
 					if a.focusReq == cn.id && a.page == pageWorkspace {
 						tb.Focus()
 						a.focusReq = 0
 					}
 					if e, ok := selected(s.sel, s.entries); (tb.Submitted() || opened) && ok {
-						if e.IsDir {
-							a.listRemote(s, sftpsvc.RemoteJoin(s.dir, e.Name))
-						} else {
-							a.openRemote(cn, sftpsvc.RemoteJoin(s.dir, e.Name), e.Size)
-						}
+						a.openEntry(cn, true, e)
 					}
 					if len(s.entries) == 0 {
 						ui.Text(c, m.Empty()).TextColor(tok.TextMuted).FontSize(theme.Footnote)
@@ -714,6 +976,35 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 	a.localConflictView(c, cn, m)
 	a.snippetView(c, cn, tok, m)
 	a.transfersSheet(c, cn, tok, m)
+	a.infoView(c, cn, tok, m)
+	a.compressView(c, cn, tok, m)
+	a.previewView(c, cn, tok, m)
+}
+
+// selected is the entry of row sel of es, if any.
+func selected(sel int, es []sftpsvc.Entry) (sftpsvc.Entry, bool) {
+	if sel < 0 || sel >= len(es) {
+		return sftpsvc.Entry{}, false
+	}
+	return es[sel], true
+}
+
+// openEntry opens an entry of a side, as a double click or Enter does: a
+// folder lists, an image shows, another remote file opens in the editor
+// and another local file uploads.
+func (a *App) openEntry(cn *conn, remote bool, e sftpsvc.Entry) {
+	sd := cn.fs.side(remote)
+	p := sidePath(remote, sd.dir, e.Name)
+	switch {
+	case e.IsDir:
+		a.goTo(cn, remote, p)
+	case isImage(e):
+		a.openPreview(cn, remote, e.Name)
+	case remote:
+		a.openRemote(cn, p, e.Size)
+	case cn.fs.remote.client != nil:
+		a.Upload(cn, []string{p}, cn.fs.remote.dir)
+	}
 }
 
 // refreshForTransfers lists the sides again as transfers finish: once

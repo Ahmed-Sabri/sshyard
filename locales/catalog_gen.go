@@ -7987,3 +7987,347 @@ func GitHubRepo() string { return In(i18n.Locale()).GitHubRepo() }
 func (msgs Messages) GitHubRepo() string {
 	return Catalog.Format(msgs.locale, "gitHubRepo", nil)
 }
+
+// CrumbsLabel says "Path"
+// in the language the app shows.
+func CrumbsLabel() string { return In(i18n.Locale()).CrumbsLabel() }
+
+// CrumbsLabel says "Path"
+// in the language of msgs.
+func (msgs Messages) CrumbsLabel() string {
+	return Catalog.Format(msgs.locale, "crumbsLabel", nil)
+}
+
+// CrumbsHidden says "Folders Above"
+// in the language the app shows.
+func CrumbsHidden() string { return In(i18n.Locale()).CrumbsHidden() }
+
+// CrumbsHidden says "Folders Above"
+// in the language of msgs.
+func (msgs Messages) CrumbsHidden() string {
+	return Catalog.Format(msgs.locale, "crumbsHidden", nil)
+}
+
+// Loading says "Loading…"
+// in the language the app shows.
+func Loading() string { return In(i18n.Locale()).Loading() }
+
+// Loading says "Loading…"
+// in the language of msgs.
+func (msgs Messages) Loading() string {
+	return Catalog.Format(msgs.locale, "loading", nil)
+}
+
+// ItemsSelected says "{count, plural, one {# item selected} other {# items selected}}"
+// in the language the app shows.
+func ItemsSelected(count int) string { return In(i18n.Locale()).ItemsSelected(count) }
+
+// ItemsSelected says "{count, plural, one {# item selected} other {# items selected}}"
+// in the language of msgs.
+func (msgs Messages) ItemsSelected(count int) string {
+	return Catalog.Format(msgs.locale, "itemsSelected", map[string]any{"count": count})
+}
+
+// ItemsCount says "{count, plural, one {# item} other {# items}}"
+// in the language the app shows.
+func ItemsCount(count int) string { return In(i18n.Locale()).ItemsCount(count) }
+
+// ItemsCount says "{count, plural, one {# item} other {# items}}"
+// in the language of msgs.
+func (msgs Messages) ItemsCount(count int) string {
+	return Catalog.Format(msgs.locale, "itemsCount", map[string]any{"count": count})
+}
+
+// PreviewItem says "Preview"
+// in the language the app shows.
+func PreviewItem() string { return In(i18n.Locale()).PreviewItem() }
+
+// PreviewItem says "Preview"
+// in the language of msgs.
+func (msgs Messages) PreviewItem() string {
+	return Catalog.Format(msgs.locale, "previewItem", nil)
+}
+
+// GetInfo says "Get Info"
+// in the language the app shows.
+func GetInfo() string { return In(i18n.Locale()).GetInfo() }
+
+// GetInfo says "Get Info"
+// in the language of msgs.
+func (msgs Messages) GetInfo() string {
+	return Catalog.Format(msgs.locale, "getInfo", nil)
+}
+
+// CompressItem says "Compress…"
+// in the language the app shows.
+func CompressItem() string { return In(i18n.Locale()).CompressItem() }
+
+// CompressItem says "Compress…"
+// in the language of msgs.
+func (msgs Messages) CompressItem() string {
+	return Catalog.Format(msgs.locale, "compressItem", nil)
+}
+
+// ExtractItem says "Extract Here"
+// in the language the app shows.
+func ExtractItem() string { return In(i18n.Locale()).ExtractItem() }
+
+// ExtractItem says "Extract Here"
+// in the language of msgs.
+func (msgs Messages) ExtractItem() string {
+	return Catalog.Format(msgs.locale, "extractItem", nil)
+}
+
+// SelectAll says "Select All"
+// in the language the app shows.
+func SelectAll() string { return In(i18n.Locale()).SelectAll() }
+
+// SelectAll says "Select All"
+// in the language of msgs.
+func (msgs Messages) SelectAll() string {
+	return Catalog.Format(msgs.locale, "selectAll", nil)
+}
+
+// DeleteItemsConfirm says "Delete {count, plural, one {# item} other {# items}}? This can’t be undone."
+// in the language the app shows.
+func DeleteItemsConfirm(count int) string { return In(i18n.Locale()).DeleteItemsConfirm(count) }
+
+// DeleteItemsConfirm says "Delete {count, plural, one {# item} other {# items}}? This can’t be undone."
+// in the language of msgs.
+func (msgs Messages) DeleteItemsConfirm(count int) string {
+	return Catalog.Format(msgs.locale, "deleteItemsConfirm", map[string]any{"count": count})
+}
+
+// InfoKind says "Kind"
+// in the language the app shows.
+func InfoKind() string { return In(i18n.Locale()).InfoKind() }
+
+// InfoKind says "Kind"
+// in the language of msgs.
+func (msgs Messages) InfoKind() string {
+	return Catalog.Format(msgs.locale, "infoKind", nil)
+}
+
+// KindFolder says "Folder"
+// in the language the app shows.
+func KindFolder() string { return In(i18n.Locale()).KindFolder() }
+
+// KindFolder says "Folder"
+// in the language of msgs.
+func (msgs Messages) KindFolder() string {
+	return Catalog.Format(msgs.locale, "kindFolder", nil)
+}
+
+// KindFile says "File"
+// in the language the app shows.
+func KindFile() string { return In(i18n.Locale()).KindFile() }
+
+// KindFile says "File"
+// in the language of msgs.
+func (msgs Messages) KindFile() string {
+	return Catalog.Format(msgs.locale, "kindFile", nil)
+}
+
+// KindLink says "Link"
+// in the language the app shows.
+func KindLink() string { return In(i18n.Locale()).KindLink() }
+
+// KindLink says "Link"
+// in the language of msgs.
+func (msgs Messages) KindLink() string {
+	return Catalog.Format(msgs.locale, "kindLink", nil)
+}
+
+// InfoWhere says "Where"
+// in the language the app shows.
+func InfoWhere() string { return In(i18n.Locale()).InfoWhere() }
+
+// InfoWhere says "Where"
+// in the language of msgs.
+func (msgs Messages) InfoWhere() string {
+	return Catalog.Format(msgs.locale, "infoWhere", nil)
+}
+
+// InfoPermissions says "Permissions"
+// in the language the app shows.
+func InfoPermissions() string { return In(i18n.Locale()).InfoPermissions() }
+
+// InfoPermissions says "Permissions"
+// in the language of msgs.
+func (msgs Messages) InfoPermissions() string {
+	return Catalog.Format(msgs.locale, "infoPermissions", nil)
+}
+
+// InfoBytes says "{size} ({bytes} bytes)"
+// in the language the app shows.
+func InfoBytes(size string, bytes string) string { return In(i18n.Locale()).InfoBytes(size, bytes) }
+
+// InfoBytes says "{size} ({bytes} bytes)"
+// in the language of msgs.
+func (msgs Messages) InfoBytes(size string, bytes string) string {
+	return Catalog.Format(msgs.locale, "infoBytes", map[string]any{"size": size, "bytes": bytes})
+}
+
+// InfoFolderSize says "{size} in {count, plural, one {# file} other {# files}}"
+// in the language the app shows.
+func InfoFolderSize(size string, count int) string {
+	return In(i18n.Locale()).InfoFolderSize(size, count)
+}
+
+// InfoFolderSize says "{size} in {count, plural, one {# file} other {# files}}"
+// in the language of msgs.
+func (msgs Messages) InfoFolderSize(size string, count int) string {
+	return Catalog.Format(msgs.locale, "infoFolderSize", map[string]any{"size": size, "count": count})
+}
+
+// InfoCounting says "Calculating…"
+// in the language the app shows.
+func InfoCounting() string { return In(i18n.Locale()).InfoCounting() }
+
+// InfoCounting says "Calculating…"
+// in the language of msgs.
+func (msgs Messages) InfoCounting() string {
+	return Catalog.Format(msgs.locale, "infoCounting", nil)
+}
+
+// CompressTitle says "Compress"
+// in the language the app shows.
+func CompressTitle() string { return In(i18n.Locale()).CompressTitle() }
+
+// CompressTitle says "Compress"
+// in the language of msgs.
+func (msgs Messages) CompressTitle() string {
+	return Catalog.Format(msgs.locale, "compressTitle", nil)
+}
+
+// ArchiveName says "Archive name"
+// in the language the app shows.
+func ArchiveName() string { return In(i18n.Locale()).ArchiveName() }
+
+// ArchiveName says "Archive name"
+// in the language of msgs.
+func (msgs Messages) ArchiveName() string {
+	return Catalog.Format(msgs.locale, "archiveName", nil)
+}
+
+// ArchiveFormat says "Format"
+// in the language the app shows.
+func ArchiveFormat() string { return In(i18n.Locale()).ArchiveFormat() }
+
+// ArchiveFormat says "Format"
+// in the language of msgs.
+func (msgs Messages) ArchiveFormat() string {
+	return Catalog.Format(msgs.locale, "archiveFormat", nil)
+}
+
+// ArchiveDefaultName says "Archive"
+// in the language the app shows.
+func ArchiveDefaultName() string { return In(i18n.Locale()).ArchiveDefaultName() }
+
+// ArchiveDefaultName says "Archive"
+// in the language of msgs.
+func (msgs Messages) ArchiveDefaultName() string {
+	return Catalog.Format(msgs.locale, "archiveDefaultName", nil)
+}
+
+// Compressing says "Compressing {name}…"
+// in the language the app shows.
+func Compressing(name string) string { return In(i18n.Locale()).Compressing(name) }
+
+// Compressing says "Compressing {name}…"
+// in the language of msgs.
+func (msgs Messages) Compressing(name string) string {
+	return Catalog.Format(msgs.locale, "compressing", map[string]any{"name": name})
+}
+
+// Extracting says "Extracting {name}…"
+// in the language the app shows.
+func Extracting(name string) string { return In(i18n.Locale()).Extracting(name) }
+
+// Extracting says "Extracting {name}…"
+// in the language of msgs.
+func (msgs Messages) Extracting(name string) string {
+	return Catalog.Format(msgs.locale, "extracting", map[string]any{"name": name})
+}
+
+// ErrNameExists says "“{name}” already exists."
+// in the language the app shows.
+func ErrNameExists(name string) string { return In(i18n.Locale()).ErrNameExists(name) }
+
+// ErrNameExists says "“{name}” already exists."
+// in the language of msgs.
+func (msgs Messages) ErrNameExists(name string) string {
+	return Catalog.Format(msgs.locale, "errNameExists", map[string]any{"name": name})
+}
+
+// PreviewOf says "{index} of {total}"
+// in the language the app shows.
+func PreviewOf(index string, total string) string { return In(i18n.Locale()).PreviewOf(index, total) }
+
+// PreviewOf says "{index} of {total}"
+// in the language of msgs.
+func (msgs Messages) PreviewOf(index string, total string) string {
+	return Catalog.Format(msgs.locale, "previewOf", map[string]any{"index": index, "total": total})
+}
+
+// PreviousImage says "Previous Image"
+// in the language the app shows.
+func PreviousImage() string { return In(i18n.Locale()).PreviousImage() }
+
+// PreviousImage says "Previous Image"
+// in the language of msgs.
+func (msgs Messages) PreviousImage() string {
+	return Catalog.Format(msgs.locale, "previousImage", nil)
+}
+
+// NextImage says "Next Image"
+// in the language the app shows.
+func NextImage() string { return In(i18n.Locale()).NextImage() }
+
+// NextImage says "Next Image"
+// in the language of msgs.
+func (msgs Messages) NextImage() string {
+	return Catalog.Format(msgs.locale, "nextImage", nil)
+}
+
+// ImageTooLarge says "This image is too large to preview ({size})."
+// in the language the app shows.
+func ImageTooLarge(size string) string { return In(i18n.Locale()).ImageTooLarge(size) }
+
+// ImageTooLarge says "This image is too large to preview ({size})."
+// in the language of msgs.
+func (msgs Messages) ImageTooLarge(size string) string {
+	return Catalog.Format(msgs.locale, "imageTooLarge", map[string]any{"size": size})
+}
+
+// ImageFailed says "Couldn’t show this image: {detail}"
+// in the language the app shows.
+func ImageFailed(detail string) string { return In(i18n.Locale()).ImageFailed(detail) }
+
+// ImageFailed says "Couldn’t show this image: {detail}"
+// in the language of msgs.
+func (msgs Messages) ImageFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "imageFailed", map[string]any{"detail": detail})
+}
+
+// ImageDims says "{width} × {height} · {size}"
+// in the language the app shows.
+func ImageDims(width string, height string, size string) string {
+	return In(i18n.Locale()).ImageDims(width, height, size)
+}
+
+// ImageDims says "{width} × {height} · {size}"
+// in the language of msgs.
+func (msgs Messages) ImageDims(width string, height string, size string) string {
+	return Catalog.Format(msgs.locale, "imageDims", map[string]any{"width": width, "height": height, "size": size})
+}
+
+// ClosePreview says "Close Preview"
+// in the language the app shows.
+func ClosePreview() string { return In(i18n.Locale()).ClosePreview() }
+
+// ClosePreview says "Close Preview"
+// in the language of msgs.
+func (msgs Messages) ClosePreview() string {
+	return Catalog.Format(msgs.locale, "closePreview", nil)
+}

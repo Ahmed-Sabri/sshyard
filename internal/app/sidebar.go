@@ -107,16 +107,15 @@ func (a *App) sidebarView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 // groupSection gives a group's section its menu, and takes the hosts
 // dropped on it.
 func (a *App) groupSection(c *ui.Context, m locales.Messages, tok theme.Tokens, sec ui.Element, g string) {
-	sec.ContextMenu(func(menu *ui.Menu) {
-		if menu.Item(m.NewHostInGroup()).Chosen() {
-			a.openEditor(nil)
-			a.form.group = g
-		}
-		if menu.Item(m.RenameGroup()).Chosen() {
-			a.openGroupForm(g, "")
-		}
-		if menu.Item(m.DeleteGroup()).Chosen() {
-			a.groupDelete, a.groupDeleting = g, true
+	a.contextMenu(sec, func() []menuEntry {
+		return []menuEntry{
+			{Icon: icons.Add, Label: m.NewHostInGroup(), Do: func() {
+				a.openEditor(nil)
+				a.form.group = g
+			}},
+			{Icon: icons.Rename, Label: m.RenameGroup(), Do: func() { a.openGroupForm(g, "") }},
+			menuSep,
+			{Icon: icons.Delete, Label: m.DeleteGroup(), Danger: true, Do: func() { a.groupDelete, a.groupDeleting = g, true }},
 		}
 	})
 	a.hostDrops(sec, tok, g)
@@ -230,7 +229,7 @@ func (a *App) hostItem(c *ui.Context, m locales.Messages, h assets.Host, prefix 
 	if it.DoubleClicked() {
 		a.Connect(h.ID, openAt{})
 	}
-	it.ContextMenu(func(menu *ui.Menu) { nativeMenu(menu, a.hostEntries(m, h)) })
+	a.contextMenu(it, func() []menuEntry { return a.hostEntries(m, h) })
 }
 
 // hostEntries are what can be done with a sidebar host: its context

@@ -541,6 +541,18 @@ func keyCaps(goos string, mods ui.Modifiers, key ui.Key) []string {
 		out = append(out, string(rune('A'+key-ui.KeyA)))
 	case key == ui.KeyPeriod:
 		out = append(out, ".")
+	case key == ui.KeySpace:
+		out = append(out, "Space")
+	case key == ui.KeyF2:
+		out = append(out, "F2")
+	case key == ui.KeyDelete && mac:
+		out = append(out, "⌦")
+	case key == ui.KeyDelete:
+		out = append(out, "Del")
+	case key == ui.KeyBackspace && mac:
+		out = append(out, "⌫")
+	case key == ui.KeyBackspace:
+		out = append(out, "Backspace")
 	}
 	return out
 }

@@ -203,8 +203,10 @@ type App struct {
 	tabRoom  float32
 	// tabsOpen shows the popover of the tabs that do not fit
 	tabsOpen bool
-	// menu is the drop-down menu open (menuButton)
+	// menu is the drop-down or context menu open (menuButton,
+	// contextMenu), ctx the context menu's place and entries
 	menu dropMenu
+	ctx  ctxMenu
 	// clearContent is set while the content shows the window's material,
 	// as the appearance settings ask (see contentFill)
 	clearContent bool
@@ -239,6 +241,7 @@ type App struct {
 	install      *installForm
 	installing   bool
 	mkdirHold    focusHold
+	compressHold focusHold
 	prompting    bool
 	hostKey      *hostKeyAsk
 	askingKey    bool

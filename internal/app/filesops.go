@@ -1,6 +1,7 @@
 package app
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"path"
@@ -41,10 +42,12 @@ type nameAsk struct {
 	err   string
 }
 
-// deleteAsk confirms deleting an entry of one side.
+// deleteAsk confirms deleting entries of one side: their paths, and, of
+// one, its name and whether it is a folder.
 type deleteAsk struct {
 	remote bool
-	path   string
+	paths  []string
+	name   string
 	isDir  bool
 }
 
@@ -79,77 +82,87 @@ func (k *conflictAsk) left() int {
 	return n
 }
 
-// rowMenu is the context menu of an entry of one side.
-func (a *App) rowMenu(c *ui.Context, mn *ui.Menu, cn *conn, remote bool, row int, e sftpsvc.Entry) {
-	m := locales.In(c.Locale())
+// fileEntries are the context menu of a side: what can be done to the
+// entries chosen, then in the folder.
+func (a *App) fileEntries(cn *conn, remote bool, m locales.Messages) []menuEntry {
 	fs := cn.fs
-	side := &fs.local.sel
-	dir := fs.local.dir
-	if remote {
-		side, dir = &fs.remote.sel, fs.remote.dir
-	}
-	*side = row
-	p := sidePath(remote, dir, e.Name)
+	sd := fs.side(remote)
 	off := fs.remote.client == nil
-	if e.IsDir && mn.Item(m.OpenFolder()).Chosen() {
+	var out []menuEntry
+	if es := sd.picked(); len(es) > 0 {
+		paths := sd.paths(remote, es)
+		e, p, one := es[0], paths[0], len(es) == 1
+		switch {
+		case !one:
+		case e.IsDir:
+			out = append(out, menuEntry{Icon: icons.OpenFile, Label: m.OpenFolder(), Do: func() { a.goTo(cn, remote, p) }})
+		case isImage(e):
+			out = append(out, menuEntry{Icon: icons.Image, Label: m.PreviewItem(), Key: ui.KeySpace, Disabled: remote && off,
+				Do: func() { a.openPreview(cn, remote, e.Name) }})
+		}
+		if one && remote && !e.IsDir {
+			out = append(out,
+				menuEntry{Icon: icons.EditFile, Label: m.EditInEditor(), Disabled: off, Do: func() { a.openRemote(cn, p, e.Size) }},
+				menuEntry{Icon: icons.OpenWith, Label: m.OpenWithDefault(), Disabled: off, Do: func() { a.openLocalProgram(cn, p, e.Size) }})
+		}
 		if remote {
-			a.listRemote(&fs.remote, p)
+			out = append(out, menuEntry{Icon: icons.Download, Label: m.Download(), Disabled: off, Do: func() { a.Download(cn, paths, fs.local.dir) }})
 		} else {
-			a.listLocal(&fs.local, p)
+			out = append(out, menuEntry{Icon: icons.Upload, Label: m.Upload(), Disabled: off, Do: func() { a.Upload(cn, paths, fs.remote.dir) }})
 		}
-	}
-	if remote {
-		if !e.IsDir {
-			if mn.Item(m.EditInEditor()).Disabled(off).Chosen() {
-				a.openRemote(cn, p, e.Size)
+		out = append(out, menuSep)
+		if one {
+			out = append(out, menuEntry{Icon: icons.Rename, Label: m.RenameItem(), Key: ui.KeyF2, Do: func() {
+				fs.ask, fs.askOpen = &nameAsk{kind: askRename, remote: remote, path: p, value: e.Name}, true
+			}})
+			if remote {
+				out = append(out, menuEntry{Icon: icons.Chmod, Label: m.Permissions(), Disabled: off, Do: func() {
+					fs.ask, fs.askOpen = &nameAsk{kind: askChmod, remote: true, path: p, value: strconv.FormatUint(uint64(e.Mode.Perm()), 8)}, true
+				}})
 			}
-			if mn.Item(m.OpenWithDefault()).Disabled(off).Chosen() {
-				a.openLocalProgram(cn, p, e.Size)
-			}
 		}
-		if mn.Item(m.Download()).Disabled(off).Chosen() {
-			a.Download(cn, []string{p}, fs.local.dir)
+		out = append(out,
+			menuEntry{Icon: icons.CopyPath, Label: m.CopyPath(), Do: func() { a.svc.WriteClipboard(strings.Join(paths, "\n")) }},
+			menuEntry{Icon: icons.Info, Label: m.GetInfo(), Mods: toggleMods, Key: ui.KeyI, Disabled: remote && off, Do: func() { a.openInfo(cn, remote, es) }},
+			menuSep,
+			menuEntry{Icon: icons.Compress, Label: m.CompressItem(), Disabled: remote && off || fs.working != nil, Do: func() { a.askCompress(cn, remote, es, m) }})
+		if one && !e.IsDir && sftpsvc.IsArchive(e.Name, remote) {
+			out = append(out, menuEntry{Icon: icons.Extract, Label: m.ExtractItem(), Disabled: remote && off || fs.working != nil, Do: func() { a.extract(cn, remote, e.Name) }})
 		}
-	} else if mn.Item(m.Upload()).Disabled(off).Chosen() {
-		a.Upload(cn, []string{p}, fs.remote.dir)
+		out = append(out, menuSep,
+			menuEntry{Icon: icons.Delete, Label: m.DeleteItem(), Mods: deleteMods, Key: deleteKey, Danger: true, Do: func() { a.askDelete(cn, remote, es) }},
+			menuSep)
 	}
-	mn.Separator()
-	if mn.Item(m.RenameItem()).Chosen() {
-		fs.ask, fs.askOpen = &nameAsk{kind: askRename, remote: remote, path: p, value: e.Name}, true
-	}
-	if remote && mn.Item(m.Permissions()).Chosen() {
-		fs.ask, fs.askOpen = &nameAsk{kind: askChmod, remote: true, path: p, value: strconv.FormatUint(uint64(e.Mode.Perm()), 8)}, true
-	}
-	if mn.Item(m.CopyPath()).Chosen() {
-		c.WriteClipboard(p)
-	}
-	mn.Separator()
-	if mn.Item(m.DeleteItem()).Chosen() {
-		fs.del, fs.delOpen = &deleteAsk{remote: remote, path: p, isDir: e.IsDir}, true
-	}
-	mn.Separator()
-	a.folderMenu(c, mn, cn, remote)
+	return append(out, a.folderEntries(cn, remote, m)...)
 }
 
-// folderMenu is the context menu of a side's folder: what makes
-// something in it.
-func (a *App) folderMenu(c *ui.Context, mn *ui.Menu, cn *conn, remote bool) {
-	m := locales.In(c.Locale())
+// folderEntries are the entries of a side's menu for its folder: what
+// makes something in it, and the rows.
+func (a *App) folderEntries(cn *conn, remote bool, m locales.Messages) []menuEntry {
 	fs := cn.fs
+	sd := fs.side(remote)
 	off := remote && fs.remote.client == nil
-	if mn.Item(m.NewFolderItem()).Disabled(off).Chosen() {
-		fs.ask, fs.askOpen = &nameAsk{kind: askMkdir, remote: remote}, true
+	return []menuEntry{
+		{Icon: icons.NewFolder, Label: m.NewFolderItem(), Disabled: off, Do: func() { fs.ask, fs.askOpen = &nameAsk{kind: askMkdir, remote: remote}, true }},
+		{Icon: icons.NewFile, Label: m.NewFileItem(), Disabled: off, Do: func() { fs.ask, fs.askOpen = &nameAsk{kind: askNewFile, remote: remote}, true }},
+		menuSep,
+		{Icon: icons.SelectAll, Label: m.SelectAll(), Mods: toggleMods, Key: ui.KeyA, Disabled: len(sd.entries) == 0, Do: func() {
+			for _, e := range sd.entries {
+				sd.chosen.Add(e.Name)
+			}
+		}},
+		{Icon: icons.Refresh, Label: m.Refresh(), Disabled: off, Do: func() { a.listAgain(cn, remote) }},
 	}
-	if mn.Item(m.NewFileItem()).Disabled(off).Chosen() {
-		fs.ask, fs.askOpen = &nameAsk{kind: askNewFile, remote: remote}, true
+}
+
+// askDelete asks to delete es, entries of a side.
+func (a *App) askDelete(cn *conn, remote bool, es []sftpsvc.Entry) {
+	if len(es) == 0 {
+		return
 	}
-	if mn.Item(m.Refresh()).Disabled(off).Chosen() {
-		if remote {
-			a.listRemote(&fs.remote, fs.remote.dir)
-		} else {
-			a.listLocal(&fs.local, fs.local.dir)
-		}
-	}
+	sd := cn.fs.side(remote)
+	cn.fs.del = &deleteAsk{remote: remote, paths: sd.paths(remote, es), name: es[0].Name, isDir: es[0].IsDir}
+	cn.fs.delOpen = true
 }
 
 // doAsk does what the name dialog asks, on its side.
@@ -259,26 +272,28 @@ func (a *App) deleteView(c *ui.Context, cn *conn, m locales.Messages) {
 		return
 	}
 	del := fs.del
-	name := filepath.Base(del.path)
-	if del.remote {
-		name = path.Base(del.path)
-	}
-	msg := m.DeleteFileConfirm(name)
-	if del.isDir {
-		msg = m.DeleteFolderConfirm(name)
+	msg := m.DeleteFileConfirm(del.name)
+	switch {
+	case len(del.paths) > 1:
+		msg = m.DeleteItemsConfirm(len(del.paths))
+	case del.isDir:
+		msg = m.DeleteFolderConfirm(del.name)
 	}
 	if ui.AlertDialog(c.Key("del"), &fs.delOpen, m.DeleteItem(), msg, m.Cancel(), m.Delete()) == 1 {
 		client := fs.remote.client
 		go func() {
 			var err error
-			if del.remote {
-				if client == nil {
-					err = errNotConnected
-				} else {
-					err = client.Remove(del.path)
+			for _, p := range del.paths {
+				var perr error
+				switch {
+				case !del.remote:
+					perr = sftpsvc.RemoveLocal(p)
+				case client == nil:
+					perr = errNotConnected
+				default:
+					perr = client.Remove(p)
 				}
-			} else {
-				err = sftpsvc.RemoveLocal(del.path)
+				err = cmp.Or(err, perr) // the first failure; the others go on
 			}
 			a.post(func() {
 				// Success clears a previous failure; a failure stays

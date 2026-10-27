@@ -11,8 +11,7 @@ import (
 )
 
 // menuEntry is an entry of a menu, the same in the app's drop-down menus
-// (menuButton), drawn with its icon, and in a context menu of the system
-// (nativeMenu).
+// (menuButton) and context menus (contextMenu), drawn with its icon.
 type menuEntry struct {
 	Icon *icons.Icon
 	// Lead, when set, builds what shows in place of the icon, 16 DIPs
@@ -35,31 +34,13 @@ type menuEntry struct {
 // menuSep is a separator between entries.
 var menuSep = menuEntry{Sep: true}
 
-// nativeMenu fills menu, one of the system's, with entries.
-func nativeMenu(menu *ui.Menu, entries []menuEntry) {
-	for _, e := range entries {
-		switch {
-		case e.Sep:
-			menu.Separator()
-		case e.Sub != nil:
-			menu.Submenu(e.Label, func(sub *ui.Menu) { nativeMenu(sub, e.Sub) }).Disabled(e.Disabled)
-		default:
-			it := menu.Item(e.Label).Disabled(e.Disabled).Checked(e.Checked)
-			if e.Key != 0 {
-				it.Shortcut(e.Mods, e.Key)
-			}
-			if it.Chosen() && e.Do != nil {
-				e.Do()
-			}
-		}
-	}
-}
-
-// menuWidth is the narrowest a drop-down menu is; menuHeight the most it
-// grows to before it scrolls.
+// menuWidth is the narrowest a drop-down menu is, menuMaxWidth the widest
+// a context menu grows to; menuHeight the most it grows to before it
+// scrolls.
 const (
-	menuWidth  = 200
-	menuHeight = 480
+	menuWidth    = 200
+	menuMaxWidth = 420
+	menuHeight   = 480
 )
 
 // dropMenu is the drop-down menu open, at most one: the key of its
@@ -71,6 +52,92 @@ type dropMenu struct {
 	key   string
 	sub   int
 	focus int
+}
+
+// ctxMenuKey is the key of the menu open while it is a context menu.
+const ctxMenuKey = "\x00context"
+
+// ctxMenu is the context menu open (contextMenu): where it opened, in the
+// window's DIPs, and its entries, which run while it shows. n counts the
+// menus opened, so that one opened over another is a new popover.
+type ctxMenu struct {
+	x, y    float32
+	n       int
+	entries func() []menuEntry
+	// fresh is set until the menu has shown once: the press that opened
+	// it is still a press outside it in that frame.
+	fresh bool
+}
+
+// contextMenu gives el a context menu drawn as the app's drop-down menus
+// are, an icon on each entry, in place of one of the system's: it opens
+// where el is right-clicked (the innermost element with one gets the
+// click), or below el on Shift+F10 while the focus is in it. entries runs
+// as it opens and while it shows.
+func (a *App) contextMenu(el ui.Element, entries func() []menuEntry) {
+	b := el.Bounds()
+	el.HandleInput(func(ev ui.InputEvent) bool { return a.contextPress(b, ev, entries) })
+	if el.Shortcut(ui.Shift, ui.KeyF10) {
+		a.openContext(b.X, b.Y+b.H, entries)
+	}
+}
+
+// contextPress opens the context menu of entries for ev, a right press on
+// the element at b, and reports whether it did, for an element's own
+// HandleInput.
+func (a *App) contextPress(b ui.Rect, ev ui.InputEvent, entries func() []menuEntry) bool {
+	if ev.Kind != ui.InputPointerDown || ev.Button != 1 {
+		return false
+	}
+	a.openContext(b.X+ev.X, b.Y+ev.Y, entries)
+	return true
+}
+
+// openContext opens the context menu of entries at (x, y), closing any
+// other menu.
+func (a *App) openContext(x, y float32, entries func() []menuEntry) {
+	a.ctx = ctxMenu{x: x, y: y, n: a.ctx.n + 1, entries: entries, fresh: true}
+	a.menu = dropMenu{key: ctxMenuKey, sub: -1, focus: 0}
+}
+
+// contextMenuView shows the context menu open, above everything else. A
+// press outside it or Escape closes it, as a choice does.
+func (a *App) contextMenuView(c *ui.Context) {
+	if a.menu.key != ctxMenuKey || a.ctx.entries == nil {
+		return
+	}
+	entries := a.ctx.entries()
+	open := len(entries) > 0
+	if open {
+		tok := currentTokens(c)
+		ui.Overlay(c, func() {
+			at := ui.Box(c.Key("ctxat")).Absolute().Left(a.ctx.x).Top(a.ctx.y).Size(1, 1)
+			ui.PopoverBase(c.Key("ctxmenu:"+strconv.Itoa(a.ctx.n)), at, &open, func(panel ui.Element) {
+				panel.AttachTo(at, ui.AnchorTopStart, ui.AnchorTopStart).MaxWidth(menuMaxWidth)
+				a.menuPanel(c, tok, panel, entries, 0)
+			})
+		})
+		if a.ctx.fresh {
+			a.ctx.fresh, open = false, true
+		}
+	}
+	if !open && a.menu.key == ctxMenuKey {
+		a.menu, a.ctx.entries = dropMenu{}, nil
+	}
+}
+
+// menuLabels are the labels of entries, "-" for separators, as a test
+// reads a menu.
+func menuLabels(entries []menuEntry) []string {
+	out := make([]string, 0, len(entries))
+	for _, e := range entries {
+		if e.Sep {
+			out = append(out, "-")
+		} else {
+			out = append(out, e.Label)
+		}
+	}
+	return out
 }
 
 // menuButton is b opening a drop-down menu of entries below it, under

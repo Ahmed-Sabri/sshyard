@@ -68,14 +68,14 @@ func evilFS() *sshtest.FakeFS {
 // Names not safe here are left out of a download, named in a notice
 // with why; the rest of a folder still downloads.
 func TestHostileNamesDownload(t *testing.T) {
-	_, tt, fc, sandbox, local := hostilePane(t, evilFS())
+	a, tt, fc, sandbox, local := hostilePane(t, evilFS())
 	waitFor(t, tt, "listing", func() bool { return tt.HasText("evil") && tt.HasText(evilName) })
 	download := func(name string) {
 		t.Helper()
 		if err := tt.RightClick(name); err != nil {
 			t.Fatal(err)
 		}
-		if err := tt.ChooseMenuItem("Download"); err != nil {
+		if err := chooseMenu(a, tt, "Download"); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -113,12 +113,12 @@ func TestDownloadSkippedNoticeMore(t *testing.T) {
 	for i := range 11 {
 		ffs.Dirs["/d"] = append(ffs.Dirs["/d"], sshtest.FakeEntry{Name: fmt.Sprintf("%02d:00.log", i), Size: 1})
 	}
-	_, tt, fc, _, _ := hostilePane(t, ffs)
+	a, tt, fc, _, _ := hostilePane(t, ffs)
 	waitFor(t, tt, "listing", func() bool { return tt.HasText("d") })
 	if err := tt.RightClick("d"); err != nil {
 		t.Fatal(err)
 	}
-	if err := tt.ChooseMenuItem("Download"); err != nil {
+	if err := chooseMenu(a, tt, "Download"); err != nil {
 		t.Fatal(err)
 	}
 	waitFor(t, tt, "notice", func() bool { return tt.HasText("Left out of the download: 11") })
@@ -144,7 +144,7 @@ func TestHostileNamesOpenWithDefaultApp(t *testing.T) {
 		if err := tt.RightClick(name); err != nil {
 			t.Fatal(err)
 		}
-		if err := tt.ChooseMenuItem("Open With Default App"); err != nil {
+		if err := chooseMenu(a, tt, "Open With Default App"); err != nil {
 			t.Fatal(err)
 		}
 		tt.Frame()

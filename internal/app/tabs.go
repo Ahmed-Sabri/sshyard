@@ -117,30 +117,26 @@ func (a *App) newTabButton(c *ui.Context, m locales.Messages) {
 	if cn == nil {
 		return
 	}
-	add.ContextMenu(func(menu *ui.Menu) {
-		if menu.Item(m.NewTab()).Shortcut(appMods, ui.KeyT).Chosen() {
-			a.Connect(cn.host.ID, openAt{})
-		}
-		if menu.Item(m.OpenAI()).Disabled(!remoteOnly(cn)).Chosen() {
-			a.OpenAI(cn.host.ID, openAt{}, 0)
-		}
+	a.contextMenu(add, func() []menuEntry {
 		link := 0
 		if cn.kind == layout.Terminal {
 			link = cn.id
 		}
-		if menu.Item(m.OpenAIRight()).Disabled(!remoteOnly(cn)).Chosen() {
-			if t := a.ws.ActiveTab(); t != nil {
-				a.OpenAI(cn.host.ID, openAt{pane: t.Focus, edge: layout.Right}, link)
+		noAI := !remoteOnly(cn)
+		beside := func(edge layout.Edge) func() {
+			return func() {
+				if t := a.ws.ActiveTab(); t != nil {
+					a.OpenAI(cn.host.ID, openAt{pane: t.Focus, edge: edge}, link)
+				}
 			}
 		}
-		if menu.Item(m.OpenAIBelow()).Disabled(!remoteOnly(cn)).Chosen() {
-			if t := a.ws.ActiveTab(); t != nil {
-				a.OpenAI(cn.host.ID, openAt{pane: t.Focus, edge: layout.Bottom}, link)
-			}
-		}
-		menu.Separator()
-		if menu.Item(m.StopAllAI()).Shortcut(stopAllMods, ui.KeyPeriod).Chosen() {
-			a.StopAllAI()
+		return []menuEntry{
+			{Icon: icons.Add, Label: m.NewTab(), Mods: appMods, Key: ui.KeyT, Do: func() { a.Connect(cn.host.ID, openAt{}) }},
+			{Icon: icons.Robot, Label: m.OpenAI(), Disabled: noAI, Do: func() { a.OpenAI(cn.host.ID, openAt{}, 0) }},
+			{Icon: icons.SplitRight, Label: m.OpenAIRight(), Disabled: noAI, Do: beside(layout.Right)},
+			{Icon: icons.SplitDown, Label: m.OpenAIBelow(), Disabled: noAI, Do: beside(layout.Bottom)},
+			menuSep,
+			{Icon: icons.Stop, Label: m.StopAllAI(), Mods: stopAllMods, Key: ui.KeyPeriod, Do: a.StopAllAI},
 		}
 	})
 }
@@ -231,7 +227,7 @@ func (a *App) tab(c *ui.Context, m locales.Messages, tok theme.Tokens, fill ui.C
 			a.closeTab(t)
 		}
 	})
-	chip.ContextMenu(func(menu *ui.Menu) { a.tabMenu(menu, m, i) })
+	a.contextMenu(chip, func() []menuEntry { return a.tabEntries(m, i) })
 	if chip.Clicked() {
 		a.ws.Active = i
 		a.page = pageWorkspace
@@ -412,27 +408,14 @@ func (a *App) tabHost(t *layout.Tab) string {
 	return ""
 }
 
-// tabMenu is the context menu of the i-th tab: closing it, or the tabs
+// tabEntries are the context menu of the i-th tab: closing it, or the tabs
 // round it, others, on its host or on others.
-func (a *App) tabMenu(menu *ui.Menu, m locales.Messages, i int) {
+func (a *App) tabEntries(m locales.Messages, i int) []menuEntry {
 	n := len(a.ws.Tabs)
 	if i >= n {
-		return
+		return nil
 	}
 	host := a.tabHost(a.ws.Tabs[i])
-	if menu.Item(m.CloseTab()).Chosen() {
-		a.closeTabs(func(j int, _ *layout.Tab) bool { return j == i })
-	}
-	if menu.Item(m.CloseOtherTabs()).Disabled(n < 2).Chosen() {
-		a.closeTabs(func(j int, _ *layout.Tab) bool { return j != i })
-	}
-	if menu.Item(m.CloseTabsLeft()).Disabled(i == 0).Chosen() {
-		a.closeTabs(func(j int, _ *layout.Tab) bool { return j < i })
-	}
-	if menu.Item(m.CloseTabsRight()).Disabled(i == n-1).Chosen() {
-		a.closeTabs(func(j int, _ *layout.Tab) bool { return j > i })
-	}
-	menu.Separator()
 	same, others := 0, 0
 	for _, t := range a.ws.Tabs {
 		if a.tabHost(t) == host {
@@ -441,15 +424,19 @@ func (a *App) tabMenu(menu *ui.Menu, m locales.Messages, i int) {
 			others++
 		}
 	}
-	if menu.Item(m.CloseHostTabs()).Disabled(same == 0).Chosen() {
-		a.closeTabs(func(_ int, t *layout.Tab) bool { return a.tabHost(t) == host })
+	closing := func(close func(j int, t *layout.Tab) bool) func() {
+		return func() { a.closeTabs(close) }
 	}
-	if menu.Item(m.CloseOtherHostTabs()).Disabled(others == 0).Chosen() {
-		a.closeTabs(func(_ int, t *layout.Tab) bool { return a.tabHost(t) != host })
-	}
-	menu.Separator()
-	if menu.Item(m.CloseAllTabs()).Chosen() {
-		a.closeTabs(func(int, *layout.Tab) bool { return true })
+	return []menuEntry{
+		{Icon: icons.Close, Label: m.CloseTab(), Do: closing(func(j int, _ *layout.Tab) bool { return j == i })},
+		{Label: m.CloseOtherTabs(), Disabled: n < 2, Do: closing(func(j int, _ *layout.Tab) bool { return j != i })},
+		{Label: m.CloseTabsLeft(), Disabled: i == 0, Do: closing(func(j int, _ *layout.Tab) bool { return j < i })},
+		{Label: m.CloseTabsRight(), Disabled: i == n-1, Do: closing(func(j int, _ *layout.Tab) bool { return j > i })},
+		menuSep,
+		{Icon: icons.Host, Label: m.CloseHostTabs(), Disabled: same == 0, Do: closing(func(_ int, t *layout.Tab) bool { return a.tabHost(t) == host })},
+		{Label: m.CloseOtherHostTabs(), Disabled: others == 0, Do: closing(func(_ int, t *layout.Tab) bool { return a.tabHost(t) != host })},
+		menuSep,
+		{Icon: icons.Clear, Label: m.CloseAllTabs(), Danger: true, Do: closing(func(int, *layout.Tab) bool { return true })},
 	}
 }
 

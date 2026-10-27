@@ -286,11 +286,11 @@ func TestMetricsBarMenu(t *testing.T) {
 	if err := tt.RightClick("CPU 50%"); err != nil {
 		t.Fatal(err)
 	}
-	menu := tt.Menu()
+	menu := menuOf(a)
 	if !textsHave(menu, "Hide metrics bar for this host") || !textsHave(menu, "Open Settings") {
 		t.Fatalf("menu %q", menu)
 	}
-	if err := tt.ChooseMenuItem("Open Settings"); err != nil {
+	if err := chooseMenu(a, tt, "Open Settings"); err != nil {
 		t.Fatal(err)
 	}
 	tt.Frame()
@@ -306,7 +306,7 @@ func TestMetricsBarMenu(t *testing.T) {
 	if err := tt.RightClick("CPU 50%"); err != nil {
 		t.Fatal(err)
 	}
-	if err := tt.ChooseMenuItem("Hide metrics bar for this host"); err != nil {
+	if err := chooseMenu(a, tt, "Hide metrics bar for this host"); err != nil {
 		t.Fatal(err)
 	}
 	tt.Frame()
@@ -340,7 +340,7 @@ func TestMetricsHideSaveError(t *testing.T) {
 	if err := tt.RightClick("CPU 50%"); err != nil {
 		t.Fatal(err)
 	}
-	if err := tt.ChooseMenuItem("Hide metrics bar for this host"); err != nil {
+	if err := chooseMenu(a, tt, "Hide metrics bar for this host"); err != nil {
 		t.Fatal(err)
 	}
 	tt.Frame()

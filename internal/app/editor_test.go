@@ -20,14 +20,13 @@ import (
 // from the row's menu, and returns the editor pane.
 func editorOn(t *testing.T, a *App, tt interface {
 	RightClick(string) error
-	ChooseMenuItem(...string) error
 	Frame()
 }, name string) {
 	t.Helper()
 	if err := tt.RightClick(name); err != nil {
 		t.Fatal(err)
 	}
-	if err := tt.ChooseMenuItem("Edit"); err != nil {
+	if err := chooseMenu(a, tt, "Edit"); err != nil {
 		t.Fatal(err)
 	}
 	tt.Frame()
@@ -202,7 +201,7 @@ func TestOpenWithDefaultApp(t *testing.T) {
 	a.refreshSides(fc)
 	waitFor(t, tt, "listing", func() bool { return tt.HasText("conf.ini") })
 	tt.RightClick("conf.ini")
-	if err := tt.ChooseMenuItem("Open With Default App"); err != nil {
+	if err := chooseMenu(a, tt, "Open With Default App"); err != nil {
 		t.Fatal(err)
 	}
 	local := ""
@@ -349,7 +348,7 @@ func TestOpenWithDefaultAppAfterFailedCopy(t *testing.T) {
 	open := func(name string, n int) string {
 		t.Helper()
 		tt.RightClick(name)
-		if err := tt.ChooseMenuItem("Open With Default App"); err != nil {
+		if err := chooseMenu(a, tt, "Open With Default App"); err != nil {
 			t.Fatal(err)
 		}
 		var got string
@@ -365,7 +364,7 @@ func TestOpenWithDefaultAppAfterFailedCopy(t *testing.T) {
 		return got
 	}
 	tt.RightClick("a.txt")
-	if err := tt.ChooseMenuItem("Open With Default App"); err != nil {
+	if err := chooseMenu(a, tt, "Open With Default App"); err != nil {
 		t.Fatal(err)
 	}
 	waitFor(t, tt, "failed copy", func() bool { return tt.HasText("disk full") })

@@ -42,12 +42,12 @@ func skipFS() *sshtest.FakeFS {
 	}
 }
 
-func download(t *testing.T, tt *ui.Tester, name string) {
+func download(t *testing.T, a *App, tt *ui.Tester, name string) {
 	t.Helper()
 	if err := tt.RightClick(name); err != nil {
 		t.Fatal(err)
 	}
-	if err := tt.ChooseMenuItem("Download"); err != nil {
+	if err := chooseMenu(a, tt, "Download"); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -55,9 +55,9 @@ func download(t *testing.T, tt *ui.Tester, name string) {
 // Skipped names are quoted, all on one line, nothing in them reordering
 // the text.
 func TestSkippedNoticeEscapesNames(t *testing.T) {
-	_, tt, fc, _, _ := hostilePane(t, skipFS())
+	a, tt, fc, _, _ := hostilePane(t, skipFS())
 	waitFor(t, tt, "listing", func() bool { return tt.HasText("d") })
-	download(t, tt, "d")
+	download(t, a, tt, "d")
 	waitFor(t, tt, "notice", func() bool { return tt.HasText("Left out of the download: 2") })
 	for _, want := range []string{`“d/a\nb.txt` + unsafeNote, `“d/\u202egpj.exe:` + unsafeNote} {
 		if !tt.HasText(want) {
@@ -78,12 +78,12 @@ func TestSkippedNoticeEscapesNames(t *testing.T) {
 // clears it, as does cancelling the question about files already there.
 func TestSkippedNoticeCleared(t *testing.T) {
 	t.Run("plan fails", func(t *testing.T) {
-		_, tt, fc, _, _ := hostilePane(t, skipFS())
+		a, tt, fc, _, _ := hostilePane(t, skipFS())
 		waitFor(t, tt, "listing", func() bool { return tt.HasText("gone") })
-		download(t, tt, "d")
+		download(t, a, tt, "d")
 		waitFor(t, tt, "notice", func() bool { return tt.HasText("Left out of the download: 2") })
 		fc.fs.transfers.Wait()
-		download(t, tt, "gone")
+		download(t, a, tt, "gone")
 		waitFor(t, tt, "failed", func() bool { return fc.fs.remote.err != "" || fc.fs.local.err != "" })
 		tt.Frame()
 		if tt.HasText("Left out of the download") || fc.fs.skipped != nil {
@@ -91,11 +91,11 @@ func TestSkippedNoticeCleared(t *testing.T) {
 		}
 	})
 	t.Run("conflict canceled", func(t *testing.T) {
-		_, tt, fc, _, local := hostilePane(t, skipFS())
+		a, tt, fc, _, local := hostilePane(t, skipFS())
 		os.MkdirAll(filepath.Join(local, "d"), 0o755)
 		os.WriteFile(filepath.Join(local, "d", "ok.txt"), []byte("mine"), 0o644)
 		waitFor(t, tt, "listing", func() bool { return tt.HasText("d") })
-		download(t, tt, "d")
+		download(t, a, tt, "d")
 		waitFor(t, tt, "question", func() bool { return fc.fs.conflictOpen && tt.HasText("Left out of the download: 2") })
 		mustClick(t, tt, "Cancel")
 		tt.Frame()
@@ -114,7 +114,7 @@ func TestSkippedNoticeCleared(t *testing.T) {
 func TestPlanErrorSurvivesTransferRefresh(t *testing.T) {
 	a, tt, fc, _, _ := hostilePane(t, skipFS())
 	waitFor(t, tt, "listing", func() bool { return tt.HasText("d") })
-	download(t, tt, "d")
+	download(t, a, tt, "d")
 	waitFor(t, tt, "notice", func() bool { return tt.HasText("Left out of the download: 2") })
 	waitFor(t, tt, "downloaded", func() bool {
 		ts := fc.fs.transfers.List()

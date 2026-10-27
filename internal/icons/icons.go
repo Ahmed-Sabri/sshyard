@@ -140,6 +140,13 @@ var (
 	Check       = load("check-line")
 	MoveTo      = load("folder-transfer-line")
 	Submenu     = load("arrow-right-s-line")
+	Next        = Submenu
+	Previous    = load("arrow-left-s-line")
+	Copy        = load("file-copy-2-line")
+	Compress    = load("file-zip-line")
+	Extract     = load("inbox-unarchive-line")
+	Image       = load("image-line")
+	SelectAll   = load("checkbox-multiple-line")
 )
 
 // HostIcon is an icon a host can be given, by the key it is saved under.

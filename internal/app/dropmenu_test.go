@@ -15,7 +15,7 @@ import (
 func TestDropMenu(t *testing.T) {
 	a, tt := newTestApp(t)
 	mustClick(t, tt, "Add")
-	if got := tt.Menu(); got != nil {
+	if got := menuOf(a); got != nil {
 		t.Fatalf("a menu of the system: %q", got)
 	}
 	add, _ := tt.Find("Add")

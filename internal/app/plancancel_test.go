@@ -26,10 +26,10 @@ func TestPlanningCanceled(t *testing.T) {
 			}
 		},
 	}
-	_, tt, fc, _, local := hostilePane(t, ffs)
+	a, tt, fc, _, local := hostilePane(t, ffs)
 	t.Cleanup(ffs.Resume)
 	waitFor(t, tt, "listing", func() bool { return tt.HasText("d") })
-	download(t, tt, "d")
+	download(t, a, tt, "d")
 	waitFor(t, tt, "planning notice", func() bool { return tt.HasText("Preparing the download…") })
 	time.Sleep(100 * time.Millisecond)
 	tt.Frame()
@@ -56,7 +56,7 @@ func TestPlanningCanceled(t *testing.T) {
 		t.Fatalf("downloaded %q", fs)
 	}
 	// A plan that is not canceled goes as before, its notice with it.
-	download(t, tt, "d")
+	download(t, a, tt, "d")
 	waitFor(t, tt, "download", func() bool { return len(fc.fs.transfers.List()) == 1 })
 	waitFor(t, tt, "notice gone", func() bool { return !tt.HasText("Preparing the download…") })
 }

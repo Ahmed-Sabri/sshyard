@@ -736,8 +736,8 @@ func TestAIShortcutsAndStopAll(t *testing.T) {
 	if err := tt.RightClick("New Tab"); err != nil {
 		t.Fatal(err)
 	}
-	if err := tt.ChooseMenuItem("Stop All AI"); err != nil {
-		t.Fatalf("%v menu %q", err, tt.Menu())
+	if err := chooseMenu(a, tt, "Stop All AI"); err != nil {
+		t.Fatalf("%v menu %q", err, menuOf(a))
 	}
 	waitFor(t, tt, "all stopped", func() bool {
 		return !a.conns[id1].ai.running && !a.conns[id2].ai.running
@@ -778,7 +778,7 @@ func TestAskAIUsesRecentPane(t *testing.T) {
 	if err := tt.RightClick("Terminal box"); err != nil {
 		t.Fatal(err)
 	}
-	if err := tt.ChooseMenuItem("Ask AI"); err == nil {
+	if err := chooseMenu(a, tt, "Ask AI"); err == nil {
 		t.Fatal("Ask AI was enabled with no selection")
 	}
 	tt.CloseMenu()
@@ -798,8 +798,8 @@ func TestAskAIUsesRecentPane(t *testing.T) {
 	if err := tt.RightClick("Terminal box"); err != nil {
 		t.Fatal(err)
 	}
-	if err := tt.ChooseMenuItem("Ask AI"); err != nil {
-		t.Fatalf("%v menu %q", err, tt.Menu())
+	if err := chooseMenu(a, tt, "Ask AI"); err != nil {
+		t.Fatalf("%v menu %q", err, menuOf(a))
 	}
 	ai := a.conns[a.aiRecent[term.host.ID]]
 	waitFor(t, tt, "selection sent", func() bool {

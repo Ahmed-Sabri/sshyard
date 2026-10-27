@@ -74,6 +74,16 @@ func center(t *testing.T, tt *ui.Tester, s string) (float32, float32) {
 	return r.X + r.W/2, r.Y + r.H/2
 }
 
+// nameAt is the middle of the icon of the row of name.
+func nameAt(t *testing.T, tt *ui.Tester, name string) (float32, float32) {
+	t.Helper()
+	r, ok := tt.Find(name)
+	if !ok {
+		t.Fatalf("no %q in %q", name, tt.Texts())
+	}
+	return r.X + 18, r.Y + r.H/2
+}
+
 func TestFilesContextMenu(t *testing.T) {
 	a, tt, fc, root := filesPane(t)
 	write(t, filepath.Join(root, "a.txt"), "hello")
@@ -86,13 +96,13 @@ func TestFilesContextMenu(t *testing.T) {
 		if err := tt.RightClick("a.txt"); err != nil {
 			t.Fatal(err)
 		}
-		return tt.Menu()
+		return menuOf(a)
 	}
 	choose := func(item string) {
 		t.Helper()
 		menu()
-		if err := tt.ChooseMenuItem(item); err != nil {
-			t.Fatalf("%v: menu %q", err, tt.Menu())
+		if err := chooseMenu(a, tt, item); err != nil {
+			t.Fatalf("%v: menu %q", err, menuOf(a))
 		}
 		tt.Frame()
 	}
@@ -102,7 +112,7 @@ func TestFilesContextMenu(t *testing.T) {
 			t.Errorf("menu %q has no %q", got, want)
 		}
 	}
-	tt.ChooseMenuItem("Copy Path")
+	chooseMenu(a, tt, "Copy Path")
 	tt.Frame()
 	if tt.Clipboard() != remote {
 		t.Errorf("clipboard %q, want %q", tt.Clipboard(), remote)
@@ -151,7 +161,7 @@ func TestFilesContextMenu(t *testing.T) {
 	if err := tt.RightClick("b.txt"); err != nil {
 		t.Fatal(err)
 	}
-	tt.ChooseMenuItem("New File…")
+	chooseMenu(a, tt, "New File…")
 	tt.Frame()
 	tt.Type("new.txt")
 	tt.Frame()
@@ -162,7 +172,7 @@ func TestFilesContextMenu(t *testing.T) {
 	if err := tt.RightClick("b.txt"); err != nil {
 		t.Fatal(err)
 	}
-	tt.ChooseMenuItem("Delete…")
+	chooseMenu(a, tt, "Delete…")
 	tt.Frame()
 	if !tt.HasText(`Delete “b.txt”?`) {
 		t.Fatalf("no confirmation in %q", tt.Texts())
@@ -178,10 +188,10 @@ func TestFilesContextMenu(t *testing.T) {
 	a.refreshSides(fc)
 	waitFor(t, tt, "up.txt", func() bool { return tt.HasText("up.txt") })
 	tt.RightClick("up.txt")
-	if got := tt.Menu(); !slices.Contains(got, "Upload") || slices.Contains(got, "Permissions…") {
+	if got := menuOf(a); !slices.Contains(got, "Upload") || slices.Contains(got, "Permissions…") {
 		t.Errorf("local menu %q", got)
 	}
-	tt.ChooseMenuItem("Upload")
+	chooseMenu(a, tt, "Upload")
 	waitFor(t, tt, "menu upload", func() bool { return read(filepath.Join(root, "up.txt")) == "up" })
 }
 
@@ -248,8 +258,11 @@ func TestFilesDragDropAndQueue(t *testing.T) {
 
 	// A local row dragged onto the remote side uploads.
 	drag := func(from, to string) {
-		x, y := center(t, tt, from)
+		x, y := nameAt(t, tt, from)
 		tx, ty := center(t, tt, to)
+		tt.ClickAt(x, y)        // a row chosen drags; elsewhere, a drag chooses
+		tt.Advance(time.Second) // not a double click
+		tt.Frame()
 		tt.Press(x, y)
 		tt.Move(x+10, y+5)
 		tt.Move(tx, ty+60)
@@ -472,8 +485,11 @@ func TestFilesDragBetweenPanes(t *testing.T) {
 	})
 	drag := func(from, to string) {
 		t.Helper()
-		x, y := center(t, tt, from)
+		x, y := nameAt(t, tt, from)
 		tx, ty := center(t, tt, to)
+		tt.ClickAt(x, y)        // a row chosen drags; elsewhere, a drag chooses
+		tt.Advance(time.Second) // not a double click
+		tt.Frame()
 		tt.Press(x, y)
 		tt.Move(x+10, y+5)
 		tt.Move(tx, ty)

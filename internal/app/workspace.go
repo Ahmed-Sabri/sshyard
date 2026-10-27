@@ -529,65 +529,58 @@ func (a *App) termElement(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn
 		t.Focus = n.ID
 	}
 	svc := c.Services()
+	tb := term.Bounds()
+	entries := func() []menuEntry { return a.termEntries(t, n, cn, tv, svc, m) }
 	term.HandleInput(func(ev ui.InputEvent) bool {
 		// A left click gives the terminal the keyboard back. A right click
 		// must not: focusing here inserts the find bar and the tab dot
-		// before the next frame, so the context menu's target id misses.
+		// before the next frame, which would move the menu's place.
 		if ev.Kind == ui.InputPointerDown && ev.Button == 0 {
 			t.Focus = n.ID
 			if !has {
 				a.focusReq = cn.id
 			}
 		}
-		return tv.input(ev, svc)
+		// A program reading the mouse takes the right click too.
+		return tv.input(ev, svc) || a.contextPress(tb, ev, entries)
 	})
+	if term.Shortcut(ui.Shift, ui.KeyF10) {
+		a.openContext(tb.X, tb.Y, entries)
+	}
 	term.TextCaret(tv.caret())
 	tv.clear = a.clearContent
 	term.Draw(func(p *ui.Painter, r ui.Rect) { tv.paint(p, r, pal, has) })
-	term.ContextMenu(func(menu *ui.Menu) {
-		if menu.Item(m.Copy()).Disabled(tv.SelectedText() == "").Chosen() {
-			svc.WriteClipboard(tv.SelectedText())
-		}
-		if menu.Item(m.Paste()).Chosen() {
-			tv.Paste(svc.ReadClipboard())
-		}
-		if menu.Item(m.Find()).Shortcut(appMods, ui.KeyF).Chosen() {
+}
+
+// termEntries are the context menu of a terminal pane n of tab t.
+func (a *App) termEntries(t *layout.Tab, n *layout.Node, cn *conn, tv *termView, svc ui.Services, m locales.Messages) []menuEntry {
+	sel := tv.SelectedText()
+	noAI := !remoteOnly(cn)
+	focus := func(do func()) func() {
+		return func() {
 			t.Focus = n.ID
-			a.finding = true
+			do()
 		}
-		if menu.Item(m.ClearScreen()).Chosen() {
-			tv.send([]byte{0x0c})
-		}
-		menu.Separator()
-		if menu.Item(m.SplitRight()).Shortcut(appMods, ui.KeyD).Chosen() {
-			t.Focus = n.ID
-			a.SplitFocused(layout.Right)
-		}
-		if menu.Item(m.SplitDown()).Shortcut(appMods, ui.KeyE).Chosen() {
-			t.Focus = n.ID
-			a.SplitFocused(layout.Bottom)
-		}
-		if menu.Item(m.OpenFilesBeside()).Shortcut(appMods, ui.KeyO).Disabled(!remoteOnly(cn)).Chosen() {
-			t.Focus = n.ID
-			a.OpenFilesBeside()
-		}
-		if menu.Item(m.OpenAIRight()).Shortcut(aiMods, ui.KeyA).Disabled(!remoteOnly(cn)).Chosen() {
-			t.Focus = n.ID
+	}
+	return []menuEntry{
+		{Icon: icons.Copy, Label: m.Copy(), Disabled: sel == "", Do: func() { svc.WriteClipboard(sel) }},
+		{Icon: icons.Paste, Label: m.Paste(), Do: func() { tv.Paste(svc.ReadClipboard()) }},
+		{Icon: icons.Search, Label: m.Find(), Mods: appMods, Key: ui.KeyF, Do: focus(func() { a.finding = true })},
+		{Icon: icons.Clear, Label: m.ClearScreen(), Do: func() { tv.send([]byte{0x0c}) }},
+		menuSep,
+		{Icon: icons.SplitRight, Label: m.SplitRight(), Mods: appMods, Key: ui.KeyD, Do: focus(func() { a.SplitFocused(layout.Right) })},
+		{Icon: icons.SplitDown, Label: m.SplitDown(), Mods: appMods, Key: ui.KeyE, Do: focus(func() { a.SplitFocused(layout.Bottom) })},
+		{Icon: icons.Folder, Label: m.OpenFilesBeside(), Mods: appMods, Key: ui.KeyO, Disabled: noAI, Do: focus(a.OpenFilesBeside)},
+		{Icon: icons.Robot, Label: m.OpenAIRight(), Mods: aiMods, Key: ui.KeyA, Disabled: noAI, Do: focus(func() {
 			a.OpenAI(cn.host.ID, openAt{pane: n.ID, edge: layout.Right}, cn.id)
-		}
-		if menu.Item(m.OpenAIBelow()).Disabled(!remoteOnly(cn)).Chosen() {
-			t.Focus = n.ID
+		})},
+		{Label: m.OpenAIBelow(), Disabled: noAI, Do: focus(func() {
 			a.OpenAI(cn.host.ID, openAt{pane: n.ID, edge: layout.Bottom}, cn.id)
-		}
-		sel := tv.SelectedText()
-		if menu.Item(m.AskAI()).Disabled(sel == "" || !remoteOnly(cn)).Chosen() {
-			a.AskAI(cn, sel)
-		}
-		menu.Separator()
-		if menu.Item(m.ClosePane()).Shortcut(appMods, ui.KeyW).Chosen() {
-			a.closeSoon(cn.id)
-		}
-	})
+		})},
+		{Icon: icons.Robot, Label: m.AskAI(), Disabled: sel == "" || noAI, Do: func() { a.AskAI(cn, sel) }},
+		menuSep,
+		{Icon: icons.Close, Label: m.ClosePane(), Mods: appMods, Key: ui.KeyW, Do: func() { a.closeSoon(cn.id) }},
+	}
 }
 
 func (a *App) banner(c *ui.Context, cn *conn, st session.Status, tok theme.Tokens, m locales.Messages) {

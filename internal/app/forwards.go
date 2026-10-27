@@ -289,21 +289,19 @@ func (a *App) forwardItem(c *ui.Context, m locales.Messages, tok theme.Tokens, f
 			a.ToggleForward(f.ID)
 		}
 	})
-	row.ContextMenu(func(menu *ui.Menu) {
-		tip := m.FwdStart()
+	a.contextMenu(row, func() []menuEntry {
+		tip, ic := m.FwdStart(), icons.Run
 		if on {
-			tip = m.FwdStop()
+			tip, ic = m.FwdStop(), icons.Stop
 		}
-		if menu.Item(tip).Chosen() {
-			a.ToggleForward(f.ID)
-		}
-		if menu.Item(m.Edit()).Chosen() {
-			ff := f
-			a.openFwdForm(m, &ff, "")
-		}
-		menu.Separator()
-		if menu.Item(m.Delete()).Chosen() {
-			a.fwdDeleteID, a.fwdDeleting = f.ID, true
+		return []menuEntry{
+			{Icon: ic, Label: tip, Do: func() { a.ToggleForward(f.ID) }},
+			{Icon: icons.Edit, Label: m.Edit(), Do: func() {
+				ff := f
+				a.openFwdForm(m, &ff, "")
+			}},
+			menuSep,
+			{Icon: icons.Delete, Label: m.Delete(), Danger: true, Do: func() { a.fwdDeleteID, a.fwdDeleting = f.ID, true }},
 		}
 	})
 	if row.Clicked() && !toggled {
