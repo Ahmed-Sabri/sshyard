@@ -125,13 +125,13 @@ var Languages = []string{"en", "zh-Hans"}
 
 // Default returns the defaults.
 func Default() Settings {
-	return Settings{Theme: theme.Auto, CheckUpdates: true, TerminalFontSize: 13, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, OSC52Write: OSC52Allow, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
+	return Settings{Theme: theme.Auto, CheckUpdates: true, TerminalFontSize: 13, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, OSC52Write: OSC52Ask, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
 		AIDefaultAgent: "builtin", AIDefaultMode: "ask", AIContextLines: 200, AIAuditRetentionDays: 90, AIRedact: true}
 }
 
 // ResolveOSC52Write is the write policy in effect. A host value of allow,
 // ask or deny wins; otherwise the global policy is used. Anything else
-// is allow.
+// is ask.
 func ResolveOSC52Write(global, host string) string {
 	switch host {
 	case OSC52Allow, OSC52Ask, OSC52Deny:
@@ -141,7 +141,7 @@ func ResolveOSC52Write(global, host string) string {
 	case OSC52Allow, OSC52Ask, OSC52Deny:
 		return global
 	}
-	return OSC52Allow
+	return OSC52Ask
 }
 
 // Normalize replaces invalid values with defaults.
@@ -182,7 +182,7 @@ func (s *Settings) Normalize() {
 	switch s.OSC52Write {
 	case OSC52Allow, OSC52Ask, OSC52Deny:
 	default:
-		s.OSC52Write = OSC52Allow
+		s.OSC52Write = OSC52Ask
 	}
 	if s.OSC52MaxBytes < OSC52MaxMin || s.OSC52MaxBytes > OSC52MaxMax {
 		s.OSC52MaxBytes = OSC52MaxDefault

@@ -18,6 +18,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"github.com/Licoy/sshyard/internal/session"
+	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/internal/sshtest"
 	"github.com/creack/pty"
 	"golang.org/x/crypto/ssh"
@@ -246,6 +247,11 @@ func TestOSC52RealTmux(t *testing.T) {
 	}
 
 	a, tt := newTestApp(t)
+	s := a.Settings()
+	s.OSC52Write = settings.OSC52Allow
+	if err := a.ApplySettings(s); err != nil {
+		t.Fatal(err)
+	}
 	h := addHost(t, a, srv, "box", "secret")
 	a.known.Add(srv.Addr, srv.HostKey.PublicKey())
 	if _, err := a.Connect(h.ID, openAt{}); err != nil {

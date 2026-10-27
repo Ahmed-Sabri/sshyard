@@ -178,6 +178,11 @@ func clipNotStored(t *testing.T, a *App, secret string) {
 
 func TestOSC52WriteToast(t *testing.T) {
 	a, tt := newTestApp(t)
+	s := a.Settings()
+	s.OSC52Write = settings.OSC52Allow
+	if err := a.ApplySettings(s); err != nil {
+		t.Fatal(err)
+	}
 	c := connectOSC(t, a, "box")
 	tt.SetClipboard("OLD")
 	writeOSC(t, c, "PAYLOAD-a")
@@ -559,6 +564,11 @@ func TestOSC52AskWithAIPane(t *testing.T) {
 
 func TestOSC52Pause(t *testing.T) {
 	a, tt := newTestApp(t)
+	s := a.Settings()
+	s.OSC52Write = settings.OSC52Allow
+	if err := a.ApplySettings(s); err != nil {
+		t.Fatal(err)
+	}
 	c := connectOSC(t, a, "box")
 	tt.SetClipboard("OLD")
 	for i := 0; i < 11; i++ {
@@ -683,6 +693,11 @@ func TestOSC52AllowOverride(t *testing.T) {
 
 func TestOSC52UndoExpiryAndLocalCopy(t *testing.T) {
 	a, tt := newTestApp(t)
+	s := a.Settings()
+	s.OSC52Write = settings.OSC52Allow
+	if err := a.ApplySettings(s); err != nil {
+		t.Fatal(err)
+	}
 	c := connectOSC(t, a, "box")
 	tt.SetClipboard("OLD")
 	writeOSC(t, c, "hello")
@@ -729,6 +744,11 @@ func TestOSC52UndoExpiryAndLocalCopy(t *testing.T) {
 
 func TestOSC52WroteLanguages(t *testing.T) {
 	a, tt := newTestApp(t)
+	s := a.Settings()
+	s.OSC52Write = settings.OSC52Allow
+	if err := a.ApplySettings(s); err != nil {
+		t.Fatal(err)
+	}
 	c := connectOSC(t, a, "box")
 	tt.SetLocale("zh-Hans")
 	writeOSC(t, c, "hi")

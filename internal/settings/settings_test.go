@@ -66,16 +66,16 @@ func TestOSC52Policy(t *testing.T) {
 	if ResolveOSC52Write(OSC52Deny, "") != OSC52Deny {
 		t.Fatal("empty host follows the global policy")
 	}
-	if ResolveOSC52Write("nope", "nope") != OSC52Allow {
-		t.Fatal("invalid policy is allow")
+	if ResolveOSC52Write("nope", "nope") != OSC52Ask {
+		t.Fatal("invalid policy is ask")
 	}
 	s := Default()
-	if s.OSC52Write != OSC52Allow || s.OSC52MaxBytes != OSC52MaxDefault {
+	if s.OSC52Write != OSC52Ask || s.OSC52MaxBytes != OSC52MaxDefault {
 		t.Fatalf("default %+v", s)
 	}
 	s.OSC52Write, s.OSC52MaxBytes = "nope", 10
 	s.Normalize()
-	if s.OSC52Write != OSC52Allow || s.OSC52MaxBytes != OSC52MaxDefault {
+	if s.OSC52Write != OSC52Ask || s.OSC52MaxBytes != OSC52MaxDefault {
 		t.Fatalf("normalized %+v", s)
 	}
 	s.OSC52Write, s.OSC52MaxBytes = OSC52Ask, OSC52MaxMin
@@ -91,7 +91,7 @@ func TestOSC52Policy(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "s.json")
 	os.WriteFile(p, []byte(`{"theme":"dark"}`), 0o600)
 	got, err := Load(p)
-	if err != nil || got.OSC52Write != OSC52Allow || got.OSC52MaxBytes != OSC52MaxDefault {
+	if err != nil || got.OSC52Write != OSC52Ask || got.OSC52MaxBytes != OSC52MaxDefault {
 		t.Fatalf("old file %+v %v", got, err)
 	}
 }
@@ -161,5 +161,26 @@ func TestMaterials(t *testing.T) {
 	}
 	if got, _ := Load(path); got.ChromeMaterial != MaterialOpaque || got.ContentMaterial != MaterialTranslucent {
 		t.Errorf("got %+v", got)
+	}
+}
+
+func TestOSC52ExplicitPoliciesPersist(t *testing.T) {
+	for _, policy := range []string{OSC52Allow, OSC52Ask, OSC52Deny} {
+		s := Default()
+		s.OSC52Write = policy
+		path := filepath.Join(t.TempDir(), "settings.json")
+		if err := Save(path, s); err != nil {
+			t.Fatal(err)
+		}
+		got, err := Load(path)
+		if err != nil || got.OSC52Write != policy {
+			t.Fatalf("policy %s became %s: %v", policy, got.OSC52Write, err)
+		}
+		if ResolveOSC52Write(policy, "") != policy {
+			t.Fatalf("global %s changed", policy)
+		}
+		if ResolveOSC52Write("invalid", policy) != policy {
+			t.Fatalf("host %s changed", policy)
+		}
 	}
 }
