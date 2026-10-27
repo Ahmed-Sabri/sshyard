@@ -31,7 +31,10 @@ func filesPaneOn(t *testing.T, setup func(*sshtest.Server)) (*App, *ui.Tester, *
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { srv.Close() })
-	root := t.TempDir()
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	srv.SFTPRoot = root
 	if setup != nil {
 		setup(srv)

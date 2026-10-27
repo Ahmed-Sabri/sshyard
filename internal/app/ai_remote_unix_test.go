@@ -18,6 +18,7 @@ import (
 
 	"github.com/Licoy/sshyard/internal/ai/agent"
 	"github.com/Licoy/sshyard/internal/ai/openai"
+	"github.com/Licoy/sshyard/internal/ai/policy"
 	"github.com/Licoy/sshyard/internal/assets"
 	"github.com/Licoy/sshyard/internal/layout"
 	"github.com/Licoy/sshyard/internal/sshtest"
@@ -27,7 +28,11 @@ import (
 
 func TestAskModeRunsReadOnlyAndPromptsForWrite(t *testing.T) {
 	a, tt, _, h := bashHost(t)
-	conf := filepath.Join(t.TempDir(), "nginx.conf")
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	conf := filepath.Join(root, "nginx.conf")
 	a.newModel = scripted(toolCall("c1", "run_command", `{"command":"df -h"}`), toolCall("w1", "write_file", writeArgs(t, conf, "worker_processes 1;\n")))
 	id := openAIPane(t, a, h.ID)
 	tt.Frame()
@@ -55,7 +60,11 @@ func TestAskModeRunsReadOnlyAndPromptsForWrite(t *testing.T) {
 
 func TestWriteConfirmAndRefuseChangedFile(t *testing.T) {
 	a, tt, _, h := bashHost(t)
-	conf := filepath.Join(t.TempDir(), "nginx.conf")
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	conf := filepath.Join(root, "nginx.conf")
 	if err := os.WriteFile(conf, []byte("old\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -203,11 +212,22 @@ func TestAICommandConcurrency(t *testing.T) {
 		t.Fatal(err)
 	}
 	tt.Frame()
+	allowCommand := func(id int) {
+		waitFor(t, tt, "command permission request", func() bool { return a.conns[id].ai.pending != nil })
+		prompt := a.conns[id].ai.pending.prompt
+		if prompt.Action.Tool != "run_command" || prompt.Action.Command != "tail -f /dev/null" || prompt.Decision.Mode != policy.ModeAsk || prompt.Decision.Outcome != policy.Ask {
+			t.Fatalf("unexpected permission request: %+v", prompt)
+		}
+		a.answerAI(a.conns[id], policy.AllowOnce)
+	}
 	a.SendAI(id1, "hold 1")
+	allowCommand(id1)
 	waitFor(t, tt, "first command", func() bool { return started.Load() >= 1 })
 	a.SendAI(id2, "hold 2")
+	allowCommand(id2)
 	waitFor(t, tt, "second command", func() bool { return started.Load() >= 2 })
 	a.SendAI(id3, "hold 3")
+	allowCommand(id3)
 	time.Sleep(time.Second)
 	tt.Frame()
 	if started.Load() != 2 || maxn.Load() > 2 {

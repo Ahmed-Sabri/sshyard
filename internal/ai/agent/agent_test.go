@@ -184,8 +184,8 @@ func TestWriteDiffAndNewFile(t *testing.T) {
 		if tools.readPath != "/etc/nginx/nginx.conf" {
 			t.Fatal(tools.readPath)
 		}
-		if !strings.Contains(gate.diffs[0], "-old") || !strings.Contains(gate.diffs[0], "+new") {
-			t.Fatalf("diff:\n%s", gate.diffs[0])
+		if !strings.Contains(gate.diffs[1], "-old") || !strings.Contains(gate.diffs[1], "+new") {
+			t.Fatalf("diff:\n%s", gate.diffs[1])
 		}
 	})
 	t.Run("new", func(t *testing.T) {
@@ -198,8 +198,8 @@ func TestWriteDiffAndNewFile(t *testing.T) {
 		if err := s.Turn(t.Context(), "create", HostMeta{Name: "web"}, "", nil); err != nil {
 			t.Fatal(err)
 		}
-		if gate.diffs[0] != "brand new\n" {
-			t.Fatalf("%q", gate.diffs[0])
+		if gate.diffs[1] != "brand new\n" {
+			t.Fatalf("%q", gate.diffs[1])
 		}
 	})
 	t.Run("read error", func(t *testing.T) {
@@ -213,7 +213,7 @@ func TestWriteDiffAndNewFile(t *testing.T) {
 		if err := s.Turn(t.Context(), "create", HostMeta{Name: "web"}, "", nil); err != nil {
 			t.Fatal(err)
 		}
-		if len(gate.actions) != 0 || len(tools.calls) != 0 {
+		if len(gate.actions) != 1 || gate.actions[0].Tool != "read_file" || len(tools.calls) != 0 {
 			t.Fatalf("read error still ran: actions %d calls %v", len(gate.actions), tools.calls)
 		}
 		if !messageHas(model.reqs[1].Messages, "tool", "stat failed") {

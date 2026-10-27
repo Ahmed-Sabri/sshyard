@@ -2,6 +2,8 @@ package sftpsvc
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -80,11 +82,15 @@ type Transfer struct {
 	// removing is set while a canceled transfer's part file is being
 	// removed: a retry, or another transfer to the same file, waits for
 	// it, so as not to lose its new part
-	removing bool
-	srcSize  int64
-	srcMod   time.Time
-	mark     time.Time
-	markB    int64
+	removing  bool
+	part      string
+	partOwned bool
+	partReady bool
+	partInfo  fs.FileInfo
+	srcSize   int64
+	srcMod    time.Time
+	mark      time.Time
+	markB     int64
 }
 
 // Percent is how far the transfer is, 0 to 100.
@@ -199,6 +205,11 @@ func (ts *Transfers) Add(dir Direction, src, dst, name string) int {
 	ts.mu.Lock()
 	ts.next++
 	t := &Transfer{ID: ts.next, Name: name, Dir: dir, Src: src, Dst: dst}
+	var token [16]byte
+	if _, err := rand.Read(token[:]); err != nil {
+		panic(err)
+	}
+	t.part = PartName(dst, dir == Upload) + "-" + hex.EncodeToString(token[:])
 	ts.list = append(ts.list, t)
 	ts.pump()
 	id := t.ID
@@ -230,7 +241,7 @@ func (ts *Transfers) pump() {
 // being removed: t would write it meanwhile. Under ts.mu.
 func (ts *Transfers) partBusy(t *Transfer) bool {
 	return slices.ContainsFunc(ts.list, func(u *Transfer) bool {
-		return u != t && u.removing && u.Dir == t.Dir && u.Dst == t.Dst
+		return u != t && (u.removing || u.State == Running || u.stopping) && u.Dir == t.Dir && u.Dst == t.Dst
 	})
 }
 
@@ -309,7 +320,7 @@ func (ts *Transfers) attempts(ctx context.Context, t *Transfer) error {
 // ErrDstIsDir is a transfer to where a folder is.
 var ErrDstIsDir = errors.New("a folder is already there")
 
-// PartName is where a transfer to dst writes before it completes.
+// PartName is the prefix for a transfer's random, exclusively created partial file.
 func PartName(dst string, remote bool) string {
 	if remote {
 		return path.Join(path.Dir(dst), "."+path.Base(dst)+".sshyard-part")
@@ -332,9 +343,17 @@ func (ts *Transfers) copy(ctx context.Context, t *Transfer) error {
 	}
 	var src, dst fileSide
 	if t.Dir == Upload {
+		if err := c.checkTransferParent(ctx, path.Dir(t.Dst)); err != nil {
+			return err
+		}
 		src, dst = localFS{}, remoteFS{c}
 	} else {
-		src, dst = remoteFS{c}, localFS{}
+		local, err := destinationRoot(t.Dst)
+		if err != nil {
+			return err
+		}
+		defer local.root.Close()
+		src, dst = remoteFS{c}, local
 		// Plans check the names; a download whose own name is unsafe
 		// (a server's "../" makes it "..") must not reach a part file
 		// in some other folder either.
@@ -344,7 +363,7 @@ func (ts *Transfers) copy(ctx context.Context, t *Transfer) error {
 	}
 	// A folder where the file goes (a server's "../" makes the file the
 	// folder chosen) fails at once: its part file would sit beside it.
-	if di, err := dst.stat(t.Dst); err == nil && di.IsDir() {
+	if di, err := dst.lstat(t.Dst); err == nil && di.IsDir() {
 		return fmt.Errorf("sftp: %s: %w", t.Dst, ErrDstIsDir)
 	}
 	fi, err := src.stat(t.Src)
@@ -355,16 +374,42 @@ func (ts *Transfers) copy(ctx context.Context, t *Transfer) error {
 		return fmt.Errorf("sftp: %s is a folder", t.Src)
 	}
 	size, mod := fi.Size(), fi.ModTime()
-	part := PartName(t.Dst, t.Dir == Upload)
+	part := t.part
 	var off int64
 	ts.mu.Lock()
 	same := t.srcSize == size && t.srcMod.Equal(mod)
 	t.srcSize, t.srcMod, t.Total = size, mod, size
 	ts.mu.Unlock()
-	if pi, err := dst.stat(part); err == nil && same && pi.Size() <= size {
+	partExists := false
+	if pi, err := dst.lstat(part); err == nil && t.partOwned && same && pi.Mode().IsRegular() && pi.Size() <= size {
+		partExists = true
 		off = pi.Size()
 	}
+	if t.partReady && partExists && off == size && same {
+		// A completed part needs only its failed rename retried. Reopening a
+		// read-only source mode for writing would unnecessarily prevent retry.
+		if local, ok := dst.(localDestination); ok {
+			f, err := local.root.Open(local.relative(part))
+			if err != nil {
+				return err
+			}
+			info, err := f.Stat()
+			f.Close()
+			if err != nil {
+				return err
+			}
+			if t.partInfo == nil || !os.SameFile(t.partInfo, info) {
+				return ErrPartChanged
+			}
+		} else if _, err := c.ResolvePath(ctx, part); err != nil {
+			return err
+		}
+		return dst.rename(part, t.Dst)
+	}
 	if off == 0 {
+		ts.mu.Lock()
+		t.partReady = false
+		ts.mu.Unlock()
 		if err := dst.mkdirAll(dirOf(t.Dst, t.Dir == Upload)); err != nil {
 			return err
 		}
@@ -374,10 +419,35 @@ func (ts *Transfers) copy(ctx context.Context, t *Transfer) error {
 		return err
 	}
 	defer r.Close()
+	if t.partOwned && off == 0 {
+		if err := dst.remove(part); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		ts.mu.Lock()
+		t.partOwned = false
+		ts.mu.Unlock()
+	}
 	w, err := dst.create(part, off > 0)
 	if err != nil {
 		return err
 	}
+	if f, ok := w.(*os.File); ok {
+		info, statErr := f.Stat()
+		if statErr != nil {
+			w.Close()
+			return statErr
+		}
+		if off > 0 && (t.partInfo == nil || !os.SameFile(t.partInfo, info)) {
+			w.Close()
+			return ErrPartChanged
+		}
+		ts.mu.Lock()
+		t.partInfo = info
+		ts.mu.Unlock()
+	}
+	ts.mu.Lock()
+	t.partOwned = true
+	ts.mu.Unlock()
 	if off > 0 {
 		if _, err := r.Seek(off, io.SeekStart); err != nil {
 			w.Close()
@@ -402,13 +472,29 @@ func (ts *Transfers) copy(ctx context.Context, t *Transfer) error {
 	ts.mu.Lock()
 	t.Bytes = pw.done
 	ts.mu.Unlock()
+	if err == nil {
+		if f, ok := w.(*os.File); ok {
+			err = f.Chmod(LocalMode(fi.Mode().Perm()))
+			if err == nil {
+				err = setFileTimes(f, mod)
+			}
+		} else if f, ok := w.(interface {
+			Chmod(fs.FileMode) error
+			Chtimes(time.Time, time.Time) error
+		}); ok {
+			err = f.Chmod(fi.Mode().Perm())
+			if err == nil {
+				err = f.Chtimes(mod, mod)
+			}
+		}
+	}
 	if cerr := w.Close(); err == nil {
 		err = cerr
 	}
 	if err != nil {
 		return err
 	}
-	pi, err := dst.stat(part)
+	pi, err := dst.lstat(part)
 	if err != nil {
 		return err
 	}
@@ -419,11 +505,12 @@ func (ts *Transfers) copy(ctx context.Context, t *Transfer) error {
 		ts.mu.Unlock()
 		return ErrSizeMismatch
 	}
+	ts.mu.Lock()
+	t.partReady = true
+	ts.mu.Unlock()
 	if err := dst.rename(part, t.Dst); err != nil {
 		return err
 	}
-	dst.chmod(t.Dst, fi.Mode().Perm())
-	dst.chtimes(t.Dst, mod)
 	return nil
 }
 
@@ -475,9 +562,13 @@ var partWait = time.Minute
 // for the connection for as long as it may come back (Client waits), so
 // that a long outage does not leave the part on the server.
 func (ts *Transfers) removePart(t *Transfer) {
-	part := PartName(t.Dst, t.Dir == Upload)
+	part := t.part
 	if t.Dir == Download {
-		os.Remove(part)
+		local, err := destinationRoot(t.Dst)
+		if err == nil {
+			defer local.root.Close()
+			local.remove(part)
+		}
 		return
 	}
 	for {
@@ -657,13 +748,12 @@ func (ts *Transfers) Wait() {
 // fileSide is one end of a transfer: the local disk or the remote one.
 type fileSide interface {
 	stat(p string) (fs.FileInfo, error)
+	lstat(p string) (fs.FileInfo, error)
 	open(p string) (io.ReadSeekCloser, error)
 	create(p string, keep bool) (writeSeekCloser, error)
 	mkdirAll(p string) error
 	remove(p string) error
 	rename(from, to string) error
-	chmod(p string, m fs.FileMode)
-	chtimes(p string, t time.Time)
 }
 
 type writeSeekCloser interface {
@@ -676,12 +766,13 @@ var _ writeSeekCloser = (*os.File)(nil)
 
 type localFS struct{}
 
+func (localFS) lstat(p string) (fs.FileInfo, error)      { return os.Lstat(p) }
 func (localFS) stat(p string) (fs.FileInfo, error)       { return os.Stat(p) }
 func (localFS) open(p string) (io.ReadSeekCloser, error) { return os.Open(p) }
 func (localFS) create(p string, keep bool) (writeSeekCloser, error) {
-	flag := os.O_WRONLY | os.O_CREATE
+	flag := os.O_WRONLY
 	if !keep {
-		flag |= os.O_TRUNC
+		flag |= os.O_CREATE | os.O_EXCL
 	}
 	return os.OpenFile(p, flag, 0o600)
 }
@@ -693,12 +784,23 @@ func (localFS) chtimes(p string, t time.Time) { os.Chtimes(p, t, t) }
 
 type remoteFS struct{ c *Client }
 
+func (r remoteFS) lstat(p string) (fs.FileInfo, error)      { return r.c.c.Lstat(p) }
 func (r remoteFS) stat(p string) (fs.FileInfo, error)       { return r.c.c.Stat(p) }
 func (r remoteFS) open(p string) (io.ReadSeekCloser, error) { return r.c.c.Open(p) }
 func (r remoteFS) create(p string, keep bool) (writeSeekCloser, error) {
-	flag := os.O_WRONLY | os.O_CREATE
+	flag := os.O_WRONLY
 	if !keep {
-		flag |= os.O_TRUNC
+		flag |= os.O_CREATE | os.O_EXCL
+	}
+	parent, err := r.c.c.Stat(path.Dir(p))
+	if err != nil {
+		return nil, err
+	}
+	if parent.Mode().Perm()&0o022 != 0 {
+		return nil, ErrUnsafeDestination
+	}
+	if _, err := r.c.ResolvePath(context.Background(), p); err != nil {
+		return nil, err
 	}
 	f, err := r.c.c.OpenFile(p, flag)
 	if err == nil {
@@ -706,13 +808,13 @@ func (r remoteFS) create(p string, keep bool) (writeSeekCloser, error) {
 	}
 	return f, err
 }
-func (r remoteFS) mkdirAll(p string) error { return r.c.c.MkdirAll(p) }
+func (r remoteFS) mkdirAll(p string) error { return r.c.MkdirAll(p) }
 func (r remoteFS) remove(p string) error   { return r.c.c.Remove(p) }
 func (r remoteFS) rename(from, to string) error {
-	if err := r.c.c.PosixRename(from, to); err == nil {
-		return nil
+	if _, ok := r.c.c.HasExtension("posix-rename@openssh.com"); ok {
+		return r.c.c.PosixRename(from, to)
 	}
-	r.c.c.Remove(to)
+	// SFTP v3 rename must refuse an existing destination; never delete it.
 	return r.c.c.Rename(from, to)
 }
 func (r remoteFS) chmod(p string, m fs.FileMode) { r.c.c.Chmod(p, m) }

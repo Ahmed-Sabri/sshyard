@@ -52,6 +52,8 @@ type openAsk struct {
 // openTimeout is how long opening or saving waits for the connection.
 const openTimeout = 30 * time.Second
 
+const editorHardReadLimit int64 = 256 << 20
+
 // openRemote opens a remote file of a files pane in an editor pane, in
 // a new tab, after asking when it is large or binary.
 func (a *App) openRemote(cn *conn, p string, size int64) { a.startOpen(cn, p, size, false) }
@@ -90,10 +92,14 @@ func (a *App) checkSize(cn *conn, p string, size int64, local bool) {
 	a.fetchOpen(cn, p, local, false)
 }
 
-// fetchOpen reads the file, then asks when it isn't text (unless
-// confirmed) or opens it.
-func (a *App) fetchOpen(cn *conn, p string, local, confirmed bool) {
+// fetchOpen reads within the approved size, then independently asks about
+// binary content before opening it. Binary confirmation uses the cached data.
+func (a *App) fetchOpen(cn *conn, p string, local, sizeConfirmed bool) {
 	get := cn.fs.transfers.Client
+	readLimit := min(int64(a.settings.OpenConfirmMB)<<20, editorHardReadLimit)
+	if sizeConfirmed {
+		readLimit = editorHardReadLimit
+	}
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), openTimeout)
 		defer cancel()
@@ -101,14 +107,14 @@ func (a *App) fetchOpen(cn *conn, p string, local, confirmed bool) {
 		var ver sftpsvc.Version
 		c, err := get(ctx)
 		if err == nil {
-			data, ver, err = c.ReadFile(p)
+			data, ver, err = c.ReadFileContext(ctx, p, readLimit)
 		}
 		a.post(func() {
 			if err != nil {
 				a.openFailed(p, err)
 				return
 			}
-			if !confirmed && !sftpsvc.IsText(data) {
+			if !sftpsvc.IsText(data) {
 				cn.fs.open, cn.fs.openOpen = &openAsk{path: p, size: ver.Size, local: local, binary: true, data: data, ver: ver}, true
 				return
 			}
@@ -117,9 +123,17 @@ func (a *App) fetchOpen(cn *conn, p string, local, confirmed bool) {
 	}()
 }
 
+// Explicitly confirmed files may be large, but every in-memory read has a ceiling.
+func editorReadLimit(size int64) int64 {
+	if size > sftpsvc.DefaultReadLimit {
+		return editorHardReadLimit
+	}
+	return sftpsvc.DefaultReadLimit
+}
+
 func (a *App) openFailed(p string, err error) {
 	a.toast(func(m locales.Messages) ui.Toast {
-		return ui.Toast{Title: m.OpenFailed(path.Base(p), err.Error()), Type: "error"}
+		return ui.Toast{Title: m.OpenFailed(path.Base(p), securityErrorText(m, err)), Type: "error"}
 	})
 }
 
@@ -212,7 +226,7 @@ func (a *App) reloadEditor(cn *conn) {
 		var ver sftpsvc.Version
 		c, err := get(ctx)
 		if err == nil {
-			data, ver, err = c.ReadFile(ed.path)
+			data, ver, err = c.ReadFileContext(ctx, ed.path, editorReadLimit(ed.ver.Size))
 		}
 		a.post(func() {
 			ed.loading = false
@@ -259,7 +273,7 @@ func (a *App) editorBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn,
 			case ed.saving || ed.loading:
 				ui.Spinner(c)
 			case ed.err != "":
-				ui.Text(c, m.ErrGeneric(ed.err)).FontSize(theme.Caption).TextColor(tok.Danger).SingleLine().Shrink(1)
+				ui.Text(c, m.ErrGeneric(securityText(m, ed.err))).FontSize(theme.Caption).TextColor(tok.Danger).SingleLine().Shrink(1)
 			case ed.st.Buffer.Modified():
 				ui.Text(c, m.EditorModified()).FontSize(theme.Caption).TextColor(tok.Accent).SingleLine()
 			}
@@ -300,7 +314,7 @@ func (a *App) openAskView(c *ui.Context, cn *conn, m locales.Messages) {
 		} else if ask.data != nil {
 			a.finishOpen(cn, ask.path, ask.data, ask.ver, ask.local)
 		} else {
-			a.fetchOpen(cn, ask.path, ask.local, false)
+			a.fetchOpen(cn, ask.path, ask.local, true)
 		}
 	}
 	if !fs.openOpen && fs.open == ask {
@@ -515,7 +529,7 @@ func (a *App) uploadLocal(cn *conn, f *localEdit, data []byte, force bool) {
 			cn.fs.upConflict, cn.fs.upConflictOpen = &localConflict{f: f, data: data}, true
 		case err != nil:
 			a.toast(func(m locales.Messages) ui.Toast {
-				return ui.Toast{Title: m.OpenFailed(name, err.Error()), Type: "error"}
+				return ui.Toast{Title: m.OpenFailed(name, securityErrorText(m, err)), Type: "error"}
 			})
 		default:
 			a.toast(func(m locales.Messages) ui.Toast { return ui.Toast{Title: m.AutoUploaded(name), Type: "success"} })
@@ -533,7 +547,7 @@ func (a *App) reloadLocal(cn *conn, f *localEdit) {
 	var data []byte
 	var ver sftpsvc.Version
 	if err == nil {
-		data, ver, err = c.ReadFile(f.remote)
+		data, ver, err = c.ReadFileContext(ctx, f.remote, editorReadLimit(f.ver.Size))
 	}
 	if err == nil {
 		// Known first, so that the watcher does not upload it back.
@@ -546,7 +560,7 @@ func (a *App) reloadLocal(cn *conn, f *localEdit) {
 		name := path.Base(f.remote)
 		a.post(func() {
 			a.toast(func(m locales.Messages) ui.Toast {
-				return ui.Toast{Title: m.OpenFailed(name, err.Error()), Type: "error"}
+				return ui.Toast{Title: m.OpenFailed(name, securityErrorText(m, err)), Type: "error"}
 			})
 		})
 	}

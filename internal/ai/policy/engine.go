@@ -131,7 +131,10 @@ func gradeRemote(a Action, scope Scope) partial {
 	case "host_info", "pane_output":
 		tool := strings.ToLower(strings.TrimSpace(a.Tool))
 		return partial{cat: "read", risk: RiskReadOnly, prefix: tool, why: tool}
-	case "list_dir", "search_files", "read_file":
+	case "search_files":
+		g := gradeReadPath(env, a.Path)
+		return better(g, partial{cat: "sensitive-read", risk: RiskMedium, prefix: g.prefix, why: "directory content search"})
+	case "list_dir", "read_file":
 		return gradeReadPath(env, a.Path)
 	case "write_file":
 		return gradeFileWrite(env, a.Path, writeFileTool)

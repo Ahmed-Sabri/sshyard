@@ -13,6 +13,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -21,21 +23,27 @@ import (
 type Protocol string
 
 const (
-	Auto        Protocol = ""
-	OnlyHTTP    Protocol = "http"
-	OnlySOCKS4  Protocol = "socks4" // SOCKS4 and SOCKS4a
-	OnlySOCKS5  Protocol = "socks5"
-	handshakeTO          = 30 * time.Second
+	Auto             Protocol = ""
+	OnlyHTTP         Protocol = "http"
+	OnlySOCKS4       Protocol = "socks4" // SOCKS4 and SOCKS4a
+	OnlySOCKS5       Protocol = "socks5"
+	handshakeTO               = 30 * time.Second
+	maxActiveClients          = 128
+	maxSOCKS4String           = 255
 )
 
 // ErrProtocol is a client speaking a protocol the server does not take.
 var ErrProtocol = errors.New("proxy: protocol not accepted")
+
+// ErrClientLimit reports a rejected connection when all slots are occupied.
+var ErrClientLimit = errors.New("proxy: active client limit reached")
 
 // Server serves a local proxy (a dynamic forward): HTTP CONNECT and
 // plain HTTP requests with an absolute URI, SOCKS4, SOCKS4a and SOCKS5
 // CONNECT. Every target is dialed with Dial, so names are resolved on
 // the far side.
 type Server struct {
+	active   atomic.Int32
 	Protocol Protocol
 	// User and Password, when User is set, are required of HTTP (Basic)
 	// and SOCKS5 (username/password) clients; SOCKS4, which cannot carry
@@ -49,27 +57,82 @@ type Server struct {
 
 // Serve accepts on l until it is closed.
 func (s *Server) Serve(l net.Listener) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	var mu sync.Mutex
+	clients := make(map[net.Conn]struct{})
+	var wg sync.WaitGroup
+	defer func() {
+		cancel()
+		mu.Lock()
+		for c := range clients {
+			c.Close()
+		}
+		mu.Unlock()
+		wg.Wait()
+	}()
 	for {
 		c, err := l.Accept()
 		if err != nil {
 			return err
 		}
+		if !s.acquire() {
+			c.Close()
+			if s.OnError != nil {
+				s.OnError(ErrClientLimit)
+			}
+			continue
+		}
+		mu.Lock()
+		clients[c] = struct{}{}
+		mu.Unlock()
+		wg.Add(1)
 		go func() {
-			if err := s.ServeConn(c); err != nil && s.OnError != nil {
+			defer wg.Done()
+			defer s.active.Add(-1)
+			defer func() {
+				mu.Lock()
+				delete(clients, c)
+				mu.Unlock()
+			}()
+			if err := s.serveConn(ctx, c); err != nil && s.OnError != nil {
 				s.OnError(err)
 			}
 		}()
 	}
 }
 
+func (s *Server) acquire() bool {
+	for {
+		n := s.active.Load()
+		if n >= maxActiveClients {
+			return false
+		}
+		if s.active.CompareAndSwap(n, n+1) {
+			return true
+		}
+	}
+}
+
 // ServeConn serves one client connection; it blocks until it ends.
 func (s *Server) ServeConn(c net.Conn) error {
-	c.SetDeadline(time.Now().Add(handshakeTO))
+	if !s.acquire() {
+		c.Close()
+		return ErrClientLimit
+	}
+	defer s.active.Add(-1)
+	return s.serveConn(context.Background(), c)
+}
+
+func (s *Server) serveConn(ctx context.Context, c net.Conn) error {
+	defer c.Close()
+	deadline := time.Now().Add(handshakeTO)
+	if err := c.SetDeadline(deadline); err != nil {
+		return err
+	}
 	br := bufio.NewReader(c)
 	b, err := br.Peek(1)
 	if err != nil {
-		c.Close()
-		return nil
+		return err
 	}
 	proto := OnlyHTTP
 	switch b[0] {
@@ -82,7 +145,6 @@ func (s *Server) ServeConn(c net.Conn) error {
 		err := fmt.Errorf("%w: %s on a %s-only port", ErrProtocol, proto, s.Protocol)
 		switch proto {
 		case OnlyHTTP:
-			// Say so in a way curl and browsers show.
 			body := "This proxy port accepts " + strings.ToUpper(string(s.Protocol)) + " only.\n"
 			fmt.Fprintf(c, "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain\r\nContent-Length: %d\r\nConnection: close\r\n\r\n%s", len(body), body)
 		case OnlySOCKS4:
@@ -90,22 +152,17 @@ func (s *Server) ServeConn(c net.Conn) error {
 		case OnlySOCKS5:
 			c.Write([]byte{5, 0xff})
 		}
-		c.Close()
 		return err
 	}
-	bc := &bufConn{c, br}
+	bc := &bufConn{Conn: c, r: br, handshakeDeadline: deadline}
 	switch proto {
 	case OnlySOCKS4:
-		err = s.socks4(bc)
+		return s.socks4(ctx, bc)
 	case OnlySOCKS5:
-		err = s.socks5(bc)
+		return s.socks5(ctx, bc)
 	default:
-		err = s.http(bc)
+		return s.http(ctx, bc)
 	}
-	if err != nil {
-		c.Close()
-	}
-	return err
 }
 
 // NetConn is the connection under the buffer.
@@ -119,19 +176,22 @@ func (c *bufConn) CloseWrite() error {
 	return errors.ErrUnsupported
 }
 
-func (s *Server) dial(target string) (net.Conn, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), handshakeTO)
+func (s *Server) dial(parent context.Context, target string) (net.Conn, error) {
+	ctx, cancel := context.WithTimeout(parent, handshakeTO)
 	defer cancel()
 	return s.Dial(ctx, "tcp", target)
 }
 
 func (s *Server) relay(c *bufConn, up net.Conn, target, proto string) error {
-	c.SetDeadline(time.Time{})
+	if err := c.SetDeadline(time.Time{}); err != nil {
+		up.Close()
+		return err
+	}
 	s.Conns.Relay(c, up, target, proto)
 	return nil
 }
 
-func (s *Server) socks4(c *bufConn) error {
+func (s *Server) socks4(ctx context.Context, c *bufConn) error {
 	var hdr [8]byte
 	if _, err := io.ReadFull(c, hdr[:]); err != nil {
 		return err
@@ -140,31 +200,33 @@ func (s *Server) socks4(c *bufConn) error {
 		c.Write([]byte{0, 0x5b, 0, 0, 0, 0, 0, 0})
 		return err
 	}
-	if _, err := c.r.ReadString(0); err != nil { // user id
-		return err
-	}
 	if hdr[1] != 1 {
 		return fail(errors.New("socks4: only CONNECT is supported"))
 	}
 	if s.User != "" {
 		return fail(fmt.Errorf("%w: socks4 cannot authenticate", ErrAuth))
 	}
+	if _, err := readSOCKS4String(c.r); err != nil {
+		return fail(err)
+	}
 	port := binary.BigEndian.Uint16(hdr[2:4])
 	host := net.IP(hdr[4:8]).String()
 	proto := "socks4"
 	if hdr[4] == 0 && hdr[5] == 0 && hdr[6] == 0 && hdr[7] != 0 {
 		// SOCKS4a: the name follows, resolved on the far side.
-		name, err := c.r.ReadString(0)
+		name, err := readSOCKS4String(c.r)
 		if err != nil {
 			return err
 		}
-		host, proto = strings.TrimSuffix(name, "\x00"), "socks4a"
+		host, proto = name, "socks4a"
 	}
 	target := net.JoinHostPort(host, strconv.Itoa(int(port)))
-	up, err := s.dial(target)
+	up, err := s.dial(ctx, target)
 	if err != nil {
 		return fail(err)
 	}
+	stop := context.AfterFunc(ctx, func() { up.Close() })
+	defer stop()
 	if _, err := c.Write([]byte{0, 0x5a, 0, 0, 0, 0, 0, 0}); err != nil {
 		up.Close()
 		return err
@@ -172,7 +234,7 @@ func (s *Server) socks4(c *bufConn) error {
 	return s.relay(c, up, target, proto)
 }
 
-func (s *Server) socks5(c *bufConn) error {
+func (s *Server) socks5(ctx context.Context, c *bufConn) error {
 	var hdr [2]byte
 	if _, err := io.ReadFull(c, hdr[:]); err != nil {
 		return err
@@ -261,11 +323,13 @@ func (s *Server) socks5(c *bufConn) error {
 		return errors.New("socks5: only CONNECT is supported")
 	}
 	target := net.JoinHostPort(host, strconv.Itoa(int(binary.BigEndian.Uint16(pb[:]))))
-	up, err := s.dial(target)
+	up, err := s.dial(ctx, target)
 	if err != nil {
 		reply(dialReply(err))
 		return err
 	}
+	stop := context.AfterFunc(ctx, func() { up.Close() })
+	defer stop()
 	reply(0)
 	return s.relay(c, up, target, "socks5")
 }
@@ -287,7 +351,12 @@ func (s *Server) authOK(user, pw string) bool {
 		subtle.ConstantTimeCompare([]byte(pw), []byte(s.Password)) == 1
 }
 
-func (s *Server) http(c *bufConn) error {
+func (s *Server) http(ctx context.Context, c *bufConn) error {
+	header, err := readHTTPHeader(c.r)
+	if err != nil {
+		return err
+	}
+	c.r = header
 	req, err := http.ReadRequest(c.r)
 	if err != nil {
 		return err
@@ -314,11 +383,13 @@ func (s *Server) http(c *bufConn) error {
 		if _, _, err := net.SplitHostPort(target); err != nil {
 			target = net.JoinHostPort(target, "443")
 		}
-		up, err := s.dial(target)
+		up, err := s.dial(ctx, target)
 		if err != nil {
 			respond(http.StatusBadGateway, "")
 			return err
 		}
+		stop := context.AfterFunc(ctx, func() { up.Close() })
+		defer stop()
 		if _, err := io.WriteString(c, "HTTP/1.1 200 Connection Established\r\n\r\n"); err != nil {
 			up.Close()
 			return err
@@ -335,19 +406,51 @@ func (s *Server) http(c *bufConn) error {
 	if _, _, err := net.SplitHostPort(target); err != nil {
 		target = net.JoinHostPort(target, "80")
 	}
-	up, err := s.dial(target)
+	up, err := s.dial(ctx, target)
 	if err != nil {
 		respond(http.StatusBadGateway, "")
 		return err
 	}
+	stop := context.AfterFunc(ctx, func() { up.Close() })
+	defer stop()
 	req.Header.Del("Proxy-Authorization")
 	req.Header.Del("Proxy-Connection")
 	req.Close = true
 	req.RequestURI = ""
-	if err := req.Write(up); err != nil {
+	if err := writeProxyRequest(up, req, c.handshakeDeadline); err != nil {
 		up.Close()
 		respond(http.StatusBadGateway, "")
 		return err
 	}
 	return s.relay(c, up, target, "http")
+}
+
+// SOCKS4 user IDs and DNS names share a small, explicit wire limit.
+func readSOCKS4String(r *bufio.Reader) (string, error) {
+	var b []byte
+	for range maxSOCKS4String + 1 {
+		c, err := r.ReadByte()
+		if err != nil {
+			return "", err
+		}
+		if c == 0 {
+			return string(b), nil
+		}
+		if len(b) == maxSOCKS4String {
+			return "", ErrHandshakeTooLarge
+		}
+		b = append(b, c)
+	}
+	return "", ErrHandshakeTooLarge
+}
+
+// SSH channel connections cannot set deadlines. Close a blocked request writer
+// at the accepted client's handshake deadline, then disarm before relaying.
+func writeProxyRequest(up net.Conn, req *http.Request, deadline time.Time) error {
+	timer := time.AfterFunc(time.Until(deadline), func() { up.Close() })
+	err := req.Write(up)
+	if !timer.Stop() {
+		return context.DeadlineExceeded
+	}
+	return err
 }

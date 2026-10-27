@@ -39,7 +39,7 @@ func TestRedact(t *testing.T) {
 		{"api-key", "api-key=supersecretvalue", "api-key=[REDACTED]"},
 		{"apikey", "apikey=supersecretvalue", "apikey=[REDACTED]"},
 		{"access token", "access_token=supersecretvalue", "access_token=[REDACTED]"},
-		{"access-token colon", "access-token: supersecretvalue", "access-token=[REDACTED]"},
+		{"access-token colon", "access-token: supersecretvalue", "access-token: [REDACTED]"},
 		{"ordinary", "df -h\ncat /etc/hostname\n", "df -h\ncat /etc/hostname\n"},
 	}
 	for _, c := range cases {

@@ -227,7 +227,7 @@ func (a *App) askView(c *ui.Context, cn *conn, m locales.Messages) {
 				ui.Text(c, m.ModeHint()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
 			}
 			if ask.err != "" {
-				ui.Text(c, m.ErrGeneric(ask.err)).TextColor(tok.Danger).FontSize(theme.Footnote)
+				ui.Text(c, m.ErrGeneric(securityText(m, ask.err))).TextColor(tok.Danger).FontSize(theme.Footnote)
 			}
 			submit := in.Submitted()
 			ui.Row(c).Gap(8).Margin(4, 0, 0, 0).Children(func() {
@@ -374,7 +374,7 @@ func transferLabel(m locales.Messages, t sftpsvc.Transfer) string {
 	case sftpsvc.Done:
 		return m.TransferDoneShort()
 	case sftpsvc.Failed:
-		return m.TransferFailed(errString(t.Err))
+		return m.TransferFailed(securityErrorText(m, t.Err))
 	case sftpsvc.Canceled:
 		return m.TransferCanceled()
 	}
@@ -518,7 +518,7 @@ func (a *App) transfersSheet(c *ui.Context, cn *conn, tok theme.Tokens, m locale
 						}
 						lbl := ui.Text(c, transferLabel(m, t)).FontSize(theme.Caption).TextColor(col).SingleLine().Width(190)
 						if t.Err != nil {
-							lbl.Tooltip(t.Err.Error())
+							lbl.Tooltip(securityErrorText(m, t.Err))
 						}
 						id := t.ID
 						ui.Row(c).Gap(2).Width(52).Justify(ui.End).Children(func() {

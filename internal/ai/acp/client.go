@@ -23,6 +23,10 @@ func (s *Session) ReadTextFile(ctx context.Context, p sdk.ReadTextFileRequest) (
 	if err != nil {
 		return sdk.ReadTextFileResponse{}, err
 	}
+	remote, err = s.resolveFile(ctx, remote)
+	if err != nil {
+		return sdk.ReadTextFileResponse{}, err
+	}
 	act := policy.Action{Where: policy.Remote, Tool: "read_file", Path: remote}
 	start := time.Now()
 	v, err := s.gate.Authorize(ctx, act, "")
@@ -36,7 +40,7 @@ func (s *Session) ReadTextFile(ctx context.Context, p sdk.ReadTextFileRequest) (
 		s.finish(act, v, 1, start, 0)
 		return sdk.ReadTextFileResponse{}, errNotConnected
 	}
-	data, _, err := s.cfg.Files.Read(remote)
+	data, _, err := s.readFile(ctx, remote)
 	if err != nil {
 		s.finish(act, v, 1, start, 0)
 		return sdk.ReadTextFileResponse{}, err
@@ -65,20 +69,39 @@ func (s *Session) WriteTextFile(ctx context.Context, p sdk.WriteTextFileRequest)
 	if err != nil {
 		return sdk.WriteTextFileResponse{}, err
 	}
+	remote, err = s.resolveFile(ctx, remote)
+	if err != nil {
+		return sdk.WriteTextFileResponse{}, err
+	}
+	// A diff reads the current file, so authorize that read independently.
+	readAct := policy.Action{Where: policy.Remote, Tool: "read_file", Path: remote}
+	readStart := time.Now()
+	readVerdict, err := s.gate.Authorize(ctx, readAct, "")
+	if err != nil {
+		return sdk.WriteTextFileResponse{}, err
+	}
+	if !readVerdict.Run {
+		return sdk.WriteTextFileResponse{}, refusalError(readVerdict)
+	}
+	if s.cfg.Files == nil {
+		s.finish(readAct, readVerdict, 1, readStart, 0)
+		return sdk.WriteTextFileResponse{}, errNotConnected
+	}
+	data, ver, readErr := s.readFile(ctx, remote)
+	if readErr == nil && len(data) > readCap {
+		readErr = sftpsvc.ErrReadLimit
+	}
+	readExit := 0
+	if readErr != nil {
+		readExit = 1
+	}
+	s.finish(readAct, readVerdict, readExit, readStart, len(data))
+	if readErr != nil && !errors.Is(readErr, fs.ErrNotExist) {
+		return sdk.WriteTextFileResponse{}, readErr
+	}
 	old := ""
-	var ver sftpsvc.Version
-	if s.cfg.Files != nil {
-		data, got, err := s.cfg.Files.Read(remote)
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return sdk.WriteTextFileResponse{}, err
-		}
-		if err == nil {
-			if len(data) > readCap {
-				return sdk.WriteTextFileResponse{}, errors.New("file exceeds 10MB")
-			}
-			old = string(data)
-			ver = got
-		}
+	if readErr == nil {
+		old = string(data)
 	}
 	diff := agent.Unified(remote, old, p.Content)
 	act := policy.Action{Where: policy.Remote, Tool: "write_file", Path: remote}
@@ -97,7 +120,7 @@ func (s *Session) WriteTextFile(ctx context.Context, p sdk.WriteTextFileRequest)
 	// A zero version is a file that was absent when the diff was made.
 	// shortcut: the re-check and Write are not atomic, upgrade when a zero version means create-only.
 	if ver == (sftpsvc.Version{}) {
-		if _, _, err := s.cfg.Files.Read(remote); err == nil {
+		if _, _, err := s.readFile(ctx, remote); err == nil {
 			s.finish(act, v, 1, start, 0)
 			return sdk.WriteTextFileResponse{}, errors.New("file appeared since the diff was made")
 		} else if !errors.Is(err, fs.ErrNotExist) {
@@ -175,4 +198,14 @@ func refusalError(v policy.Verdict) error {
 		return errors.New(v.Refusal)
 	}
 	return errors.New("refused")
+}
+
+func (s *Session) resolveFile(ctx context.Context, p string) (string, error) {
+	if s.cfg.Files == nil {
+		return p, nil
+	}
+	return s.cfg.Files.ResolvePath(ctx, p)
+}
+func (s *Session) readFile(ctx context.Context, p string) ([]byte, sftpsvc.Version, error) {
+	return s.cfg.Files.ReadContext(ctx, p, readCap)
 }

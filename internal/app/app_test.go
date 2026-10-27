@@ -313,7 +313,10 @@ func TestFilesPaneInSplit(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer srv.Close()
-	root := t.TempDir()
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	srv.SFTPRoot = root
 	os.WriteFile(filepath.Join(root, "remote.txt"), []byte("from server"), 0o644)
 	a, tt := newTestApp(t)

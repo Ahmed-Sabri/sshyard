@@ -109,7 +109,8 @@ func (d *Dialer) DialContext(ctx context.Context, network, addr string) (net.Con
 // bufConn is a connection whose first bytes were read into a buffer.
 type bufConn struct {
 	net.Conn
-	r *bufio.Reader
+	r                 *bufio.Reader
+	handshakeDeadline time.Time
 }
 
 func (c *bufConn) Read(p []byte) (int, error) { return c.r.Read(p) }
@@ -126,7 +127,10 @@ func httpConnect(conn net.Conn, addr, user, pw string) (net.Conn, error) {
 	if _, err := io.WriteString(conn, req); err != nil {
 		return nil, err
 	}
-	br := bufio.NewReader(conn)
+	br, err := readHTTPHeader(bufio.NewReader(conn))
+	if err != nil {
+		return nil, err
+	}
 	resp, err := http.ReadResponse(br, &http.Request{Method: http.MethodConnect})
 	if err != nil {
 		return nil, err
@@ -137,10 +141,7 @@ func httpConnect(conn net.Conn, addr, user, pw string) (net.Conn, error) {
 	case resp.StatusCode/100 != 2:
 		return nil, &RefusedError{resp.Status}
 	}
-	if br.Buffered() > 0 {
-		return &bufConn{conn, br}, nil
-	}
-	return conn, nil
+	return &bufConn{Conn: conn, r: br}, nil
 }
 
 func socks5Connect(conn net.Conn, addr, user, pw string) error {

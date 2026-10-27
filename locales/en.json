@@ -746,6 +746,16 @@
   "materialTranslucent": "Translucent",
   "materialOpaque": "Opaque",
   "materialUnsupported": "Translucency is available on macOS only.",
+  "aiCommandOutputLimit": "Command output limit exceeded; execution cancelled and output truncated",
+  "securitySftpReadLimit": "The file exceeds the read limit",
+  "securitySftpUnsafePath": "Symbolic links and unsafe paths are not allowed",
+  "securitySftpUnsafeDestination": "The destination folder is writable by other users",
+  "securitySftpPartChanged": "The partial download file changed; transfer stopped",
+  "securitySftpInvalidPath": "The file path is invalid",
+  "securitySftpNotDirectory": "The parent path is not a folder",
+  "securitySftpNotRegular": "The path is not a regular file",
+  "securityProxyClientLimit": "The proxy active connection limit has been reached",
+  "securityProxyHandshakeLimit": "The proxy handshake exceeds the size limit",
   "backupSection": "Backup",
   "backupDesc": "Keep a copy of SSHYard, or move it to another device, in one encrypted file.",
   "exportBackup": "Export Backup",
@@ -773,5 +783,6 @@
   "backupNotBackup": "This isn’t an SSHYard backup.",
   "backupNewer": "This backup was made by a newer version of SSHYard. Update SSHYard to restore it.",
   "backupWrongPassword": "Wrong password.",
-  "backupDamaged": "The backup is damaged or was changed."
+  "backupDamaged": "The backup is damaged or was changed.",
+  "securitySftpOperationsBusy": "Too many SFTP operations are pending; try again later"
 }

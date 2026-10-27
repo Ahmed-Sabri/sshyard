@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Licoy/sshyard/internal/assets"
+	"github.com/Licoy/sshyard/internal/netproxy"
 	"github.com/Licoy/sshyard/internal/session"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/locales"
@@ -67,6 +68,9 @@ func (a *App) proxyOf(h assets.Host) (assets.Proxy, bool) {
 // errText explains a connection error to h in the user's language,
 // naming the jump host or proxy it failed at.
 func (a *App) errText(m locales.Messages, h assets.Host, err error) string {
+	if errors.Is(err, netproxy.ErrClientLimit) || errors.Is(err, netproxy.ErrHandshakeTooLarge) {
+		return errText(m, h, err)
+	}
 	switch session.Classify(err) {
 	case session.KindProxyAuth, session.KindProxy:
 		px, _ := a.proxyOf(h)
@@ -137,6 +141,9 @@ func netReason(m locales.Messages, err error) string {
 func errText(m locales.Messages, h assets.Host, err error) string {
 	if err == nil {
 		return m.StateDisconnected()
+	}
+	if errors.Is(err, netproxy.ErrClientLimit) || errors.Is(err, netproxy.ErrHandshakeTooLarge) {
+		return m.ErrGeneric(securityErrorText(m, err))
 	}
 	name := h.Label()
 	switch session.Classify(err) {

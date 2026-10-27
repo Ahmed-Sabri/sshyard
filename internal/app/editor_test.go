@@ -119,6 +119,75 @@ func TestOpenConfirmations(t *testing.T) {
 	waitFor(t, tt, "binary opened", func() bool { c := a.focused(); return c.kind == layout.Editor && c.ed.name == "blob.bin" })
 }
 
+func TestOpenLargeBinaryRequiresBothConfirmations(t *testing.T) {
+	a, tt, fc, root := filesPane(t)
+	settings := a.settings
+	settings.OpenConfirmMB = 1
+	a.ApplySettings(settings)
+	write(t, filepath.Join(root, "big.bin"), "\x00"+strings.Repeat("x", (2<<20)-1))
+	a.refreshSides(fc)
+	waitFor(t, tt, "listing", func() bool { return tt.HasText("big.bin") })
+	editorOn(t, a, tt, "big.bin")
+	if !tt.HasText("Open a large file?") {
+		t.Fatal("missing size confirmation")
+	}
+	mustClick(t, tt, "Open")
+	waitFor(t, tt, "independent binary confirmation", func() bool { return tt.HasText("Open a binary file?") })
+	if len(a.ws.Tabs) != 1 || a.focused() != fc {
+		t.Fatal("size confirmation also opened binary content")
+	}
+	mustClick(t, tt, "Cancel")
+	if len(a.ws.Tabs) != 1 || fc.fs.openOpen {
+		t.Fatal("binary cancel opened an editor")
+	}
+	editorOn(t, a, tt, "big.bin")
+	if !tt.HasText("Open a large file?") {
+		t.Fatal("missing second size confirmation")
+	}
+	mustClick(t, tt, "Open")
+	waitFor(t, tt, "binary confirmation", func() bool { return tt.HasText("Open a binary file?") })
+	mustClick(t, tt, "Open")
+	waitFor(t, tt, "both approvals opened binary", func() bool {
+		c := a.focused()
+		return c.kind == layout.Editor && c.ed.name == "big.bin" && c.ed.st.Buffer.Len() == 2<<20
+	})
+}
+
+func TestOpenConfirmationCannotBypassHardReadLimit(t *testing.T) {
+	for _, threshold := range []int{10, 512} {
+		t.Run(strconv.Itoa(threshold), func(t *testing.T) {
+			a, tt, fc, root := filesPane(t)
+			settings := a.settings
+			settings.OpenConfirmMB = threshold
+			a.ApplySettings(settings)
+			file, err := os.Create(filepath.Join(root, "oversized.bin"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := file.Truncate(editorHardReadLimit + 1); err != nil {
+				file.Close()
+				t.Fatal(err)
+			}
+			if err := file.Close(); err != nil {
+				t.Fatal(err)
+			}
+			a.refreshSides(fc)
+			waitFor(t, tt, "listing", func() bool { return tt.HasText("oversized.bin") })
+			editorOn(t, a, tt, "oversized.bin")
+			if threshold < 256 {
+				if !tt.HasText("Open a large file?") {
+					t.Fatal("missing size confirmation")
+				}
+				mustClick(t, tt, "Open")
+			}
+			waitFor(t, tt, "hard size limit", func() bool { return tt.HasText("Couldn’t open oversized.bin: The file exceeds the read limit") })
+			if len(a.ws.Tabs) != 1 || a.focused() != fc || fc.fs.openOpen || tt.HasText("Open a binary file?") {
+				t.Fatal("oversized file passed the hard limit")
+			}
+		})
+	}
+}
+
 func TestOpenWithDefaultApp(t *testing.T) {
 	a, tt, fc, root := filesPane(t)
 	old := watchEvery

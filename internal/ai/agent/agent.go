@@ -237,6 +237,27 @@ func (s *Session) execOne(ctx context.Context, call openai.ToolCall, emit func(E
 	fields := map[string]any{}
 	_ = json.Unmarshal([]byte(raw), &fields)
 	act := actionFor(call.Name, fields)
+	if resolver, ok := s.tools.(interface {
+		ResolvePath(context.Context, string) (string, error)
+	}); ok && act.Path != "" {
+		resolved, err := resolver.ResolvePath(ctx, act.Path)
+		if ctx.Err() != nil {
+			s.dropCall(call.ID)
+			return ctx.Err()
+		}
+		if err != nil {
+			s.emitTool(emit, ToolCard{ID: call.ID, Name: call.Name, Path: act.Path, Phase: "done", Exit: 1, Output: err.Error()})
+			s.appendTool(call.ID, err.Error())
+			return ctx.Err()
+		}
+		act.Path = resolved
+		fields["path"] = resolved
+		encoded, err := json.Marshal(fields)
+		if err != nil {
+			return err
+		}
+		raw = string(encoded)
+	}
 
 	diff := ""
 	if call.Name == "write_file" {
@@ -245,10 +266,14 @@ func (s *Session) execOne(ctx context.Context, call openai.ToolCall, emit func(E
 			return err
 		}
 		content := asString(fields["content"])
-		old, ok, err := s.tools.ReadFile(ctx, act.Path)
+		old, ok, err := s.readForDiff(ctx, act)
 		if ctx.Err() != nil {
 			s.dropCall(call.ID)
 			return ctx.Err()
+		}
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			s.dropCall(call.ID)
+			return err
 		}
 		if err != nil {
 			// A failed read must not become a new-file write: that would
@@ -256,6 +281,11 @@ func (s *Session) execOne(ctx context.Context, call openai.ToolCall, emit func(E
 			card := ToolCard{
 				ID: call.ID, Name: call.Name, Where: string(act.Where), Path: act.Path,
 				Phase: "done", Exit: 1, Output: err.Error(),
+			}
+			var denied *readDenied
+			if errors.As(err, &denied) {
+				card.Verdict = "reject"
+				card.Refusal = err.Error()
 			}
 			s.emitTool(emit, card)
 			s.appendTool(call.ID, err.Error())

@@ -491,10 +491,7 @@ func (e *shellEnv) redir(r *syntax.Redirect) partial {
 	if write {
 		return better(g, e.gradeWrite(w.text, writeRedirect))
 	}
-	if e.sensitive(w.text) {
-		return better(g, sens(w.text))
-	}
-	return g
+	return better(g, sens(w.text))
 }
 
 func isFD(s string) bool {
@@ -671,11 +668,17 @@ func (e *shellEnv) gradeArgs(args []arg) partial {
 		return better(better(unk("command name"), danger), subst)
 	}
 	name := baseName(rest[0].text)
+	if strings.ContainsAny(rest[0].text, "/\\") {
+		return better(unk("explicit executable path"), subst)
+	}
 	var core partial
 	if isWrap(name) {
 		core = e.wrap(name, rest)
 	} else {
 		core = e.core(name, rest)
+	}
+	if core.risk == RiskReadOnly && shellReadsContent(name, rest) {
+		core = partial{cat: "sensitive-read", risk: RiskMedium, prefix: core.prefix, why: "unresolved file content read"}
 	}
 	core = better(core, subst)
 	core = dynFloor(core, rest)
@@ -718,7 +721,7 @@ func dynFloor(core partial, args []arg) partial {
 	// A path reader with a bare $VAR might name a secret. Command
 	// substitution is graded on its own (cat $(ls) can stay read-only);
 	// its output is not simulated. When unsure, Unknown.
-	if bare && len(args) > 0 && args[0].ok && readsPaths(baseName(args[0].text)) {
+	if bare {
 		core = better(core, unk("unresolved path"))
 	}
 	if dynamic && core.risk != RiskReadOnly {

@@ -346,7 +346,15 @@ func toolOutput(m locales.Messages, s string) string {
 	if s == "remote tools are not connected yet" {
 		return m.AiToolsPending()
 	}
-	return s
+	first, rest, multiline := strings.Cut(s, "\n")
+	if first == "ai.command_output_limit" {
+		text := m.AiCommandOutputLimit()
+		if multiline {
+			text += "\n" + rest
+		}
+		return text
+	}
+	return securityText(m, s)
 }
 
 func aiErrLine(m locales.Messages, s string) string {
@@ -356,7 +364,7 @@ func aiErrLine(m locales.Messages, s string) string {
 	case "provider":
 		return m.AiNoModel()
 	default:
-		return m.AiRequestFailed(s)
+		return m.AiRequestFailed(toolOutput(m, s))
 	}
 }
 

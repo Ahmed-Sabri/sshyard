@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"path"
 	"strings"
+	"sync"
 
 	"github.com/Licoy/sshyard/internal/ai/remote"
 	"github.com/Licoy/sshyard/internal/assets"
@@ -81,12 +82,12 @@ func (h *hostTools) connect(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	files, err := remote.OpenFiles(client)
+	files, err := remote.OpenFilesContext(ctx, client)
 	if err != nil {
 		release()
 		return err
 	}
-	sftp, err := sftpsvc.New(client)
+	sftp, err := sftpsvc.NewContext(ctx, client)
 	if err != nil {
 		files.Close()
 		release()
@@ -119,7 +120,7 @@ func (h *hostTools) ReadFile(ctx context.Context, p string) (string, bool, error
 		}
 		return "", false, err
 	}
-	b, ver, err := h.files.Read(p)
+	b, ver, err := h.files.ReadContext(ctx, p, 1<<20)
 	if errors.Is(err, fs.ErrNotExist) {
 		delete(h.vers, p)
 		return "", false, nil
@@ -171,7 +172,7 @@ func (h *hostTools) Call(ctx context.Context, name string, raw json.RawMessage) 
 		}
 		return text, 0, nil
 	case "search_files":
-		return h.search(args.Path, args.Query)
+		return h.search(ctx, args.Path, args.Query)
 	case "write_file":
 		return h.write(args.Path, args.Content)
 	default:
@@ -220,7 +221,7 @@ func (h *hostTools) list(dir string) (string, int, error) {
 }
 
 // shortcut: one directory, not a tree, until a caller needs a walk.
-func (h *hostTools) search(dir, query string) (string, int, error) {
+func (h *hostTools) search(ctx context.Context, dir, query string) (string, int, error) {
 	if query == "" {
 		return "empty query", 1, nil
 	}
@@ -235,9 +236,9 @@ func (h *hostTools) search(dir, query string) (string, int, error) {
 		if e.IsDir || n >= maxFiles || total >= maxBytes {
 			continue
 		}
-		data, _, err := h.files.Read(path.Join(dir, e.Name))
+		data, _, err := h.files.ReadContext(ctx, path.Join(dir, e.Name), int64(maxBytes-total))
 		if err != nil {
-			continue
+			return toolErr(ctx, err)
 		}
 		total += len(data)
 		if !bytes.Contains(data, []byte(query)) {
@@ -266,13 +267,18 @@ func (h *hostTools) write(p, content string) (string, int, error) {
 }
 
 func (h *hostTools) command(ctx context.Context, cmd, dir string) (string, int, error) {
-	var outB, errB bytes.Buffer
-	cwOut := &remote.CountingWriter{W: &outB}
-	cwErr := &remote.CountingWriter{W: &errB}
-	code, err := h.run.Run(ctx, cmd, dir, cwOut, cwErr)
+	runCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	output := &commandOutput{remaining: (1 << 20) - 4096, cancel: cancel}
+	cwOut := &remote.CountingWriter{W: output}
+	cwErr := &remote.CountingWriter{W: output}
+	code, err := h.run.Run(runCtx, cmd, dir, cwOut, cwErr)
 	h.nbytes = cwOut.Bytes() + cwErr.Bytes()
 	h.counted = true
-	text := joinOut(outB.String(), errB.String())
+	text, limited := output.result()
+	if limited && ctx.Err() == nil {
+		return commandLimitResult(text, err)
+	}
 	if err != nil {
 		if ctx.Err() != nil || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 			return text, -1, err
@@ -286,6 +292,20 @@ func (h *hostTools) command(ctx context.Context, cmd, dir string) (string, int, 
 	return text, code, nil
 }
 
+func commandLimitResult(text string, err error) (string, int, error) {
+	notice := "ai.command_output_limit"
+	if err != nil && err != context.Canceled {
+		// A wrapped cancellation may contain a remote kill/cleanup failure;
+		// keep it visible as a failed result instead of treating it as user Stop.
+		detail := err.Error()
+		if len(detail) > 2048 {
+			detail = detail[:2048] + "…"
+		}
+		return joinOut(joinOut(notice, detail), text), 1, fmt.Errorf("command output limit: %v", err)
+	}
+	return joinOut(notice, text), 1, nil
+}
+
 func joinOut(a, b string) string {
 	if b == "" {
 		return a
@@ -297,4 +317,41 @@ func joinOut(a, b string) string {
 		return a + b
 	}
 	return a + "\n" + b
+}
+
+// ResolvePath verifies the actual remote target before the agent authorizes it.
+func (h *hostTools) ResolvePath(ctx context.Context, p string) (string, error) {
+	if err := h.connect(ctx); err != nil {
+		return "", err
+	}
+	return h.files.ResolvePath(ctx, p)
+}
+
+// Both streams share one bounded allocation; cancellation stops the producer,
+// rather than continuing to buffer or silently reporting a successful result.
+type commandOutput struct {
+	mu        sync.Mutex
+	data      bytes.Buffer
+	remaining int
+	limited   bool
+	cancel    context.CancelFunc
+}
+
+func (o *commandOutput) Write(p []byte) (int, error) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	n := len(p)
+	if n > o.remaining {
+		p = p[:o.remaining]
+		o.limited = true
+		o.cancel()
+	}
+	o.data.Write(p)
+	o.remaining -= len(p)
+	return n, nil
+}
+func (o *commandOutput) result() (string, bool) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return o.data.String(), o.limited
 }

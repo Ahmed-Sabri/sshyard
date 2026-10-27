@@ -390,7 +390,7 @@ func (a *App) enqueue(cn *conn, ask *conflictAsk) {
 			case it.IsDir && up:
 				err = c.MkdirAll(it.Dst)
 			case it.IsDir:
-				err = os.MkdirAll(it.Dst, 0o755)
+				err = sftpsvc.MkdirAllLocal(it.Dst)
 			case ask.choice[i] == resSkip:
 			default:
 				dst := it.Dst
@@ -616,7 +616,7 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 						}
 					}
 					if l.err != "" {
-						ui.Text(c, l.err).TextColor(tok.Danger).FontSize(theme.Footnote)
+						ui.Text(c, securityText(m, l.err)).TextColor(tok.Danger).FontSize(theme.Footnote)
 					}
 				})
 				// remote rows download here, from this pane or another files
@@ -660,7 +660,7 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 								ui.Text(c, a.pv(a.statusText(m, cn.host, cn.s.Status(), c.Now()))).TextColor(tok.TextMuted)
 							}
 							if s.err != "" {
-								ui.Text(c, a.pv(m.ErrGeneric(s.err))).TextColor(tok.Danger).FontSize(theme.Footnote)
+								ui.Text(c, a.pv(m.ErrGeneric(securityText(m, s.err)))).TextColor(tok.Danger).FontSize(theme.Footnote)
 							}
 						})
 						return
@@ -681,7 +681,7 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 						ui.Text(c, m.Empty()).TextColor(tok.TextMuted).FontSize(theme.Footnote)
 					}
 					if s.err != "" {
-						ui.Text(c, m.ErrGeneric(s.err)).TextColor(tok.Danger).FontSize(theme.Footnote)
+						ui.Text(c, m.ErrGeneric(securityText(m, s.err))).TextColor(tok.Danger).FontSize(theme.Footnote)
 					}
 				})
 				if files := remote.DroppedFiles(); len(files) > 0 {

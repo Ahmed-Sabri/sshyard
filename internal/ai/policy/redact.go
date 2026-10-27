@@ -24,7 +24,14 @@ func Redact(s string) string {
 	s = ghTokenRE.ReplaceAllString(s, "[REDACTED]")
 	s = ghPatRE.ReplaceAllString(s, "[REDACTED]")
 	s = skTokenRE.ReplaceAllString(s, "[REDACTED]")
-	s = assignRE.ReplaceAllString(s, "${1}=[REDACTED]")
+	s = assignRE.ReplaceAllStringFunc(s, func(m string) string {
+		parts := assignRE.FindStringSubmatch(m)
+		value := "[REDACTED]"
+		if parts[4][0] == '"' || parts[4][0] == '\'' {
+			value = parts[4][:1] + value + parts[4][:1]
+		}
+		return parts[1] + parts[2] + parts[3] + value
+	})
 	s = longFlagRE.ReplaceAllString(s, "${1} [REDACTED]")
 	s = redactMySQLPassword(s)
 	return s
@@ -38,7 +45,7 @@ var (
 	ghTokenRE  = regexp.MustCompile(`\bgh[pousr]_[A-Za-z0-9]{20,}\b`)
 	ghPatRE    = regexp.MustCompile(`\bgithub_pat_[A-Za-z0-9_]{20,}\b`)
 	skTokenRE  = regexp.MustCompile(`\bsk-[A-Za-z0-9]{20,}\b`)
-	assignRE   = regexp.MustCompile(`(?i)\b(api[_-]?key|access[_-]?token|password|passwd|token|secret)[ \t]*[:=][ \t]*\S+`)
+	assignRE   = regexp.MustCompile(`(?i)(["']?)\b((?:[a-z0-9]+[_-])*(?:api[_-]?key|access[_-]?token|secret[_-]?access[_-]?key|private[_-]?key|client[_-]?secret|password|passwd|token|secret))(["']?[ \t]*[:=][ \t]*)("(?:\\.|[^"\\])*"|'[^']*'|[^\s,;}]+)`)
 	longFlagRE = regexp.MustCompile(`(?i)(--(?:password|passwd|token|secret))[ \t]+\S+`)
 	mysqlRE    = regexp.MustCompile(`(?i)(^|[\s])(-p)(\S+)`)
 	mysqlSpRE  = regexp.MustCompile(`(?i)(^|[\s])(-p)[ \t]+(\S+)`)

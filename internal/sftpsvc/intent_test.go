@@ -39,7 +39,7 @@ func downloaded(t *testing.T, dst string, data []byte) {
 	if err != nil || !bytes.Equal(got, data) {
 		t.Fatalf("destination: %v, %d bytes of %d", err, len(got), len(data))
 	}
-	if LocalExists(PartName(dst, false)) {
+	if parts, _ := filepath.Glob(PartName(dst, false) + "-*"); len(parts) != 0 {
 		t.Error("part file left")
 	}
 }
@@ -77,12 +77,12 @@ func TestQueueLatestAskWins(t *testing.T) {
 		if tr := ts.List()[0]; tr.State != Canceled || tr.Bytes != 0 {
 			t.Fatalf("%v at %d", tr.State, tr.Bytes)
 		}
-		if LocalExists(dst) || LocalExists(PartName(dst, false)) {
+		if LocalExists(dst) || LocalExists(ts.List()[0].part) {
 			t.Error("a canceled download left a file")
 		}
 	})
 	t.Run("pause, resume, pause pauses", func(t *testing.T) {
-		ts, id, _, dst, release := heldDownload(t)
+		ts, id, _, _, release := heldDownload(t)
 		ts.Pause(id)
 		ts.Resume(id)
 		ts.Pause(id)
@@ -91,7 +91,7 @@ func TestQueueLatestAskWins(t *testing.T) {
 		if tr := ts.List()[0]; tr.State != Paused {
 			t.Fatalf("%v", tr.State)
 		}
-		if !LocalExists(PartName(dst, false)) {
+		if !LocalExists(ts.List()[0].part) {
 			t.Error("a paused download lost its part file")
 		}
 	})
@@ -144,7 +144,7 @@ func TestQueueCanceledUploadPartOutlastsOutage(t *testing.T) {
 	src := filepath.Join(t.TempDir(), "up.bin")
 	data := bigFile(t, src, 1<<20)
 	dst := root + "/up.bin"
-	part := PartName(dst, true)
+	part := ""
 	ts := newQueue(r)
 	var down atomic.Bool
 	ts.Client = func(ctx context.Context) (*Client, error) {
@@ -159,6 +159,7 @@ func TestQueueCanceledUploadPartOutlastsOutage(t *testing.T) {
 	ts.onWrite = func(*Transfer, int64) { once.Do(func() { close(held); <-gate }) }
 	id := ts.Add(Upload, src, dst, "up.bin")
 	<-held
+	part = ts.List()[0].part
 	down.Store(true)
 	ts.Cancel(id)
 	close(gate)

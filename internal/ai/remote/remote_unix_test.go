@@ -373,7 +373,10 @@ func TestRunExpiredTurnDoesNotStart(t *testing.T) {
 }
 
 func TestWriteRefusesWhenChanged(t *testing.T) {
-	root := t.TempDir()
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	f, err := OpenFiles(dialHost(t, root, nil))
 	if err != nil {
 		t.Fatal(err)

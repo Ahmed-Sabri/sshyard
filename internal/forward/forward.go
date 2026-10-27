@@ -9,9 +9,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/Licoy/sshyard/internal/netproxy"
 	"github.com/Licoy/sshyard/internal/session"
@@ -92,15 +94,16 @@ type Forward struct {
 	Conns    *netproxy.Registry
 	onChange atomic.Pointer[func()]
 
-	mu       sync.Mutex
-	started  bool
-	stopped  bool
-	ln       net.Listener // local listener (Local, Dynamic)
-	remote   net.Listener // server listener (Remote), on client
-	client   *ssh.Client  // the connection the relays (and remote) are on
-	err      error        // the forward's own failure (Remote refused)
-	listenOn func(network, addr string) (net.Listener, error)
-	dialOut  func(ctx context.Context, network, addr string) (net.Conn, error)
+	mu           sync.Mutex
+	started      bool
+	stopped      bool
+	ln           net.Listener // local listener (Local, Dynamic)
+	remote       net.Listener // server listener (Remote), on client
+	client       *ssh.Client  // the connection the relays (and remote) are on
+	err          error        // the forward's own failure (Remote refused)
+	proxyLimitAt time.Time    // last resource-limit log; protected by mu
+	listenOn     func(network, addr string) (net.Listener, error)
+	dialOut      func(ctx context.Context, network, addr string) (net.Conn, error)
 }
 
 // New returns a forward of r that connects as cfg says; Start runs it.
@@ -170,7 +173,7 @@ func (f *Forward) Start() error {
 		f.ln = ln
 		f.mu.Unlock()
 		if f.rule.Kind == Dynamic {
-			srv := &netproxy.Server{Protocol: f.rule.Protocol, User: f.rule.User, Password: f.rule.Password, Dial: f.dialRemote, Conns: f.Conns}
+			srv := &netproxy.Server{Protocol: f.rule.Protocol, User: f.rule.User, Password: f.rule.Password, Dial: f.dialRemote, Conns: f.Conns, OnError: f.proxyError}
 			go srv.Serve(ln)
 		} else {
 			go f.acceptLocal(ln)
@@ -178,6 +181,29 @@ func (f *Forward) Start() error {
 	}
 	f.sess.Start()
 	return nil
+}
+
+// proxyError reports resource rejection without logging peer-supplied data.
+// Coalesce flood traffic to one log per forward per minute.
+func (f *Forward) proxyError(err error) {
+	var limit error
+	switch {
+	case errors.Is(err, netproxy.ErrClientLimit):
+		limit = netproxy.ErrClientLimit
+	case errors.Is(err, netproxy.ErrHandshakeTooLarge):
+		limit = netproxy.ErrHandshakeTooLarge
+	default:
+		return
+	}
+	now := time.Now()
+	f.mu.Lock()
+	if !f.proxyLimitAt.IsZero() && now.Sub(f.proxyLimitAt) < time.Minute {
+		f.mu.Unlock()
+		return
+	}
+	f.proxyLimitAt = now
+	f.mu.Unlock()
+	log.Printf("forward: dynamic proxy rejected client: %v", limit)
 }
 
 // Stop ends the forward and every connection it relays. It does not

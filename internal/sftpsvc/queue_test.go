@@ -64,7 +64,10 @@ func queueServer(t *testing.T) (*redialer, string) {
 	if runtime.GOOS == "windows" {
 		t.Skip("sftp test server does not support Windows paths")
 	}
-	root := t.TempDir()
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	srv, err := sshtest.Start("127.0.0.1:0", "demo", "secret")
 	if err != nil {
 		t.Fatal(err)
@@ -258,7 +261,7 @@ func TestQueuePauseResumesAtOffset(t *testing.T) {
 	if LocalExists(dst) {
 		t.Fatal("a paused download is at its destination")
 	}
-	if fi, err := os.Stat(PartName(dst, false)); err != nil || fi.Size() == 0 {
+	if fi, err := os.Stat(tr.part); err != nil || fi.Size() == 0 {
 		t.Fatalf("part file: %v", err)
 	}
 	ts.onWrite = nil
@@ -272,7 +275,7 @@ func TestQueuePauseResumesAtOffset(t *testing.T) {
 	if sha256.Sum256(got) != sha256.Sum256(data) {
 		t.Fatal("sha256 differs after resume")
 	}
-	if LocalExists(PartName(dst, false)) {
+	if LocalExists(tr.part) {
 		t.Error("part file left")
 	}
 	mu.Lock()
@@ -302,7 +305,7 @@ func TestQueueCancelLeavesNothing(t *testing.T) {
 	ts.CancelAll()
 	ts.Wait()
 	time.Sleep(100 * time.Millisecond) // the upload's part goes after its goroutine ends
-	for _, p := range []string{filepath.Join(root, "sub", "up.bin"), PartName(filepath.Join(root, "sub", "up.bin"), false), filepath.Join(local, "down.bin"), PartName(filepath.Join(local, "down.bin"), false)} {
+	for _, p := range []string{filepath.Join(root, "sub", "up.bin"), ts.List()[0].part, filepath.Join(local, "down.bin"), ts.List()[1].part} {
 		if LocalExists(p) {
 			t.Errorf("%s left", p)
 		}

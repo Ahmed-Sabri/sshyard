@@ -277,7 +277,7 @@ func (e *shellEnv) wrapEnv(args []arg) partial {
 	}
 	var g partial
 	if i >= len(args) {
-		g = partial{cat: "read", risk: RiskReadOnly, prefix: "env", why: "env"}
+		g = partial{cat: "sensitive-read", risk: RiskMedium, prefix: "env", why: "environment disclosure"}
 	} else {
 		g = e.wrapRest("env", args[i:], "")
 	}
@@ -487,7 +487,7 @@ func (e *shellEnv) wrapStrace(args []arg) partial {
 }
 
 func (e *shellEnv) core(name string, args []arg) partial {
-	if helpOnly(args) {
+	if helpOnly(args) && knownCommand(name) {
 		return partial{cat: "read", risk: RiskReadOnly, prefix: name + " --help", why: "help"}
 	}
 	if isInterp(name) {
@@ -1922,6 +1922,14 @@ func (e *shellEnv) gradeSimple(name string, args []arg) (partial, bool) {
 		return crit("sgdisk", "sgdisk"), true
 	}
 	if readOnlyCmd(name) {
+		if !verifiedReadArgs(name, args) {
+			u := unk("unverified " + name + " arguments")
+			u.prefix = name
+			return u, true
+		}
+		if name == "rg" || name == "printenv" || recursiveRead(name, args) || processEnvironment(name, args) {
+			return partial{cat: "sensitive-read", risk: RiskMedium, prefix: name, why: "potential secret disclosure"}, true
+		}
 		if name == "sort" && sortCompress(args) {
 			u := unk("sort --compress-program")
 			u.prefix = "sort"
@@ -2016,6 +2024,9 @@ func (e *shellEnv) sortOutput(name string, args []arg) partial {
 		if (args[i].text == "-o" || args[i].text == "--output") && i+1 < len(args) && args[i+1].ok {
 			return e.gradeWrite(args[i+1].text, writeRedirect)
 		}
+		if strings.HasPrefix(args[i].text, "-o") && !strings.HasPrefix(args[i].text, "--") && len(args[i].text) > 2 {
+			return e.gradeWrite(args[i].text[2:], writeRedirect)
+		}
 		if strings.HasPrefix(args[i].text, "--output=") {
 			return e.gradeWrite(strings.TrimPrefix(args[i].text, "--output="), writeRedirect)
 		}
@@ -2033,9 +2044,7 @@ func operandPaths(name, text string) []string {
 		return nil
 	}
 	// grep's pattern is not a path unless it looks like one.
-	if (name == "grep" || name == "rg" || name == "egrep" || name == "fgrep") && !pathLike(text) {
-		return nil
-	}
+
 	return []string{text}
 }
 

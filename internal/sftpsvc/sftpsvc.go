@@ -49,21 +49,35 @@ func entry(fi fs.FileInfo) Entry {
 type Client struct {
 	c *sftp.Client
 	// conn is the connection, for a second SFTP session (dirPager)
-	conn *ssh.Client
+	conn       *ssh.Client
+	operation  *ssh.Session
+	operations chan struct{}
 }
 
 // New opens SFTP on an SSH connection; closing the Client does not close
 // the connection.
 func New(conn *ssh.Client) (*Client, error) {
-	c, err := sftp.NewClient(conn)
+	return NewContext(context.Background(), conn)
+}
+
+// NewContext negotiates only a dedicated channel and shares a pending-channel
+// quota with every SFTP client on the same pooled SSH connection.
+func NewContext(ctx context.Context, conn *ssh.Client) (*Client, error) {
+	c := &Client{conn: conn, operations: operationSlots(conn)}
+	sub, err := c.operationClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("sftp: %w", err)
 	}
-	return &Client{c: c, conn: conn}, nil
+	return sub, nil
 }
 
 // Close ends the SFTP session.
-func (c *Client) Close() error { return c.c.Close() }
+func (c *Client) Close() error {
+	if c.operation != nil {
+		c.operation.Close()
+	}
+	return c.c.Close()
+}
 
 // Home is the directory the server starts in.
 func (c *Client) Home() (string, error) { return c.c.Getwd() }

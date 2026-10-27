@@ -746,6 +746,16 @@
   "materialTranslucent": "半透明",
   "materialOpaque": "不透明",
   "materialUnsupported": "半透明效果仅支持 macOS。",
+  "aiCommandOutputLimit": "命令输出超过上限，已取消执行并截断输出",
+  "securitySftpReadLimit": "文件超过读取大小上限",
+  "securitySftpUnsafePath": "不允许符号链接或不安全的路径",
+  "securitySftpUnsafeDestination": "目标文件夹可被其他用户写入",
+  "securitySftpPartChanged": "部分下载文件的身份已变化，传输已停止",
+  "securitySftpInvalidPath": "文件路径无效",
+  "securitySftpNotDirectory": "父路径不是文件夹",
+  "securitySftpNotRegular": "路径不是普通文件",
+  "securityProxyClientLimit": "代理活跃连接数已达上限",
+  "securityProxyHandshakeLimit": "代理握手数据超过大小上限",
   "backupSection": "备份",
   "backupDesc": "把 SSHYard 的数据加密保存为一个文件，用于留存或迁移到其他设备。",
   "exportBackup": "导出备份",
@@ -773,5 +783,6 @@
   "backupNotBackup": "这不是 SSHYard 备份文件。",
   "backupNewer": "此备份由更新版本的 SSHYard 创建，请先升级 SSHYard 再恢复。",
   "backupWrongPassword": "密码错误。",
-  "backupDamaged": "备份文件已损坏或被修改。"
+  "backupDamaged": "备份文件已损坏或被修改。",
+  "securitySftpOperationsBusy": "待处理的 SFTP 操作已达上限，请稍后重试"
 }

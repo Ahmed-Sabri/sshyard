@@ -7552,6 +7552,106 @@ func (msgs Messages) MaterialUnsupported() string {
 	return Catalog.Format(msgs.locale, "materialUnsupported", nil)
 }
 
+// AiCommandOutputLimit says "Command output limit exceeded; execution cancelled and output truncated"
+// in the language the app shows.
+func AiCommandOutputLimit() string { return In(i18n.Locale()).AiCommandOutputLimit() }
+
+// AiCommandOutputLimit says "Command output limit exceeded; execution cancelled and output truncated"
+// in the language of msgs.
+func (msgs Messages) AiCommandOutputLimit() string {
+	return Catalog.Format(msgs.locale, "aiCommandOutputLimit", nil)
+}
+
+// SecuritySftpReadLimit says "The file exceeds the read limit"
+// in the language the app shows.
+func SecuritySftpReadLimit() string { return In(i18n.Locale()).SecuritySftpReadLimit() }
+
+// SecuritySftpReadLimit says "The file exceeds the read limit"
+// in the language of msgs.
+func (msgs Messages) SecuritySftpReadLimit() string {
+	return Catalog.Format(msgs.locale, "securitySftpReadLimit", nil)
+}
+
+// SecuritySftpUnsafePath says "Symbolic links and unsafe paths are not allowed"
+// in the language the app shows.
+func SecuritySftpUnsafePath() string { return In(i18n.Locale()).SecuritySftpUnsafePath() }
+
+// SecuritySftpUnsafePath says "Symbolic links and unsafe paths are not allowed"
+// in the language of msgs.
+func (msgs Messages) SecuritySftpUnsafePath() string {
+	return Catalog.Format(msgs.locale, "securitySftpUnsafePath", nil)
+}
+
+// SecuritySftpUnsafeDestination says "The destination folder is writable by other users"
+// in the language the app shows.
+func SecuritySftpUnsafeDestination() string { return In(i18n.Locale()).SecuritySftpUnsafeDestination() }
+
+// SecuritySftpUnsafeDestination says "The destination folder is writable by other users"
+// in the language of msgs.
+func (msgs Messages) SecuritySftpUnsafeDestination() string {
+	return Catalog.Format(msgs.locale, "securitySftpUnsafeDestination", nil)
+}
+
+// SecuritySftpPartChanged says "The partial download file changed; transfer stopped"
+// in the language the app shows.
+func SecuritySftpPartChanged() string { return In(i18n.Locale()).SecuritySftpPartChanged() }
+
+// SecuritySftpPartChanged says "The partial download file changed; transfer stopped"
+// in the language of msgs.
+func (msgs Messages) SecuritySftpPartChanged() string {
+	return Catalog.Format(msgs.locale, "securitySftpPartChanged", nil)
+}
+
+// SecuritySftpInvalidPath says "The file path is invalid"
+// in the language the app shows.
+func SecuritySftpInvalidPath() string { return In(i18n.Locale()).SecuritySftpInvalidPath() }
+
+// SecuritySftpInvalidPath says "The file path is invalid"
+// in the language of msgs.
+func (msgs Messages) SecuritySftpInvalidPath() string {
+	return Catalog.Format(msgs.locale, "securitySftpInvalidPath", nil)
+}
+
+// SecuritySftpNotDirectory says "The parent path is not a folder"
+// in the language the app shows.
+func SecuritySftpNotDirectory() string { return In(i18n.Locale()).SecuritySftpNotDirectory() }
+
+// SecuritySftpNotDirectory says "The parent path is not a folder"
+// in the language of msgs.
+func (msgs Messages) SecuritySftpNotDirectory() string {
+	return Catalog.Format(msgs.locale, "securitySftpNotDirectory", nil)
+}
+
+// SecuritySftpNotRegular says "The path is not a regular file"
+// in the language the app shows.
+func SecuritySftpNotRegular() string { return In(i18n.Locale()).SecuritySftpNotRegular() }
+
+// SecuritySftpNotRegular says "The path is not a regular file"
+// in the language of msgs.
+func (msgs Messages) SecuritySftpNotRegular() string {
+	return Catalog.Format(msgs.locale, "securitySftpNotRegular", nil)
+}
+
+// SecurityProxyClientLimit says "The proxy active connection limit has been reached"
+// in the language the app shows.
+func SecurityProxyClientLimit() string { return In(i18n.Locale()).SecurityProxyClientLimit() }
+
+// SecurityProxyClientLimit says "The proxy active connection limit has been reached"
+// in the language of msgs.
+func (msgs Messages) SecurityProxyClientLimit() string {
+	return Catalog.Format(msgs.locale, "securityProxyClientLimit", nil)
+}
+
+// SecurityProxyHandshakeLimit says "The proxy handshake exceeds the size limit"
+// in the language the app shows.
+func SecurityProxyHandshakeLimit() string { return In(i18n.Locale()).SecurityProxyHandshakeLimit() }
+
+// SecurityProxyHandshakeLimit says "The proxy handshake exceeds the size limit"
+// in the language of msgs.
+func (msgs Messages) SecurityProxyHandshakeLimit() string {
+	return Catalog.Format(msgs.locale, "securityProxyHandshakeLimit", nil)
+}
+
 // BackupSection says "Backup"
 // in the language the app shows.
 func BackupSection() string { return In(i18n.Locale()).BackupSection() }
@@ -7834,4 +7934,14 @@ func BackupDamaged() string { return In(i18n.Locale()).BackupDamaged() }
 // in the language of msgs.
 func (msgs Messages) BackupDamaged() string {
 	return Catalog.Format(msgs.locale, "backupDamaged", nil)
+}
+
+// SecuritySftpOperationsBusy says "Too many SFTP operations are pending; try again later"
+// in the language the app shows.
+func SecuritySftpOperationsBusy() string { return In(i18n.Locale()).SecuritySftpOperationsBusy() }
+
+// SecuritySftpOperationsBusy says "Too many SFTP operations are pending; try again later"
+// in the language of msgs.
+func (msgs Messages) SecuritySftpOperationsBusy() string {
+	return Catalog.Format(msgs.locale, "securitySftpOperationsBusy", nil)
 }

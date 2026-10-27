@@ -359,7 +359,7 @@ func TestFSWriteAllowedRefusedAndConflict(t *testing.T) {
 		t.Fatalf("file %q", got)
 	}
 	_, diffs, dones := gate.snapshot()
-	if len(diffs) != 1 || diffs[0] != "hello" || len(dones) != 1 || dones[0].exit != 0 {
+	if len(diffs) != 2 || diffs[0] != "" || diffs[1] != "hello" || len(dones) != 2 || dones[0].exit != 1 || dones[1].exit != 0 {
 		t.Fatalf("diffs %q dones %+v", diffs, dones)
 	}
 
@@ -390,10 +390,10 @@ func TestFSWriteAllowedRefusedAndConflict(t *testing.T) {
 		t.Fatalf("after conflict %q writes %d", got, writes)
 	}
 	_, diffs, dones = cg.snapshot()
-	if len(diffs) != 2 || !strings.Contains(diffs[0], "old") || !strings.Contains(diffs[1], "other") {
+	if len(diffs) != 4 || diffs[0] != "" || !strings.Contains(diffs[1], "old") || diffs[2] != "" || !strings.Contains(diffs[3], "other") {
 		t.Fatalf("diffs %#v", diffs)
 	}
-	if len(dones) != 2 || dones[0].exit != 1 || dones[1].exit != 0 {
+	if len(dones) != 4 || dones[0].exit != 0 || dones[1].exit != 1 || dones[2].exit != 0 || dones[3].exit != 0 {
 		t.Fatalf("dones %+v", dones)
 	}
 }
@@ -580,12 +580,29 @@ func TestPermissionByKindAndStop(t *testing.T) {
 
 func TestUnknownUpdatesIgnoredAndSessionEvents(t *testing.T) {
 	b := &bag{}
-	s := mustStart(t, "---\nbad-update\ncommands\nnote _x.ai/ping\nnote not_extension\nunknown-request\nmessage ok\nthought hmm\ntool readme\nplan ship\nstderr {not-json\n", Config{Gate: &fixedGate{run: true}, OnUpdate: b.add})
+	planned := make(chan struct{}, 1)
+	onUpdate := func(u Update) {
+		b.add(u)
+		if u.Kind == "plan" {
+			select {
+			case planned <- struct{}{}:
+			default:
+			}
+		}
+	}
+	s := mustStart(t, "---\nbad-update\ncommands\nnote _x.ai/ping\nnote not_extension\nunknown-request\nmessage ok\nthought hmm\ntool readme\nplan ship\nstderr {not-json\n", Config{Gate: &fixedGate{run: true}, OnUpdate: onUpdate})
 	reason, err := s.Prompt(t.Context(), "hi", []Resource{{URI: "file:///a", Text: "body"}})
 	if err != nil || reason != "end_turn" {
 		t.Fatalf("prompt %q %v", reason, err)
 	}
-	d := waitDiag(t, s, "rpc -32601")
+	// Prompt and stderr run independently of the notification pump. Wait
+	// for the script's last known update before inspecting all prior updates.
+	select {
+	case <-planned:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("plan update not delivered; kinds %v", b.kinds())
+	}
+	d := waitDiag(t, s, "{not-json")
 	if strings.Contains(b.texts(), "nope") || !strings.Contains(b.texts(), "ok") || !strings.Contains(b.texts(), "hmm") {
 		t.Fatalf("updates %q kinds %v", b.texts(), b.kinds())
 	}
@@ -916,4 +933,20 @@ func TestWriteNewFileRefusesWhenItAppears(t *testing.T) {
 	if writes != 0 {
 		t.Fatalf("writes %d", writes)
 	}
+}
+
+func (m *memFiles) ResolvePath(_ context.Context, p string) (string, error) { return p, nil }
+func (m *memFiles) ReadContext(ctx context.Context, p string, limit int64) ([]byte, sftpsvc.Version, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, sftpsvc.Version{}, err
+	}
+	data, v, err := m.Read(p)
+	if int64(len(data)) > limit {
+		return nil, sftpsvc.Version{}, sftpsvc.ErrReadLimit
+	}
+	return data, v, err
+}
+func (m *appearFile) ResolvePath(_ context.Context, p string) (string, error) { return p, nil }
+func (m *appearFile) ReadContext(ctx context.Context, p string, limit int64) ([]byte, sftpsvc.Version, error) {
+	return m.Read(p)
 }

@@ -26,6 +26,8 @@ var (
 // sftpsvc.ErrChanged. Nil means the host is not connected yet; the gate
 // still runs, and the call then fails.
 type Files interface {
+	ResolvePath(context.Context, string) (string, error)
+	ReadContext(context.Context, string, int64) ([]byte, sftpsvc.Version, error)
 	Read(path string) ([]byte, sftpsvc.Version, error)
 	Write(path string, data []byte, was sftpsvc.Version) (sftpsvc.Version, error)
 }

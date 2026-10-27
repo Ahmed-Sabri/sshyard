@@ -319,7 +319,12 @@ func LocalExists(p string) bool {
 }
 
 // MkdirAll makes the remote folder and its parents.
-func (c *Client) MkdirAll(p string) error { return c.c.MkdirAll(p) }
+func (c *Client) MkdirAll(p string) error {
+	if err := c.checkTransferParent(context.Background(), p); err != nil {
+		return err
+	}
+	return c.c.MkdirAll(p)
+}
 
 // Stat describes the remote path, following links.
 func (c *Client) Stat(p string) (Entry, error) {
@@ -440,8 +445,59 @@ func (v Version) withSum(data []byte) Version {
 // ErrChanged is a remote file changed since it was read.
 var ErrChanged = errors.New("sftp: the file changed on the server since it was opened")
 
-// ReadFile reads the remote file and its version.
+// DefaultReadLimit bounds editor-independent and AI reads.
+const DefaultReadLimit int64 = 10 << 20
+
+var ErrReadLimit = errors.New("sftp: file exceeds read limit")
+
+// ReadFile reads at most DefaultReadLimit bytes.
 func (c *Client) ReadFile(p string) ([]byte, Version, error) {
+	return c.ReadFileContext(context.Background(), p, DefaultReadLimit)
+}
+
+// ReadFileContext uses a dedicated SFTP session, so cancellation interrupts
+// stalled server requests without closing other files or the SSH connection.
+func (c *Client) ReadFileContext(ctx context.Context, p string, limit int64) ([]byte, Version, error) {
+	return c.readFileContext(ctx, p, limit, false)
+}
+
+// ReadFileNoLinksContext repeats the path check on the operation session
+// immediately before opening, rather than trusting an earlier policy check.
+func (c *Client) ReadFileNoLinksContext(ctx context.Context, p string, limit int64) ([]byte, Version, error) {
+	return c.readFileContext(ctx, p, limit, true)
+}
+
+func (c *Client) readFileContext(ctx context.Context, p string, limit int64, noLinks bool) ([]byte, Version, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, Version{}, err
+	}
+	if limit <= 0 || limit > 1<<30 {
+		return nil, Version{}, ErrReadLimit
+	}
+	sub, err := c.operationClient(ctx)
+	if err != nil {
+		return nil, Version{}, err
+	}
+	defer sub.Close()
+	stop := context.AfterFunc(ctx, func() { sub.Close() })
+	defer stop()
+	if noLinks {
+		p, err = sub.resolvePath(ctx, p)
+		if err != nil {
+			if ctx.Err() != nil {
+				err = ctx.Err()
+			}
+			return nil, Version{}, err
+		}
+	}
+	data, ver, err := sub.readBounded(p, limit)
+	if ctx.Err() != nil {
+		return nil, Version{}, ctx.Err()
+	}
+	return data, ver, err
+}
+
+func (c *Client) readBounded(p string, limit int64) ([]byte, Version, error) {
 	f, err := c.c.Open(p)
 	if err != nil {
 		return nil, Version{}, err
@@ -451,11 +507,27 @@ func (c *Client) ReadFile(p string) ([]byte, Version, error) {
 	if err != nil {
 		return nil, Version{}, err
 	}
-	var b bytes.Buffer
-	if _, err := f.WriteTo(&b); err != nil {
+	if !fi.Mode().IsRegular() {
+		return nil, Version{}, errors.New("sftp: not a regular file")
+	}
+	if fi.Size() < 0 || fi.Size() > limit {
+		return nil, Version{}, ErrReadLimit
+	}
+	data, err := io.ReadAll(io.LimitReader(f, limit+1))
+	if err != nil {
 		return nil, Version{}, err
 	}
-	return b.Bytes(), Version{Size: fi.Size(), ModTime: fi.ModTime()}.withSum(b.Bytes()), nil
+	if int64(len(data)) > limit {
+		return nil, Version{}, ErrReadLimit
+	}
+	after, err := f.Stat()
+	if err != nil {
+		return nil, Version{}, err
+	}
+	if int64(len(data)) != fi.Size() || after.Size() != fi.Size() || !after.ModTime().Equal(fi.ModTime()) {
+		return nil, Version{}, ErrChanged
+	}
+	return data, Version{Size: fi.Size(), ModTime: fi.ModTime()}.withSum(data), nil
 }
 
 // Version is the remote file's version now.
@@ -485,6 +557,20 @@ func (c *Client) Version(p string) (Version, error) {
 // the user may not write is not replaced either (the permission error).
 // A replaced file is a new inode: hard links to the old one keep it.
 func (c *Client) WriteFile(p string, data []byte, was Version) (Version, error) {
+	return c.writeFile(p, data, was, false)
+}
+
+// WriteFileNoLinks does not adopt a link that appeared after authorization.
+func (c *Client) WriteFileNoLinks(p string, data []byte, was Version) (Version, error) {
+	return c.writeFile(p, data, was, true)
+}
+
+func (c *Client) writeFile(p string, data []byte, was Version, noLinks bool) (Version, error) {
+	if noLinks {
+		if _, err := c.ResolvePath(context.Background(), p); err != nil {
+			return Version{}, err
+		}
+	}
 	// An old file a cut save left aside comes back first.
 	c.cleanBeforeSave(p)
 	if !was.ModTime.IsZero() {
@@ -496,7 +582,7 @@ func (c *Client) WriteFile(p string, data []byte, was Version) (Version, error) 
 			return Version{}, ErrChanged
 		}
 		if was.Sum != ([sha256.Size]byte{}) {
-			_, cur, err := c.ReadFile(p)
+			_, cur, err := c.readFileContext(context.Background(), p, max(DefaultReadLimit, was.Size), noLinks)
 			if err != nil {
 				return Version{}, err
 			}
@@ -510,6 +596,9 @@ func (c *Client) WriteFile(p string, data []byte, was Version) (Version, error) 
 		return Version{}, err
 	}
 	if target != p {
+		if noLinks {
+			return Version{}, ErrUnsafePath
+		}
 		c.cleanBeforeSave(target)
 		if target, fi, err = c.linkTarget(p); err != nil {
 			return Version{}, err
@@ -526,7 +615,15 @@ func (c *Client) WriteFile(p string, data []byte, was Version) (Version, error) 
 		}
 		f.Close()
 	}
+	if noLinks {
+		if _, err := c.ResolvePath(context.Background(), p); err != nil {
+			return Version{}, err
+		}
+	}
 	if err := c.replace(target, data, fi); errors.Is(err, errInPlace) {
+		if noLinks {
+			return Version{}, err
+		}
 		if err := c.writeInPlace(target, data); err != nil {
 			return Version{}, err
 		}
