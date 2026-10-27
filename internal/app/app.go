@@ -106,10 +106,15 @@ type conn struct {
 	nameConn int
 	// probe is how far reading the shell's directory from the server
 	// went, for a terminal that does not report it, per connect
-	// (probeConn), and probeAt when it was last read; see probeCwd
+	// (probeConn), probeAt when it was last read and probeMiss how many
+	// reads in a row found nothing; see probeCwd
 	probe     probeState
 	probeConn int
 	probeAt   time.Time
+	probeMiss int
+	// startCmd is a command typed into the terminal once it connects, as
+	// the shell in a container the Docker panel opened; see sendStartCmds
+	startCmd string
 	// temp is the ID of the temporary host the pane was opened on, kept
 	// after it is saved as a host, so that what was typed for it goes
 	// when its last pane closes
@@ -122,6 +127,9 @@ type conn struct {
 	termNo int
 	// metCPU, metDisk, metNet and metGPU are this pane's metrics popovers.
 	metCPU, metDisk, metNet, metGPU bool
+	// metCompact drops the words of the metrics bar, for a pane too
+	// narrow for them (metricsCompact)
+	metCompact bool
 	// ai is set for an AI pane. It has no session of its own.
 	ai *aiState
 }
@@ -182,8 +190,20 @@ type App struct {
 	page page
 	// pref is the settings page showing, inspector the panel open beside
 	// the panes, "" for none
-	pref        prefPage
-	inspector   inspectorKind
+	pref      prefPage
+	inspector inspectorKind
+	// tabStart is the first tab the title bar shows when not all fit, the
+	// others in its menu of more tabs; tabRoom the width they had
+	tabStart int
+	tabRoom  float32
+	// tabsOpen shows the popover of the tabs that do not fit
+	tabsOpen bool
+	// clearContent is set while the content shows the window's material,
+	// as the appearance settings ask (see contentFill)
+	clearContent bool
+	// usage and docker are what the usage and Docker panels read
+	usage       *usageState
+	docker      *dockerState
 	selected    string // host chosen in the sidebar
 	search      string
 	searchFocus bool // the search field takes the focus next frame
@@ -228,6 +248,7 @@ type App struct {
 	// the transfers at once and the size to confirm opening, as edited
 	concChoice, openMBChoice float64
 	osc52Choice              int
+	chromeMat, contentMat    int // the materials chosen, by materials' index
 	osc52KiB                 float64
 	clip                     clipGate
 	clipAsk                  *oscAsk

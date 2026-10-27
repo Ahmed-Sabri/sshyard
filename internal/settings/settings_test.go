@@ -145,3 +145,21 @@ func TestNormalizeFonts(t *testing.T) {
 		}
 	}
 }
+
+// TestMaterials: the sidebar is translucent and the content opaque by
+// default, as before the setting, and each keeps its own choice.
+func TestMaterials(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	os.WriteFile(path, []byte(`{"theme":"dark","contentMaterial":"frosted"}`), 0o600)
+	s, err := Load(path)
+	if err != nil || s.ChromeMaterial != MaterialTranslucent || s.ContentMaterial != MaterialOpaque {
+		t.Fatalf("old file %+v %v", s, err)
+	}
+	s.ChromeMaterial, s.ContentMaterial = MaterialOpaque, MaterialTranslucent
+	if err := Save(path, s); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := Load(path); got.ChromeMaterial != MaterialOpaque || got.ContentMaterial != MaterialTranslucent {
+		t.Errorf("got %+v", got)
+	}
+}

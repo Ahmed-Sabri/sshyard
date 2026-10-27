@@ -34,6 +34,9 @@ type shapeKey struct {
 
 type termView struct {
 	target ptyTarget
+	// clear leaves the background to the pane's translucent fill, for a
+	// content area on the window's material (settings.ContentMaterial)
+	clear bool
 
 	// font
 	fontSize            float32
@@ -241,7 +244,9 @@ func (v *termView) paint(p *ui.Painter, r ui.Rect, pal *theme.Terminal, focused 
 	t := v.target.Terminal()
 	snap := t.Snapshot(v.offset)
 	v.offset, v.first = snap.Offset, snap.First
-	p.Fill(r, pal.Background, 0)
+	if !v.clear {
+		p.Fill(r, pal.Background, 0)
+	}
 	s := v.scale
 	ox := float32(math.Round(float64((r.X+termPad)*s))) / s
 	oy := float32(math.Round(float64((r.Y+termPad)*s))) / s

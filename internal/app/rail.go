@@ -23,12 +23,17 @@ type inspectorKind string
 
 const (
 	inspectMonitor inspectorKind = "monitor"
+	inspectUsage   inspectorKind = "usage"
 	inspectHost    inspectorKind = "host"
+	inspectDocker  inspectorKind = "docker"
 )
 
+// railWidth is the rail's width; inspectorWidth the panel's, and
+// tableInspectorWidth that of a panel of tables (usage, Docker).
 const (
-	railWidth      = 44
-	inspectorWidth = 300
+	railWidth           = 44
+	inspectorWidth      = 300
+	tableInspectorWidth = 460
 )
 
 // railView is the rail: the panels' toggles, then actions on the focused
@@ -47,11 +52,13 @@ func (a *App) railView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 			}
 		}
 		toggle(inspectMonitor, icons.Monitor, icons.MonitorOn, m.SystemMonitor())
+		toggle(inspectUsage, icons.Usage, icons.UsageOn, m.ProcessUsage())
 		toggle(inspectHost, icons.Info, icons.InfoOn, m.HostDetails())
 		ui.Box(c.Key("sep")).Width(16).Height(1).Shrink(0).MarginY(theme.Space(1)).Background(tok.Line)
 		if (IconButton{Icon: icons.Folder, Label: m.OpenFilesBeside(), Disabled: !remoteOnly(cn)}).Clicked(c, "files") {
 			a.OpenFilesBeside()
 		}
+		toggle(inspectDocker, icons.Docker, icons.DockerOn, m.DockerManager())
 		if (IconButton{Icon: icons.Robot, Label: m.OpenAIRight(), Disabled: !remoteOnly(cn)}).Clicked(c, "ai") {
 			a.OpenAIBeside()
 		}
@@ -75,17 +82,34 @@ func (a *App) railView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 // inspectorView is the panel the rail opened: a title bar, and the
 // panel's cards scrolling under it.
 func (a *App) inspectorView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
-	title := m.SystemMonitor()
-	if a.inspector == inspectHost {
+	title, width, tables := m.SystemMonitor(), float32(inspectorWidth), false
+	switch a.inspector {
+	case inspectHost:
 		title = m.HostDetails()
+	case inspectUsage:
+		title, width, tables = m.ProcessUsage(), tableInspectorWidth, true
+	case inspectDocker:
+		title, width, tables = m.DockerManager(), tableInspectorWidth, true
 	}
-	ui.Column(c.Key("inspector")).Width(inspectorWidth).Shrink(0).FillHeight().Background(tok.Canvas).Children(func() {
+	ui.Column(c.Key("inspector")).Width(width).Shrink(0).FillHeight().Background(a.contentFill(tok.Canvas, canvasAlpha)).Children(func() {
 		ui.Row(c).Height(40).Shrink(0).Padding(0, 8, 0, 16).Gap(8).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, title).FontSize(theme.Body).FontWeight(600).Grow(1).Shrink(1).SingleLine()
 			if (IconButton{Icon: icons.Close, Label: m.ClosePanel(), Size: Small}).Clicked(c, "close") {
 				a.inspector = ""
 			}
 		})
+		if tables {
+			// Its tables scroll themselves: the panel gives them its height.
+			ui.Column(c.Key("body:"+string(a.inspector))).Grow(1).Shrink(1).MinHeight(0).FillWidth().
+				Padding(0, theme.Space(3), theme.Space(3), theme.Space(3)).Gap(theme.Space(2.5)).Children(func() {
+				if a.inspector == inspectUsage {
+					a.usagePanel(c, m, tok)
+				} else {
+					a.dockerPanel(c, m, tok)
+				}
+			})
+			return
+		}
 		ui.Scroll(c.Key("body:" + string(a.inspector))).Grow(1).Shrink(1).FillWidth().Children(func() {
 			ui.Column(c).FillWidth().Padding(0, theme.Space(3), theme.Space(3), theme.Space(3)).Gap(theme.Space(2.5)).Children(func() {
 				switch a.inspector {

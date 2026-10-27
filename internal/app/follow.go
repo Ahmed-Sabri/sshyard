@@ -32,6 +32,10 @@ const noReportAfter = 3 * time.Second
 // it is read from the server, while a Files pane follows it.
 const probeEvery = 2 * time.Second
 
+// probeTries is how many reads in a row may find nothing before the
+// server is taken not to tell: a shell just started may not run yet.
+const probeTries = 3
+
 // probeState is how far reading a shell's directory from its server went.
 type probeState int
 
@@ -62,8 +66,11 @@ func followDir(d string) string {
 
 // followCwd sends each following Files pane to the directory the
 // terminal of its tab, on the same host, last reported (OSC 7). With
-// several such terminals, the one that reported last leads.
-func (a *App) followCwd(now time.Time) {
+// several such terminals, the one that reported last leads. While the
+// server is read for a shell that does not report (probeCwd), it asks
+// for a frame then, notice or none.
+func (a *App) followCwd(c *ui.Context) {
+	now := c.Now()
 	for _, t := range a.ws.Tabs {
 		items := t.Items()
 		for _, it := range items {
@@ -90,7 +97,9 @@ func (a *App) followCwd(now time.Time) {
 			if lead == nil {
 				continue
 			}
-			a.probeCwd(lead, now)
+			if a.probeCwd(lead, now) {
+				c.After(probeEvery)
+			}
 			if lead.cwd == "" {
 				continue
 			}
@@ -112,24 +121,32 @@ func (a *App) followCwd(now time.Time) {
 
 // probeCwd reads the directory of tc's shell from its server, for a shell
 // that does not report it (OSC 7): the server finds the shell by the tag
-// of its environment (session.ShellCwd). It runs at most every
-// probeEvery, and not again on a connection where it failed.
-func (a *App) probeCwd(tc *conn, now time.Time) {
+// of its environment, or as the connection's one terminal when it took
+// no tag (session.ShellCwd). It runs at most every probeEvery, and not
+// again on a connection where probeTries reads in a row failed. It
+// reports whether it is still reading.
+func (a *App) probeCwd(tc *conn, now time.Time) bool {
 	if tc.up.IsZero() || tc.s.Term.Cwd() != "" {
-		return
+		return false
 	}
 	connects := tc.s.Status().Connects
 	if tc.probeConn != connects {
-		tc.probeConn, tc.probe, tc.probeAt = connects, probeIdle, time.Time{}
+		tc.probeConn, tc.probe, tc.probeAt, tc.probeMiss = connects, probeIdle, time.Time{}, 0
+	}
+	if tc.probe == probeFailed {
+		return false
 	}
 	if tc.probe != probeIdle || now.Sub(tc.probeAt) < probeEvery {
-		return
+		return true
 	}
 	tag, ok := tc.s.Tag()
+	if !ok {
+		tag = ""
+	}
 	client := tc.s.Client()
-	if !ok || client == nil {
+	if client == nil {
 		tc.probe = probeFailed
-		return
+		return false
 	}
 	tc.probe = probeRunning
 	go func() {
@@ -140,17 +157,21 @@ func (a *App) probeCwd(tc *conn, now time.Time) {
 			if tc.probeConn != connects || tc.probe != probeRunning {
 				return
 			}
+			tc.probe, tc.probeAt = probeIdle, now
 			if err != nil {
-				tc.probe = probeFailed
+				if tc.probeMiss++; tc.probeMiss >= probeTries {
+					tc.probe = probeFailed
+				}
 				return
 			}
-			tc.probe, tc.probeAt = probeIdle, time.Now()
+			tc.probeMiss = 0
 			if tc.s.Term.Cwd() == "" && d != tc.cwd {
 				a.cwdSeq++
 				tc.cwd, tc.cwdSeq = d, a.cwdSeq
 			}
 		})
 	}()
+	return true
 }
 
 // leadTerminal is the terminal of items on fc's host that reported its
@@ -199,8 +220,7 @@ func (a *App) noReportView(c *ui.Context, t *layout.Tab, cn *conn, tok theme.Tok
 		return
 	}
 	if lead.probe != probeFailed {
-		// The server tells: read it again in a while.
-		c.After(probeEvery)
+		// The server tells (followCwd reads it again in a while).
 		return
 	}
 	if lead.cwd != "" {

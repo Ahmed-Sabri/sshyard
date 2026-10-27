@@ -46,7 +46,7 @@ func TestSettingsNav(t *testing.T) {
 	if tt.HasText(en.SystemMonitor()) {
 		t.Error("the rail shows over the settings")
 	}
-	mustClick(t, tt, "Back to Sessions")
+	mustClick(t, tt, "Close Settings")
 	if a.page != pageWorkspace || !tt.HasText(en.SystemMonitor()) {
 		t.Fatalf("back: page %v %q", a.page, tt.Texts())
 	}

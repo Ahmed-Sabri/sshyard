@@ -3,6 +3,7 @@ package app
 import (
 	"time"
 
+	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/locales"
 	"github.com/egoist/mygo/ui"
@@ -23,7 +24,8 @@ func (a *App) View(c *ui.Context) {
 	}
 	a.toasts = nil
 	a.wakeUndo(c)
-	a.followCwd(c.Now())
+	a.followCwd(c)
+	a.sendStartCmds()
 
 	base := *c.Theme()
 	base.Font = a.fonts.ui
@@ -40,8 +42,13 @@ func (a *App) View(c *ui.Context) {
 	// content. The content's bottom band is the status bar; in the
 	// workspace a rail of IconButtons runs down its right edge, with the
 	// panel it opens beside the panes.
-	clear := c.Vibrancy()
-	if clear {
+	// Each part shows the material as the appearance settings say: the
+	// sidebar and the title bar (clear), and the content (clearContent),
+	// through a lighter fill of its own.
+	vibrant := c.Vibrancy()
+	clear := vibrant && a.settings.ChromeMaterial != settings.MaterialOpaque
+	a.clearContent = vibrant && a.settings.ContentMaterial == settings.MaterialTranslucent
+	if vibrant {
 		c.Root().Background(ui.Transparent)
 	} else {
 		c.Root().Background(tok.Sidebar)
@@ -61,12 +68,12 @@ func (a *App) View(c *ui.Context) {
 					a.sidebarView(c, m, tok)
 				}
 				c.SetTheme(tok.Apply(base))
-				if clear {
+				if vibrant {
 					c.Root().Background(ui.Transparent)
 				}
 			})
 			ui.Box(c).Width(1).FillHeight().Background(tok.Line)
-			ui.Column(c.Key("main")).Grow(1).Shrink(1).FillHeight().Background(tok.Canvas).Children(func() {
+			ui.Column(c.Key("main")).Grow(1).Shrink(1).FillHeight().Background(a.contentFill(tok.Canvas, canvasAlpha)).Children(func() {
 				ui.Row(c.Key("body")).Grow(1).Shrink(1).FillWidth().MinHeight(0).Children(func() {
 					ui.Column(c.Key("content")).Grow(1).Shrink(1).MinWidth(0).FillHeight().Children(func() {
 						switch a.page {

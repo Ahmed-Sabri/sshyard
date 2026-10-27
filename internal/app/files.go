@@ -121,6 +121,7 @@ func newFilesState(onChange func()) *filesState {
 	fs.remote.sel, fs.local.sel = -1, -1
 	fs.remote.list.Selected = &fs.remote.sel
 	fs.local.list.Selected = &fs.local.sel
+	fs.remote.list.RoundRows, fs.local.list.RoundRows = true, true
 	return fs
 }
 

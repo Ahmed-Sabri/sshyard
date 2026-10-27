@@ -134,7 +134,7 @@ func waitSample(t *testing.T, tt *ui.Tester) {
 			tt.HasText("Memory 4.0G/8.0G, swap 1.0G/2.0G") &&
 			tt.HasText("Disk 40%") &&
 			tt.HasText("Load 0.15 0.10 0.05") &&
-			tt.HasText("↑") && tt.HasText("↓") &&
+			tt.HasText("Network up") &&
 			hasLatency(tt)
 	})
 }
@@ -151,17 +151,21 @@ func terminalsUp(a *App) int {
 
 func TestMeterColorThresholds(t *testing.T) {
 	tok := theme.LightTokens()
-	if meterColor(tok, 80, true) != tok.Text || meterColor(tok, 95, true) != tok.Warning {
-		t.Fatalf("80 and 95: %v %v", meterColor(tok, 80, true), meterColor(tok, 95, true))
+	for pct, want := range map[float64]ui.Color{0: tok.Success, 59.9: tok.Success, 60: tok.Warning, 79.9: tok.Warning, 80: tok.Danger, 100: tok.Danger} {
+		if got := meterColor(tok, pct, true); got != want {
+			t.Errorf("%v%%: %v, want %v", pct, got, want)
+		}
 	}
-	if meterColor(tok, 80.1, true) != tok.Warning || meterColor(tok, 95.1, true) != tok.Danger {
-		t.Fatal("thresholds are not strict")
-	}
-	if meterColor(tok, 99, false) != tok.Text {
+	if meterColor(tok, 99, false) != tok.TextMuted {
 		t.Fatal("unknown percent took a meter color")
 	}
-	if latencyColor(tok, 300*time.Millisecond, true) != tok.Text || latencyColor(tok, 301*time.Millisecond, true) != tok.Warning {
-		t.Fatal("latency threshold")
+	for d, want := range map[time.Duration]ui.Color{99 * time.Millisecond: tok.Success, 100 * time.Millisecond: tok.Warning, 300 * time.Millisecond: tok.Danger} {
+		if got := latencyColor(tok, d, true); got != want {
+			t.Errorf("latency %v: %v, want %v", d, got, want)
+		}
+	}
+	if p, ok := loadPct(session.Reading{LoadOK: true, Load1: 1, Cores: make([]session.Core, 4)}); !ok || p != 25 {
+		t.Errorf("load of 1 on 4 cores: %v %v", p, ok)
 	}
 	if fmtKB(4194304) != "4.0G" || fmtKB(8388608) != "8.0G" || fmtKB(1048576) != "1.0G" || fmtKB(2097152) != "2.0G" {
 		t.Fatalf("sizes %s %s %s %s", fmtKB(4194304), fmtKB(8388608), fmtKB(1048576), fmtKB(2097152))

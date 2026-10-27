@@ -428,7 +428,7 @@ func TestSettingsToggle(t *testing.T) {
 	if a.page != pageSettings || a.prefNow() != prefAppearance {
 		t.Fatal("settings did not open")
 	}
-	mustClick(t, tt, "Back to Sessions")
+	mustClick(t, tt, "Close Settings")
 	if a.page != pageWorkspace {
 		t.Fatal("settings did not close")
 	}

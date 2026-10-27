@@ -213,112 +213,28 @@ func toolbarTrail(bar ui.TitleBar) float32 {
 	return 12
 }
 
-// tabHeight and tabWidth size a tab; tabs narrow alike when there are
-// many, as a browser's.
-const (
-	tabHeight = 32
-	tabWidth  = 180
-)
-
-// tabs are the browser's kind: standing on the bottom of the title bar,
-// the active one in the content's color and joined to it, with feet that
-// curve into the bar; the others flat, apart by short lines, and lit on
-// hover. Each shows the host as the sidebar does.
-func (a *App) tabs(c *ui.Context, m locales.Messages, tok theme.Tokens) {
-	active := -1
-	if a.page == pageWorkspace {
-		active = a.ws.Active
-	}
-	// Read when the tabs paint, once all have been built.
-	hovered := make([]bool, len(a.ws.Tabs))
-	ui.Row(c.Key("tabs")).Shrink(1).MinWidth(0).AlignSelf(ui.End).Height(tabHeight).Padding(0, theme.RadiusSmall).Children(func() {
-		for i, t := range a.ws.Tabs {
-			on := i == active
-			cn := a.conns[t.Focused().ID]
-			chip := ui.Row(c.Key("tab:"+strconv.Itoa(t.ID))).Gap(6).Padding(0, 4, 0, 10).Width(tabWidth).Shrink(1).MinWidth(72).
-				AlignItems(ui.Center).Cursor(ui.CursorPointer)
-			if cn != nil {
-				chip.Drag(dragSession{cn.id})
-			}
-			hovered[i] = chip.Hovered()
-			chip.Draw(func(p *ui.Painter, r ui.Rect) {
-				switch {
-				case on:
-					tabShape(p, r, tok.Canvas, tok.Line)
-				case hovered[i]:
-					p.Fill(ui.Rect{X: r.X + 2, Y: r.Y + 3, W: r.W - 4, H: r.H - 6}, tok.Hover, theme.RadiusControl)
-				}
-				if next := i + 1; next < len(hovered) && !on && next != active && !hovered[i] && !hovered[next] {
-					x := r.X + r.W - 0.5
-					p.Line(x, r.Y+r.H/2-7, x, r.Y+r.H/2+7, 1, tok.Line)
-				}
-			})
-			chip.Children(func() {
-				if cn != nil {
-					hostAvatar(c, tok, a.liveHost(cn.host), 16)
-				}
-				txt := ui.Text(c, a.tabLabel(t)).SingleLine().Grow(1).Shrink(1).MinWidth(0).FontSize(theme.Footnote)
-				if on {
-					txt.FontWeight(500)
-				} else {
-					txt.TextColor(tok.TextMuted)
-				}
-				if cn != nil && isTemp(cn.host.ID) {
-					tempBadge(c, m, tok)
-				}
-				if cn != nil && cn.s != nil {
-					dot(c, stateColor(tok, cn.s.Status().State))
-				}
-				a.tabAIMarks(c, t, tok, m)
-				if (IconButton{Icon: icons.Close, Label: m.CloseTab(), Size: Small}).Clicked(c, "x") {
-					a.closeTab(t)
-				}
-			})
-			chip.ContextMenu(func(menu *ui.Menu) {
-				if menu.Item(m.CloseTab()).Chosen() {
-					a.closeTab(t)
-				}
-			})
-			if chip.Clicked() {
-				a.ws.Active = i
-				a.page = pageWorkspace
-				a.focusReq = t.Focused().ID
-			}
-		}
-	})
-}
-
-// tabShape paints the active tab in r: rounded at the top, its feet
-// curving out into the bar at the bottom, filled with fill and edged
-// with line, open at the bottom where it joins the content.
-func tabShape(p *ui.Painter, r ui.Rect, fill, line ui.Color) {
-	rr, f := theme.RadiusControl, theme.RadiusSmall
-	x0, x1, y0, y1 := r.X, r.X+r.W, r.Y, r.Y+r.H
-	outline := func(path *ui.Path) *ui.Path {
-		return path.MoveTo(x0-f, y1).QuadTo(x0, y1, x0, y1-f).LineTo(x0, y0+rr).QuadTo(x0, y0, x0+rr, y0).
-			LineTo(x1-rr, y0).QuadTo(x1, y0, x1, y0+rr).LineTo(x1, y1-f).QuadTo(x1, y1, x1+f, y1)
-	}
-	var shape, edge ui.Path
-	p.FillPath(outline(&shape).Close(), fill)
-	p.StrokePath(outline(&edge), 1, line)
-}
-
 func (a *App) tabStrip(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	// The title bar's part over the content: the tabs on its foot, the
 	// actions grouped on the right, clear of the window buttons.
 	bar := c.TitleBar()
 	ui.Row(c.Key("toolbar")).Grow(1).Shrink(1).MinWidth(0).FillHeight().Padding(0, toolbarTrail(bar), 0, 12).Gap(8).AlignItems(ui.Center).Children(func() {
-		if len(a.ws.Tabs) > 0 {
-			a.tabs(c, m, tok)
+		if a.page == pageSettings {
+			// The settings cover the sessions: no tabs, and their way
+			// out at the end.
+			ui.Spacer(c)
+			if (IconButton{Icon: icons.Close, Label: m.CloseSettings()}).Clicked(c, "closesettings") {
+				a.closeSettings()
+			}
+			return
 		}
-		ui.Spacer(c)
+		a.tabs(c, m, tok)
 		// One capsule of the actions on the focused session. The settings
 		// are in the status bar, the panels in the rail.
 		cn := a.focused()
 		if cn == nil || a.page != pageWorkspace {
 			return
 		}
-		ui.Row(c.Key("actions")).Gap(0).Padding(2).Radius(theme.Capsule).Background(tok.Fill).AlignItems(ui.Center).Children(func() {
+		ui.Row(c.Key("actions")).Gap(0).Padding((tabHeight + 2*tabInset - 28) / 2).Radius(theme.Capsule).Background(tok.Fill).AlignItems(ui.Center).Children(func() {
 			add := (IconButton{Icon: icons.Add, Label: m.NewTab()}).Show(c, "newtab")
 			if add.Clicked() {
 				a.Connect(cn.host.ID, openAt{})
@@ -463,7 +379,7 @@ func (a *App) paneView(c *ui.Context, t *layout.Tab, n *layout.Node, tok theme.T
 	// right and at the bottom.)
 	var pane ui.Element
 	ui.Box(c.Key("pw:" + strconv.Itoa(n.ID))).Fill().Padding(paneGap / 2).Children(func() {
-		pane = ui.Column(c.Key("pane:" + strconv.Itoa(n.ID))).Grow(1).Shrink(1).MinHeight(0).Radius(theme.RadiusCard).Clip().Background(bg)
+		pane = ui.Column(c.Key("pane:" + strconv.Itoa(n.ID))).Grow(1).Shrink(1).MinHeight(0).Radius(theme.RadiusCard).Clip().Background(a.contentFill(bg, paneAlpha))
 		theme.Shadow(tok.Card).On(pane)
 		// The ask names a pane by number. Outline that pane in the accent
 		// color, wider than the focus hairline, until the question is gone.
@@ -662,6 +578,7 @@ func (a *App) termElement(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn
 		return tv.input(ev, svc)
 	})
 	term.TextCaret(tv.caret())
+	tv.clear = a.clearContent
 	term.Draw(func(p *ui.Painter, r ui.Rect) { tv.paint(p, r, pal, has) })
 	term.ContextMenu(func(menu *ui.Menu) {
 		if menu.Item(m.Copy()).Disabled(tv.SelectedText() == "").Chosen() {

@@ -28,6 +28,12 @@ type Settings struct {
 	// Privacy masks the IP addresses the app shows, for a screen share
 	// or a recording. What is typed in a form is shown as it is.
 	Privacy bool `json:"privacy,omitempty"`
+	// ChromeMaterial is how the sidebar and the title bar show the
+	// window's material (macOS): MaterialTranslucent, the default, or
+	// MaterialOpaque. ContentMaterial is that of the content beside them,
+	// opaque by default.
+	ChromeMaterial  string `json:"chromeMaterial,omitempty"`
+	ContentMaterial string `json:"contentMaterial,omitempty"`
 	// UIFont is the interface's font family, "" for the system's.
 	UIFont string `json:"uiFont,omitempty"`
 	// TerminalFont is the terminal's font family, "" for the system's
@@ -105,12 +111,21 @@ const (
 	OSC52MaxMax     = 8 << 20
 )
 
+// The materials of a part of the window: the system's translucent
+// material behind it, or its own solid fill.
+const (
+	MaterialTranslucent = "translucent"
+	MaterialOpaque      = "opaque"
+)
+
+func materialOK(s string) bool { return s == MaterialTranslucent || s == MaterialOpaque }
+
 // Languages are the languages SSHYard ships, besides following the system.
 var Languages = []string{"en", "zh-Hans"}
 
 // Default returns the defaults.
 func Default() Settings {
-	return Settings{Theme: theme.Auto, CheckUpdates: true, TerminalFontSize: 13, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, OSC52Write: OSC52Allow, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
+	return Settings{Theme: theme.Auto, CheckUpdates: true, TerminalFontSize: 13, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, OSC52Write: OSC52Allow, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
 		AIDefaultAgent: "builtin", AIDefaultMode: "ask", AIContextLines: 200, AIAuditRetentionDays: 90, AIRedact: true}
 }
 
@@ -147,6 +162,12 @@ func (s *Settings) Normalize() {
 	}
 	if s.KeepAliveSeconds < 0 || s.KeepAliveSeconds > 600 {
 		s.KeepAliveSeconds = d.KeepAliveSeconds
+	}
+	if !materialOK(s.ChromeMaterial) {
+		s.ChromeMaterial = d.ChromeMaterial
+	}
+	if !materialOK(s.ContentMaterial) {
+		s.ContentMaterial = d.ContentMaterial
 	}
 	s.UIFont, s.TerminalFont = fontName(s.UIFont), fontName(s.TerminalFont)
 	if s.SidebarWidth < 160 || s.SidebarWidth > 480 {

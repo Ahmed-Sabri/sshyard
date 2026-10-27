@@ -23,10 +23,10 @@ func (a *App) SetWindow(w WindowControls) { a.post(func() { a.win = &w }) }
 func (a *App) SetMaximized(on bool) { a.post(func() { a.maximized = on }) }
 
 // titleBar is the window's one band across the top, which drags it: over
-// the sidebar the app's name after the traffic lights (macOS), or the way
-// back from the settings; over the content the tabs and the actions on the
-// focused session; at the end the window's buttons where the app draws
-// them.
+// the sidebar the app's name after the traffic lights (macOS), or the
+// settings' title; over the content the tabs and the actions on the
+// focused session, or in the settings only the button closing them; at
+// the end the window's buttons where the app draws them.
 func (a *App) titleBar(c *ui.Context, m locales.Messages, tok theme.Tokens, clear bool) {
 	bar := c.TitleBar()
 	row := ui.Row(c.Key("titlebar")).Height(bandHeight(c)).Shrink(0).FillWidth().AlignItems(ui.Center).DragWindow()
@@ -43,9 +43,6 @@ func (a *App) titleBar(c *ui.Context, m locales.Messages, tok theme.Tokens, clea
 		ui.Row(c.Key("tblead")).Width(a.sbWidth+1).Shrink(0).FillHeight().Padding(0, 10, 0, max(bar.Left+4, 14)).Gap(8).
 			AlignItems(ui.Center).Children(func() {
 			if a.page == pageSettings {
-				if (IconButton{Icon: icons.Back, Label: m.BackToSessions()}).Clicked(c, "back") {
-					a.closeSettings()
-				}
 				ui.Text(c, m.Settings()).FontSize(theme.Title3).FontWeight(600).SingleLine().Shrink(1)
 				return
 			}

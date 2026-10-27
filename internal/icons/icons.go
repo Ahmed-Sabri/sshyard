@@ -118,6 +118,7 @@ var (
 	Sent       = load("arrow-up-line")
 	Received   = load("arrow-down-line")
 	Uptime     = load("time-line")
+	Load       = load("speed-up-line")
 	Privacy    = load("eye-off-line")
 	PrivacyOn  = load("eye-off-fill")
 	Transfers  = Network
@@ -127,6 +128,12 @@ var (
 	WinMaximize = load("checkbox-blank-line")
 	WinRestore  = load("checkbox-multiple-blank-line")
 	More        = load("more-line")
+	Usage       = load("bar-chart-horizontal-line")
+	UsageOn     = load("bar-chart-horizontal-fill")
+	Docker      = load("ship-2-line")
+	DockerOn    = load("ship-2-fill")
+	Halt        = load("stop-line")
+	Logs        = load("file-list-3-line")
 )
 
 // HostIcon is an icon a host can be given, by the key it is saved under.

@@ -50,7 +50,10 @@ func TestFilesFollowTerminal(t *testing.T) {
 	if tt.HasText(noReport) {
 		t.Fatal("notice at once")
 	}
-	waitFor(t, tt, "probe failed", func() bool { return tc.probe == probeFailed })
+	waitFor(t, tt, "probe failed", func() bool {
+		tt.Advance(probeEvery)
+		return tc.probe == probeFailed
+	})
 	tt.Move(600, 700) // over nothing that has a tooltip
 	tt.Advance(noReportAfter + time.Second)
 	tt.Frame()
@@ -112,6 +115,49 @@ func TestFilesFollowTerminal(t *testing.T) {
 	tt.Frame()
 	if fc.fs.remote.dir != etc {
 		t.Errorf("followed with the host switch off: %q", fc.fs.remote.dir)
+	}
+}
+
+// TestFilesFollowProbeUntagged follows a shell the server did not tag (its
+// AcceptEnv names no such variable): the server finds it as the
+// connection's one terminal, and a read that finds nothing at first, as
+// of a shell not yet running, is tried again.
+func TestFilesFollowProbeUntagged(t *testing.T) {
+	var dir atomic.Value
+	dir.Store("")
+	var asks atomic.Int32
+	a, tt, fc, root := filesPaneOn(t, func(srv *sshtest.Server) {
+		srv.RefuseEnv = true
+		srv.Exec = func(ch ssh.Channel, cmd string) int {
+			if !strings.HasPrefix(cmd, "sh -c ") || strings.Contains(cmd, session.TagEnv) || !strings.Contains(cmd, "/fd/0") {
+				return 127
+			}
+			if asks.Add(1) == 1 {
+				return 1
+			}
+			io.WriteString(ch, dir.Load().(string)+"\n")
+			return 0
+		}
+	})
+	write(t, filepath.Join(root, "srv", "app.log"), "x")
+	srvDir := sftpsvc.RemoteJoin(fc.fs.remote.dir, "srv")
+	dir.Store(srvDir)
+	h, _ := a.store.Get(fc.host.ID)
+	h.CwdFollow = true
+	if _, err := a.store.Update(h); err != nil {
+		t.Fatal(err)
+	}
+	tc := terminalBeside(t, a, tt, fc)
+	waitFor(t, tt, "terminal up", func() bool { return !tc.up.IsZero() })
+	if _, ok := tc.s.Tag(); ok {
+		t.Fatal("tagged by a server that refused it")
+	}
+	waitFor(t, tt, "followed", func() bool {
+		tt.Advance(probeEvery)
+		return fc.fs.remote.dir == srvDir && tt.HasText("app.log")
+	})
+	if tc.probe == probeFailed {
+		t.Error("gave up after one miss")
 	}
 }
 

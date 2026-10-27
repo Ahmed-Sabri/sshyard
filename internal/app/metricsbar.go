@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Licoy/sshyard/internal/assets"
+	"github.com/Licoy/sshyard/internal/icons"
 	"github.com/Licoy/sshyard/internal/layout"
 	"github.com/Licoy/sshyard/internal/session"
 	"github.com/Licoy/sshyard/internal/theme"
@@ -14,6 +15,10 @@ import (
 	"github.com/egoist/mygo/ui"
 	"golang.org/x/crypto/ssh"
 )
+
+// metricsCompact is the width of the metrics bar under which its items
+// show their icons without their words, which their tips still name.
+const metricsCompact = 760
 
 // metricsProbe is how often a visible bar times the keepalive.
 const metricsProbe = 5 * time.Second
@@ -259,26 +264,41 @@ func intervalIndex(n int) int {
 	}
 }
 
-// meterColor is warning above 80% and danger above 95%.
+// meterColor is the color of a usage at pct: success below 60%, warning
+// below 80% and danger from 80%; muted when it is not known.
 func meterColor(tok theme.Tokens, pct float64, ok bool) ui.Color {
-	if !ok {
-		return tok.Text
-	}
-	if pct > 95 {
+	switch {
+	case !ok:
+		return tok.TextMuted
+	case pct >= 80:
 		return tok.Danger
-	}
-	if pct > 80 {
+	case pct >= 60:
 		return tok.Warning
 	}
-	return tok.Text
+	return tok.Success
 }
 
-// latencyColor is warning above 300 ms.
+// latencyColor is success below 100 ms, warning below 300 ms and danger
+// from 300 ms; muted when it is not known.
 func latencyColor(tok theme.Tokens, d time.Duration, ok bool) ui.Color {
-	if ok && d > 300*time.Millisecond {
+	switch {
+	case !ok:
+		return tok.TextMuted
+	case d >= 300*time.Millisecond:
+		return tok.Danger
+	case d >= 100*time.Millisecond:
 		return tok.Warning
 	}
-	return tok.Text
+	return tok.Success
+}
+
+// loadPct is the load over the last minute as a share of the CPUs, the
+// percent a usage is colored by, when the cores are known.
+func loadPct(rd session.Reading) (float64, bool) {
+	if !rd.LoadOK || len(rd.Cores) == 0 {
+		return 0, false
+	}
+	return rd.Load1 / float64(len(rd.Cores)) * 100, true
 }
 
 func fmtKB(kb uint64) string {
@@ -333,17 +353,6 @@ func memoryText(m locales.Messages, rd session.Reading) string {
 		return m.MetricsMemory(d, d, d, d)
 	}
 	return m.MetricsMemory(fmtKB(rd.MemUsedKB), fmtKB(rd.MemTotalKB), fmtKB(rd.SwapUsedKB), fmtKB(rd.SwapTotalKB))
-}
-
-func memoryHot(rd session.Reading) (float64, bool) {
-	if !rd.MemOK {
-		return 0, false
-	}
-	pct := rd.MemPct
-	if rd.SwapTotalKB > 0 && rd.SwapPct > pct {
-		pct = rd.SwapPct
-	}
-	return pct, true
 }
 
 func loadText(m locales.Messages, rd session.Reading) string {
@@ -408,26 +417,70 @@ func (a *App) metricsItemMenu(el ui.Element, cn *conn, m locales.Messages) {
 	})
 }
 
-func (a *App) metricsText(c *ui.Context, cn *conn, m locales.Messages, text, label string, col ui.Color, fam string) {
-	tx := ui.Text(c, text).Font(fam).FontSize(theme.Caption).TextColor(col).SingleLine().Shrink(0).Label(label)
-	a.metricsItemMenu(tx, cn, m)
+// metricPart is a figure of the metrics bar: its icon, its word (muted)
+// and its value, the icon and the value in the color of its level.
+type metricPart struct {
+	icon        *icons.Icon
+	word, value string
+	col         ui.Color
 }
 
-func (a *App) metricsButton(c *ui.Context, cn *conn, m locales.Messages, key, text, label string, col ui.Color, fam string, open *bool, tip string, pop func()) {
-	b := ui.ButtonBase(c.Key(key)).Label(label).Tooltip(tip).Font(fam).FontSize(theme.Caption).TextColor(col).Shrink(0)
-	a.metricsItemMenu(b, cn, m)
-	if b.Clicked() {
-		was := *open
-		cn.metCPU, cn.metDisk, cn.metNet, cn.metGPU = false, false, false, false
-		*open = !was
+// metric is an item of the metrics bar: its figures, its whole text for
+// assistive technology and the tip, and, with open, the popover it opens.
+type metric struct {
+	key, label, tip string
+	parts           []metricPart
+	open            *bool
+	pop             func()
+}
+
+// metricItem shows it, its menu that of the bar; one that opens a popover
+// lights in a rounded shape under the pointer and while open.
+func (a *App) metricItem(c *ui.Context, cn *conn, m locales.Messages, tok theme.Tokens, fam string, it metric) {
+	if cn.metCompact {
+		for i := range it.parts {
+			if it.parts[i].icon != nil {
+				it.parts[i].word = ""
+			}
+		}
 	}
-	b.Children(func() {
-		tx := ui.Text(c, text).Font(fam).FontSize(theme.Caption).TextColor(col).SingleLine().PassThrough()
-		a.metricsItemMenu(tx, cn, m)
+	var el ui.Element
+	if it.open != nil {
+		el = ui.ButtonBase(c.Key(it.key)).Cursor(ui.CursorPointer)
+		switch {
+		case *it.open || el.Pressed():
+			el.Background(tok.Press)
+		case el.Hovered():
+			el.Background(tok.Hover)
+		}
+		if el.Clicked() {
+			was := *it.open
+			cn.metCPU, cn.metDisk, cn.metNet, cn.metGPU = false, false, false, false
+			*it.open = !was
+		}
+	} else {
+		el = ui.Row(c.Key(it.key))
+	}
+	el.Label(it.label).Tooltip(it.tip).Height(18).Padding(0, 5).Gap(8).AlignItems(ui.Center).Radius(theme.RadiusSmall).Shrink(0)
+	a.metricsItemMenu(el, cn, m)
+	el.Children(func() {
+		for _, p := range it.parts {
+			ui.Row(c).Gap(4).AlignItems(ui.Center).PassThrough().Children(func() {
+				if p.icon != nil {
+					ui.Icon(c, p.icon.SVG).Size(12, 12).Shrink(0).TextColor(p.col)
+				}
+				if p.word != "" {
+					ui.Text(c, p.word).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine()
+				}
+				ui.Text(c, p.value).Font(fam).FontSize(theme.Caption).FontWeight(500).TextColor(p.col).SingleLine()
+			})
+		}
 	})
-	ui.Popover(c, b, open, func() {
-		ui.Column(c).Padding(8, 10).Gap(6).Children(pop)
-	})
+	if it.open != nil {
+		ui.Popover(c, el, it.open, func() {
+			ui.Column(c).Padding(8, 10).Gap(6).Children(it.pop)
+		})
+	}
 }
 
 func (a *App) metricsBar(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages) {
@@ -438,8 +491,13 @@ func (a *App) metricsBar(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 	}
 	fam := a.termFamily()
 	ui.Box(c).Height(1).Shrink(0).FillWidth().Background(tok.Line)
-	row := ui.Row(c.Key("metrics")).MinHeight(22).Shrink(0).FillWidth().Padding(2, 8, 2, 8).Gap(8).AlignItems(ui.Center).
-		Font(fam).FontSize(theme.Caption).Label(m.MetricsBar())
+	row := ui.Row(c.Key("metrics")).MinHeight(24).Shrink(0).FillWidth().Padding(2, 6, 2, 6).Gap(2).AlignItems(ui.Center).
+		FontSize(theme.Caption).Label(m.MetricsBar()).ClipX()
+	if w := row.Bounds().W; w > 0 && (w < metricsCompact) != cn.metCompact {
+		// Measured anew: lay the items out again with or without words.
+		cn.metCompact = w < metricsCompact
+		c.Invalidate()
+	}
 	a.metricsItemMenu(row, cn, m)
 	row.Children(func() {
 		if reason != "" {
@@ -450,23 +508,37 @@ func (a *App) metricsBar(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 				label = m.MetricsUnavailableReason(m.MetricsUnavailable(), why)
 				tip = why
 			}
-			tx := ui.Text(c, m.MetricsUnavailable()).Font(fam).FontSize(theme.Caption).TextColor(tok.Text).SingleLine().Grow(1).Shrink(1).Label(label).Tooltip(tip)
+			ui.Icon(c, icons.Warning.SVG).Size(12, 12).Shrink(0).TextColor(tok.Warning).Margin(0, 4, 0, 4)
+			tx := ui.Text(c, m.MetricsUnavailable()).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine().Grow(1).Shrink(1).Label(label).Tooltip(tip)
 			a.metricsItemMenu(tx, cn, m)
 			a.latencyItem(c, cn, tok, m, fam)
 			return
 		}
-		cpuPct := m.MetricsDash()
+		dash := m.MetricsDash()
+		cpuPct := dash
 		if rd.CPUOK {
 			cpuPct = fmtPct(rd.CPU)
 		}
 		cpu := m.MetricsCPU(cpuPct)
-		a.metricsButton(c, cn, m, "mcpu", cpu, cpu, meterColor(tok, rd.CPU, rd.CPUOK), fam, &cn.metCPU, cpu, func() {
-			a.cpuPop(c, m, tok, fam, rd)
-		})
-		hot, hotOK := memoryHot(rd)
+		a.metricItem(c, cn, m, tok, fam, metric{key: "mcpu", label: cpu, tip: cpu, open: &cn.metCPU,
+			parts: []metricPart{{icons.CPU, m.BarCPU(), cpuPct, meterColor(tok, rd.CPU, rd.CPUOK)}},
+			pop:   func() { a.cpuPop(c, m, tok, fam, rd) }})
+
 		mem := memoryText(m, rd)
-		a.metricsText(c, cn, m, mem, mem, meterColor(tok, hot, hotOK), fam)
-		diskPct := m.MetricsDash()
+		used, swap := dash, ""
+		if rd.MemOK {
+			used = fmtKB(rd.MemUsedKB) + "/" + fmtKB(rd.MemTotalKB)
+			if rd.SwapTotalKB > 0 {
+				swap = fmtKB(rd.SwapUsedKB) + "/" + fmtKB(rd.SwapTotalKB)
+			}
+		}
+		parts := []metricPart{{icons.Memory, m.BarMemory(), used, meterColor(tok, rd.MemPct, rd.MemOK)}}
+		if swap != "" {
+			parts = append(parts, metricPart{nil, m.BarSwap(), swap, meterColor(tok, rd.SwapPct, true)})
+		}
+		a.metricItem(c, cn, m, tok, fam, metric{key: "mmem", label: mem, tip: mem, parts: parts})
+
+		diskPct := dash
 		diskOK := false
 		var diskHot float64
 		if v, ok := rootVol(rd.Vols); ok {
@@ -474,22 +546,38 @@ func (a *App) metricsBar(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 			diskHot, diskOK = v.Pct, true
 		}
 		disk := m.MetricsDisk(diskPct)
-		a.metricsButton(c, cn, m, "mdisk", disk, disk, meterColor(tok, diskHot, diskOK), fam, &cn.metDisk, disk, func() {
-			a.diskPop(c, m, fam, rd)
-		})
-		up, down := m.MetricsDash(), m.MetricsDash()
+		a.metricItem(c, cn, m, tok, fam, metric{key: "mdisk", label: disk, tip: disk, open: &cn.metDisk,
+			parts: []metricPart{{icons.Disk, m.BarDisk(), diskPct, meterColor(tok, diskHot, diskOK)}},
+			pop:   func() { a.diskPop(c, m, fam, rd) }})
+
+		up, down := dash, dash
+		netCol := tok.TextMuted
 		if rd.NetOK {
-			up, down = fmtRate(rd.NetUp), fmtRate(rd.NetDown)
+			up, down, netCol = fmtRate(rd.NetUp), fmtRate(rd.NetDown), tok.Accent
 		}
-		net := m.MetricsNet(up, down)
 		netLabel := m.MetricsNetLabel(up, down)
-		a.metricsButton(c, cn, m, "mnet", net, netLabel, tok.Text, fam, &cn.metNet, a.netTip(m, rd, netLabel), func() {
-			a.netPop(c, m, fam, rd)
-		})
+		a.metricItem(c, cn, m, tok, fam, metric{key: "mnet", label: netLabel, tip: a.netTip(m, rd, netLabel), open: &cn.metNet,
+			parts: []metricPart{{icons.Sent, "", up, netCol}, {icons.Received, "", down, netCol}},
+			pop:   func() { a.netPop(c, m, fam, rd) }})
+
 		load := loadText(m, rd)
-		a.metricsText(c, cn, m, load, load, tok.Text, fam)
+		loads := dash
+		switch {
+		case rd.LoadOK && cn.metCompact:
+			loads = fmtLoad(rd.Load1) // the others in its tip
+		case rd.LoadOK:
+			loads = fmtLoad(rd.Load1) + " " + fmtLoad(rd.Load5) + " " + fmtLoad(rd.Load15)
+		}
+		lp, lok := loadPct(rd)
+		loadCol := meterColor(tok, lp, lok)
+		if rd.LoadOK && !lok {
+			loadCol = tok.Text
+		}
+		a.metricItem(c, cn, m, tok, fam, metric{key: "mload", label: load, tip: load,
+			parts: []metricPart{{icons.Load, m.BarLoad(), loads, loadCol}}})
+
 		if len(rd.GPUs) > 0 {
-			gp := m.MetricsDash()
+			gp := dash
 			gok := false
 			var gpct float64
 			if p, ok := maxGPU(rd.GPUs); ok {
@@ -497,9 +585,9 @@ func (a *App) metricsBar(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 				gpct, gok = p, true
 			}
 			gpu := m.MetricsGPU(gp)
-			a.metricsButton(c, cn, m, "mgpu", gpu, gpu, meterColor(tok, gpct, gok), fam, &cn.metGPU, gpu, func() {
-				a.gpuPop(c, m, fam, rd)
-			})
+			a.metricItem(c, cn, m, tok, fam, metric{key: "mgpu", label: gpu, tip: gpu, open: &cn.metGPU,
+				parts: []metricPart{{icons.GPU, m.BarGPU(), gp, meterColor(tok, gpct, gok)}},
+				pop:   func() { a.gpuPop(c, m, fam, rd) }})
 		}
 		ui.Spacer(c)
 		a.latencyItem(c, cn, tok, m, fam)
@@ -509,7 +597,8 @@ func (a *App) metricsBar(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 func (a *App) latencyItem(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages, fam string) {
 	d, ok := cn.s.Latency()
 	text := latencyText(m, d, ok)
-	a.metricsText(c, cn, m, text, text, latencyColor(tok, d, ok), fam)
+	a.metricItem(c, cn, m, tok, fam, metric{key: "mlat", label: text, tip: text,
+		parts: []metricPart{{icons.Monitor, "", latencyValue(m, d, ok), latencyColor(tok, d, ok)}}})
 }
 
 func (a *App) cpuPop(c *ui.Context, m locales.Messages, tok theme.Tokens, fam string, rd session.Reading) {

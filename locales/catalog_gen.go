@@ -1512,16 +1512,6 @@ func (msgs Messages) RemoveFavorite() string {
 	return Catalog.Format(msgs.locale, "removeFavorite", nil)
 }
 
-// HostActions says "Host actions"
-// in the language the app shows.
-func HostActions() string { return In(i18n.Locale()).HostActions() }
-
-// HostActions says "Host actions"
-// in the language of msgs.
-func (msgs Messages) HostActions() string {
-	return Catalog.Format(msgs.locale, "hostActions", nil)
-}
-
 // PaneActions says "Pane actions"
 // in the language the app shows.
 func PaneActions() string { return In(i18n.Locale()).PaneActions() }
@@ -5710,14 +5700,14 @@ func (msgs Messages) AiRequestFailed(detail string) string {
 	return Catalog.Format(msgs.locale, "aiRequestFailed", map[string]any{"detail": detail})
 }
 
-// BackToSessions says "Back to Sessions"
+// CloseSettings says "Close Settings"
 // in the language the app shows.
-func BackToSessions() string { return In(i18n.Locale()).BackToSessions() }
+func CloseSettings() string { return In(i18n.Locale()).CloseSettings() }
 
-// BackToSessions says "Back to Sessions"
+// CloseSettings says "Close Settings"
 // in the language of msgs.
-func (msgs Messages) BackToSessions() string {
-	return Catalog.Format(msgs.locale, "backToSessions", nil)
+func (msgs Messages) CloseSettings() string {
+	return Catalog.Format(msgs.locale, "closeSettings", nil)
 }
 
 // SettingsGroupPreferences says "Preferences"
@@ -5780,11 +5770,11 @@ func (msgs Messages) AboutSection() string {
 	return Catalog.Format(msgs.locale, "aboutSection", nil)
 }
 
-// AppearanceDesc says "How SSHYard looks: theme, language and the interface font."
+// AppearanceDesc says "How SSHYard looks: theme, language, translucency and the interface font."
 // in the language the app shows.
 func AppearanceDesc() string { return In(i18n.Locale()).AppearanceDesc() }
 
-// AppearanceDesc says "How SSHYard looks: theme, language and the interface font."
+// AppearanceDesc says "How SSHYard looks: theme, language, translucency and the interface font."
 // in the language of msgs.
 func (msgs Messages) AppearanceDesc() string {
 	return Catalog.Format(msgs.locale, "appearanceDesc", nil)
@@ -7008,4 +6998,556 @@ func MoreActions() string { return In(i18n.Locale()).MoreActions() }
 // in the language of msgs.
 func (msgs Messages) MoreActions() string {
 	return Catalog.Format(msgs.locale, "moreActions", nil)
+}
+
+// MoreTabs says "{count, plural, one {# more tab} other {# more tabs}}"
+// in the language the app shows.
+func MoreTabs(count int) string { return In(i18n.Locale()).MoreTabs(count) }
+
+// MoreTabs says "{count, plural, one {# more tab} other {# more tabs}}"
+// in the language of msgs.
+func (msgs Messages) MoreTabs(count int) string {
+	return Catalog.Format(msgs.locale, "moreTabs", map[string]any{"count": count})
+}
+
+// CloseOtherTabs says "Close Other Tabs"
+// in the language the app shows.
+func CloseOtherTabs() string { return In(i18n.Locale()).CloseOtherTabs() }
+
+// CloseOtherTabs says "Close Other Tabs"
+// in the language of msgs.
+func (msgs Messages) CloseOtherTabs() string {
+	return Catalog.Format(msgs.locale, "closeOtherTabs", nil)
+}
+
+// CloseTabsLeft says "Close Tabs to the Left"
+// in the language the app shows.
+func CloseTabsLeft() string { return In(i18n.Locale()).CloseTabsLeft() }
+
+// CloseTabsLeft says "Close Tabs to the Left"
+// in the language of msgs.
+func (msgs Messages) CloseTabsLeft() string {
+	return Catalog.Format(msgs.locale, "closeTabsLeft", nil)
+}
+
+// CloseTabsRight says "Close Tabs to the Right"
+// in the language the app shows.
+func CloseTabsRight() string { return In(i18n.Locale()).CloseTabsRight() }
+
+// CloseTabsRight says "Close Tabs to the Right"
+// in the language of msgs.
+func (msgs Messages) CloseTabsRight() string {
+	return Catalog.Format(msgs.locale, "closeTabsRight", nil)
+}
+
+// CloseHostTabs says "Close All Tabs of This Host"
+// in the language the app shows.
+func CloseHostTabs() string { return In(i18n.Locale()).CloseHostTabs() }
+
+// CloseHostTabs says "Close All Tabs of This Host"
+// in the language of msgs.
+func (msgs Messages) CloseHostTabs() string {
+	return Catalog.Format(msgs.locale, "closeHostTabs", nil)
+}
+
+// CloseOtherHostTabs says "Close Tabs of Other Hosts"
+// in the language the app shows.
+func CloseOtherHostTabs() string { return In(i18n.Locale()).CloseOtherHostTabs() }
+
+// CloseOtherHostTabs says "Close Tabs of Other Hosts"
+// in the language of msgs.
+func (msgs Messages) CloseOtherHostTabs() string {
+	return Catalog.Format(msgs.locale, "closeOtherHostTabs", nil)
+}
+
+// CloseAllTabs says "Close All Tabs"
+// in the language the app shows.
+func CloseAllTabs() string { return In(i18n.Locale()).CloseAllTabs() }
+
+// CloseAllTabs says "Close All Tabs"
+// in the language of msgs.
+func (msgs Messages) CloseAllTabs() string {
+	return Catalog.Format(msgs.locale, "closeAllTabs", nil)
+}
+
+// ProcessUsage says "Process Usage"
+// in the language the app shows.
+func ProcessUsage() string { return In(i18n.Locale()).ProcessUsage() }
+
+// ProcessUsage says "Process Usage"
+// in the language of msgs.
+func (msgs Messages) ProcessUsage() string {
+	return Catalog.Format(msgs.locale, "processUsage", nil)
+}
+
+// ColProcess says "Process"
+// in the language the app shows.
+func ColProcess() string { return In(i18n.Locale()).ColProcess() }
+
+// ColProcess says "Process"
+// in the language of msgs.
+func (msgs Messages) ColProcess() string {
+	return Catalog.Format(msgs.locale, "colProcess", nil)
+}
+
+// ColMemory says "Memory"
+// in the language the app shows.
+func ColMemory() string { return In(i18n.Locale()).ColMemory() }
+
+// ColMemory says "Memory"
+// in the language of msgs.
+func (msgs Messages) ColMemory() string {
+	return Catalog.Format(msgs.locale, "colMemory", nil)
+}
+
+// ColDisk says "Disk"
+// in the language the app shows.
+func ColDisk() string { return In(i18n.Locale()).ColDisk() }
+
+// ColDisk says "Disk"
+// in the language of msgs.
+func (msgs Messages) ColDisk() string {
+	return Catalog.Format(msgs.locale, "colDisk", nil)
+}
+
+// UsageLinuxOnly says "Process usage is read from /proc, which only Linux servers have."
+// in the language the app shows.
+func UsageLinuxOnly() string { return In(i18n.Locale()).UsageLinuxOnly() }
+
+// UsageLinuxOnly says "Process usage is read from /proc, which only Linux servers have."
+// in the language of msgs.
+func (msgs Messages) UsageLinuxOnly() string {
+	return Catalog.Format(msgs.locale, "usageLinuxOnly", nil)
+}
+
+// UsageFailed says "Could not read the processes: {detail}"
+// in the language the app shows.
+func UsageFailed(detail string) string { return In(i18n.Locale()).UsageFailed(detail) }
+
+// UsageFailed says "Could not read the processes: {detail}"
+// in the language of msgs.
+func (msgs Messages) UsageFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "usageFailed", map[string]any{"detail": detail})
+}
+
+// FilterProcesses says "Filter by name, user or PID"
+// in the language the app shows.
+func FilterProcesses() string { return In(i18n.Locale()).FilterProcesses() }
+
+// FilterProcesses says "Filter by name, user or PID"
+// in the language of msgs.
+func (msgs Messages) FilterProcesses() string {
+	return Catalog.Format(msgs.locale, "filterProcesses", nil)
+}
+
+// ProcessCount says "{count, plural, one {# process} other {# processes}}"
+// in the language the app shows.
+func ProcessCount(count int) string { return In(i18n.Locale()).ProcessCount(count) }
+
+// ProcessCount says "{count, plural, one {# process} other {# processes}}"
+// in the language of msgs.
+func (msgs Messages) ProcessCount(count int) string {
+	return Catalog.Format(msgs.locale, "processCount", map[string]any{"count": count})
+}
+
+// DockerManager says "Docker"
+// in the language the app shows.
+func DockerManager() string { return In(i18n.Locale()).DockerManager() }
+
+// DockerManager says "Docker"
+// in the language of msgs.
+func (msgs Messages) DockerManager() string {
+	return Catalog.Format(msgs.locale, "dockerManager", nil)
+}
+
+// DockerContainers says "Containers ({count})"
+// in the language the app shows.
+func DockerContainers(count string) string { return In(i18n.Locale()).DockerContainers(count) }
+
+// DockerContainers says "Containers ({count})"
+// in the language of msgs.
+func (msgs Messages) DockerContainers(count string) string {
+	return Catalog.Format(msgs.locale, "dockerContainers", map[string]any{"count": count})
+}
+
+// DockerImages says "Images ({count})"
+// in the language the app shows.
+func DockerImages(count string) string { return In(i18n.Locale()).DockerImages(count) }
+
+// DockerImages says "Images ({count})"
+// in the language of msgs.
+func (msgs Messages) DockerImages(count string) string {
+	return Catalog.Format(msgs.locale, "dockerImages", map[string]any{"count": count})
+}
+
+// DockerMissing says "Docker is not installed on this server."
+// in the language the app shows.
+func DockerMissing() string { return In(i18n.Locale()).DockerMissing() }
+
+// DockerMissing says "Docker is not installed on this server."
+// in the language of msgs.
+func (msgs Messages) DockerMissing() string {
+	return Catalog.Format(msgs.locale, "dockerMissing", nil)
+}
+
+// DockerDenied says "This user may not use Docker. Add it to the docker group, or allow sudo without a password."
+// in the language the app shows.
+func DockerDenied() string { return In(i18n.Locale()).DockerDenied() }
+
+// DockerDenied says "This user may not use Docker. Add it to the docker group, or allow sudo without a password."
+// in the language of msgs.
+func (msgs Messages) DockerDenied() string {
+	return Catalog.Format(msgs.locale, "dockerDenied", nil)
+}
+
+// DockerFailed says "Docker failed: {detail}"
+// in the language the app shows.
+func DockerFailed(detail string) string { return In(i18n.Locale()).DockerFailed(detail) }
+
+// DockerFailed says "Docker failed: {detail}"
+// in the language of msgs.
+func (msgs Messages) DockerFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "dockerFailed", map[string]any{"detail": detail})
+}
+
+// DockerNoContainers says "No containers on this server."
+// in the language the app shows.
+func DockerNoContainers() string { return In(i18n.Locale()).DockerNoContainers() }
+
+// DockerNoContainers says "No containers on this server."
+// in the language of msgs.
+func (msgs Messages) DockerNoContainers() string {
+	return Catalog.Format(msgs.locale, "dockerNoContainers", nil)
+}
+
+// DockerNoImages says "No images on this server."
+// in the language the app shows.
+func DockerNoImages() string { return In(i18n.Locale()).DockerNoImages() }
+
+// DockerNoImages says "No images on this server."
+// in the language of msgs.
+func (msgs Messages) DockerNoImages() string {
+	return Catalog.Format(msgs.locale, "dockerNoImages", nil)
+}
+
+// DockerPickContainer says "Select a container to manage it."
+// in the language the app shows.
+func DockerPickContainer() string { return In(i18n.Locale()).DockerPickContainer() }
+
+// DockerPickContainer says "Select a container to manage it."
+// in the language of msgs.
+func (msgs Messages) DockerPickContainer() string {
+	return Catalog.Format(msgs.locale, "dockerPickContainer", nil)
+}
+
+// DockerColImage says "Image"
+// in the language the app shows.
+func DockerColImage() string { return In(i18n.Locale()).DockerColImage() }
+
+// DockerColImage says "Image"
+// in the language of msgs.
+func (msgs Messages) DockerColImage() string {
+	return Catalog.Format(msgs.locale, "dockerColImage", nil)
+}
+
+// DockerColStatus says "Status"
+// in the language the app shows.
+func DockerColStatus() string { return In(i18n.Locale()).DockerColStatus() }
+
+// DockerColStatus says "Status"
+// in the language of msgs.
+func (msgs Messages) DockerColStatus() string {
+	return Catalog.Format(msgs.locale, "dockerColStatus", nil)
+}
+
+// DockerColCreated says "Created"
+// in the language the app shows.
+func DockerColCreated() string { return In(i18n.Locale()).DockerColCreated() }
+
+// DockerColCreated says "Created"
+// in the language of msgs.
+func (msgs Messages) DockerColCreated() string {
+	return Catalog.Format(msgs.locale, "dockerColCreated", nil)
+}
+
+// DockerPorts says "Ports"
+// in the language the app shows.
+func DockerPorts() string { return In(i18n.Locale()).DockerPorts() }
+
+// DockerPorts says "Ports"
+// in the language of msgs.
+func (msgs Messages) DockerPorts() string {
+	return Catalog.Format(msgs.locale, "dockerPorts", nil)
+}
+
+// DockerStart says "Start"
+// in the language the app shows.
+func DockerStart() string { return In(i18n.Locale()).DockerStart() }
+
+// DockerStart says "Start"
+// in the language of msgs.
+func (msgs Messages) DockerStart() string {
+	return Catalog.Format(msgs.locale, "dockerStart", nil)
+}
+
+// DockerStop says "Stop"
+// in the language the app shows.
+func DockerStop() string { return In(i18n.Locale()).DockerStop() }
+
+// DockerStop says "Stop"
+// in the language of msgs.
+func (msgs Messages) DockerStop() string {
+	return Catalog.Format(msgs.locale, "dockerStop", nil)
+}
+
+// DockerRestart says "Restart"
+// in the language the app shows.
+func DockerRestart() string { return In(i18n.Locale()).DockerRestart() }
+
+// DockerRestart says "Restart"
+// in the language of msgs.
+func (msgs Messages) DockerRestart() string {
+	return Catalog.Format(msgs.locale, "dockerRestart", nil)
+}
+
+// DockerPause says "Pause"
+// in the language the app shows.
+func DockerPause() string { return In(i18n.Locale()).DockerPause() }
+
+// DockerPause says "Pause"
+// in the language of msgs.
+func (msgs Messages) DockerPause() string {
+	return Catalog.Format(msgs.locale, "dockerPause", nil)
+}
+
+// DockerUnpause says "Resume"
+// in the language the app shows.
+func DockerUnpause() string { return In(i18n.Locale()).DockerUnpause() }
+
+// DockerUnpause says "Resume"
+// in the language of msgs.
+func (msgs Messages) DockerUnpause() string {
+	return Catalog.Format(msgs.locale, "dockerUnpause", nil)
+}
+
+// DockerLogs says "Logs"
+// in the language the app shows.
+func DockerLogs() string { return In(i18n.Locale()).DockerLogs() }
+
+// DockerLogs says "Logs"
+// in the language of msgs.
+func (msgs Messages) DockerLogs() string {
+	return Catalog.Format(msgs.locale, "dockerLogs", nil)
+}
+
+// DockerShell says "Open Shell in Container"
+// in the language the app shows.
+func DockerShell() string { return In(i18n.Locale()).DockerShell() }
+
+// DockerShell says "Open Shell in Container"
+// in the language of msgs.
+func (msgs Messages) DockerShell() string {
+	return Catalog.Format(msgs.locale, "dockerShell", nil)
+}
+
+// DockerRemove says "Remove Container"
+// in the language the app shows.
+func DockerRemove() string { return In(i18n.Locale()).DockerRemove() }
+
+// DockerRemove says "Remove Container"
+// in the language of msgs.
+func (msgs Messages) DockerRemove() string {
+	return Catalog.Format(msgs.locale, "dockerRemove", nil)
+}
+
+// DockerRemoveImage says "Remove Image"
+// in the language the app shows.
+func DockerRemoveImage() string { return In(i18n.Locale()).DockerRemoveImage() }
+
+// DockerRemoveImage says "Remove Image"
+// in the language of msgs.
+func (msgs Messages) DockerRemoveImage() string {
+	return Catalog.Format(msgs.locale, "dockerRemoveImage", nil)
+}
+
+// DockerRemoveConfirm says "Remove the container “{name}”? It is stopped first, and its data that is not in a volume is lost."
+// in the language the app shows.
+func DockerRemoveConfirm(name string) string { return In(i18n.Locale()).DockerRemoveConfirm(name) }
+
+// DockerRemoveConfirm says "Remove the container “{name}”? It is stopped first, and its data that is not in a volume is lost."
+// in the language of msgs.
+func (msgs Messages) DockerRemoveConfirm(name string) string {
+	return Catalog.Format(msgs.locale, "dockerRemoveConfirm", map[string]any{"name": name})
+}
+
+// DockerRemoveImageConfirm says "Remove the image “{name}”?"
+// in the language the app shows.
+func DockerRemoveImageConfirm(name string) string {
+	return In(i18n.Locale()).DockerRemoveImageConfirm(name)
+}
+
+// DockerRemoveImageConfirm says "Remove the image “{name}”?"
+// in the language of msgs.
+func (msgs Messages) DockerRemoveImageConfirm(name string) string {
+	return Catalog.Format(msgs.locale, "dockerRemoveImageConfirm", map[string]any{"name": name})
+}
+
+// DockerLogsOf says "Logs of {name}"
+// in the language the app shows.
+func DockerLogsOf(name string) string { return In(i18n.Locale()).DockerLogsOf(name) }
+
+// DockerLogsOf says "Logs of {name}"
+// in the language of msgs.
+func (msgs Messages) DockerLogsOf(name string) string {
+	return Catalog.Format(msgs.locale, "dockerLogsOf", map[string]any{"name": name})
+}
+
+// DockerLogsNote says "The last {count} lines"
+// in the language the app shows.
+func DockerLogsNote(count string) string { return In(i18n.Locale()).DockerLogsNote(count) }
+
+// DockerLogsNote says "The last {count} lines"
+// in the language of msgs.
+func (msgs Messages) DockerLogsNote(count string) string {
+	return Catalog.Format(msgs.locale, "dockerLogsNote", map[string]any{"count": count})
+}
+
+// DockerNoLogs says "The container has written nothing."
+// in the language the app shows.
+func DockerNoLogs() string { return In(i18n.Locale()).DockerNoLogs() }
+
+// DockerNoLogs says "The container has written nothing."
+// in the language of msgs.
+func (msgs Messages) DockerNoLogs() string {
+	return Catalog.Format(msgs.locale, "dockerNoLogs", nil)
+}
+
+// BarCPU says "CPU"
+// in the language the app shows.
+func BarCPU() string { return In(i18n.Locale()).BarCPU() }
+
+// BarCPU says "CPU"
+// in the language of msgs.
+func (msgs Messages) BarCPU() string {
+	return Catalog.Format(msgs.locale, "barCPU", nil)
+}
+
+// BarMemory says "Memory"
+// in the language the app shows.
+func BarMemory() string { return In(i18n.Locale()).BarMemory() }
+
+// BarMemory says "Memory"
+// in the language of msgs.
+func (msgs Messages) BarMemory() string {
+	return Catalog.Format(msgs.locale, "barMemory", nil)
+}
+
+// BarSwap says "Swap"
+// in the language the app shows.
+func BarSwap() string { return In(i18n.Locale()).BarSwap() }
+
+// BarSwap says "Swap"
+// in the language of msgs.
+func (msgs Messages) BarSwap() string {
+	return Catalog.Format(msgs.locale, "barSwap", nil)
+}
+
+// BarDisk says "Disk"
+// in the language the app shows.
+func BarDisk() string { return In(i18n.Locale()).BarDisk() }
+
+// BarDisk says "Disk"
+// in the language of msgs.
+func (msgs Messages) BarDisk() string {
+	return Catalog.Format(msgs.locale, "barDisk", nil)
+}
+
+// BarLoad says "Load"
+// in the language the app shows.
+func BarLoad() string { return In(i18n.Locale()).BarLoad() }
+
+// BarLoad says "Load"
+// in the language of msgs.
+func (msgs Messages) BarLoad() string {
+	return Catalog.Format(msgs.locale, "barLoad", nil)
+}
+
+// BarGPU says "GPU"
+// in the language the app shows.
+func BarGPU() string { return In(i18n.Locale()).BarGPU() }
+
+// BarGPU says "GPU"
+// in the language of msgs.
+func (msgs Messages) BarGPU() string {
+	return Catalog.Format(msgs.locale, "barGPU", nil)
+}
+
+// MaterialSection says "Translucency"
+// in the language the app shows.
+func MaterialSection() string { return In(i18n.Locale()).MaterialSection() }
+
+// MaterialSection says "Translucency"
+// in the language of msgs.
+func (msgs Messages) MaterialSection() string {
+	return Catalog.Format(msgs.locale, "materialSection", nil)
+}
+
+// MaterialChrome says "Sidebar & Title Bar"
+// in the language the app shows.
+func MaterialChrome() string { return In(i18n.Locale()).MaterialChrome() }
+
+// MaterialChrome says "Sidebar & Title Bar"
+// in the language of msgs.
+func (msgs Messages) MaterialChrome() string {
+	return Catalog.Format(msgs.locale, "materialChrome", nil)
+}
+
+// MaterialContent says "Content Area"
+// in the language the app shows.
+func MaterialContent() string { return In(i18n.Locale()).MaterialContent() }
+
+// MaterialContent says "Content Area"
+// in the language of msgs.
+func (msgs Messages) MaterialContent() string {
+	return Catalog.Format(msgs.locale, "materialContent", nil)
+}
+
+// MaterialContentNote says "Panes and panels show the desktop behind the window, blurred."
+// in the language the app shows.
+func MaterialContentNote() string { return In(i18n.Locale()).MaterialContentNote() }
+
+// MaterialContentNote says "Panes and panels show the desktop behind the window, blurred."
+// in the language of msgs.
+func (msgs Messages) MaterialContentNote() string {
+	return Catalog.Format(msgs.locale, "materialContentNote", nil)
+}
+
+// MaterialTranslucent says "Translucent"
+// in the language the app shows.
+func MaterialTranslucent() string { return In(i18n.Locale()).MaterialTranslucent() }
+
+// MaterialTranslucent says "Translucent"
+// in the language of msgs.
+func (msgs Messages) MaterialTranslucent() string {
+	return Catalog.Format(msgs.locale, "materialTranslucent", nil)
+}
+
+// MaterialOpaque says "Opaque"
+// in the language the app shows.
+func MaterialOpaque() string { return In(i18n.Locale()).MaterialOpaque() }
+
+// MaterialOpaque says "Opaque"
+// in the language of msgs.
+func (msgs Messages) MaterialOpaque() string {
+	return Catalog.Format(msgs.locale, "materialOpaque", nil)
+}
+
+// MaterialUnsupported says "Translucency is available on macOS only."
+// in the language the app shows.
+func MaterialUnsupported() string { return In(i18n.Locale()).MaterialUnsupported() }
+
+// MaterialUnsupported says "Translucency is available on macOS only."
+// in the language of msgs.
+func (msgs Messages) MaterialUnsupported() string {
+	return Catalog.Format(msgs.locale, "materialUnsupported", nil)
 }

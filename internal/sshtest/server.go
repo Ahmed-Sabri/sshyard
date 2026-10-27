@@ -53,6 +53,9 @@ type Server struct {
 	DirectTCPIP, TCPIPForward bool
 	// Exec runs "exec" requests; nil refuses them.
 	Exec func(ch ssh.Channel, cmd string) int
+	// RefuseEnv refuses "env" requests, as a server whose AcceptEnv does
+	// not name the variable.
+	RefuseEnv bool
 	// ExecPTY runs "exec" requests on a channel that asked for a PTY
 	// first (ssh -t host cmd); nil leaves them to Exec.
 	ExecPTY func(ch ssh.Channel, cmd string, pty PTY, resize <-chan PTY) int
@@ -294,7 +297,7 @@ func (s *Server) serveSession(ch ssh.Channel, reqs <-chan *ssh.Request) {
 				}
 			}
 		case "env":
-			r.Reply(true, nil)
+			r.Reply(!s.RefuseEnv, nil)
 		case "shell":
 			if started {
 				r.Reply(false, nil)
