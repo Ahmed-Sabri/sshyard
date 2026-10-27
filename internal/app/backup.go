@@ -22,7 +22,7 @@ import (
 
 // A backup is everything SSHYard keeps (the hosts and what they use, the
 // preferences, the trusted host keys and, unless left out, their secrets
-// from the keychain) in one file sealed with a password (package vault),
+// from the encrypted local store) in one file sealed with a password (package vault),
 // to keep or to move to another device. Restoring merges it in.
 
 // backupPayload is what a backup file holds once opened.
@@ -30,7 +30,7 @@ type backupPayload struct {
 	Assets     assets.Snapshot   `json:"assets"`
 	Settings   settings.Settings `json:"settings"`
 	KnownHosts string            `json:"knownHosts,omitempty"`
-	// Secrets are the keychain entries of the entries above, by key.
+	// Secrets are the entries above, by key; never the master key or MCP token.
 	Secrets map[string][]byte `json:"secrets,omitempty"`
 }
 
@@ -49,7 +49,7 @@ const maxBackupFile = 64 << 20
 type backupForm struct {
 	restore           bool
 	password, confirm string
-	// secrets puts the keychain's secrets in an export; on by default
+	// secrets puts the local store's secrets in an export; on by default
 	secrets bool
 	// name, data and created are the backup file being restored
 	name    string
@@ -61,7 +61,7 @@ type backupForm struct {
 	err  string
 }
 
-// backupSecretKeys are the keychain keys of the entries of snap and of
+// backupSecretKeys are the allowed secret keys of the entries of snap and of
 // the AI providers.
 func backupSecretKeys(snap assets.Snapshot, provs []settings.AIProvider) []string {
 	var out []string
@@ -83,7 +83,7 @@ func backupSecretKeys(snap assets.Snapshot, provs []settings.AIProvider) []strin
 }
 
 // collectBackup gathers what a backup holds. With secrets it reads them
-// from the keychain, and fails when the keychain can not be read: a
+// from the encrypted local store, and fails when it cannot be read: a
 // backup missing secrets it seems to have is worse than none.
 func (a *App) collectBackup(secrets bool) (backupPayload, error) {
 	p := backupPayload{Assets: a.store.Snapshot(), Settings: a.settings}
@@ -110,9 +110,10 @@ func (a *App) collectBackup(secrets bool) (backupPayload, error) {
 // errBadBackup reports a backup whose entries can not be taken.
 var errBadBackup = errors.New("app: invalid backup entries")
 
-// restoreBackup merges p into this device: its secrets into the keychain
-// first, then the entries, so the two never disagree (a failure puts the
-// secrets back); then the trusted host keys and the preferences, whose
+// restoreBackup merges p into this device: one batch of secrets is encrypted
+// under this device's master key, then entries are saved, with compensating
+// rollback on failure (not crash atomicity across files); host keys and preferences
+// follow, whose
 // failures are told but undo nothing. Only the secrets of the backup's
 // own entries are taken.
 func (a *App) restoreBackup(m locales.Messages, p backupPayload) error {
@@ -123,16 +124,18 @@ func (a *App) restoreBackup(m locales.Messages, p backupPayload) error {
 		}
 	}
 	tx := &secretTx{kc: a.kc}
+	var changes []keychain.Change
 	for _, key := range backupSecretKeys(snap, p.Settings.AIProviders) {
 		if v := p.Secrets[key]; len(v) > 0 {
-			if err := tx.set(key, v); err != nil {
-				msg := m.ErrKeychainSave(err.Error())
-				if rerr := tx.rollback(); rerr != nil {
-					msg = m.ErrKeychainRestore(msg, rerr.Error())
-				}
-				return errors.New(msg)
-			}
+			changes = append(changes, keychain.Change{Key: key, Value: v})
 		}
+	}
+	if err := tx.setBatch(changes); err != nil {
+		msg := m.ErrKeychainSave(secretStoreErrorText(m, err))
+		if rerr := tx.rollback(); rerr != nil {
+			msg = m.ErrKeychainRestore(msg, secretStoreErrorText(m, rerr))
+		}
+		return errors.New(msg)
 	}
 	if err := a.store.Restore(snap); err != nil {
 		var fe *assets.FieldError
@@ -140,7 +143,7 @@ func (a *App) restoreBackup(m locales.Messages, p backupPayload) error {
 			err = errBadBackup
 		}
 		if rerr := tx.rollback(); rerr != nil {
-			return errors.New(m.ErrKeychainRestore(backupErrText(m, err), rerr.Error()))
+			return errors.New(m.ErrKeychainRestore(backupErrText(m, err), secretStoreErrorText(m, rerr)))
 		}
 		return err
 	}
@@ -212,7 +215,7 @@ func backupErrText(m locales.Messages, err error) string {
 	case errors.Is(err, vault.ErrCorrupt), errors.Is(err, errBadBackup):
 		return m.BackupDamaged()
 	}
-	return m.ErrGeneric(err.Error())
+	return m.ErrGeneric(secretStoreErrorText(m, err))
 }
 
 // toastError shows msg as an error toast at the next frame.
@@ -250,7 +253,7 @@ func (a *App) ExportBackup(m locales.Messages) bool {
 		data, err = json.Marshal(p)
 	}
 	if err != nil {
-		f.err = m.BackupExportFailed(err.Error())
+		f.err = m.BackupExportFailed(secretStoreErrorText(m, err))
 		return false
 	}
 	pw, cost, title := []byte(f.password), a.kdf, m.ExportBackup()
@@ -389,11 +392,7 @@ func (a *App) backupSection(c *ui.Context, m locales.Messages, tok theme.Tokens)
 				a.openExport()
 			}
 		})
-		note := m.RestoreBackupNote()
-		if !a.keychainOK {
-			note = m.RestoreBackupMemory()
-		}
-		g.row(m.RestoreBackup(), note, func() {
+		g.row(m.RestoreBackup(), m.RestoreBackupNote(), func() {
 			if pill(c, m.KeyChooseFile(), false, false, a.p.PickFile == nil) {
 				a.pickBackup(m)
 			}

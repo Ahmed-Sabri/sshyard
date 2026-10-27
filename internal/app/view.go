@@ -17,6 +17,10 @@ func (a *App) View(c *ui.Context) {
 	// The same clock as the toasts, so a snapshot and its Undo end together.
 	a.clip.now = func() time.Time { return c.Now() }
 	a.drain()
+	if !a.unlocked() {
+		a.unlockView(c)
+		return
+	}
 	a.commitMetricsMount()
 	a.syncMetrics()
 	for _, t := range a.toasts {

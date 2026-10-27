@@ -35,23 +35,25 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
-// Platform is what the app needs from the system. Zero fields fall back
-// to what works anywhere: in-memory data, an in-memory keychain, updates
-// off.
+// Platform is what the app needs from the system, including an explicit
+// system keychain and a persistent data directory for encrypted secrets.
 type Platform struct {
 	// OpenPath opens a file in its default app; nil can't.
 	OpenPath func(path string) error
 	// CacheDir is where files opened in another app are copied, the
 	// user's cache folder when "".
 	CacheDir string
-	// DataDir holds hosts.json, settings.json and known_hosts; "" keeps
-	// everything in memory.
+	// DataDir holds application metadata and encrypted credentials; it is required
+	// unless ResolveStorage supplies the persistent storage paths.
 	DataDir string
 	Version string
-	// Secrets is the system keychain; nil or unavailable falls back to
-	// memory, for this run only, and the sidebar says so.
-	Secrets keychain.Backend
-	Updates updater.Backend
+	// Secrets stores only the random master key; failures keep the app locked.
+	Secrets        keychain.Backend
+	SecretLockPath string
+	SecretScope    string
+	StartupError   error
+	ResolveStorage func() (StoragePaths, error)
+	Updates        updater.Backend
 	// SetTheme and SetLocale apply the user's choice to the window.
 	SetTheme  func(theme.Mode)
 	SetLocale func(tag string)
@@ -169,6 +171,7 @@ type App struct {
 	store      *assets.Store
 	kc         *keychain.Keychain
 	keychainOK bool
+	unlock     unlockState
 	known      *session.KnownHosts
 	ws         *layout.Workspace
 	conns      map[int]*conn
@@ -368,6 +371,29 @@ func New(p Platform) (*App, error) {
 	a := &App{p: p, ws: layout.New(), conns: map[int]*conn{}, pool: session.NewPool(), typed: map[string]string{}, typedGen: map[string]int{}, sections: map[string]*bool{}, temps: map[string]assets.Host{}, pct: map[int]*float32{}, fwds: map[string]*fwdRun{}, fwdOpen: map[string]bool{}, paneBounds: map[int]ui.Rect{}, metrics: map[string]*session.Collector{}, aiRecent: map[string]int{}}
 	a.settings = settings.Default()
 	a.kdf = vault.DefaultParams
+	err := a.resolveStorage()
+	if err == nil {
+		var loadErr error
+		a.settings, loadErr = settings.Load(filepath.Join(a.p.DataDir, "settings.json"))
+		if loadErr != nil {
+			err = loadErr
+			a.settings = settings.Default()
+		}
+	}
+	a.kc = keychain.New(lockedSecrets{})
+	backend := p.Updates
+	if backend == nil {
+		backend = disabledUpdates{}
+	}
+	a.upd = updater.New(backend, a.invalidate)
+	a.syncChoices()
+	a.resolveFonts(false, false)
+	a.updateCheck = a.settings.CheckUpdates
+	return a, err
+}
+
+func (a *App) loadData() error {
+	p := a.p
 	var errs []error
 	path := func(name string) string {
 		if p.DataDir == "" {
@@ -388,7 +414,7 @@ func New(p Platform) (*App, error) {
 	st, err := assets.Open(path("hosts.json"))
 	if err != nil {
 		errs = append(errs, err)
-		st, _ = assets.Open("")
+		return errors.Join(errs...)
 	}
 	a.store = st
 	if kh := path("known_hosts"); kh != "" {
@@ -397,37 +423,8 @@ func New(p Platform) (*App, error) {
 			errs = append(errs, err)
 		}
 	}
-	if a.known == nil {
-		f, _ := os.CreateTemp("", "sshyard-known_hosts-*")
-		f.Close()
-		a.known, _ = session.OpenKnownHosts(f.Name())
-	}
-	if p.Secrets != nil {
-		a.kc = keychain.New(p.Secrets)
-		a.keychainOK = a.kc.Available()
-	}
-	if !a.keychainOK {
-		a.kc = keychain.New(keychain.NewMemory())
-	}
-	// The hosts of an older data file are gone (no migration); so are
-	// the secrets the old version kept for them.
-	for _, id := range a.store.Discarded() {
-		for _, k := range keychain.Kinds {
-			a.kc.Delete("host/" + id + "/" + string(k))
-		}
-	}
-	backend := p.Updates
-	if backend == nil {
-		backend = disabledUpdates{}
-	}
-	a.upd = updater.New(backend, a.invalidate)
-	a.syncChoices()
-	a.resolveFonts(false, false)
-	a.updateCheck = a.settings.CheckUpdates
-	if a.settings.CheckUpdates && p.Updates != nil {
-		go a.upd.Check(context.Background())
-	}
-	return a, errors.Join(errs...)
+
+	return errors.Join(errs...)
 }
 
 type disabledUpdates struct{}
@@ -465,6 +462,9 @@ func (a *App) Keychain() (*keychain.Keychain, bool) { return a.kc, a.keychainOK 
 
 // ApplySettings applies and saves settings.
 func (a *App) ApplySettings(s settings.Settings) error {
+	if !a.unlocked() {
+		return keychain.ErrLocked
+	}
 	s.Normalize()
 	old := a.settings
 	a.settings = s
@@ -517,6 +517,14 @@ func (a *App) Start() {
 	if a.p.SetLocale != nil && a.settings.Language != "" {
 		a.p.SetLocale(a.settings.Language)
 	}
+	a.retryUnlock()
+}
+
+// startUnlocked starts background services only after the encrypted store opens.
+func (a *App) startUnlocked() {
+	if a.settings.CheckUpdates && a.p.Updates != nil {
+		go a.upd.Check(context.Background())
+	}
 	a.autoStartForwards()
 	a.syncMCP()
 	a.loadLayout()
@@ -554,6 +562,13 @@ func (a *App) drain() {
 
 // Close ends every session and port forward.
 func (a *App) Close() {
+	a.unlock.mu.Lock()
+	defer a.unlock.mu.Unlock()
+	a.unlock.closed = true
+	if a.unlock.pending != nil {
+		a.closeSecrets(a.unlock.pending)
+		a.unlock.pending = nil
+	}
 	a.stopCollectors()
 	a.stopMCP()
 	if !a.closing {
@@ -569,6 +584,10 @@ func (a *App) Close() {
 	}
 	a.clipAsk = nil
 	a.fwds = map[string]*fwdRun{}
+	if a.kc != nil {
+		a.closeSecrets(a.kc)
+	}
+	a.unlock.ready.Store(false)
 }
 
 // Open where a new session goes.
@@ -601,6 +620,9 @@ func (a *App) open(hostID string, kind layout.Kind, at openAt, from *conn) (int,
 // makeConn builds a pane and registers it. It does not place or start it.
 // An AI pane gets no SSH session.
 func (a *App) makeConn(hostID string, kind layout.Kind, link int) (*conn, error) {
+	if !a.unlocked() {
+		return nil, keychain.ErrLocked
+	}
 	h, ok := a.host(hostID)
 	if !ok {
 		return nil, assets.ErrNotFound

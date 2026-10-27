@@ -71,7 +71,7 @@ var errMCPNeedsInput = errors.New("this host needs a password or passphrase type
 // settings' port. Restarting drops every agent connection.
 func (a *App) syncMCP() {
 	a.stopMCP()
-	if !a.settings.MCPEnabled {
+	if !a.unlocked() || !a.settings.MCPEnabled {
 		return
 	}
 	tok, err := a.mcpToken()

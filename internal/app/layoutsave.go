@@ -44,7 +44,7 @@ func (a *App) layoutPath() string {
 
 func (a *App) saveLayout() {
 	file := a.layoutPath()
-	if file == "" || a.restoring {
+	if file == "" || a.restoring || !a.unlocked() {
 		return
 	}
 	snap := layoutSnap{}

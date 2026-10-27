@@ -5,6 +5,7 @@ package main
 import (
 	"log"
 	"os"
+	"path/filepath"
 	"runtime"
 
 	"github.com/Licoy/sshyard/internal/app"
@@ -29,21 +30,14 @@ func themeSource(m theme.Mode) mygo.ThemeSource {
 
 // platform is the app's hooks into MyGo.
 func platform() app.Platform {
-	dir := os.Getenv("SSHYARD_DATA_DIR")
-	if dir == "" {
-		var err error
-		if dir, err = mygo.App.Path(mygo.PathUserData); err != nil {
-			log.Printf("sshyard: no data directory, keeping data in memory: %v", err)
-		}
-	}
 	return app.Platform{
-		DataDir:   dir,
-		Version:   mygo.App.Version(),
-		Secrets:   keychain.System{},
-		Updates:   updater.MygoBackend{},
-		SetTheme:  func(m theme.Mode) { mygo.Theme.SetSource(themeSource(m)) },
-		SetLocale: mygo.App.SetLocale,
-		OpenPath:  mygo.Shell.OpenPath,
+		ResolveStorage: storagePaths,
+		Version:        mygo.App.Version(),
+		Secrets:        keychain.System{},
+		Updates:        updater.MygoBackend{},
+		SetTheme:       func(m theme.Mode) { mygo.Theme.SetSource(themeSource(m)) },
+		SetLocale:      mygo.App.SetLocale,
+		OpenPath:       mygo.Shell.OpenPath,
 		PickFile: func(title string) (string, error) {
 			paths, err := mygo.Dialog.Open(mygo.OpenDialogOptions{Title: title, ShowHiddenFiles: true})
 			if err != nil || len(paths) == 0 {
@@ -55,6 +49,18 @@ func platform() app.Platform {
 			return mygo.Dialog.Save(mygo.SaveDialogOptions{Title: title, DefaultPath: path, CreateDirectories: true})
 		},
 	}
+}
+
+func storagePaths() (app.StoragePaths, error) {
+	canonical, err := mygo.App.Path(mygo.PathUserData)
+	if err != nil {
+		return app.StoragePaths{}, err
+	}
+	dir := os.Getenv("SSHYARD_DATA_DIR")
+	if dir == "" {
+		dir = canonical
+	}
+	return app.StoragePaths{DataDir: dir, LockPath: filepath.Join(canonical, "secrets.lock"), Scope: mygo.App.Name()}, nil
 }
 
 // windowVibrancy is the material behind the window: the sidebar material
@@ -75,11 +81,8 @@ func main() {
 	mygo.App.WhenReady(func() {
 		// Linux: size the window buttons' bar to its buttons (see gtkfix).
 		gtkfix.Apply()
-		a, err := app.New(platform())
-		if err != nil {
-			log.Printf("sshyard: %v", err)
-		}
-		a.Start()
+		// Startup failures are presented with safe, localized diagnostics in the UI.
+		a, _ := app.New(platform())
 		mygo.App.OnQuit(a.Close)
 		w := mygo.NewWindow(mygo.WindowOptions{
 			Title:     "SSHYard",
@@ -103,6 +106,7 @@ func main() {
 			// Native UI only: no web view anywhere in SSHYard.
 			Content: ui.View(a.View),
 		})
+		a.Start()
 		w.OnMinimize(func() { a.SetMinimized(true) })
 		w.OnRestore(func() { a.SetMinimized(false) })
 		if ownWindowButtons() {

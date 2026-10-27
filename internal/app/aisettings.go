@@ -291,7 +291,7 @@ func (a *App) providerDelete(c *ui.Context, m locales.Messages) {
 	switch ui.AlertDialog(c, &a.provDeleting, m.Delete(), m.AiDeleteProviderConfirm(name), m.Cancel(), m.Delete()) {
 	case 1:
 		if err := a.deleteProvider(a.provDeleteID); err != nil {
-			c.AddToast(ui.Toast{Title: m.ErrGeneric(err.Error()), Type: "error"})
+			c.AddToast(ui.Toast{Title: m.ErrGeneric(secretStoreErrorText(m, err)), Type: "error"})
 		}
 	}
 }
@@ -326,7 +326,7 @@ func (a *App) saveProvider(m locales.Messages) bool {
 	}
 	if key := strings.TrimSpace(f.key); key != "" {
 		if err := a.kc.Set(keychain.AIKey(id), []byte(key)); err != nil {
-			f.err = m.ErrGeneric(err.Error())
+			f.err = m.ErrGeneric(secretStoreErrorText(m, err))
 			return false
 		}
 	} else if f.isNew {

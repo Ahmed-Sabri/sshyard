@@ -356,16 +356,16 @@ func (a *App) importCredential(m locales.Messages, k *impKey) (string, error) {
 	tx := &secretTx{kc: a.kc}
 	fail := func(msg string) (string, error) {
 		if rerr := tx.rollback(); rerr != nil {
-			msg = m.ErrKeychainRestore(msg, rerr.Error())
+			msg = m.ErrKeychainRestore(msg, secretStoreErrorText(m, rerr))
 		}
 		return "", errors.New(msg)
 	}
 	if err := tx.set(keychain.Cred(cr.ID, keychain.PrivateKey), key.PEM); err != nil {
-		return fail(m.ErrKeychainSave(err.Error()))
+		return fail(m.ErrKeychainSave(secretStoreErrorText(m, err)))
 	}
 	if key.Encrypted && k.pass != "" {
 		if err := tx.set(keychain.Cred(cr.ID, keychain.Passphrase), []byte(k.pass)); err != nil {
-			return fail(m.ErrKeychainSave(err.Error()))
+			return fail(m.ErrKeychainSave(secretStoreErrorText(m, err)))
 		}
 	}
 	if _, err := a.store.AddCredential(cr); err != nil {

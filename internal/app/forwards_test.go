@@ -329,10 +329,7 @@ func TestForwardAutoStart(t *testing.T) {
 	srv := fwdServer(t)
 	dir := t.TempDir()
 	kc := keychain.NewMemory()
-	a, err := New(Platform{DataDir: dir, Secrets: kc, HomeDir: dir, CacheDir: filepath.Join(dir, "cache")})
-	if err != nil {
-		t.Fatal(err)
-	}
+	a, _ := appIn(t, dir, kc)
 	h := addHost(t, a, srv, "box", "secret")
 	a.known.Add(srv.Addr, srv.HostKey.PublicKey())
 	webHost, webPort := webServer(t)

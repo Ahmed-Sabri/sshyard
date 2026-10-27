@@ -639,11 +639,7 @@ func (a *App) aboutPage(c *ui.Context, m locales.Messages, tok theme.Tokens, s *
 				}
 			}
 		})
-		secrets := m.SecretsKeychain()
-		if !a.keychainOK {
-			secrets = m.SecretsMemory()
-		}
-		g.row(m.AboutSecrets(), "", value(secrets))
+		g.row(m.AboutSecrets(), "", value(m.SecretsKeychain()))
 	})
 	settingsSection(c, tok, icons.OpenWith, tok.TintAt(2), m.AboutLinks(), func(g *settingsGroup) {
 		link := func(key, url string) func() {

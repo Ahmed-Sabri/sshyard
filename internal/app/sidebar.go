@@ -90,12 +90,7 @@ func (a *App) sidebarView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 			}).Grow(1).FillWidth()
 			_ = sb
 		}
-		if !a.keychainOK {
-			ui.Row(c).Margin(6, 8, 8, 8).Padding(8, 10).Gap(8).Radius(theme.RadiusControl).Background(tok.Warning.Alpha(0.12)).Children(func() {
-				ui.Icon(c, icons.Warning.SVG).Size(14, 14).Shrink(0).TextColor(tok.Warning)
-				ui.Text(c, m.KeychainUnavailable()).FontSize(theme.Caption).TextColor(tok.Text).Shrink(1)
-			})
-		}
+
 		// The foot of the sidebar: how many hosts there are.
 		ui.Box(c).Height(1).Shrink(0).FillWidth().Background(tok.Line)
 		ui.Row(c.Key("sbfoot")).Height(statusBarHeight).Shrink(0).Padding(0, 12).AlignItems(ui.Center).Children(func() {

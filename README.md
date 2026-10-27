@@ -9,12 +9,14 @@ SSHYard is a cross-platform desktop SSH / SFTP client for macOS, Windows and Lin
 - **Terminal**: tabs and split panes, true colour, wide characters, input methods, mouse reporting (tmux, vim, htop), search.
 - **Files**: SFTP panes side by side with the terminal; a transfer queue with pause, resume, retry and folder transfers; drag and drop; a built-in editor; the files pane can follow the terminal's working directory.
 - **AI assistant**: a per-host assistant pane that can run commands and edit files on that host, with permission modes (Ask, Review, Full access).
-- **MCP server** (off by default): lets AI agents on this computer list groups and hosts, connect with the saved credentials (never revealed; hosts that need a typed password are refused) and run commands, at `http://127.0.0.1:47320/mcp` with a bearer token from the keychain. Turn it on in Settings → AI after reading its risks.
+- **MCP server** (off by default): lets AI agents on this computer list groups and hosts, connect with the saved credentials (never revealed; hosts that need a typed password are refused) and run commands, at `http://127.0.0.1:47320/mcp` with a bearer token from the local encrypted store. Turn it on in Settings → AI after reading its risks.
 - **Shared connections**: every pane on a host shares one authenticated SSH connection, and they all reconnect together after a drop.
-- **Hosts and credentials**: passwords and private keys (OpenSSH, PEM, PuTTY .ppk) stored only in the system keychain; SSH agent; key generation and public-key install.
-- **Backup**: one password-encrypted file (Argon2id, XChaCha20-Poly1305) holding hosts, credentials with their secrets, proxies, port forwards, preferences and trusted host keys, to restore on another device.
+- **Hosts and credentials**: passwords and private keys (OpenSSH, PEM, PuTTY .ppk) stored in the local encrypted `secrets.enc` file; only its random 32-byte master key is stored in the system keychain; SSH agent; key generation and public-key install.
+- **Backup**: one password-encrypted file (Argon2id, XChaCha20-Poly1305) holding hosts, credentials with their secrets, proxies, port forwards, preferences and trusted host keys, to restore on another device under its own master key; the local master key and device MCP token are excluded.
 - **Networking**: multi-hop jump hosts, HTTP / SOCKS5 proxies, local / remote / dynamic port forwards.
 - **Convenience**: import from `~/.ssh/config`, quick connect (`user@host:port`), a server metrics bar, light and dark themes, English and Simplified Chinese.
+
+At startup SSHYard automatically requests the master key and unlocks its local store. If access is denied or fails, Retry requests access again and Cancel leaves the app locked; credentials never fall back to memory-only storage. The former per-secret keychain layout is not migrated or read.
 
 ## Development
 
@@ -24,9 +26,9 @@ Requires Go 1.27.3 (`GOTOOLCHAIN` can download it). No cgo is needed.
 # run
 go run .
 
-# run the development app; on macOS signed with an "Apple Development"
-# identity if there is one, so the keychain's "Always Allow" lasts across
-# rebuilds (with the self-signed "SSHYard-Dev" it asks after every rebuild)
+# run the development app; on macOS prefer an "Apple Development" identity
+# stable signing can reduce keychain prompts; self-signing does not guarantee
+# access across rebuilds, and macOS may still request authorization
 scripts/run-dev-app.sh
 
 # keep data in a separate directory

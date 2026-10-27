@@ -114,11 +114,11 @@ func (msgs Messages) DeleteForward() string {
 	return Catalog.Format(msgs.locale, "deleteForward", nil)
 }
 
-// DeleteForwardConfirm says "Delete {name}? It stops now, and any password saved for it is removed from the keychain."
+// DeleteForwardConfirm says "Delete {name}? It stops now, and any password saved for it is removed from the encrypted local credential store."
 // in the language the app shows.
 func DeleteForwardConfirm(name string) string { return In(i18n.Locale()).DeleteForwardConfirm(name) }
 
-// DeleteForwardConfirm says "Delete {name}? It stops now, and any password saved for it is removed from the keychain."
+// DeleteForwardConfirm says "Delete {name}? It stops now, and any password saved for it is removed from the encrypted local credential store."
 // in the language of msgs.
 func (msgs Messages) DeleteForwardConfirm(name string) string {
 	return Catalog.Format(msgs.locale, "deleteForwardConfirm", map[string]any{"name": name})
@@ -284,11 +284,11 @@ func (msgs Messages) FieldPassphrase() string {
 	return Catalog.Format(msgs.locale, "fieldPassphrase", nil)
 }
 
-// SavePassword says "Save in system keychain"
+// SavePassword says "Save in encrypted local credential store"
 // in the language the app shows.
 func SavePassword() string { return In(i18n.Locale()).SavePassword() }
 
-// SavePassword says "Save in system keychain"
+// SavePassword says "Save in encrypted local credential store"
 // in the language of msgs.
 func (msgs Messages) SavePassword() string {
 	return Catalog.Format(msgs.locale, "savePassword", nil)
@@ -364,21 +364,11 @@ func (msgs Messages) Edit() string {
 	return Catalog.Format(msgs.locale, "edit", nil)
 }
 
-// KeychainUnavailable says "The system keychain is unavailable. Credentials are asked for each time and never written to disk."
-// in the language the app shows.
-func KeychainUnavailable() string { return In(i18n.Locale()).KeychainUnavailable() }
-
-// KeychainUnavailable says "The system keychain is unavailable. Credentials are asked for each time and never written to disk."
-// in the language of msgs.
-func (msgs Messages) KeychainUnavailable() string {
-	return Catalog.Format(msgs.locale, "keychainUnavailable", nil)
-}
-
-// KeychainError says "Keychain error: {detail}"
+// KeychainError says "Encrypted credential store error: {detail}"
 // in the language the app shows.
 func KeychainError(detail string) string { return In(i18n.Locale()).KeychainError(detail) }
 
-// KeychainError says "Keychain error: {detail}"
+// KeychainError says "Encrypted credential store error: {detail}"
 // in the language of msgs.
 func (msgs Messages) KeychainError(detail string) string {
 	return Catalog.Format(msgs.locale, "keychainError", map[string]any{"detail": detail})
@@ -2066,13 +2056,13 @@ func (msgs Messages) DeleteCredential() string {
 	return Catalog.Format(msgs.locale, "deleteCredential", nil)
 }
 
-// DeleteCredentialConfirm says "Delete {name}? Its secret is removed from the keychain."
+// DeleteCredentialConfirm says "Delete {name}? Its secret is removed from the encrypted local credential store."
 // in the language the app shows.
 func DeleteCredentialConfirm(name string) string {
 	return In(i18n.Locale()).DeleteCredentialConfirm(name)
 }
 
-// DeleteCredentialConfirm says "Delete {name}? Its secret is removed from the keychain."
+// DeleteCredentialConfirm says "Delete {name}? Its secret is removed from the encrypted local credential store."
 // in the language of msgs.
 func (msgs Messages) DeleteCredentialConfirm(name string) string {
 	return Catalog.Format(msgs.locale, "deleteCredentialConfirm", map[string]any{"name": name})
@@ -2484,33 +2474,33 @@ func (msgs Messages) ViaJumps(target string, chain string) string {
 	return Catalog.Format(msgs.locale, "viaJumps", map[string]any{"target": target, "chain": chain})
 }
 
-// ErrKeychainSave says "Couldn’t save to the keychain: {detail}. Nothing was changed."
+// ErrKeychainSave says "Couldn’t save to the encrypted local credential store: {detail}. Nothing was changed."
 // in the language the app shows.
 func ErrKeychainSave(detail string) string { return In(i18n.Locale()).ErrKeychainSave(detail) }
 
-// ErrKeychainSave says "Couldn’t save to the keychain: {detail}. Nothing was changed."
+// ErrKeychainSave says "Couldn’t save to the encrypted local credential store: {detail}. Nothing was changed."
 // in the language of msgs.
 func (msgs Messages) ErrKeychainSave(detail string) string {
 	return Catalog.Format(msgs.locale, "errKeychainSave", map[string]any{"detail": detail})
 }
 
-// ErrKeychainRestore says "{message} The keychain could not be restored either: {detail}"
+// ErrKeychainRestore says "{message} The encrypted local credential store could not be restored either: {detail}"
 // in the language the app shows.
 func ErrKeychainRestore(message string, detail string) string {
 	return In(i18n.Locale()).ErrKeychainRestore(message, detail)
 }
 
-// ErrKeychainRestore says "{message} The keychain could not be restored either: {detail}"
+// ErrKeychainRestore says "{message} The encrypted local credential store could not be restored either: {detail}"
 // in the language of msgs.
 func (msgs Messages) ErrKeychainRestore(message string, detail string) string {
 	return Catalog.Format(msgs.locale, "errKeychainRestore", map[string]any{"message": message, "detail": detail})
 }
 
-// ErrKeychainDelete says "Couldn’t remove its secrets from the keychain: {detail}. It was kept, so you can try again."
+// ErrKeychainDelete says "Couldn’t remove its secrets from the encrypted local credential store: {detail}. It was kept, so you can try again."
 // in the language the app shows.
 func ErrKeychainDelete(detail string) string { return In(i18n.Locale()).ErrKeychainDelete(detail) }
 
-// ErrKeychainDelete says "Couldn’t remove its secrets from the keychain: {detail}. It was kept, so you can try again."
+// ErrKeychainDelete says "Couldn’t remove its secrets from the encrypted local credential store: {detail}. It was kept, so you can try again."
 // in the language of msgs.
 func (msgs Messages) ErrKeychainDelete(detail string) string {
 	return Catalog.Format(msgs.locale, "errKeychainDelete", map[string]any{"detail": detail})
@@ -2888,11 +2878,11 @@ func (msgs Messages) ImportSkippedPattern() string {
 	return Catalog.Format(msgs.locale, "importSkippedPattern", nil)
 }
 
-// ImportReadOnlyNote says "The config and key files are only read, never changed. Imported keys go to the keychain."
+// ImportReadOnlyNote says "The config and key files are only read, never changed. Imported keys go to the encrypted local credential store."
 // in the language the app shows.
 func ImportReadOnlyNote() string { return In(i18n.Locale()).ImportReadOnlyNote() }
 
-// ImportReadOnlyNote says "The config and key files are only read, never changed. Imported keys go to the keychain."
+// ImportReadOnlyNote says "The config and key files are only read, never changed. Imported keys go to the encrypted local credential store."
 // in the language of msgs.
 func (msgs Messages) ImportReadOnlyNote() string {
 	return Catalog.Format(msgs.locale, "importReadOnlyNote", nil)
@@ -3168,11 +3158,11 @@ func (msgs Messages) FwdRemoteRefused(addr string) string {
 	return Catalog.Format(msgs.locale, "fwdRemoteRefused", map[string]any{"addr": addr})
 }
 
-// FwdPasswordMissing says "Error: the proxy password is missing from the keychain"
+// FwdPasswordMissing says "Error: the proxy password is missing from the encrypted local credential store"
 // in the language the app shows.
 func FwdPasswordMissing() string { return In(i18n.Locale()).FwdPasswordMissing() }
 
-// FwdPasswordMissing says "Error: the proxy password is missing from the keychain"
+// FwdPasswordMissing says "Error: the proxy password is missing from the encrypted local credential store"
 // in the language of msgs.
 func (msgs Messages) FwdPasswordMissing() string {
 	return Catalog.Format(msgs.locale, "fwdPasswordMissing", nil)
@@ -5170,11 +5160,11 @@ func (msgs Messages) AiAPIKey() string {
 	return Catalog.Format(msgs.locale, "aiAPIKey", nil)
 }
 
-// AiAPIKeyNote says "Saved only in the keychain. Leave it blank when editing to keep the saved key."
+// AiAPIKeyNote says "Saved only in the encrypted local credential store. Leave it blank when editing to keep the saved key."
 // in the language the app shows.
 func AiAPIKeyNote() string { return In(i18n.Locale()).AiAPIKeyNote() }
 
-// AiAPIKeyNote says "Saved only in the keychain. Leave it blank when editing to keep the saved key."
+// AiAPIKeyNote says "Saved only in the encrypted local credential store. Leave it blank when editing to keep the saved key."
 // in the language of msgs.
 func (msgs Messages) AiAPIKeyNote() string {
 	return Catalog.Format(msgs.locale, "aiAPIKeyNote", nil)
@@ -5220,13 +5210,13 @@ func (msgs Messages) AiEditProvider() string {
 	return Catalog.Format(msgs.locale, "aiEditProvider", nil)
 }
 
-// AiDeleteProviderConfirm says "Delete {name}? Its API key is removed from the keychain."
+// AiDeleteProviderConfirm says "Delete {name}? Its API key is removed from the encrypted local credential store."
 // in the language the app shows.
 func AiDeleteProviderConfirm(name string) string {
 	return In(i18n.Locale()).AiDeleteProviderConfirm(name)
 }
 
-// AiDeleteProviderConfirm says "Delete {name}? Its API key is removed from the keychain."
+// AiDeleteProviderConfirm says "Delete {name}? Its API key is removed from the encrypted local credential store."
 // in the language of msgs.
 func (msgs Messages) AiDeleteProviderConfirm(name string) string {
 	return Catalog.Format(msgs.locale, "aiDeleteProviderConfirm", map[string]any{"name": name})
@@ -5912,11 +5902,11 @@ func (msgs Messages) AiDesc() string {
 	return Catalog.Format(msgs.locale, "aiDesc", nil)
 }
 
-// CredentialsDesc says "Passwords and keys that hosts share. Secrets stay in the system keychain."
+// CredentialsDesc says "Passwords and keys that hosts share. Secrets stay in the encrypted local credential store."
 // in the language the app shows.
 func CredentialsDesc() string { return In(i18n.Locale()).CredentialsDesc() }
 
-// CredentialsDesc says "Passwords and keys that hosts share. Secrets stay in the system keychain."
+// CredentialsDesc says "Passwords and keys that hosts share. Secrets stay in the encrypted local credential store."
 // in the language of msgs.
 func (msgs Messages) CredentialsDesc() string {
 	return Catalog.Format(msgs.locale, "credentialsDesc", nil)
@@ -6082,24 +6072,14 @@ func (msgs Messages) AboutSecrets() string {
 	return Catalog.Format(msgs.locale, "aboutSecrets", nil)
 }
 
-// SecretsKeychain says "System keychain"
+// SecretsKeychain says "Encrypted local store; master key in system keychain"
 // in the language the app shows.
 func SecretsKeychain() string { return In(i18n.Locale()).SecretsKeychain() }
 
-// SecretsKeychain says "System keychain"
+// SecretsKeychain says "Encrypted local store; master key in system keychain"
 // in the language of msgs.
 func (msgs Messages) SecretsKeychain() string {
 	return Catalog.Format(msgs.locale, "secretsKeychain", nil)
-}
-
-// SecretsMemory says "Memory only, for this run"
-// in the language the app shows.
-func SecretsMemory() string { return In(i18n.Locale()).SecretsMemory() }
-
-// SecretsMemory says "Memory only, for this run"
-// in the language of msgs.
-func (msgs Messages) SecretsMemory() string {
-	return Catalog.Format(msgs.locale, "secretsMemory", nil)
 }
 
 // AboutLinks says "Links"
@@ -7804,24 +7784,14 @@ func (msgs Messages) RestoreBackup() string {
 	return Catalog.Format(msgs.locale, "restoreBackup", nil)
 }
 
-// RestoreBackupNote says "Merges a backup into this device. Its secrets go into the system keychain."
+// RestoreBackupNote says "Merges a backup into this device. Its secrets go into the encrypted local credential store."
 // in the language the app shows.
 func RestoreBackupNote() string { return In(i18n.Locale()).RestoreBackupNote() }
 
-// RestoreBackupNote says "Merges a backup into this device. Its secrets go into the system keychain."
+// RestoreBackupNote says "Merges a backup into this device. Its secrets go into the encrypted local credential store."
 // in the language of msgs.
 func (msgs Messages) RestoreBackupNote() string {
 	return Catalog.Format(msgs.locale, "restoreBackupNote", nil)
-}
-
-// RestoreBackupMemory says "The system keychain is unavailable: restored secrets are kept only until SSHYard quits."
-// in the language the app shows.
-func RestoreBackupMemory() string { return In(i18n.Locale()).RestoreBackupMemory() }
-
-// RestoreBackupMemory says "The system keychain is unavailable: restored secrets are kept only until SSHYard quits."
-// in the language of msgs.
-func (msgs Messages) RestoreBackupMemory() string {
-	return Catalog.Format(msgs.locale, "restoreBackupMemory", nil)
 }
 
 // BackupPassword says "Backup password"
@@ -7854,11 +7824,11 @@ func (msgs Messages) BackupIncludeSecrets() string {
 	return Catalog.Format(msgs.locale, "backupIncludeSecrets", nil)
 }
 
-// BackupIncludeSecretsNote says "Passwords, private keys, passphrases and API keys from the keychain."
+// BackupIncludeSecretsNote says "Passwords, private keys, passphrases and API keys from the encrypted local credential store."
 // in the language the app shows.
 func BackupIncludeSecretsNote() string { return In(i18n.Locale()).BackupIncludeSecretsNote() }
 
-// BackupIncludeSecretsNote says "Passwords, private keys, passphrases and API keys from the keychain."
+// BackupIncludeSecretsNote says "Passwords, private keys, passphrases and API keys from the encrypted local credential store."
 // in the language of msgs.
 func (msgs Messages) BackupIncludeSecretsNote() string {
 	return Catalog.Format(msgs.locale, "backupIncludeSecretsNote", nil)
@@ -8452,11 +8422,11 @@ func (msgs Messages) McpToken() string {
 	return Catalog.Format(msgs.locale, "mcpToken", nil)
 }
 
-// McpTokenNote says "Saved only in the keychain. Agents send it as a Bearer token."
+// McpTokenNote says "Saved only in the encrypted local credential store. Agents send it as a Bearer token."
 // in the language the app shows.
 func McpTokenNote() string { return In(i18n.Locale()).McpTokenNote() }
 
-// McpTokenNote says "Saved only in the keychain. Agents send it as a Bearer token."
+// McpTokenNote says "Saved only in the encrypted local credential store. Agents send it as a Bearer token."
 // in the language of msgs.
 func (msgs Messages) McpTokenNote() string {
 	return Catalog.Format(msgs.locale, "mcpTokenNote", nil)
@@ -8640,4 +8610,298 @@ func McpConfirm() string { return In(i18n.Locale()).McpConfirm() }
 // in the language of msgs.
 func (msgs Messages) McpConfirm() string {
 	return Catalog.Format(msgs.locale, "mcpConfirm", nil)
+}
+
+// SecretsLockedTitle says "Credentials are locked"
+// in the language the app shows.
+func SecretsLockedTitle() string { return In(i18n.Locale()).SecretsLockedTitle() }
+
+// SecretsLockedTitle says "Credentials are locked"
+// in the language of msgs.
+func (msgs Messages) SecretsLockedTitle() string {
+	return Catalog.Format(msgs.locale, "secretsLockedTitle", nil)
+}
+
+// SecretsLockedBody says "Authorize access to the system master key to unlock your encrypted local credentials and connections."
+// in the language the app shows.
+func SecretsLockedBody() string { return In(i18n.Locale()).SecretsLockedBody() }
+
+// SecretsLockedBody says "Authorize access to the system master key to unlock your encrypted local credentials and connections."
+// in the language of msgs.
+func (msgs Messages) SecretsLockedBody() string {
+	return Catalog.Format(msgs.locale, "secretsLockedBody", nil)
+}
+
+// SecretsRetry says "Authorize Again"
+// in the language the app shows.
+func SecretsRetry() string { return In(i18n.Locale()).SecretsRetry() }
+
+// SecretsRetry says "Authorize Again"
+// in the language of msgs.
+func (msgs Messages) SecretsRetry() string {
+	return Catalog.Format(msgs.locale, "secretsRetry", nil)
+}
+
+// SecretsAuthorizing says "Waiting for Authorization…"
+// in the language the app shows.
+func SecretsAuthorizing() string { return In(i18n.Locale()).SecretsAuthorizing() }
+
+// SecretsAuthorizing says "Waiting for Authorization…"
+// in the language of msgs.
+func (msgs Messages) SecretsAuthorizing() string {
+	return Catalog.Format(msgs.locale, "secretsAuthorizing", nil)
+}
+
+// SecretsUnlockFailed says "Unable to unlock credentials"
+// in the language the app shows.
+func SecretsUnlockFailed() string { return In(i18n.Locale()).SecretsUnlockFailed() }
+
+// SecretsUnlockFailed says "Unable to unlock credentials"
+// in the language of msgs.
+func (msgs Messages) SecretsUnlockFailed() string {
+	return Catalog.Format(msgs.locale, "secretsUnlockFailed", nil)
+}
+
+// SecretsUnlockSafety says "The master key protects your encrypted local credentials; SSHYard stays locked until it can safely open the store."
+// in the language the app shows.
+func SecretsUnlockSafety() string { return In(i18n.Locale()).SecretsUnlockSafety() }
+
+// SecretsUnlockSafety says "The master key protects your encrypted local credentials; SSHYard stays locked until it can safely open the store."
+// in the language of msgs.
+func (msgs Messages) SecretsUnlockSafety() string {
+	return Catalog.Format(msgs.locale, "secretsUnlockSafety", nil)
+}
+
+// SecretsReasonSystem says "The operation could not be completed; check system authorization and local storage permissions."
+// in the language the app shows.
+func SecretsReasonSystem() string { return In(i18n.Locale()).SecretsReasonSystem() }
+
+// SecretsReasonSystem says "The operation could not be completed; check system authorization and local storage permissions."
+// in the language of msgs.
+func (msgs Messages) SecretsReasonSystem() string {
+	return Catalog.Format(msgs.locale, "secretsReasonSystem", nil)
+}
+
+// SecretsReasonBusy says "Another SSHYard process is using this credential store; close it and try again."
+// in the language the app shows.
+func SecretsReasonBusy() string { return In(i18n.Locale()).SecretsReasonBusy() }
+
+// SecretsReasonBusy says "Another SSHYard process is using this credential store; close it and try again."
+// in the language of msgs.
+func (msgs Messages) SecretsReasonBusy() string {
+	return Catalog.Format(msgs.locale, "secretsReasonBusy", nil)
+}
+
+// SecretsReasonMasterMissing says "The system master key is missing while encrypted credentials exist; restore the original key to avoid data loss."
+// in the language the app shows.
+func SecretsReasonMasterMissing() string { return In(i18n.Locale()).SecretsReasonMasterMissing() }
+
+// SecretsReasonMasterMissing says "The system master key is missing while encrypted credentials exist; restore the original key to avoid data loss."
+// in the language of msgs.
+func (msgs Messages) SecretsReasonMasterMissing() string {
+	return Catalog.Format(msgs.locale, "secretsReasonMasterMissing", nil)
+}
+
+// SecretsReasonMasterInvalid says "The system master key is invalid; existing encrypted credentials have been preserved."
+// in the language the app shows.
+func SecretsReasonMasterInvalid() string { return In(i18n.Locale()).SecretsReasonMasterInvalid() }
+
+// SecretsReasonMasterInvalid says "The system master key is invalid; existing encrypted credentials have been preserved."
+// in the language of msgs.
+func (msgs Messages) SecretsReasonMasterInvalid() string {
+	return Catalog.Format(msgs.locale, "secretsReasonMasterInvalid", nil)
+}
+
+// SecretsReasonCorrupt says "Encrypted credentials failed verification; the file may be damaged or belong to another master key."
+// in the language the app shows.
+func SecretsReasonCorrupt() string { return In(i18n.Locale()).SecretsReasonCorrupt() }
+
+// SecretsReasonCorrupt says "Encrypted credentials failed verification; the file may be damaged or belong to another master key."
+// in the language of msgs.
+func (msgs Messages) SecretsReasonCorrupt() string {
+	return Catalog.Format(msgs.locale, "secretsReasonCorrupt", nil)
+}
+
+// SecretsReasonVersion says "This encrypted credential store uses an unsupported format version."
+// in the language the app shows.
+func SecretsReasonVersion() string { return In(i18n.Locale()).SecretsReasonVersion() }
+
+// SecretsReasonVersion says "This encrypted credential store uses an unsupported format version."
+// in the language of msgs.
+func (msgs Messages) SecretsReasonVersion() string {
+	return Catalog.Format(msgs.locale, "secretsReasonVersion", nil)
+}
+
+// SecretsReasonUnavailable says "The system credential service is unavailable; enable it and authorize again."
+// in the language the app shows.
+func SecretsReasonUnavailable() string { return In(i18n.Locale()).SecretsReasonUnavailable() }
+
+// SecretsReasonUnavailable says "The system credential service is unavailable; enable it and authorize again."
+// in the language of msgs.
+func (msgs Messages) SecretsReasonUnavailable() string {
+	return Catalog.Format(msgs.locale, "secretsReasonUnavailable", nil)
+}
+
+// SecretsReasonCancelled says "System authorization was cancelled."
+// in the language the app shows.
+func SecretsReasonCancelled() string { return In(i18n.Locale()).SecretsReasonCancelled() }
+
+// SecretsReasonCancelled says "System authorization was cancelled."
+// in the language of msgs.
+func (msgs Messages) SecretsReasonCancelled() string {
+	return Catalog.Format(msgs.locale, "secretsReasonCancelled", nil)
+}
+
+// SecretsReasonAuthentication says "System authentication failed; check your keychain access permissions."
+// in the language the app shows.
+func SecretsReasonAuthentication() string { return In(i18n.Locale()).SecretsReasonAuthentication() }
+
+// SecretsReasonAuthentication says "System authentication failed; check your keychain access permissions."
+// in the language of msgs.
+func (msgs Messages) SecretsReasonAuthentication() string {
+	return Catalog.Format(msgs.locale, "secretsReasonAuthentication", nil)
+}
+
+// SecretsReasonInteraction says "The system does not allow authorization interaction in the current session."
+// in the language the app shows.
+func SecretsReasonInteraction() string { return In(i18n.Locale()).SecretsReasonInteraction() }
+
+// SecretsReasonInteraction says "The system does not allow authorization interaction in the current session."
+// in the language of msgs.
+func (msgs Messages) SecretsReasonInteraction() string {
+	return Catalog.Format(msgs.locale, "secretsReasonInteraction", nil)
+}
+
+// SecretsSystemCode says "{reason} (OSStatus {code})"
+// in the language the app shows.
+func SecretsSystemCode(reason string, code string) string {
+	return In(i18n.Locale()).SecretsSystemCode(reason, code)
+}
+
+// SecretsSystemCode says "{reason} (OSStatus {code})"
+// in the language of msgs.
+func (msgs Messages) SecretsSystemCode(reason string, code string) string {
+	return Catalog.Format(msgs.locale, "secretsSystemCode", map[string]any{"reason": reason, "code": code})
+}
+
+// SecretsStageOpen says "Opening encrypted credentials"
+// in the language the app shows.
+func SecretsStageOpen() string { return In(i18n.Locale()).SecretsStageOpen() }
+
+// SecretsStageOpen says "Opening encrypted credentials"
+// in the language of msgs.
+func (msgs Messages) SecretsStageOpen() string {
+	return Catalog.Format(msgs.locale, "secretsStageOpen", nil)
+}
+
+// SecretsStageLock says "Acquiring the credential store lock"
+// in the language the app shows.
+func SecretsStageLock() string { return In(i18n.Locale()).SecretsStageLock() }
+
+// SecretsStageLock says "Acquiring the credential store lock"
+// in the language of msgs.
+func (msgs Messages) SecretsStageLock() string {
+	return Catalog.Format(msgs.locale, "secretsStageLock", nil)
+}
+
+// SecretsStageReadMaster says "Reading the system master key"
+// in the language the app shows.
+func SecretsStageReadMaster() string { return In(i18n.Locale()).SecretsStageReadMaster() }
+
+// SecretsStageReadMaster says "Reading the system master key"
+// in the language of msgs.
+func (msgs Messages) SecretsStageReadMaster() string {
+	return Catalog.Format(msgs.locale, "secretsStageReadMaster", nil)
+}
+
+// SecretsStageWriteMaster says "Saving the new system master key"
+// in the language the app shows.
+func SecretsStageWriteMaster() string { return In(i18n.Locale()).SecretsStageWriteMaster() }
+
+// SecretsStageWriteMaster says "Saving the new system master key"
+// in the language of msgs.
+func (msgs Messages) SecretsStageWriteMaster() string {
+	return Catalog.Format(msgs.locale, "secretsStageWriteMaster", nil)
+}
+
+// SecretsStageVerifyMaster says "Verifying the saved system master key"
+// in the language the app shows.
+func SecretsStageVerifyMaster() string { return In(i18n.Locale()).SecretsStageVerifyMaster() }
+
+// SecretsStageVerifyMaster says "Verifying the saved system master key"
+// in the language of msgs.
+func (msgs Messages) SecretsStageVerifyMaster() string {
+	return Catalog.Format(msgs.locale, "secretsStageVerifyMaster", nil)
+}
+
+// SecretsStageReadFile says "Reading local application data"
+// in the language the app shows.
+func SecretsStageReadFile() string { return In(i18n.Locale()).SecretsStageReadFile() }
+
+// SecretsStageReadFile says "Reading local application data"
+// in the language of msgs.
+func (msgs Messages) SecretsStageReadFile() string {
+	return Catalog.Format(msgs.locale, "secretsStageReadFile", nil)
+}
+
+// SecretsStageDecrypt says "Verifying encrypted credentials"
+// in the language the app shows.
+func SecretsStageDecrypt() string { return In(i18n.Locale()).SecretsStageDecrypt() }
+
+// SecretsStageDecrypt says "Verifying encrypted credentials"
+// in the language of msgs.
+func (msgs Messages) SecretsStageDecrypt() string {
+	return Catalog.Format(msgs.locale, "secretsStageDecrypt", nil)
+}
+
+// SecretsStageWriteFile says "Saving encrypted credentials"
+// in the language the app shows.
+func SecretsStageWriteFile() string { return In(i18n.Locale()).SecretsStageWriteFile() }
+
+// SecretsStageWriteFile says "Saving encrypted credentials"
+// in the language of msgs.
+func (msgs Messages) SecretsStageWriteFile() string {
+	return Catalog.Format(msgs.locale, "secretsStageWriteFile", nil)
+}
+
+// SecretsFailureDetail says "{stage}: {reason}"
+// in the language the app shows.
+func SecretsFailureDetail(stage string, reason string) string {
+	return In(i18n.Locale()).SecretsFailureDetail(stage, reason)
+}
+
+// SecretsFailureDetail says "{stage}: {reason}"
+// in the language of msgs.
+func (msgs Messages) SecretsFailureDetail(stage string, reason string) string {
+	return Catalog.Format(msgs.locale, "secretsFailureDetail", map[string]any{"stage": stage, "reason": reason})
+}
+
+// SecretsReasonPermission says "Access to local application data was denied; check folder and file permissions."
+// in the language the app shows.
+func SecretsReasonPermission() string { return In(i18n.Locale()).SecretsReasonPermission() }
+
+// SecretsReasonPermission says "Access to local application data was denied; check folder and file permissions."
+// in the language of msgs.
+func (msgs Messages) SecretsReasonPermission() string {
+	return Catalog.Format(msgs.locale, "secretsReasonPermission", nil)
+}
+
+// SecretsReasonNotFound says "A required local file or folder is missing; check the application data location."
+// in the language the app shows.
+func SecretsReasonNotFound() string { return In(i18n.Locale()).SecretsReasonNotFound() }
+
+// SecretsReasonNotFound says "A required local file or folder is missing; check the application data location."
+// in the language of msgs.
+func (msgs Messages) SecretsReasonNotFound() string {
+	return Catalog.Format(msgs.locale, "secretsReasonNotFound", nil)
+}
+
+// SecretsReasonDiskFull says "There is not enough free disk space to save encrypted credentials."
+// in the language the app shows.
+func SecretsReasonDiskFull() string { return In(i18n.Locale()).SecretsReasonDiskFull() }
+
+// SecretsReasonDiskFull says "There is not enough free disk space to save encrypted credentials."
+// in the language of msgs.
+func (msgs Messages) SecretsReasonDiskFull() string {
+	return Catalog.Format(msgs.locale, "secretsReasonDiskFull", nil)
 }

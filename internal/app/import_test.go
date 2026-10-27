@@ -65,7 +65,7 @@ func TestImportSSHConfig(t *testing.T) {
 	k := writeConfig(t, a.p.HomeDir, bastion, db)
 	db.Password = "" // the key is the only way in
 	db.AuthorizedKey = k.Public
-	kc := a.kc.Backend().(*keychain.Memory)
+	kc := a.kc
 
 	// The welcome page offers the import.
 	mustClick(t, tt, "Import from SSH Config")
@@ -127,10 +127,9 @@ func TestImportSSHConfig(t *testing.T) {
 	if len(creds) != 1 || creds[0].Name != "id_enc" {
 		t.Fatalf("credentials %+v", creds)
 	}
-	kcKeys := strings.Join(kc.Keys(), " ")
 	for _, kind := range []keychain.Kind{keychain.PrivateKey, keychain.Passphrase} {
-		if !strings.Contains(kcKeys, keychain.Cred(creds[0].ID, kind)) {
-			t.Errorf("keychain lacks %s: %s", kind, kcKeys)
+		if value, err := kc.Get(keychain.Cred(creds[0].ID, kind)); err != nil || len(value) == 0 {
+			t.Errorf("encrypted store lacks %s: %v", kind, err)
 		}
 	}
 
@@ -233,7 +232,10 @@ func TestQuickConnect(t *testing.T) {
 	srv := startServer(t)
 	a, tt := newTestApp(t)
 	m := locales.In("en")
-	kc := a.kc.Backend().(*keychain.Memory)
+	before, err := os.ReadFile(filepath.Join(a.p.DataDir, "secrets.enc"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	a.known.Add(srv.Addr, srv.HostKey.PublicKey())
 
 	// ⌘K (Ctrl+Shift+K) opens it, and so does the + menu.
@@ -277,8 +279,12 @@ func TestQuickConnect(t *testing.T) {
 	}
 	a.CloseSession(second.id)
 	tt.Frame()
-	if len(a.temps) != 0 || len(a.typed) != 0 || a.store.Len() != 0 || len(kc.Keys()) != 0 {
-		t.Fatalf("left behind: %d temps, %d typed, %d hosts, keychain %v", len(a.temps), len(a.typed), a.store.Len(), kc.Keys())
+	after, err := os.ReadFile(filepath.Join(a.p.DataDir, "secrets.enc"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(a.temps) != 0 || len(a.typed) != 0 || a.store.Len() != 0 || string(after) != string(before) {
+		t.Fatalf("left behind: %d temps, %d typed, %d hosts, encrypted store changed %v", len(a.temps), len(a.typed), a.store.Len(), string(after) != string(before))
 	}
 
 	// Save as Host turns a temporary tab into a saved host.

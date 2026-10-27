@@ -281,3 +281,157 @@ func TestMergeSettings(t *testing.T) {
 		t.Fatalf("consent %v", out.AIConsentHosts)
 	}
 }
+
+// installBackupStore uses real ciphertext with an independent simulated device keychain.
+func installBackupStore(t *testing.T, a *App) (keychain.OpenOptions, *keychain.Memory) {
+	t.Helper()
+	if err := a.kc.Close(); err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	system := keychain.NewMemory()
+	opts := keychain.OpenOptions{Path: filepath.Join(dir, "secrets.enc"), LockPath: filepath.Join(dir, "lock"), Scope: dir, System: system}
+	var err error
+	a.kc, err = keychain.Open(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return opts, system
+}
+
+func TestBackupIndependentDeviceMasters(t *testing.T) {
+	src, stt, dir := backupApp(t)
+	_, srcSystem := installBackupStore(t, src)
+	pw, _, _ := fillStore(t, src)
+	if err := src.kc.Set(keychain.MCPToken, []byte("source-device-token")); err != nil {
+		t.Fatal(err)
+	}
+	path := export(t, src, stt, dir, "correct horse", true)
+	sealed, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plain, err := vault.Open(sealed, []byte("correct horse"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var payload backupPayload
+	if err := json.Unmarshal(plain, &payload); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := payload.Secrets[keychain.MasterKey]; ok {
+		t.Fatal("backup contains device master")
+	}
+	if _, ok := payload.Secrets[keychain.MCPToken]; ok || bytes.Contains(plain, []byte("source-device-token")) {
+		t.Fatal("backup contains device MCP token")
+	}
+	dst, _, _ := backupApp(t)
+	opts, dstSystem := installBackupStore(t, dst)
+	srcMaster, err := srcSystem.Get(keychain.MasterKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer clear(srcMaster)
+	dstMaster, err := dstSystem.Get(keychain.MasterKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer clear(dstMaster)
+	if bytes.Equal(srcMaster, dstMaster) || len(srcSystem.Keys()) != 1 || len(dstSystem.Keys()) != 1 {
+		t.Fatal("devices do not have independent master-only system keychains")
+	}
+	// Even injected vault entries cannot replace device-local secrets.
+	payload.Secrets[keychain.MasterKey] = srcMaster
+	payload.Secrets[keychain.MCPToken] = []byte("foreign-token")
+	if err := dst.kc.Set(keychain.MCPToken, []byte("destination-device-token")); err != nil {
+		t.Fatal(err)
+	}
+	if err := dst.restoreBackup(en, payload); err != nil {
+		t.Fatal(err)
+	}
+	if err := dst.kc.Close(); err != nil {
+		t.Fatal(err)
+	}
+	dst.kc, err = keychain.Open(opts)
+	if err != nil {
+		t.Fatal("destination cannot reopen restored ciphertext:", err)
+	}
+	if value, err := dst.kc.Get(keychain.Cred(pw.ID, keychain.Password)); err != nil || string(value) != "hunter2" {
+		t.Fatal("restored credential did not survive encrypted-store reopen")
+	}
+	if value, err := dst.kc.Get(keychain.MCPToken); err != nil || string(value) != "destination-device-token" {
+		t.Fatal("restore replaced the device MCP token")
+	}
+	if ok, err := dst.kc.Exists(keychain.MasterKey); ok || err != nil {
+		t.Fatal("restore imported the source master into the secret store")
+	}
+	ciphertext, err := os.ReadFile(opts.Path)
+	if err != nil || bytes.Contains(ciphertext, []byte("hunter2")) {
+		t.Fatal("restored credential is not encrypted on disk")
+	}
+}
+
+func TestRestoreBatchFailureKeepsPreviousSecrets(t *testing.T) {
+	a, _, backend := newFlakyApp(t)
+	first := addCred(t, a, "first", "old-first")
+	second := addCred(t, a, "second", "old-second")
+	firstKey := keychain.Cred(first.ID, keychain.Password)
+	secondKey := keychain.Cred(second.ID, keychain.Password)
+	failed := false
+	backend.failOn(func(key string) bool {
+		if key == secondKey && !failed {
+			failed = true
+			return true
+		}
+		return false
+	}, nil)
+	payload := backupPayload{Assets: a.store.Snapshot(), Settings: a.settings, Secrets: map[string][]byte{
+		firstKey: []byte("new-first"), secondKey: []byte("new-second"),
+	}}
+	if err := a.restoreBackup(en, payload); err == nil || !failed {
+		t.Fatal("restore bypassed injected batch write failure")
+	}
+	for key, want := range map[string]string{firstKey: "old-first", secondKey: "old-second"} {
+		if got, err := a.kc.Get(key); err != nil || string(got) != want {
+			t.Fatal("failed restore changed an existing secret")
+		}
+	}
+}
+
+func TestRestoreMetadataFailureRollsBackEncryptedBatch(t *testing.T) {
+	a, _, _ := backupApp(t)
+	opts, _ := installBackupStore(t, a)
+	path := filepath.Join(t.TempDir(), "hosts.json")
+	var err error
+	a.store, err = assets.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cr := addCred(t, a, "before", "old-secret")
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(path, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	payload := backupPayload{Assets: a.store.Snapshot(), Settings: a.settings, Secrets: map[string][]byte{
+		keychain.Cred(cr.ID, keychain.Password): []byte("replacement-secret"),
+	}}
+	payload.Assets.Credentials[0].Name = "after"
+	if err := a.restoreBackup(en, payload); err == nil {
+		t.Fatal("restore ignored metadata write failure")
+	}
+	if got, ok := a.store.Credential(cr.ID); !ok || got.Name != "before" {
+		t.Fatal("failed restore changed in-memory metadata")
+	}
+	if err := a.kc.Close(); err != nil {
+		t.Fatal(err)
+	}
+	a.kc, err = keychain.Open(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if value, err := a.kc.Get(keychain.Cred(cr.ID, keychain.Password)); err != nil || string(value) != "old-secret" {
+		t.Fatal("metadata failure did not persist secret rollback")
+	}
+}

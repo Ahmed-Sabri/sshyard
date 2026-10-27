@@ -249,7 +249,7 @@ func (a *App) inUseText(m locales.Messages, err error) string {
 	var iu *assets.InUseError
 	var kd *keychainDeleteError
 	if errors.As(err, &kd) {
-		return m.ErrKeychainDelete(kd.err.Error())
+		return m.ErrKeychainDelete(secretStoreErrorText(m, kd.err))
 	}
 	if !errors.As(err, &iu) {
 		return m.ErrGeneric(err.Error())

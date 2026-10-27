@@ -2,7 +2,6 @@ package app
 
 import (
 	"errors"
-	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -67,17 +66,12 @@ func (k *flakyKC) failOn(set, del func(string) bool) {
 
 func newFlakyApp(t *testing.T) (*App, *ui.Tester, *flakyKC) {
 	t.Helper()
-	dir := t.TempDir()
+	a, tt := newTestApp(t)
 	kc := &flakyKC{Memory: keychain.NewMemory()}
-	a, err := New(Platform{DataDir: dir, Secrets: kc, HomeDir: dir, CacheDir: filepath.Join(dir, "cache")})
-	if err != nil {
+	if err := a.kc.Close(); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(a.Close)
-	a.Start()
-	tt := ui.NewTester(a.View, 1200, 760)
-	tt.SetLocale("en")
-	tt.Frame()
+	a.kc = keychain.New(kc)
 	return a, tt, kc
 }
 
@@ -219,7 +213,7 @@ func TestProxySaveKeychainFailure(t *testing.T) {
 // entry, says why, and a retry finishes it.
 func TestDeleteKeychainFailure(t *testing.T) {
 	a, tt, kc := newFlakyApp(t)
-	want := "Couldn’t remove its secrets from the keychain: keychain locked. It was kept, so you can try again."
+	want := en.ErrKeychainDelete(errFlaky.Error())
 	cr := addCred(t, a, "ops", "pw")
 	kc.failOn(nil, suffix("/password"))
 	if err := a.DeleteCredential(cr.ID, nil); err == nil || a.inUseText(en, err) != want {

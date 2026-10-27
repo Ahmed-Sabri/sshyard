@@ -79,7 +79,7 @@ func (a *App) SaveProxyForm(m locales.Messages) bool {
 	tx := &secretTx{kc: a.kc}
 	fail := func(msg string) bool {
 		if rerr := tx.rollback(); rerr != nil {
-			msg = m.ErrKeychainRestore(msg, rerr.Error())
+			msg = m.ErrKeychainRestore(msg, secretStoreErrorText(m, rerr))
 		}
 		f.err = msg
 		return false
@@ -92,7 +92,7 @@ func (a *App) SaveProxyForm(m locales.Messages) bool {
 		err = tx.set(key, []byte(f.password))
 	}
 	if err != nil {
-		return fail(m.ErrKeychainSave(err.Error()))
+		return fail(m.ErrKeychainSave(secretStoreErrorText(m, err)))
 	}
 	var saved assets.Proxy
 	if f.isNew {

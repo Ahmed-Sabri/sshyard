@@ -70,6 +70,9 @@ func (a *App) promptConns() []int {
 // opening one without a shell when no pane has it. A local port in use
 // is returned at once; the forward shows the error until stopped.
 func (a *App) StartForward(id string) error {
+	if !a.unlocked() {
+		return keychain.ErrLocked
+	}
 	if a.fwds[id] != nil {
 		return nil
 	}
@@ -489,7 +492,7 @@ func (a *App) SaveFwdForm(m locales.Messages) bool {
 	tx := &secretTx{kc: a.kc}
 	fail := func(msg string) bool {
 		if rerr := tx.rollback(); rerr != nil {
-			msg = m.ErrKeychainRestore(msg, rerr.Error())
+			msg = m.ErrKeychainRestore(msg, secretStoreErrorText(m, rerr))
 		}
 		f.err = msg
 		return false
@@ -503,7 +506,7 @@ func (a *App) SaveFwdForm(m locales.Messages) bool {
 		err = tx.set(key, []byte(f.password))
 	}
 	if err != nil {
-		return fail(m.ErrKeychainSave(err.Error()))
+		return fail(m.ErrKeychainSave(secretStoreErrorText(m, err)))
 	}
 	var saved assets.Forward
 	if f.isNew {

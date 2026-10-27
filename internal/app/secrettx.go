@@ -6,9 +6,8 @@ import (
 	"github.com/Licoy/sshyard/internal/keychain"
 )
 
-// secretTx changes keychain entries so that they can be put back: a save
-// writes its secrets first, then its metadata, and undoes the secrets when
-// either step fails, so the two never disagree.
+// secretTx compensates secret writes when a later metadata save fails.
+// Separate metadata and secret files are not crash-atomic together.
 type secretTx struct {
 	kc   *keychain.Keychain
 	undo []func() error
@@ -33,6 +32,21 @@ func (t *secretTx) set(key string, v []byte) error {
 		return err
 	}
 	return t.kc.Set(key, v)
+}
+
+// setBatch captures the old values before one encrypted-store commit.
+func (t *secretTx) setBatch(changes []keychain.Change) error {
+	undo := make([]keychain.Change, 0, len(changes))
+	for _, change := range changes {
+		old, err := t.kc.Get(change.Key)
+		if err != nil && !errors.Is(err, keychain.ErrNotFound) {
+			return err
+		}
+		undo = append(undo, keychain.Change{Key: change.Key, Value: old, Delete: errors.Is(err, keychain.ErrNotFound)})
+	}
+	// Include the batch in rollback even when an injected backend partially fails.
+	t.undo = append(t.undo, func() error { return t.kc.Apply(undo) })
+	return t.kc.Apply(changes)
 }
 
 func (t *secretTx) delete(key string) error {

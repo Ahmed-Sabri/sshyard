@@ -41,6 +41,7 @@ func appIn(t *testing.T, dir string, secrets keychain.Backend) (*App, *ui.Tester
 	tt := ui.NewTester(a.View, 1200, 760)
 	tt.SetLocale("en")
 	tt.Frame()
+	waitFor(t, tt, "credential store unlocked", a.unlocked)
 	return a, tt
 }
 
@@ -202,7 +203,8 @@ func TestAILayoutRestoresEmptySession(t *testing.T) {
 	}
 	defer srv.Close()
 	dir := t.TempDir()
-	a, tt := appIn(t, dir, nil)
+	system := keychain.NewMemory()
+	a, tt := appIn(t, dir, system)
 	term := connected(t, a, tt, srv)
 	tt.Key(aiMods, ui.KeyA)
 	tt.Frame()
@@ -225,7 +227,7 @@ func TestAILayoutRestoresEmptySession(t *testing.T) {
 	a.Close()
 	logins := srv.Logins()
 
-	again, tt2 := appIn(t, dir, nil)
+	again, tt2 := appIn(t, dir, system)
 	tt2.Frame()
 	var got *conn
 	for _, c := range again.conns {
@@ -247,7 +249,8 @@ func TestAILayoutRestoresEmptySession(t *testing.T) {
 
 func TestAILayoutDropsSavedFullMode(t *testing.T) {
 	dir := t.TempDir()
-	a, _ := appIn(t, dir, nil)
+	system := keychain.NewMemory()
+	a, _ := appIn(t, dir, system)
 	h := savedHost(t, a, "web", "10.0.0.8")
 	fullID, err := a.OpenAI(h.ID, openAt{}, 0)
 	if err != nil {
@@ -262,7 +265,7 @@ func TestAILayoutDropsSavedFullMode(t *testing.T) {
 	a.saveLayout()
 	a.Close()
 
-	again, tt := appIn(t, dir, nil)
+	again, tt := appIn(t, dir, system)
 	tt.Frame()
 	var dropped, ask *conn
 	for _, c := range again.conns {
@@ -293,7 +296,8 @@ func TestLayoutSkipsTempHosts(t *testing.T) {
 	}
 	defer srv.Close()
 	dir := t.TempDir()
-	a, tt := appIn(t, dir, nil)
+	system := keychain.NewMemory()
+	a, tt := appIn(t, dir, system)
 	other := savedHost(t, a, "other", "10.0.0.8")
 	if _, err := a.OpenAI(other.ID, openAt{}, 0); err != nil {
 		t.Fatal(err)
@@ -335,7 +339,7 @@ func TestLayoutSkipsTempHosts(t *testing.T) {
 	}
 	a.Close()
 
-	again, tt2 := appIn(t, dir, nil)
+	again, tt2 := appIn(t, dir, system)
 	tt2.Frame()
 	if len(again.ws.Tabs) != 3 {
 		t.Fatalf("tabs %d", len(again.ws.Tabs))
@@ -994,7 +998,11 @@ func TestAISettingsProviderKeychain(t *testing.T) {
 	const fakeKey = "test-key-not-real"
 	mem := keychain.NewMemory()
 	secrets := &failDel{Backend: mem}
-	a, tt := appIn(t, t.TempDir(), secrets)
+	a, tt := appIn(t, t.TempDir(), nil)
+	if err := a.kc.Close(); err != nil {
+		t.Fatal(err)
+	}
+	a.kc = keychain.New(secrets)
 	tt.SetSize(1200, 3200)
 	a.openSettings(prefAI)
 	tt.Frame()
@@ -1034,7 +1042,7 @@ func TestAISettingsProviderKeychain(t *testing.T) {
 	tt.Frame()
 	mustClick(t, tt, "Delete")
 	tt.Frame()
-	if !tt.HasText("Delete fake? Its API key is removed from the keychain.") {
+	if !tt.HasText("Delete fake? Its API key is removed from the encrypted local credential store.") {
 		t.Fatalf("texts %q", tt.Texts())
 	}
 	tt.Key(0, ui.KeyEnter)

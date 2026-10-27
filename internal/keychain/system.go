@@ -2,6 +2,8 @@ package keychain
 
 import (
 	"errors"
+	"regexp"
+	"strconv"
 
 	"github.com/egoist/mygo"
 )
@@ -9,6 +11,8 @@ import (
 // System is the Backend of the operating system's keychain, mygo.Secrets,
 // under the app's identifier (com.sshyard.desktop).
 type System struct{}
+
+var osStatusSuffix = regexp.MustCompile(`\(OSStatus (-?[0-9]+)\)$`)
 
 func mapErr(err error) error {
 	switch {
@@ -18,6 +22,11 @@ func mapErr(err error) error {
 		return ErrNotFound
 	case errors.Is(err, errors.ErrUnsupported):
 		return errors.Join(ErrUnavailable, err)
+	}
+	if matches := osStatusSuffix.FindStringSubmatch(err.Error()); len(matches) == 2 {
+		if code, e := strconv.Atoi(matches[1]); e == nil {
+			return &SystemError{Code: code, Err: err}
+		}
 	}
 	return err
 }

@@ -104,7 +104,7 @@ func TestAboutPage(t *testing.T) {
 	a.openSettings(prefAbout)
 	tt.Frame()
 	for _, s := range []string{"Version dev", runtime.GOOS + " / " + runtime.GOARCH, a.p.DataDir,
-		"System keychain", "github.com/Licoy/sshyard", "github.com/Licoy/sshyard/issues", "Check for Updates"} {
+		"Encrypted local store; master key in system keychain", "github.com/Licoy/sshyard", "github.com/Licoy/sshyard/issues", "Check for Updates"} {
 		if !tt.HasText(s) {
 			t.Errorf("about misses %q: %q", s, tt.Texts())
 		}

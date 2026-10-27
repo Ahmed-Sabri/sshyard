@@ -1,14 +1,9 @@
 #!/bin/sh
-# Runs SSHYard with `mygo dev`. On macOS the development app is code signed
-# so the keychain can remember "Always Allow".
-#
-# The keychain also checks a partition ID, which securityd derives from the
-# signature: "teamid:<team>" for an Apple Development (or Developer ID)
-# certificate, but "cdhash:<hash of this build>" for anything else, such as a
-# self-signed certificate. Only a team ID survives a rebuild, so an
-# "Apple Development" identity (a free Apple ID in Xcode > Settings > Accounts
-# is enough) is used when there is one; with the self-signed "SSHYard-Dev"
-# the keychain asks again after every rebuild.
+# Runs SSHYard with `mygo dev`. On macOS, prefer an Apple Development
+# identity with a stable team ID, which can reduce keychain authorization
+# prompts. Self-signed identities may be identified by each build's hash;
+# using the same certificate does not guarantee access across rebuilds.
+# macOS keychain policy may still require authorization with either identity.
 #
 # SSHYARD_DEV_IDENTITY picks another identity. Arguments go to `mygo dev`.
 set -eu
@@ -26,7 +21,7 @@ if [ -z "$identity" ]; then
 fi
 if [ -z "$identity" ]; then
 	identity=SSHYard-Dev
-	echo "run-dev-app: no \"Apple Development\" identity; signing with the self-signed \"$identity\", so the keychain asks again after every rebuild." >&2
+	echo "run-dev-app: no \"Apple Development\" identity; signing with the self-signed \"$identity\", so macOS may request keychain access again after a rebuild." >&2
 fi
 if ! printf '%s\n' "$identities" | grep -qF "\"$identity\""; then
 	echo "run-dev-app: no valid code signing identity \"$identity\" in the keychain." >&2

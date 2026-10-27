@@ -32,6 +32,7 @@ func newTestApp(t *testing.T) (*App, *ui.Tester) {
 	tt := ui.NewTester(a.View, 1200, 760)
 	tt.SetLocale("en")
 	tt.Frame()
+	waitFor(t, tt, "credential store unlocked", a.unlocked)
 	return a, tt
 }
 
@@ -137,7 +138,7 @@ func TestAddHostFlow(t *testing.T) {
 	}
 }
 
-// addCred adds a password credential, its password in the keychain.
+// addCred adds a password credential, its password in the encrypted local credential store.
 func addCred(t *testing.T, a *App, name, password string) assets.Credential {
 	t.Helper()
 	cr, err := a.Store().SaveCredential(assets.Credential{Name: name, Kind: assets.CredPassword})
@@ -212,6 +213,10 @@ func TestPasswordPrompt(t *testing.T) {
 	}
 	defer srv.Close()
 	a, tt := newTestApp(t)
+	sealedBefore, err := os.ReadFile(filepath.Join(a.p.DataDir, "secrets.enc"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	h := addHost(t, a, srv, "nopw", "")
 	a.known.Add(srv.Addr, srv.HostKey.PublicKey())
 	a.Connect(h.ID, openAt{})
@@ -228,8 +233,12 @@ func TestPasswordPrompt(t *testing.T) {
 	c := a.focused()
 	waitFor(t, tt, "connected", func() bool { return c.s.Status().State == session.Connected })
 	// An "ask" host's password is never saved.
-	if keys := a.kc.Backend().(*keychain.Memory).Keys(); len(keys) != 0 {
-		t.Errorf("keychain holds %q", keys)
+	sealedAfter, err := os.ReadFile(filepath.Join(a.p.DataDir, "secrets.enc"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(sealedAfter) != string(sealedBefore) {
+		t.Error("typed password was saved")
 	}
 	_ = h
 }
@@ -515,6 +524,10 @@ func TestSplitReusesConnection(t *testing.T) {
 	}
 	defer srv.Close()
 	a, tt := newTestApp(t)
+	sealedBefore, err := os.ReadFile(filepath.Join(a.p.DataDir, "secrets.enc"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	h := addHost(t, a, srv, "nosave", "")
 	a.known.Add(srv.Addr, srv.HostKey.PublicKey())
 	a.Connect(h.ID, openAt{})
@@ -553,8 +566,12 @@ func TestSplitReusesConnection(t *testing.T) {
 			t.Errorf("pane %d lost its connection when another closed", c.id)
 		}
 	}
-	if !a.keychainOK || len(a.kc.Backend().(*keychain.Memory).Keys()) != 0 {
-		t.Error("the typed password ended up in the keychain")
+	sealedAfter, err := os.ReadFile(filepath.Join(a.p.DataDir, "secrets.enc"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !a.keychainOK || string(sealedAfter) != string(sealedBefore) {
+		t.Error("the typed password ended up in the encrypted local credential store")
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/pem"
+	"github.com/egoist/mygo/ui"
 	"io"
 	"net"
 	"os"
@@ -142,7 +143,7 @@ func TestAgentAuth(t *testing.T) {
 }
 
 // TestOldDataDiscarded: a data file of the old schema is wiped (no
-// migration), and so are the secrets the old version kept for its hosts.
+// migration); unrelated system entries are not touched during construction.
 func TestOldDataDiscarded(t *testing.T) {
 	dir := t.TempDir()
 	old := `{"version":1,"hosts":[{"id":"h1","name":"old","address":"x","port":22,"user":"u","auth":"password"}]}`
@@ -158,10 +159,13 @@ func TestOldDataDiscarded(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer a.Close()
+	a.Start()
+	tt := ui.NewTester(a.View, 1200, 760)
+	waitFor(t, tt, "credential store unlocked", a.unlocked)
 	if a.Store().Len() != 0 {
 		t.Errorf("%d hosts kept from the old file", a.Store().Len())
 	}
-	if kc.Has("host/h1/password") || !kc.Has("cred/keep/password") {
+	if !kc.Has("host/h1/password") || !kc.Has("cred/keep/password") {
 		t.Errorf("keychain after the wipe: %q", mem.Keys())
 	}
 }

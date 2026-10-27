@@ -112,7 +112,7 @@ func noSecrets(t *testing.T, dir string, secrets ...string) {
 }
 
 // TestCredentialSheet: a password credential made in Settings keeps its
-// password in the keychain only; changing its kind to a pasted key drops
+// password in the encrypted local credential store only; changing its kind to a pasted key drops
 // the password.
 func TestCredentialSheet(t *testing.T) {
 	a, tt := newTestApp(t)
@@ -315,7 +315,7 @@ func TestNewCredentialFromHostEditor(t *testing.T) {
 }
 
 // TestDeleteCredential: a credential in use names its hosts and moves
-// them before it goes; its secrets leave the keychain.
+// them before it goes; its secrets leave the encrypted local credential store.
 func TestDeleteCredential(t *testing.T) {
 	a, tt := newTestApp(t)
 	cr := addCred(t, a, "ops", "pw")
@@ -345,7 +345,7 @@ func TestDeleteCredential(t *testing.T) {
 	}
 	for _, k := range []keychain.Kind{keychain.Password, keychain.PrivateKey, keychain.Passphrase} {
 		if a.kc.Has(keychain.Cred(cr.ID, k)) {
-			t.Errorf("%s left in the keychain", k)
+			t.Errorf("%s left in the encrypted local credential store", k)
 		}
 	}
 	if _, ok := a.typed[keychain.Cred(cr.ID, keychain.Password)]; ok {
@@ -355,7 +355,7 @@ func TestDeleteCredential(t *testing.T) {
 	cr2 := addCred(t, a, "spare", "pw2")
 	a.askDeleteCred(en, cr2.ID)
 	tt.Frame()
-	if !tt.HasText("Delete spare? Its secret is removed from the keychain.") {
+	if !tt.HasText("Delete spare? Its secret is removed from the encrypted local credential store.") {
 		t.Fatalf("%q", tt.Texts())
 	}
 	mustClick(t, tt, "Delete")
