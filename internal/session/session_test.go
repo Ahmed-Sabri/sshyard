@@ -387,8 +387,25 @@ func TestDialTimeoutAndClassify(t *testing.T) {
 	}()
 	kh, _ := OpenKnownHosts(filepath.Join(t.TempDir(), "kh"))
 	_, err := Dial(context.Background(), Config{Addr: ln.Addr().String(), User: "u", Credentials: password("x"), HostKey: kh.Callback(), Timeout: 100 * time.Millisecond})
-	if Classify(err) != KindTimeout {
+	if Classify(err) != KindNoBanner || !errors.Is(err, context.DeadlineExceeded) || !Classify(err).Retryable() {
 		t.Errorf("silent server: %v → %v", err, Classify(err))
+	}
+	// A server that greets and then stalls times out, but is heard.
+	l3, _ := net.Listen("tcp", "127.0.0.1:0")
+	defer l3.Close()
+	go func() {
+		for {
+			c, err := l3.Accept()
+			if err != nil {
+				return
+			}
+			defer c.Close()
+			c.Write([]byte("SSH-2.0-Stall\r\n"))
+		}
+	}()
+	_, err = Dial(context.Background(), Config{Addr: l3.Addr().String(), User: "u", Credentials: password("x"), HostKey: kh.Callback(), Timeout: 100 * time.Millisecond})
+	if Classify(err) != KindTimeout {
+		t.Errorf("stalled server: %v → %v", err, Classify(err))
 	}
 	// A port nobody listens on.
 	l2, _ := net.Listen("tcp", "127.0.0.1:0")

@@ -13,6 +13,7 @@ import (
 	"net"
 	"slices"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/Licoy/sshyard/internal/netproxy"
@@ -40,6 +41,12 @@ var ErrPassphraseWrong = errors.New("session: wrong passphrase for the private k
 
 // ErrNoCredentials reports a host with nothing to authenticate with.
 var ErrNoCredentials = errors.New("session: no password or key")
+
+// ErrNoBanner reports a server that accepted the TCP connection but sent
+// nothing, not even its SSH version, before the timeout: sshd hung or
+// overloaded, or a firewall that lets the connection through and then
+// drops what follows.
+var ErrNoBanner = errors.New("session: the server sent no SSH greeting")
 
 // Config is how to connect to a host.
 type Config struct {
@@ -238,8 +245,9 @@ func dialHop(ctx context.Context, hop Hop, dial func(ctx context.Context, networ
 	if dl, ok := ctx.Deadline(); ok {
 		conn.SetDeadline(dl)
 	}
+	heard := &heardConn{Conn: conn}
 	stop := context.AfterFunc(ctx, func() { conn.Close() })
-	c, chans, reqs, err := ssh.NewClientConn(conn, hop.Addr, &ssh.ClientConfig{
+	c, chans, reqs, err := ssh.NewClientConn(heard, hop.Addr, &ssh.ClientConfig{
 		User:            user,
 		Auth:            methods,
 		HostKeyCallback: hop.HostKey,
@@ -251,6 +259,11 @@ func dialHop(ctx context.Context, hop Hop, dial func(ctx context.Context, networ
 		if err == nil {
 			err = ctx.Err()
 		}
+		var ne net.Error
+		timedOut := ctx.Err() != nil || errors.As(err, &ne) && ne.Timeout()
+		if timedOut && !heard.heard.Load() {
+			return nil, fmt.Errorf("%w: %w: %w", ErrNoBanner, context.DeadlineExceeded, err)
+		}
 		if ctx.Err() != nil && !isHostKeyErr(err) {
 			return nil, fmt.Errorf("%w: %w", context.DeadlineExceeded, err)
 		}
@@ -258,6 +271,20 @@ func dialHop(ctx context.Context, hop Hop, dial func(ctx context.Context, networ
 	}
 	conn.SetDeadline(time.Time{})
 	return ssh.NewClient(c, chans, reqs), nil
+}
+
+// heardConn notes whether the server has sent anything.
+type heardConn struct {
+	net.Conn
+	heard atomic.Bool
+}
+
+func (c *heardConn) Read(p []byte) (int, error) {
+	n, err := c.Conn.Read(p)
+	if n > 0 {
+		c.heard.Store(true)
+	}
+	return n, err
 }
 
 func isHostKeyErr(err error) bool {
@@ -274,6 +301,8 @@ const (
 	KindAuth
 	KindNetwork
 	KindTimeout
+	// KindNoBanner: the server took the connection but never answered.
+	KindNoBanner
 	KindHostUnknown
 	KindHostChanged
 	KindPassphrase
@@ -311,6 +340,8 @@ func Classify(err error) Kind {
 		return KindNoCredentials
 	case strings.Contains(err.Error(), "unable to authenticate"):
 		return KindAuth
+	case errors.Is(err, ErrNoBanner):
+		return KindNoBanner
 	case errors.Is(err, context.DeadlineExceeded), errors.As(err, &ne) && ne.Timeout():
 		return KindTimeout
 	case errors.As(err, new(*net.OpError)), errors.As(err, new(*net.DNSError)),
@@ -324,5 +355,5 @@ func Classify(err error) Kind {
 // Retryable reports whether reconnecting automatically may help: not when
 // the user has to do something first.
 func (k Kind) Retryable() bool {
-	return k == KindNetwork || k == KindTimeout || k == KindProxy || k == KindOther
+	return k == KindNetwork || k == KindTimeout || k == KindNoBanner || k == KindProxy || k == KindOther
 }
