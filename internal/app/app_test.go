@@ -358,7 +358,10 @@ func TestFilesPaneInSplit(t *testing.T) {
 		return string(b) == "from server"
 	})
 	fc.fs.transfers.Wait()
+	fc.fs.queueOpen = true
 	waitFor(t, tt, "transfer list", func() bool { return tt.HasText("Transfers") && tt.HasText("Done") && tt.HasText("remote.txt") })
+	fc.fs.queueOpen = false
+	tt.Frame()
 
 	// New folder on the remote side, from its IconButton and dialog.
 	mustClick(t, tt, "New Remote Folder")

@@ -225,7 +225,7 @@ func (a *App) proxiesSection(c *ui.Context, m locales.Messages, tok theme.Tokens
 		}
 		for _, p := range ps {
 			p := p
-			note := proxyKindText(p) + " · " + p.Addr()
+			note := a.pv(proxyKindText(p) + " · " + p.Addr())
 			if p.User != "" {
 				note += " · " + p.User
 			}

@@ -90,9 +90,15 @@ type filesState struct {
 	// followed is the directory it last went to for it
 	noFollow bool
 	followed string
-	// queueHidden collapses the transfer queue to its header.
-	queueHidden bool
-	queue       ui.ListState
+	// noReportHidden hides the line saying the terminal followed does not
+	// report its directory, snippetOpen is its sheet with the snippet.
+	noReportHidden bool
+	snippetOpen    bool
+	// split is the local side's share of the room, in percent.
+	split float32
+	// queueOpen is the transfers sheet, queue its list.
+	queueOpen bool
+	queue     ui.ListState
 	// opening is set, per side (local, remote), from a double click on a
 	// row's name, which opens on the press, to its release, whose click
 	// is not a choice in the folder just opened.
@@ -565,119 +571,137 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 		a.noReportView(c, t, cn, tok, m)
 		a.planningView(c, cn, tok, m)
 		a.skippedView(c, cn, tok, m)
-		var sides ui.Element
-		if stacked {
-			sides = ui.Column(c.Key("stacked"))
-		} else {
-			sides = ui.Row(c.Key("sides"))
+		if fs.split <= 0 || fs.split >= 100 {
+			fs.split = 50
 		}
-		sides.Grow(1).FillWidth().Gap(10).Children(func() {
-			// local
-			local := ui.Column(c.Key("local")).Grow(1).Basis(0).Fill().Gap(4).Padding(6).Radius(theme.RadiusCard-2).Border(1, tok.Line)
-			local.Children(func() {
-				le, lok := selected(l.sel, l.entries)
-				sideHeader(c, tok, icons.LocalDisk, m.Local(), l.dir, func() {
-					if iconButton(c, "lup", icons.GoUp, m.LocalUp()) {
-						a.listLocal(l, filepath.Dir(l.dir))
-					}
-					if iconButton(c, "lrefresh", icons.Refresh, m.LocalRefresh()) {
-						a.listLocal(l, l.dir)
-					}
-					if iconButton(c, "lmkdir", icons.NewFolder, m.LocalNewFolder()) {
-						fs.ask, fs.askOpen = &nameAsk{kind: askMkdir}, true
-					}
-					if (IconButton{Icon: icons.Upload, Label: m.UploadSelected(), Disabled: s.client == nil || !lok}).Clicked(c, "upload") {
-						a.Upload(cn, []string{filepath.Join(l.dir, le.Name)}, s.dir)
-					}
-				})
-				tb, opened := a.fileTable(c, cn, false, m, &l.list, l.dir, l.entries, tok, narrow)
-				if e, ok := selected(l.sel, l.entries); (tb.Submitted() || opened) && ok {
-					if e.IsDir {
-						a.listLocal(l, filepath.Join(l.dir, e.Name))
-					} else if s.client != nil {
-						a.Upload(cn, []string{filepath.Join(l.dir, e.Name)}, s.dir)
-					}
-				}
-				if l.err != "" {
-					ui.Text(c, l.err).TextColor(tok.Danger).FontSize(theme.Footnote)
-				}
-			})
-			// remote rows download here, from this pane or another files
-			// pane (on its own connection, in its own queue)
-			if d, ok := ui.Drop[filesDrag](local); ok && d.remote {
-				if src := a.conns[d.pane]; src != nil && src.fs != nil {
-					a.Download(src, d.paths, l.dir)
-				}
+		// Each side keeps clear of the line the sides are resized by.
+		gap := func(first bool) (top, right, bottom, left float32) {
+			switch {
+			case stacked && first:
+				return 0, 0, 5, 0
+			case stacked:
+				return 5, 0, 0, 0
+			case first:
+				return 0, 5, 0, 0
 			}
-			if d, ok := ui.DragOver[filesDrag](local); ok && d.remote {
-				local.Background(tok.Accent.Alpha(0.08))
-			}
-			// remote
-			remote := ui.Column(c.Key("remote")).Grow(1).Basis(0).Fill().Gap(4).Padding(6).Radius(theme.RadiusCard-2).Border(1, tok.Line)
-			remote.Children(func() {
-				re, rok := selected(s.sel, s.entries)
-				sideHeader(c, tok, icons.Host, m.Remote(), s.dir, func() {
-					if s.opening {
-						ui.Spinner(c)
-					}
-					off := s.client == nil
-					if (IconButton{Icon: icons.GoUp, Label: m.RemoteUp(), Disabled: off}).Clicked(c, "rup") && s.dir != "" {
-						a.listRemote(s, sftpsvc.RemoteParent(s.dir))
-					}
-					if (IconButton{Icon: icons.Refresh, Label: m.RemoteRefresh(), Disabled: off}).Clicked(c, "rrefresh") {
-						a.listRemote(s, s.dir)
-					}
-					if (IconButton{Icon: icons.NewFolder, Label: m.RemoteNewFolder(), Disabled: off}).Clicked(c, "rmkdir") {
-						fs.ask, fs.askOpen = &nameAsk{kind: askMkdir, remote: true}, true
-					}
-					if (IconButton{Icon: icons.Download, Label: m.DownloadSelected(), Disabled: off || !rok}).Clicked(c, "download") {
-						a.Download(cn, []string{sftpsvc.RemoteJoin(s.dir, re.Name)}, l.dir)
-					}
-				})
-				if s.client == nil {
-					ui.Column(c).Grow(1).Center().Children(func() {
-						if s.opening || cn.s.Status().State != session.Connected {
-							ui.Text(c, a.statusText(m, cn.host, cn.s.Status(), c.Now())).TextColor(tok.TextMuted)
+			return 0, 0, 0, 5
+		}
+		localPane := func() {
+			ui.Box(c.Key("lpad")).Fill().Padding(gap(true)).Children(func() {
+				// local
+				local := ui.Column(c.Key("local")).Fill().Gap(4).Padding(6).Radius(theme.RadiusCard-2).Border(1, tok.Line)
+				local.Children(func() {
+					le, lok := selected(l.sel, l.entries)
+					sideHeader(c, tok, icons.LocalDisk, m.Local(), l.dir, func() {
+						if iconButton(c, "lup", icons.GoUp, m.LocalUp()) {
+							a.listLocal(l, filepath.Dir(l.dir))
 						}
-						if s.err != "" {
-							ui.Text(c, m.ErrGeneric(s.err)).TextColor(tok.Danger).FontSize(theme.Footnote)
+						if iconButton(c, "lrefresh", icons.Refresh, m.LocalRefresh()) {
+							a.listLocal(l, l.dir)
+						}
+						if iconButton(c, "lmkdir", icons.NewFolder, m.LocalNewFolder()) {
+							fs.ask, fs.askOpen = &nameAsk{kind: askMkdir}, true
+						}
+						if (IconButton{Icon: icons.Upload, Label: m.UploadSelected(), Disabled: s.client == nil || !lok}).Clicked(c, "upload") {
+							a.Upload(cn, []string{filepath.Join(l.dir, le.Name)}, s.dir)
 						}
 					})
-					return
-				}
-				tb, opened := a.fileTable(c, cn, true, m, &s.list, s.dir, s.entries, tok, narrow)
-				if a.focusReq == cn.id && a.page == pageWorkspace {
-					tb.Focus()
-					a.focusReq = 0
-				}
-				if e, ok := selected(s.sel, s.entries); (tb.Submitted() || opened) && ok {
-					if e.IsDir {
-						a.listRemote(s, sftpsvc.RemoteJoin(s.dir, e.Name))
-					} else {
-						a.openRemote(cn, sftpsvc.RemoteJoin(s.dir, e.Name), e.Size)
+					tb, opened := a.fileTable(c, cn, false, m, &l.list, l.dir, l.entries, tok, narrow)
+					if e, ok := selected(l.sel, l.entries); (tb.Submitted() || opened) && ok {
+						if e.IsDir {
+							a.listLocal(l, filepath.Join(l.dir, e.Name))
+						} else if s.client != nil {
+							a.Upload(cn, []string{filepath.Join(l.dir, e.Name)}, s.dir)
+						}
+					}
+					if l.err != "" {
+						ui.Text(c, l.err).TextColor(tok.Danger).FontSize(theme.Footnote)
+					}
+				})
+				// remote rows download here, from this pane or another files
+				// pane (on its own connection, in its own queue)
+				if d, ok := ui.Drop[filesDrag](local); ok && d.remote {
+					if src := a.conns[d.pane]; src != nil && src.fs != nil {
+						a.Download(src, d.paths, l.dir)
 					}
 				}
-				if len(s.entries) == 0 {
-					ui.Text(c, m.Empty()).TextColor(tok.TextMuted).FontSize(theme.Footnote)
-				}
-				if s.err != "" {
-					ui.Text(c, m.ErrGeneric(s.err)).TextColor(tok.Danger).FontSize(theme.Footnote)
+				if d, ok := ui.DragOver[filesDrag](local); ok && d.remote {
+					local.Background(tok.Accent.Alpha(0.08))
 				}
 			})
-			if files := remote.DroppedFiles(); len(files) > 0 {
-				a.Upload(cn, files, s.dir)
-			}
-			// local rows upload here, from this pane or another one: the
-			// local disk is the same for all. Remote rows of another pane
-			// are not taken (no copying between remotes).
-			if d, ok := ui.Drop[filesDrag](remote); ok && !d.remote {
-				a.Upload(cn, d.paths, s.dir)
-			}
-			if d, ok := ui.DragOver[filesDrag](remote); remote.FileDragOver() || ok && !d.remote {
-				remote.Background(tok.Accent.Alpha(0.08))
-			}
-		})
-		a.transfersView(c, cn, tok, m)
+		}
+		remotePane := func() {
+			ui.Box(c.Key("rpad")).Fill().Padding(gap(false)).Children(func() {
+				remote := ui.Column(c.Key("remote")).Fill().Gap(4).Padding(6).Radius(theme.RadiusCard-2).Border(1, tok.Line)
+				remote.Children(func() {
+					re, rok := selected(s.sel, s.entries)
+					sideHeader(c, tok, icons.Host, m.Remote(), s.dir, func() {
+						if s.opening {
+							ui.Spinner(c)
+						}
+						off := s.client == nil
+						if (IconButton{Icon: icons.GoUp, Label: m.RemoteUp(), Disabled: off}).Clicked(c, "rup") && s.dir != "" {
+							a.listRemote(s, sftpsvc.RemoteParent(s.dir))
+						}
+						if (IconButton{Icon: icons.Refresh, Label: m.RemoteRefresh(), Disabled: off}).Clicked(c, "rrefresh") {
+							a.listRemote(s, s.dir)
+						}
+						if (IconButton{Icon: icons.NewFolder, Label: m.RemoteNewFolder(), Disabled: off}).Clicked(c, "rmkdir") {
+							fs.ask, fs.askOpen = &nameAsk{kind: askMkdir, remote: true}, true
+						}
+						if (IconButton{Icon: icons.Download, Label: m.DownloadSelected(), Disabled: off || !rok}).Clicked(c, "download") {
+							a.Download(cn, []string{sftpsvc.RemoteJoin(s.dir, re.Name)}, l.dir)
+						}
+					})
+					if s.client == nil {
+						ui.Column(c).Grow(1).Center().Children(func() {
+							if s.opening || cn.s.Status().State != session.Connected {
+								ui.Text(c, a.pv(a.statusText(m, cn.host, cn.s.Status(), c.Now()))).TextColor(tok.TextMuted)
+							}
+							if s.err != "" {
+								ui.Text(c, a.pv(m.ErrGeneric(s.err))).TextColor(tok.Danger).FontSize(theme.Footnote)
+							}
+						})
+						return
+					}
+					tb, opened := a.fileTable(c, cn, true, m, &s.list, s.dir, s.entries, tok, narrow)
+					if a.focusReq == cn.id && a.page == pageWorkspace {
+						tb.Focus()
+						a.focusReq = 0
+					}
+					if e, ok := selected(s.sel, s.entries); (tb.Submitted() || opened) && ok {
+						if e.IsDir {
+							a.listRemote(s, sftpsvc.RemoteJoin(s.dir, e.Name))
+						} else {
+							a.openRemote(cn, sftpsvc.RemoteJoin(s.dir, e.Name), e.Size)
+						}
+					}
+					if len(s.entries) == 0 {
+						ui.Text(c, m.Empty()).TextColor(tok.TextMuted).FontSize(theme.Footnote)
+					}
+					if s.err != "" {
+						ui.Text(c, m.ErrGeneric(s.err)).TextColor(tok.Danger).FontSize(theme.Footnote)
+					}
+				})
+				if files := remote.DroppedFiles(); len(files) > 0 {
+					a.Upload(cn, files, s.dir)
+				}
+				// local rows upload here, from this pane or another one: the
+				// local disk is the same for all. Remote rows of another pane
+				// are not taken (no copying between remotes).
+				if d, ok := ui.Drop[filesDrag](remote); ok && !d.remote {
+					a.Upload(cn, d.paths, s.dir)
+				}
+				if d, ok := ui.DragOver[filesDrag](remote); remote.FileDragOver() || ok && !d.remote {
+					remote.Background(tok.Accent.Alpha(0.08))
+				}
+			})
+		}
+		if stacked {
+			ui.SplitVerticalPercent(c.Key("stacked"), &fs.split, localPane, remotePane).Grow(1).FillWidth()
+		} else {
+			ui.SplitPercent(c.Key("sides"), &fs.split, localPane, remotePane).Grow(1).FillWidth()
+		}
 	})
 	if body.FocusWithin() && t.Focus != n.ID {
 		t.Focus = n.ID
@@ -687,6 +711,8 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 	a.conflictView(c, cn, m)
 	a.openAskView(c, cn, m)
 	a.localConflictView(c, cn, m)
+	a.snippetView(c, cn, tok, m)
+	a.transfersSheet(c, cn, tok, m)
 }
 
 // refreshForTransfers lists the sides again as transfers finish: once

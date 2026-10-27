@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
+	"strconv"
 	"testing"
 	"time"
 
@@ -254,6 +255,13 @@ func TestFilesDragDropAndQueue(t *testing.T) {
 	}
 	drag("drag.txt", "Remote")
 	waitFor(t, tt, "drag upload", func() bool { return read(filepath.Join(root, "drag.txt")) == "dragged" })
+	// The remote side lists it, not its partial file, before the next
+	// drag picks a row there.
+	waitFor(t, tt, "listed", func() bool {
+		es := fc.fs.remote.entries
+		return len(es) == 2 && es[0].Name == "down.txt" && es[1].Name == "drag.txt"
+	})
+	tt.Frame()
 	// and a remote one onto the local side downloads.
 	drag("down.txt", "Local")
 	waitFor(t, tt, "drag download", func() bool { return read(filepath.Join(local, "down.txt")) == "down" })
@@ -272,7 +280,12 @@ func TestFilesDragDropAndQueue(t *testing.T) {
 	fc.fs.transfers.Wait()
 	tt.Frame()
 
-	// The queue: rows say they are done, and clear; it folds away.
+	// The queue is in a sheet the header's button opens: rows say they
+	// are done, and clear.
+	if tt.HasText("z.txt") {
+		t.Fatal("queue shown in the pane")
+	}
+	mustClick(t, tt, "Transfers")
 	waitFor(t, tt, "rows", func() bool { return tt.HasText("z.txt") && tt.HasText("Done") })
 	if !tt.HasText("0 active · 4 of 4 done") {
 		t.Errorf("summary in %q", tt.Texts())
@@ -281,13 +294,65 @@ func TestFilesDragDropAndQueue(t *testing.T) {
 	if len(fc.fs.transfers.List()) != 0 || !tt.HasText("No transfers yet") {
 		t.Error("not cleared")
 	}
-	mustClick(t, tt, "Hide transfers")
-	if !fc.fs.queueHidden || tt.HasText("No transfers yet") {
-		t.Error("queue not hidden")
+	mustClick(t, tt, "Close")
+	tt.Frame()
+	if fc.fs.queueOpen || tt.HasText("No transfers yet") {
+		t.Error("sheet not closed")
 	}
-	mustClick(t, tt, "Show transfers")
-	if fc.fs.queueHidden {
-		t.Error("queue not shown")
+}
+
+// TestFilesTransfersBadge counts what is still to go on the header's
+// transfers button, and failures in red once nothing is.
+func TestFilesTransfersBadge(t *testing.T) {
+	_, tt, fc, root := filesPane(t)
+	trs := fc.fs.transfers
+	write(t, filepath.Join(root, "big.bin"), string(make([]byte, 1<<20)))
+	trs.SetConcurrency(1)
+	dst := filepath.Join(fc.fs.local.dir, "big.bin")
+	for i, name := range []string{"a.bin", "b.bin", "c.bin"} {
+		id := trs.Add(sftpsvc.Download, sftpsvc.RemoteJoin(fc.fs.remote.dir, "big.bin"), dst+strconv.Itoa(i), name)
+		trs.Pause(id)
+	}
+	badge := func() bool { return slices.Contains(tt.Texts(), "3") }
+	tt.Frame()
+	if !badge() {
+		t.Fatalf("no badge in %q", tt.Texts())
+	}
+	trs.CancelAll()
+	tt.Frame()
+	if !badge() || tt.HasText("a.bin") {
+		t.Fatalf("no failure badge, or the queue in the pane: %q", tt.Texts())
+	}
+	trs.ClearFinished()
+	tt.Frame()
+	if badge() {
+		t.Errorf("badge with nothing queued: %q", tt.Texts())
+	}
+}
+
+// TestFilesSplit resizes the sides by dragging the line between them.
+func TestFilesSplit(t *testing.T) {
+	_, tt, fc, _ := filesPane(t)
+	if fc.fs.split != 50 {
+		t.Fatalf("split %v", fc.fs.split)
+	}
+	lx, ly := center(t, tt, "Local")
+	rx, _ := center(t, tt, "Remote")
+	r, ok := tt.Find("Divider")
+	if !ok {
+		t.Fatalf("no divider in %q", tt.Texts())
+	}
+	x := r.X + r.W/2
+	if x < lx || x > rx {
+		t.Fatalf("divider at %v, not between %v and %v", x, lx, rx)
+	}
+	tt.Press(x, ly+100)
+	tt.Move(x-10, ly+100)
+	tt.Move(x-120, ly+100)
+	tt.Release(x-120, ly+100)
+	tt.Frame()
+	if fc.fs.split >= 50 {
+		t.Errorf("split %v after dragging left", fc.fs.split)
 	}
 }
 
@@ -297,7 +362,7 @@ func TestFilesQueueControls(t *testing.T) {
 	// A big file and one byte at a time keeps them going.
 	write(t, filepath.Join(root, "big.bin"), string(make([]byte, 4<<20)))
 	trs.SetConcurrency(1)
-	fc.fs.queueHidden = false
+	fc.fs.queueOpen = true
 	dst := filepath.Join(fc.fs.local.dir, "big.bin")
 	id := trs.Add(sftpsvc.Download, sftpsvc.RemoteJoin(fc.fs.remote.dir, "big.bin"), dst, "big.bin")
 	id2 := trs.Add(sftpsvc.Download, sftpsvc.RemoteJoin(fc.fs.remote.dir, "big.bin"), dst+"2", "big2.bin")

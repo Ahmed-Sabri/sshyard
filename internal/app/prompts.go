@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/Licoy/sshyard/internal/assets"
-	"github.com/Licoy/sshyard/internal/icons"
 	"github.com/Licoy/sshyard/internal/session"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/locales"
@@ -331,15 +330,15 @@ func (a *App) TrustHostKey() error {
 func (a *App) promptsView(c *ui.Context, m locales.Messages) {
 	a.checkFailures(m)
 	if p := a.prompt; p != nil {
-		title := m.PasswordPromptTitle(p.host.Target())
+		title := m.PasswordPromptTitle(a.pv(p.host.Target()))
 		if p.passphrase {
-			title = m.PassphrasePromptTitle(p.host.Target())
+			title = m.PassphrasePromptTitle(a.pv(p.host.Target()))
 		}
 		tok := currentTokens(c)
 		sheet(ui.Modal(c, &a.prompting, func() {
 			ui.Column(c).Gap(14).Width(380).Children(func() {
 				ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
-					tile(c, icons.Host, tok.Tint(p.host.ID), 36)
+					hostAvatar(c, tok, a.liveHost(p.host), 36)
 					ui.Text(c, title).FontSize(theme.Title3).FontWeight(600).Shrink(1)
 				})
 				if p.err != "" {

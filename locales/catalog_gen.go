@@ -3490,16 +3490,6 @@ func (msgs Messages) FileName() string {
 	return Catalog.Format(msgs.locale, "fileName", nil)
 }
 
-// HideTransfers says "Hide transfers"
-// in the language the app shows.
-func HideTransfers() string { return In(i18n.Locale()).HideTransfers() }
-
-// HideTransfers says "Hide transfers"
-// in the language of msgs.
-func (msgs Messages) HideTransfers() string {
-	return Catalog.Format(msgs.locale, "hideTransfers", nil)
-}
-
 // KeepBoth says "Keep Both"
 // in the language the app shows.
 func KeepBoth() string { return In(i18n.Locale()).KeepBoth() }
@@ -3698,16 +3688,6 @@ func RetryTransfer(name string) string { return In(i18n.Locale()).RetryTransfer(
 // in the language of msgs.
 func (msgs Messages) RetryTransfer(name string) string {
 	return Catalog.Format(msgs.locale, "retryTransfer", map[string]any{"name": name})
-}
-
-// ShowTransfers says "Show transfers"
-// in the language the app shows.
-func ShowTransfers() string { return In(i18n.Locale()).ShowTransfers() }
-
-// ShowTransfers says "Show transfers"
-// in the language of msgs.
-func (msgs Messages) ShowTransfers() string {
-	return Catalog.Format(msgs.locale, "showTransfers", nil)
 }
 
 // Skip says "Skip"
@@ -4004,11 +3984,11 @@ func (msgs Messages) FollowTerminal() string {
 	return Catalog.Format(msgs.locale, "followTerminal", nil)
 }
 
-// FollowNoReport says "This shell doesn’t say which folder it’s in. Add this to its startup file (~/.bashrc or ~/.zshrc):"
+// FollowNoReport says "This shell doesn’t report its folder, so Files can’t follow it."
 // in the language the app shows.
 func FollowNoReport() string { return In(i18n.Locale()).FollowNoReport() }
 
-// FollowNoReport says "This shell doesn’t say which folder it’s in. Add this to its startup file (~/.bashrc or ~/.zshrc):"
+// FollowNoReport says "This shell doesn’t report its folder, so Files can’t follow it."
 // in the language of msgs.
 func (msgs Messages) FollowNoReport() string {
 	return Catalog.Format(msgs.locale, "followNoReport", nil)
@@ -6438,4 +6418,544 @@ func DurDays(d string, h string) string { return In(i18n.Locale()).DurDays(d, h)
 // in the language of msgs.
 func (msgs Messages) DurDays(d string, h string) string {
 	return Catalog.Format(msgs.locale, "durDays", map[string]any{"d": d, "h": h})
+}
+
+// PrivacyMode says "Privacy mode: mask IP addresses"
+// in the language the app shows.
+func PrivacyMode() string { return In(i18n.Locale()).PrivacyMode() }
+
+// PrivacyMode says "Privacy mode: mask IP addresses"
+// in the language of msgs.
+func (msgs Messages) PrivacyMode() string {
+	return Catalog.Format(msgs.locale, "privacyMode", nil)
+}
+
+// LocalTerminal says "Local terminal"
+// in the language the app shows.
+func LocalTerminal() string { return In(i18n.Locale()).LocalTerminal() }
+
+// LocalTerminal says "Local terminal"
+// in the language of msgs.
+func (msgs Messages) LocalTerminal() string {
+	return Catalog.Format(msgs.locale, "localTerminal", nil)
+}
+
+// LocalTerminalNote says "A shell on this computer. Files, AI, forwards and metrics need a server."
+// in the language the app shows.
+func LocalTerminalNote() string { return In(i18n.Locale()).LocalTerminalNote() }
+
+// LocalTerminalNote says "A shell on this computer. Files, AI, forwards and metrics need a server."
+// in the language of msgs.
+func (msgs Messages) LocalTerminalNote() string {
+	return Catalog.Format(msgs.locale, "localTerminalNote", nil)
+}
+
+// MonitorLocal says "Metrics are for servers. This pane is a shell on this computer."
+// in the language the app shows.
+func MonitorLocal() string { return In(i18n.Locale()).MonitorLocal() }
+
+// MonitorLocal says "Metrics are for servers. This pane is a shell on this computer."
+// in the language of msgs.
+func (msgs Messages) MonitorLocal() string {
+	return Catalog.Format(msgs.locale, "monitorLocal", nil)
+}
+
+// NewGroup says "New group"
+// in the language the app shows.
+func NewGroup() string { return In(i18n.Locale()).NewGroup() }
+
+// NewGroup says "New group"
+// in the language of msgs.
+func (msgs Messages) NewGroup() string {
+	return Catalog.Format(msgs.locale, "newGroup", nil)
+}
+
+// NewGroupEllipsis says "New group…"
+// in the language the app shows.
+func NewGroupEllipsis() string { return In(i18n.Locale()).NewGroupEllipsis() }
+
+// NewGroupEllipsis says "New group…"
+// in the language of msgs.
+func (msgs Messages) NewGroupEllipsis() string {
+	return Catalog.Format(msgs.locale, "newGroupEllipsis", nil)
+}
+
+// RenameGroup says "Rename group"
+// in the language the app shows.
+func RenameGroup() string { return In(i18n.Locale()).RenameGroup() }
+
+// RenameGroup says "Rename group"
+// in the language of msgs.
+func (msgs Messages) RenameGroup() string {
+	return Catalog.Format(msgs.locale, "renameGroup", nil)
+}
+
+// DeleteGroup says "Delete group"
+// in the language the app shows.
+func DeleteGroup() string { return In(i18n.Locale()).DeleteGroup() }
+
+// DeleteGroup says "Delete group"
+// in the language of msgs.
+func (msgs Messages) DeleteGroup() string {
+	return Catalog.Format(msgs.locale, "deleteGroup", nil)
+}
+
+// DeleteGroupConfirm says "Delete the group {group}? Its hosts are kept, without a group."
+// in the language the app shows.
+func DeleteGroupConfirm(group string) string { return In(i18n.Locale()).DeleteGroupConfirm(group) }
+
+// DeleteGroupConfirm says "Delete the group {group}? Its hosts are kept, without a group."
+// in the language of msgs.
+func (msgs Messages) DeleteGroupConfirm(group string) string {
+	return Catalog.Format(msgs.locale, "deleteGroupConfirm", map[string]any{"group": group})
+}
+
+// GroupTaken says "There is already a group with this name."
+// in the language the app shows.
+func GroupTaken() string { return In(i18n.Locale()).GroupTaken() }
+
+// GroupTaken says "There is already a group with this name."
+// in the language of msgs.
+func (msgs Messages) GroupTaken() string {
+	return Catalog.Format(msgs.locale, "groupTaken", nil)
+}
+
+// GroupPlaceholder says "Production"
+// in the language the app shows.
+func GroupPlaceholder() string { return In(i18n.Locale()).GroupPlaceholder() }
+
+// GroupPlaceholder says "Production"
+// in the language of msgs.
+func (msgs Messages) GroupPlaceholder() string {
+	return Catalog.Format(msgs.locale, "groupPlaceholder", nil)
+}
+
+// EmptyGroup says "No hosts. Drag hosts here."
+// in the language the app shows.
+func EmptyGroup() string { return In(i18n.Locale()).EmptyGroup() }
+
+// EmptyGroup says "No hosts. Drag hosts here."
+// in the language of msgs.
+func (msgs Messages) EmptyGroup() string {
+	return Catalog.Format(msgs.locale, "emptyGroup", nil)
+}
+
+// NewHostInGroup says "New host in this group"
+// in the language the app shows.
+func NewHostInGroup() string { return In(i18n.Locale()).NewHostInGroup() }
+
+// NewHostInGroup says "New host in this group"
+// in the language of msgs.
+func (msgs Messages) NewHostInGroup() string {
+	return Catalog.Format(msgs.locale, "newHostInGroup", nil)
+}
+
+// MoveToGroup says "Move to group"
+// in the language the app shows.
+func MoveToGroup() string { return In(i18n.Locale()).MoveToGroup() }
+
+// MoveToGroup says "Move to group"
+// in the language of msgs.
+func (msgs Messages) MoveToGroup() string {
+	return Catalog.Format(msgs.locale, "moveToGroup", nil)
+}
+
+// NoGroup says "No group"
+// in the language the app shows.
+func NoGroup() string { return In(i18n.Locale()).NoGroup() }
+
+// NoGroup says "No group"
+// in the language of msgs.
+func (msgs Messages) NoGroup() string {
+	return Catalog.Format(msgs.locale, "noGroup", nil)
+}
+
+// FieldAppearance says "Appearance"
+// in the language the app shows.
+func FieldAppearance() string { return In(i18n.Locale()).FieldAppearance() }
+
+// FieldAppearance says "Appearance"
+// in the language of msgs.
+func (msgs Messages) FieldAppearance() string {
+	return Catalog.Format(msgs.locale, "fieldAppearance", nil)
+}
+
+// HostEmoji says "Emoji or text"
+// in the language the app shows.
+func HostEmoji() string { return In(i18n.Locale()).HostEmoji() }
+
+// HostEmoji says "Emoji or text"
+// in the language of msgs.
+func (msgs Messages) HostEmoji() string {
+	return Catalog.Format(msgs.locale, "hostEmoji", nil)
+}
+
+// EmojiPlaceholder says "🚀 or up to 4 characters"
+// in the language the app shows.
+func EmojiPlaceholder() string { return In(i18n.Locale()).EmojiPlaceholder() }
+
+// EmojiPlaceholder says "🚀 or up to 4 characters"
+// in the language of msgs.
+func (msgs Messages) EmojiPlaceholder() string {
+	return Catalog.Format(msgs.locale, "emojiPlaceholder", nil)
+}
+
+// AutoIcon says "Automatic icon"
+// in the language the app shows.
+func AutoIcon() string { return In(i18n.Locale()).AutoIcon() }
+
+// AutoIcon says "Automatic icon"
+// in the language of msgs.
+func (msgs Messages) AutoIcon() string {
+	return Catalog.Format(msgs.locale, "autoIcon", nil)
+}
+
+// AutoColor says "Automatic color"
+// in the language the app shows.
+func AutoColor() string { return In(i18n.Locale()).AutoColor() }
+
+// AutoColor says "Automatic color"
+// in the language of msgs.
+func (msgs Messages) AutoColor() string {
+	return Catalog.Format(msgs.locale, "autoColor", nil)
+}
+
+// IconServer says "Server"
+// in the language the app shows.
+func IconServer() string { return In(i18n.Locale()).IconServer() }
+
+// IconServer says "Server"
+// in the language of msgs.
+func (msgs Messages) IconServer() string {
+	return Catalog.Format(msgs.locale, "iconServer", nil)
+}
+
+// IconDatabase says "Database"
+// in the language the app shows.
+func IconDatabase() string { return In(i18n.Locale()).IconDatabase() }
+
+// IconDatabase says "Database"
+// in the language of msgs.
+func (msgs Messages) IconDatabase() string {
+	return Catalog.Format(msgs.locale, "iconDatabase", nil)
+}
+
+// IconCloud says "Cloud"
+// in the language the app shows.
+func IconCloud() string { return In(i18n.Locale()).IconCloud() }
+
+// IconCloud says "Cloud"
+// in the language of msgs.
+func (msgs Messages) IconCloud() string {
+	return Catalog.Format(msgs.locale, "iconCloud", nil)
+}
+
+// IconComputer says "Computer"
+// in the language the app shows.
+func IconComputer() string { return In(i18n.Locale()).IconComputer() }
+
+// IconComputer says "Computer"
+// in the language of msgs.
+func (msgs Messages) IconComputer() string {
+	return Catalog.Format(msgs.locale, "iconComputer", nil)
+}
+
+// IconLaptop says "Laptop"
+// in the language the app shows.
+func IconLaptop() string { return In(i18n.Locale()).IconLaptop() }
+
+// IconLaptop says "Laptop"
+// in the language of msgs.
+func (msgs Messages) IconLaptop() string {
+	return Catalog.Format(msgs.locale, "iconLaptop", nil)
+}
+
+// IconRouter says "Router"
+// in the language the app shows.
+func IconRouter() string { return In(i18n.Locale()).IconRouter() }
+
+// IconRouter says "Router"
+// in the language of msgs.
+func (msgs Messages) IconRouter() string {
+	return Catalog.Format(msgs.locale, "iconRouter", nil)
+}
+
+// IconStorage says "Storage"
+// in the language the app shows.
+func IconStorage() string { return In(i18n.Locale()).IconStorage() }
+
+// IconStorage says "Storage"
+// in the language of msgs.
+func (msgs Messages) IconStorage() string {
+	return Catalog.Format(msgs.locale, "iconStorage", nil)
+}
+
+// IconContainer says "Container"
+// in the language the app shows.
+func IconContainer() string { return In(i18n.Locale()).IconContainer() }
+
+// IconContainer says "Container"
+// in the language of msgs.
+func (msgs Messages) IconContainer() string {
+	return Catalog.Format(msgs.locale, "iconContainer", nil)
+}
+
+// IconCode says "Code"
+// in the language the app shows.
+func IconCode() string { return In(i18n.Locale()).IconCode() }
+
+// IconCode says "Code"
+// in the language of msgs.
+func (msgs Messages) IconCode() string {
+	return Catalog.Format(msgs.locale, "iconCode", nil)
+}
+
+// IconRocket says "Rocket"
+// in the language the app shows.
+func IconRocket() string { return In(i18n.Locale()).IconRocket() }
+
+// IconRocket says "Rocket"
+// in the language of msgs.
+func (msgs Messages) IconRocket() string {
+	return Catalog.Format(msgs.locale, "iconRocket", nil)
+}
+
+// IconPlanet says "Planet"
+// in the language the app shows.
+func IconPlanet() string { return In(i18n.Locale()).IconPlanet() }
+
+// IconPlanet says "Planet"
+// in the language of msgs.
+func (msgs Messages) IconPlanet() string {
+	return Catalog.Format(msgs.locale, "iconPlanet", nil)
+}
+
+// IconTest says "Test"
+// in the language the app shows.
+func IconTest() string { return In(i18n.Locale()).IconTest() }
+
+// IconTest says "Test"
+// in the language of msgs.
+func (msgs Messages) IconTest() string {
+	return Catalog.Format(msgs.locale, "iconTest", nil)
+}
+
+// IconGit says "Git"
+// in the language the app shows.
+func IconGit() string { return In(i18n.Locale()).IconGit() }
+
+// IconGit says "Git"
+// in the language of msgs.
+func (msgs Messages) IconGit() string {
+	return Catalog.Format(msgs.locale, "iconGit", nil)
+}
+
+// IconHome says "Home"
+// in the language the app shows.
+func IconHome() string { return In(i18n.Locale()).IconHome() }
+
+// IconHome says "Home"
+// in the language of msgs.
+func (msgs Messages) IconHome() string {
+	return Catalog.Format(msgs.locale, "iconHome", nil)
+}
+
+// IconOffice says "Office"
+// in the language the app shows.
+func IconOffice() string { return In(i18n.Locale()).IconOffice() }
+
+// IconOffice says "Office"
+// in the language of msgs.
+func (msgs Messages) IconOffice() string {
+	return Catalog.Format(msgs.locale, "iconOffice", nil)
+}
+
+// IconSecure says "Secure"
+// in the language the app shows.
+func IconSecure() string { return In(i18n.Locale()).IconSecure() }
+
+// IconSecure says "Secure"
+// in the language of msgs.
+func (msgs Messages) IconSecure() string {
+	return Catalog.Format(msgs.locale, "iconSecure", nil)
+}
+
+// IconGame says "Game"
+// in the language the app shows.
+func IconGame() string { return In(i18n.Locale()).IconGame() }
+
+// IconGame says "Game"
+// in the language of msgs.
+func (msgs Messages) IconGame() string {
+	return Catalog.Format(msgs.locale, "iconGame", nil)
+}
+
+// ColorGreen says "Green"
+// in the language the app shows.
+func ColorGreen() string { return In(i18n.Locale()).ColorGreen() }
+
+// ColorGreen says "Green"
+// in the language of msgs.
+func (msgs Messages) ColorGreen() string {
+	return Catalog.Format(msgs.locale, "colorGreen", nil)
+}
+
+// ColorOrange says "Orange"
+// in the language the app shows.
+func ColorOrange() string { return In(i18n.Locale()).ColorOrange() }
+
+// ColorOrange says "Orange"
+// in the language of msgs.
+func (msgs Messages) ColorOrange() string {
+	return Catalog.Format(msgs.locale, "colorOrange", nil)
+}
+
+// ColorTeal says "Teal"
+// in the language the app shows.
+func ColorTeal() string { return In(i18n.Locale()).ColorTeal() }
+
+// ColorTeal says "Teal"
+// in the language of msgs.
+func (msgs Messages) ColorTeal() string {
+	return Catalog.Format(msgs.locale, "colorTeal", nil)
+}
+
+// ColorPurple says "Purple"
+// in the language the app shows.
+func ColorPurple() string { return In(i18n.Locale()).ColorPurple() }
+
+// ColorPurple says "Purple"
+// in the language of msgs.
+func (msgs Messages) ColorPurple() string {
+	return Catalog.Format(msgs.locale, "colorPurple", nil)
+}
+
+// ColorIndigo says "Indigo"
+// in the language the app shows.
+func ColorIndigo() string { return In(i18n.Locale()).ColorIndigo() }
+
+// ColorIndigo says "Indigo"
+// in the language of msgs.
+func (msgs Messages) ColorIndigo() string {
+	return Catalog.Format(msgs.locale, "colorIndigo", nil)
+}
+
+// ColorPink says "Pink"
+// in the language the app shows.
+func ColorPink() string { return In(i18n.Locale()).ColorPink() }
+
+// ColorPink says "Pink"
+// in the language of msgs.
+func (msgs Messages) ColorPink() string {
+	return Catalog.Format(msgs.locale, "colorPink", nil)
+}
+
+// ColorRed says "Red"
+// in the language the app shows.
+func ColorRed() string { return In(i18n.Locale()).ColorRed() }
+
+// ColorRed says "Red"
+// in the language of msgs.
+func (msgs Messages) ColorRed() string {
+	return Catalog.Format(msgs.locale, "colorRed", nil)
+}
+
+// ColorBlue says "Blue"
+// in the language the app shows.
+func ColorBlue() string { return In(i18n.Locale()).ColorBlue() }
+
+// ColorBlue says "Blue"
+// in the language of msgs.
+func (msgs Messages) ColorBlue() string {
+	return Catalog.Format(msgs.locale, "colorBlue", nil)
+}
+
+// FollowHowTo says "How to follow this shell"
+// in the language the app shows.
+func FollowHowTo() string { return In(i18n.Locale()).FollowHowTo() }
+
+// FollowHowTo says "How to follow this shell"
+// in the language of msgs.
+func (msgs Messages) FollowHowTo() string {
+	return Catalog.Format(msgs.locale, "followHowTo", nil)
+}
+
+// FollowHowToText says "On Linux servers SSHYard reads the shell’s folder by itself. On other servers, or when the server refuses SSHYard…"
+// in the language the app shows.
+func FollowHowToText() string { return In(i18n.Locale()).FollowHowToText() }
+
+// FollowHowToText says "On Linux servers SSHYard reads the shell’s folder by itself. On other servers, or when the server refuses SSHYard…"
+// in the language of msgs.
+func (msgs Messages) FollowHowToText() string {
+	return Catalog.Format(msgs.locale, "followHowToText", nil)
+}
+
+// HideNotice says "Hide notice"
+// in the language the app shows.
+func HideNotice() string { return In(i18n.Locale()).HideNotice() }
+
+// HideNotice says "Hide notice"
+// in the language of msgs.
+func (msgs Messages) HideNotice() string {
+	return Catalog.Format(msgs.locale, "hideNotice", nil)
+}
+
+// Copied says "Copied"
+// in the language the app shows.
+func Copied() string { return In(i18n.Locale()).Copied() }
+
+// Copied says "Copied"
+// in the language of msgs.
+func (msgs Messages) Copied() string {
+	return Catalog.Format(msgs.locale, "copied", nil)
+}
+
+// IconUbuntu says "Ubuntu"
+// in the language the app shows.
+func IconUbuntu() string { return In(i18n.Locale()).IconUbuntu() }
+
+// IconUbuntu says "Ubuntu"
+// in the language of msgs.
+func (msgs Messages) IconUbuntu() string {
+	return Catalog.Format(msgs.locale, "iconUbuntu", nil)
+}
+
+// IconCentOS says "CentOS"
+// in the language the app shows.
+func IconCentOS() string { return In(i18n.Locale()).IconCentOS() }
+
+// IconCentOS says "CentOS"
+// in the language of msgs.
+func (msgs Messages) IconCentOS() string {
+	return Catalog.Format(msgs.locale, "iconCentOS", nil)
+}
+
+// IconApple says "macOS"
+// in the language the app shows.
+func IconApple() string { return In(i18n.Locale()).IconApple() }
+
+// IconApple says "macOS"
+// in the language of msgs.
+func (msgs Messages) IconApple() string {
+	return Catalog.Format(msgs.locale, "iconApple", nil)
+}
+
+// IconWindows says "Windows"
+// in the language the app shows.
+func IconWindows() string { return In(i18n.Locale()).IconWindows() }
+
+// IconWindows says "Windows"
+// in the language of msgs.
+func (msgs Messages) IconWindows() string {
+	return Catalog.Format(msgs.locale, "iconWindows", nil)
+}
+
+// IconAndroid says "Android"
+// in the language the app shows.
+func IconAndroid() string { return In(i18n.Locale()).IconAndroid() }
+
+// IconAndroid says "Android"
+// in the language of msgs.
+func (msgs Messages) IconAndroid() string {
+	return Catalog.Format(msgs.locale, "iconAndroid", nil)
 }

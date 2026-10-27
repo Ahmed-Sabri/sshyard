@@ -400,129 +400,159 @@ func pad2(n int) string {
 	return strconv.Itoa(n)
 }
 
-// transfersView is the transfer queue at the bottom of a files pane:
-// a header with what is going on and buttons for all, and a row for each
-// transfer, collapsible to the header.
-func (a *App) transfersView(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages) {
-	fs := cn.fs
-	trs := fs.transfers
-	ts := trs.List()
-	var active, running, paused, failed, done int
-	var speed float64
+// transferCounts is how many of ts are in each state, and how fast the
+// running ones go together.
+type transferCounts struct {
+	active, running, paused, failed, done int
+	speed                                 float64
+}
+
+func countTransfers(ts []sftpsvc.Transfer) transferCounts {
+	var n transferCounts
 	for _, t := range ts {
 		switch t.State {
 		case sftpsvc.Running:
-			running++
-			speed += t.Speed
+			n.running++
+			n.speed += t.Speed
 		case sftpsvc.Paused:
-			paused++
+			n.paused++
 		case sftpsvc.Failed, sftpsvc.Canceled:
-			failed++
+			n.failed++
 		case sftpsvc.Done:
-			done++
+			n.done++
 		}
 		if t.Active() {
-			active++
+			n.active++
 		}
 	}
-	box := ui.Column(c.Key("transfers")).Gap(4).Padding(6, 10).Radius(theme.RadiusCard - 2).Background(tok.Fill).FillWidth()
-	if !fs.queueHidden {
-		box.Height(156)
+	return n
+}
+
+// transfersButton is the Files pane header's button for its transfer
+// queue, with how many are still to go on it.
+func (a *App) transfersButton(c *ui.Context, cn *conn, m locales.Messages) {
+	n := countTransfers(cn.fs.transfers.List())
+	b := IconButton{Icon: icons.Transfers, Label: m.Transfers(), Active: cn.fs.queueOpen, Size: Small}
+	if n.active > 0 {
+		b.Badge = strconv.Itoa(n.active)
+	} else if n.failed > 0 {
+		b.Badge, b.BadgeDanger = strconv.Itoa(n.failed), true
 	}
-	box.Children(func() {
-		ui.Row(c).Gap(6).AlignItems(ui.Center).Height(26).Children(func() {
-			ic, label := icons.Collapse, m.HideTransfers()
-			if fs.queueHidden {
-				ic, label = icons.Expand, m.ShowTransfers()
-			}
-			if (IconButton{Icon: ic, Label: label, Size: Small}).Clicked(c, "fold") {
-				fs.queueHidden = !fs.queueHidden
-			}
-			ui.Text(c, m.Transfers()).FontWeight(600).FontSize(theme.Footnote)
-			summary := m.TransferSummary(strconv.Itoa(active), strconv.Itoa(done), strconv.Itoa(len(ts)))
-			if speed > 0 {
-				summary += " · " + humanSize(int64(speed)) + "/s"
-			}
-			if len(ts) > 0 {
-				ui.Text(c, summary).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine().Shrink(1)
-			}
-			ui.Spacer(c)
-			if (IconButton{Icon: icons.Pause, Label: m.PauseAll(), Disabled: active == paused, Size: Small}).Clicked(c, "pauseall") {
-				trs.PauseAll()
-			}
-			if (IconButton{Icon: icons.Resume, Label: m.ResumeAll(), Disabled: paused == 0, Size: Small}).Clicked(c, "resumeall") {
-				trs.ResumeAll()
-			}
-			if (IconButton{Icon: icons.Reconnect, Label: m.RetryAll(), Disabled: failed == 0, Size: Small}).Clicked(c, "retryall") {
-				for _, t := range ts {
-					if t.State == sftpsvc.Failed || t.State == sftpsvc.Canceled {
-						trs.Retry(t.ID)
-					}
-				}
-			}
-			if (IconButton{Icon: icons.Close, Label: m.CancelAll(), Disabled: active == 0, Size: Small}).Clicked(c, "cancelall") {
-				trs.CancelAll()
-			}
-			if (IconButton{Icon: icons.Clear, Label: m.ClearFinished(), Disabled: len(ts) == active, Size: Small}).Clicked(c, "clear") {
-				trs.ClearFinished()
-			}
-		})
-		if fs.queueHidden {
-			return
-		}
-		if len(ts) == 0 {
-			ui.Text(c, m.NoTransfers()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
-			return
-		}
-		ui.List(c.Key("queue"), &fs.queue, len(ts), func(i int) {
-			t := ts[i]
-			ui.Row(c.Key("tr:"+strconv.Itoa(t.ID))).Gap(8).AlignItems(ui.Center).Height(26).Padding(0, 2).FillWidth().Children(func() {
-				ic := icons.Upload
-				if t.Dir == sftpsvc.Download {
-					ic = icons.Download
-				}
-				ui.Icon(c, ic.SVG).Width(14).Height(14).Shrink(0).TextColor(tok.TextMuted)
-				name := ui.Text(c, t.Name).FontSize(theme.Footnote).SingleLine().Width(170)
-				if t.Destination != "" {
-					name.Tooltip(t.Destination)
-				}
-				ui.Progress(c, float64(t.Percent())/100).Grow(1)
-				col := tok.TextMuted
-				if t.State == sftpsvc.Failed {
-					col = tok.Danger
-				}
-				lbl := ui.Text(c, transferLabel(m, t)).FontSize(theme.Caption).TextColor(col).SingleLine().Width(190)
-				if t.Err != nil {
-					lbl.Tooltip(t.Err.Error())
-				}
-				id := t.ID
-				ui.Row(c).Gap(2).Width(52).Justify(ui.End).Children(func() {
-					switch t.State {
-					case sftpsvc.Queued, sftpsvc.Running:
-						if (IconButton{Icon: icons.Pause, Label: m.PauseTransfer(t.Name), Size: Small}).Clicked(c, "pause") {
-							trs.Pause(id)
-						}
-					case sftpsvc.Paused:
-						if (IconButton{Icon: icons.Resume, Label: m.ResumeTransfer(t.Name), Size: Small}).Clicked(c, "resume") {
-							trs.Resume(id)
-						}
-					case sftpsvc.Failed, sftpsvc.Canceled:
-						if (IconButton{Icon: icons.Reconnect, Label: m.RetryTransfer(t.Name), Size: Small}).Clicked(c, "retry") {
-							trs.Retry(id)
-						}
-					}
-					if t.Active() {
-						if (IconButton{Icon: icons.Close, Label: m.CancelTransfer(t.Name), Size: Small}).Clicked(c, "cancel") {
-							trs.Cancel(id)
-						}
-					}
-				})
-			})
-		}).Grow(1).FillWidth()
-	})
-	if running > 0 {
+	if b.Clicked(c, "transfers") {
+		cn.fs.queueOpen = true
+	}
+	if n.running > 0 {
 		c.After(250 * time.Millisecond)
 	}
+}
+
+// transfersSheet is the transfer queue of a files pane: what is going
+// on, buttons for all, and a row for each transfer.
+func (a *App) transfersSheet(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages) {
+	fs := cn.fs
+	if !fs.queueOpen {
+		return
+	}
+	trs := fs.transfers
+	ts := trs.List()
+	n := countTransfers(ts)
+	active, paused, failed := n.active, n.paused, n.failed
+	sheet(ui.Modal(c, &fs.queueOpen, func() {
+		ui.Column(c.Key("transfers")).Gap(14).Width(720).Children(func() {
+			ui.Row(c).Gap(12).AlignItems(ui.Center).FillWidth().Children(func() {
+				tile(c, icons.Transfers, theme.Brand, 36)
+				ui.Column(c).Gap(2).Grow(1).Shrink(1).Children(func() {
+					sheetTitle(c, m.Transfers())
+					summary := m.TransferSummary(strconv.Itoa(active), strconv.Itoa(n.done), strconv.Itoa(len(ts)))
+					if n.speed > 0 {
+						summary += " · " + humanSize(int64(n.speed)) + "/s"
+					}
+					if len(ts) > 0 {
+						ui.Text(c, summary).FontSize(theme.Footnote).TextColor(tok.TextMuted).SingleLine()
+					}
+				})
+				if (IconButton{Icon: icons.Pause, Label: m.PauseAll(), Disabled: active == paused, Size: Small}).Clicked(c, "pauseall") {
+					trs.PauseAll()
+				}
+				if (IconButton{Icon: icons.Resume, Label: m.ResumeAll(), Disabled: paused == 0, Size: Small}).Clicked(c, "resumeall") {
+					trs.ResumeAll()
+				}
+				if (IconButton{Icon: icons.Reconnect, Label: m.RetryAll(), Disabled: failed == 0, Size: Small}).Clicked(c, "retryall") {
+					for _, t := range ts {
+						if t.State == sftpsvc.Failed || t.State == sftpsvc.Canceled {
+							trs.Retry(t.ID)
+						}
+					}
+				}
+				if (IconButton{Icon: icons.Close, Label: m.CancelAll(), Disabled: active == 0, Size: Small}).Clicked(c, "cancelall") {
+					trs.CancelAll()
+				}
+				if (IconButton{Icon: icons.Clear, Label: m.ClearFinished(), Disabled: len(ts) == active, Size: Small}).Clicked(c, "clear") {
+					trs.ClearFinished()
+				}
+			})
+			box := ui.Column(c).Height(320).FillWidth().Padding(6).Radius(theme.RadiusCard - 2).Background(tok.Fill)
+			box.Children(func() {
+				if len(ts) == 0 {
+					ui.Column(c).Grow(1).Center().Children(func() {
+						ui.Text(c, m.NoTransfers()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
+					})
+					return
+				}
+				ui.List(c.Key("queue"), &fs.queue, len(ts), func(i int) {
+					t := ts[i]
+					ui.Row(c.Key("tr:"+strconv.Itoa(t.ID))).Gap(8).AlignItems(ui.Center).Height(26).Padding(0, 2).FillWidth().Children(func() {
+						ic := icons.Upload
+						if t.Dir == sftpsvc.Download {
+							ic = icons.Download
+						}
+						ui.Icon(c, ic.SVG).Width(14).Height(14).Shrink(0).TextColor(tok.TextMuted)
+						name := ui.Text(c, t.Name).FontSize(theme.Footnote).SingleLine().Width(200)
+						if t.Destination != "" {
+							name.Tooltip(t.Destination)
+						}
+						ui.Progress(c, float64(t.Percent())/100).Grow(1)
+						col := tok.TextMuted
+						if t.State == sftpsvc.Failed {
+							col = tok.Danger
+						}
+						lbl := ui.Text(c, transferLabel(m, t)).FontSize(theme.Caption).TextColor(col).SingleLine().Width(190)
+						if t.Err != nil {
+							lbl.Tooltip(t.Err.Error())
+						}
+						id := t.ID
+						ui.Row(c).Gap(2).Width(52).Justify(ui.End).Children(func() {
+							switch t.State {
+							case sftpsvc.Queued, sftpsvc.Running:
+								if (IconButton{Icon: icons.Pause, Label: m.PauseTransfer(t.Name), Size: Small}).Clicked(c, "pause") {
+									trs.Pause(id)
+								}
+							case sftpsvc.Paused:
+								if (IconButton{Icon: icons.Resume, Label: m.ResumeTransfer(t.Name), Size: Small}).Clicked(c, "resume") {
+									trs.Resume(id)
+								}
+							case sftpsvc.Failed, sftpsvc.Canceled:
+								if (IconButton{Icon: icons.Reconnect, Label: m.RetryTransfer(t.Name), Size: Small}).Clicked(c, "retry") {
+									trs.Retry(id)
+								}
+							}
+							if t.Active() {
+								if (IconButton{Icon: icons.Close, Label: m.CancelTransfer(t.Name), Size: Small}).Clicked(c, "cancel") {
+									trs.Cancel(id)
+								}
+							}
+						})
+					})
+				}).Grow(1).FillWidth()
+			})
+			ui.Row(c).Gap(8).Children(func() {
+				ui.Spacer(c)
+				if pill(c, m.Close(), true, false, false) {
+					fs.queueOpen = false
+				}
+			})
+		})
+	}), tok)
 }
 
 // skippedShown is how many skipped items the notice names.

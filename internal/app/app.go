@@ -104,6 +104,12 @@ type conn struct {
 	name     string
 	nameAsk  nameState
 	nameConn int
+	// probe is how far reading the shell's directory from the server
+	// went, for a terminal that does not report it, per connect
+	// (probeConn), and probeAt when it was last read; see probeCwd
+	probe     probeState
+	probeConn int
+	probeAt   time.Time
 	// temp is the ID of the temporary host the pane was opened on, kept
 	// after it is saved as a host, so that what was typed for it goes
 	// when its last pane closes
@@ -298,6 +304,16 @@ type App struct {
 	// restoring is set while a saved layout is opened, so it is not saved
 	// again over itself mid-way.
 	restoring bool
+	// localName is what local terminals are called, in the language of
+	// the last frame.
+	localName string
+	// group is the group sheet open (new or rename), groupDeleting asks
+	// before deleting groupDelete
+	group         *groupForm
+	grouping      bool
+	groupHold     focusHold
+	groupDeleting bool
+	groupDelete   string
 }
 
 // New opens the app's data.
@@ -535,6 +551,9 @@ func (a *App) makeConn(hostID string, kind layout.Kind, link int) (*conn, error)
 	if !ok {
 		return nil, assets.ErrNotFound
 	}
+	if isLocal(h.ID) && kind != layout.Terminal {
+		return nil, errLocalTerminalOnly
+	}
 	a.nextConn++
 	c := &conn{id: a.nextConn, kind: kind, host: h}
 	if isTemp(h.ID) {
@@ -552,11 +571,15 @@ func (a *App) makeConn(hostID string, kind layout.Kind, link int) (*conn, error)
 		a.conns[c.id] = c
 		return c, nil
 	}
-	cfg := a.hostConfig(h, c, func(ctx context.Context) (session.Credentials, error) { return a.credentials(c, h) })
+	var cfg session.Config
+	if !isLocal(h.ID) {
+		cfg = a.hostConfig(h, c, func(ctx context.Context) (session.Credentials, error) { return a.credentials(c, h) })
+	}
 	opts := session.Options{
 		KeepAlive:     time.Duration(a.settings.KeepAliveSeconds) * time.Second,
 		AutoReconnect: a.settings.AutoReconnect,
 		NoShell:       kind != layout.Terminal,
+		Local:         isLocal(h.ID),
 	}
 	c.s = session.New(cfg, opts, 80, 24)
 	c.s.OnChange = a.invalidate
@@ -837,6 +860,15 @@ func hostsBy(st *assets.Store, query string) (favorites []assets.Host, groups []
 			groups = append(groups, h.Group)
 		}
 		byGroup[h.Group] = append(byGroup[h.Group], h)
+	}
+	// Groups made on their own show while empty, but not in a search.
+	if query == "" {
+		for _, g := range st.Groups() {
+			if _, ok := byGroup[g]; !ok {
+				groups = append(groups, g)
+				byGroup[g] = nil
+			}
+		}
 	}
 	sort.Slice(groups, func(i, j int) bool { return groups[i] < groups[j] })
 	return

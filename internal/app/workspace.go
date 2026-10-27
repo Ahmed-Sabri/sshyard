@@ -92,9 +92,9 @@ func (a *App) tabLabel(t *layout.Tab) string {
 		return ""
 	}
 	if n := len(t.Panes()); n > 1 {
-		return cn.host.Label() + " +" + strconv.Itoa(n-1)
+		return a.pv(cn.host.Label()) + " +" + strconv.Itoa(n-1)
 	}
-	return cn.host.Label()
+	return a.pv(cn.host.Label())
 }
 
 // kindIcon is the icon of a pane kind, the "-fill" one when on.
@@ -290,19 +290,19 @@ func (a *App) tabStrip(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 				if menu.Item(m.NewTab()).Shortcut(appMods, ui.KeyT).Chosen() {
 					a.Connect(cn.host.ID, openAt{})
 				}
-				if menu.Item(m.OpenAI()).Chosen() {
+				if menu.Item(m.OpenAI()).Disabled(!remoteOnly(cn)).Chosen() {
 					a.OpenAI(cn.host.ID, openAt{}, 0)
 				}
 				link := 0
 				if cn.kind == layout.Terminal {
 					link = cn.id
 				}
-				if menu.Item(m.OpenAIRight()).Chosen() {
+				if menu.Item(m.OpenAIRight()).Disabled(!remoteOnly(cn)).Chosen() {
 					if t := a.ws.ActiveTab(); t != nil {
 						a.OpenAI(cn.host.ID, openAt{pane: t.Focus, edge: layout.Right}, link)
 					}
 				}
-				if menu.Item(m.OpenAIBelow()).Chosen() {
+				if menu.Item(m.OpenAIBelow()).Disabled(!remoteOnly(cn)).Chosen() {
 					if t := a.ws.ActiveTab(); t != nil {
 						a.OpenAI(cn.host.ID, openAt{pane: t.Focus, edge: layout.Bottom}, link)
 					}
@@ -440,11 +440,11 @@ func (a *App) paneView(c *ui.Context, t *layout.Tab, n *layout.Node, tok theme.T
 		}
 		head := ui.Row(c.Key("head")).Height(36).Shrink(0).Padding(0, 6, 0, 10).Gap(8).AlignItems(ui.Center).Drag(dragSession{cn.id}).Label(m.PaneActions())
 		head.Children(func() {
-			softTile(c, kindIcon(cn.kind, focused), tok.Tint(cn.host.ID), 22)
-			title := cn.host.Label()
+			softTile(c, kindIcon(cn.kind, focused), hostTint(tok, a.liveHost(cn.host)), 22)
+			title := a.pv(cn.host.Label())
 			switch cn.kind {
 			case layout.Files:
-				title = m.FilesPane(cn.host.Label())
+				title = m.FilesPane(a.pv(cn.host.Label()))
 			case layout.Editor:
 				title = cn.ed.name
 			}
@@ -467,7 +467,7 @@ func (a *App) paneView(c *ui.Context, t *layout.Tab, n *layout.Node, tok theme.T
 			if cn.kind == layout.Terminal {
 				a.paneForwards(c, m, tok, cn.host.ID)
 			}
-			ui.Text(c, cn.host.Target()).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine().Shrink(1)
+			ui.Text(c, a.pv(cn.host.Target())).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine().Shrink(1)
 			ui.Spacer(c)
 			if isTemp(cn.host.ID) {
 				if (IconButton{Icon: icons.Save, Label: m.SaveAsHost(), Size: Small}).Clicked(c, "saveas") {
@@ -480,13 +480,14 @@ func (a *App) paneView(c *ui.Context, t *layout.Tab, n *layout.Node, tok theme.T
 					t.Focus = n.ID
 					a.finding = !(a.finding && focused)
 				}
-				if (IconButton{Icon: icons.Folder, Label: m.OpenFilesHere(), Size: Small}).Clicked(c, "files") {
+				if (IconButton{Icon: icons.Folder, Label: m.OpenFilesHere(), Size: Small, Disabled: !remoteOnly(cn)}).Clicked(c, "files") {
 					t.Focus = n.ID
 					a.OpenFiles(cn.host.ID, openAt{pane: n.ID, edge: layout.Right}, cn)
 				}
 			} else if cn.kind == layout.Editor {
 				a.editorActions(c, t, n, cn, m)
 			} else {
+				a.transfersButton(c, cn, m)
 				a.followButton(c, t, n, cn, m)
 				if (IconButton{Icon: icons.Terminal, Label: m.OpenTerminalBeside(), Size: Small}).Clicked(c, "term") {
 					t.Focus = n.ID
@@ -633,20 +634,20 @@ func (a *App) termElement(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn
 			t.Focus = n.ID
 			a.SplitFocused(layout.Bottom)
 		}
-		if menu.Item(m.OpenFilesBeside()).Shortcut(appMods, ui.KeyO).Chosen() {
+		if menu.Item(m.OpenFilesBeside()).Shortcut(appMods, ui.KeyO).Disabled(!remoteOnly(cn)).Chosen() {
 			t.Focus = n.ID
 			a.OpenFilesBeside()
 		}
-		if menu.Item(m.OpenAIRight()).Shortcut(aiMods, ui.KeyA).Chosen() {
+		if menu.Item(m.OpenAIRight()).Shortcut(aiMods, ui.KeyA).Disabled(!remoteOnly(cn)).Chosen() {
 			t.Focus = n.ID
 			a.OpenAI(cn.host.ID, openAt{pane: n.ID, edge: layout.Right}, cn.id)
 		}
-		if menu.Item(m.OpenAIBelow()).Chosen() {
+		if menu.Item(m.OpenAIBelow()).Disabled(!remoteOnly(cn)).Chosen() {
 			t.Focus = n.ID
 			a.OpenAI(cn.host.ID, openAt{pane: n.ID, edge: layout.Bottom}, cn.id)
 		}
 		sel := tv.SelectedText()
-		if menu.Item(m.AskAI()).Disabled(sel == "").Chosen() {
+		if menu.Item(m.AskAI()).Disabled(sel == "" || !remoteOnly(cn)).Chosen() {
 			a.AskAI(cn, sel)
 		}
 		menu.Separator()
@@ -669,7 +670,7 @@ func (a *App) banner(c *ui.Context, cn *conn, st session.Status, tok theme.Token
 		} else {
 			ui.Icon(c, icons.Warning.SVG).Size(14, 14).Shrink(0).TextColor(col)
 		}
-		ui.Text(c, a.statusText(m, cn.host, st, c.Now())).FontSize(theme.Footnote).Grow(1).Shrink(1)
+		ui.Text(c, a.pv(a.statusText(m, cn.host, st, c.Now()))).FontSize(theme.Footnote).Grow(1).Shrink(1)
 		switch st.State {
 		case session.Failed, session.Disconnected, session.Exited, session.Reconnecting:
 			if session.Classify(st.Err) == session.KindHostChanged {

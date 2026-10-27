@@ -180,3 +180,22 @@ func TestTintAt(t *testing.T) {
 		t.Fatal("TintAt does not wrap")
 	}
 }
+
+func TestTintNamed(t *testing.T) {
+	if len(TintNames) != len(Tints) {
+		t.Fatalf("%d names for %d tints", len(TintNames), len(Tints))
+	}
+	l, d := LightTokens(), DarkTokens()
+	for i, n := range TintNames {
+		lc, ok1 := l.TintNamed(n)
+		dc, ok2 := d.TintNamed(n)
+		if !ok1 || !ok2 || lc != Tints[i][0] || dc != Tints[i][1] {
+			t.Errorf("%s is not tint %d", n, i)
+		}
+	}
+	for _, n := range []string{"", "Green", "#1984FC"} {
+		if _, ok := l.TintNamed(n); ok {
+			t.Errorf("%q names a tint", n)
+		}
+	}
+}

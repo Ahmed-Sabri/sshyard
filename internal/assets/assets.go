@@ -21,6 +21,8 @@ import (
 	"time"
 
 	"github.com/Licoy/sshyard/internal/settings"
+	"github.com/Licoy/sshyard/internal/theme"
+	"github.com/mattn/go-runewidth"
 )
 
 // MetricsMode is a host's metrics bar: follow the global setting, on, or off.
@@ -62,6 +64,13 @@ type Host struct {
 	Group    string     `json:"group,omitempty"`
 	Favorite bool       `json:"favorite,omitempty"`
 	Auth     AuthMethod `json:"auth"`
+	// Icon is the host's icon: one of the app's own, by its key after
+	// IconPrefix ("icon:database"), or a short text the user typed, as
+	// an emoji. Empty picks one from the address.
+	Icon string `json:"icon,omitempty"`
+	// Color is the tint behind the icon, a name of theme.TintNames.
+	// Empty picks one from the address.
+	Color string `json:"color,omitempty"`
 	// CredentialID is the credential of AuthCredential.
 	CredentialID string `json:"credentialId,omitempty"`
 	// JumpChain are the hosts connected through, in order, before this
@@ -141,6 +150,10 @@ func (h *Host) Normalize() {
 	h.Address = strings.TrimSpace(h.Address)
 	h.User = strings.TrimSpace(h.User)
 	h.Group = strings.TrimSpace(h.Group)
+	h.Icon = IconText(h.Icon)
+	if _, ok := theme.LightTokens().TintNamed(h.Color); !ok {
+		h.Color = ""
+	}
 	if h.Port == 0 {
 		h.Port = 22
 	}
@@ -165,6 +178,20 @@ func (h *Host) Normalize() {
 		h.Metrics = MetricsFollow
 	}
 	h.AIPolicy.normalize()
+}
+
+// IconPrefix starts a Host.Icon naming one of the app's icons.
+const IconPrefix = "icon:"
+
+// IconText is what a host keeps of its icon: one of the app's as it is,
+// else the text trimmed, at most two emoji or four letters wide, whole
+// characters only.
+func IconText(s string) string {
+	s = strings.TrimSpace(s)
+	if strings.HasPrefix(s, IconPrefix) {
+		return s
+	}
+	return runewidth.Truncate(s, 4, "")
 }
 
 func (p *AIPolicy) normalize() {
@@ -250,6 +277,9 @@ type Store struct {
 	creds    []Credential
 	proxies  []Proxy
 	forwards []Forward
+	// groups are the groups made on their own, kept while empty; the
+	// groups hosts name are groups too.
+	groups []string
 	// discarded are the host IDs of an older file Open threw away.
 	discarded []string
 }
@@ -260,6 +290,7 @@ type file struct {
 	Credentials []Credential `json:"credentials"`
 	Proxies     []Proxy      `json:"proxies"`
 	Forwards    []Forward    `json:"forwards"`
+	Groups      []string     `json:"groups,omitempty"`
 }
 
 // Open reads the store at path; a missing file is an empty store. A file
@@ -302,7 +333,7 @@ func Open(path string) (*Store, error) {
 		}
 		return s, nil
 	}
-	s.hosts, s.creds, s.proxies, s.forwards = f.Hosts, f.Credentials, f.Proxies, f.Forwards
+	s.hosts, s.creds, s.proxies, s.forwards, s.groups = f.Hosts, f.Credentials, f.Proxies, f.Forwards, f.Groups
 	return s, nil
 }
 
@@ -314,7 +345,7 @@ func (s *Store) save() error {
 	if s.path == "" {
 		return nil
 	}
-	f := file{Version: SchemaVersion, Hosts: s.hosts, Credentials: s.creds, Proxies: s.proxies, Forwards: s.forwards}
+	f := file{Version: SchemaVersion, Hosts: s.hosts, Credentials: s.creds, Proxies: s.proxies, Forwards: s.forwards, Groups: s.groups}
 	// Empty lists are written as [], not null.
 	if f.Hosts == nil {
 		f.Hosts = []Host{}
@@ -337,10 +368,10 @@ func (s *Store) save() error {
 
 // commit saves, or undoes what fn changed when saving fails.
 func (s *Store) commit(fn func()) error {
-	h, c, p, f := slices.Clone(s.hosts), slices.Clone(s.creds), slices.Clone(s.proxies), slices.Clone(s.forwards)
+	h, c, p, f, g := slices.Clone(s.hosts), slices.Clone(s.creds), slices.Clone(s.proxies), slices.Clone(s.forwards), slices.Clone(s.groups)
 	fn()
 	if err := s.save(); err != nil {
-		s.hosts, s.creds, s.proxies, s.forwards = h, c, p, f
+		s.hosts, s.creds, s.proxies, s.forwards, s.groups = h, c, p, f, g
 		return err
 	}
 	return nil
@@ -577,19 +608,102 @@ func (s *Store) Favorites() []Host {
 	return out
 }
 
-// Groups returns the names of the groups, sorted; hosts without a group
-// are in none of them.
+// Groups returns the names of the groups, sorted: those of the hosts and
+// those made with AddGroup, empty or not. Hosts without a group are in
+// none of them.
 func (s *Store) Groups() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.groupNames()
+}
+
+func (s *Store) groupNames() []string {
 	seen := map[string]bool{}
 	var out []string
-	for _, h := range s.List() {
-		if h.Group != "" && !seen[h.Group] {
-			seen[h.Group] = true
-			out = append(out, h.Group)
+	add := func(g string) {
+		if g != "" && !seen[g] {
+			seen[g] = true
+			out = append(out, g)
 		}
+	}
+	for _, g := range s.groups {
+		add(g)
+	}
+	for _, h := range s.hosts {
+		add(h.Group)
 	}
 	slices.SortFunc(out, func(a, b string) int { return strings.Compare(strings.ToLower(a), strings.ToLower(b)) })
 	return out
+}
+
+// AddGroup makes an empty group, for hosts to be moved into. The name is
+// trimmed; a group of that name, in any case, is a "taken" FieldError.
+func (s *Store) AddGroup(name string) error {
+	name = strings.TrimSpace(name)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := s.checkGroup(name, ""); err != nil {
+		return err
+	}
+	return s.commit(func() { s.groups = append(s.groups, name) })
+}
+
+// checkGroup checks a new group name, other than old.
+func (s *Store) checkGroup(name, old string) error {
+	if name == "" {
+		return &FieldError{Field: "group", Reason: "required"}
+	}
+	for _, g := range s.groupNames() {
+		if strings.EqualFold(g, name) && g != old {
+			return &FieldError{Field: "group", Reason: "taken"}
+		}
+	}
+	return nil
+}
+
+// RenameGroup renames a group, and moves its hosts with it.
+func (s *Store) RenameGroup(old, name string) error {
+	name = strings.TrimSpace(name)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !slices.Contains(s.groupNames(), old) {
+		return ErrNotFound
+	}
+	if err := s.checkGroup(name, old); err != nil {
+		return err
+	}
+	return s.commit(func() {
+		s.groups = slices.DeleteFunc(slices.Clone(s.groups), func(g string) bool { return g == old })
+		s.groups = append(s.groups, name)
+		for i := range s.hosts {
+			if s.hosts[i].Group == old {
+				s.hosts[i].Group = name
+			}
+		}
+	})
+}
+
+// DeleteGroup removes a group. Its hosts stay, in no group.
+func (s *Store) DeleteGroup(name string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !slices.Contains(s.groupNames(), name) {
+		return ErrNotFound
+	}
+	return s.commit(func() {
+		s.groups = slices.DeleteFunc(slices.Clone(s.groups), func(g string) bool { return g == name })
+		for i := range s.hosts {
+			if s.hosts[i].Group == name {
+				s.hosts[i].Group = ""
+			}
+		}
+	})
+}
+
+// SetGroup moves a host into a group, "" for none.
+func (s *Store) SetGroup(id, group string) error {
+	group = strings.TrimSpace(group)
+	return s.modify(id, func(h *Host) { h.Group = group })
 }
 
 // InGroup returns the hosts of a group, "" for those without one.

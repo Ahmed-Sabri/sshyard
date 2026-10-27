@@ -10,16 +10,23 @@ import (
 	"strings"
 )
 
-// addMenu is the sidebar's "+": a new host, quick connect, import.
+// addMenu is the sidebar's "+": a new host or group, quick connect, a
+// local terminal, import.
 func (a *App) addMenu(menu *ui.Menu, m locales.Messages) {
 	if menu.Item(m.NewHost()).Chosen() {
 		a.openEditor(nil)
+	}
+	if menu.Item(m.NewGroup()).Chosen() {
+		a.openGroupForm("", "")
 	}
 	if menu.Item(m.QuickConnectMenu()).Shortcut(appMods, ui.KeyK).Chosen() {
 		a.OpenQuickConnect()
 	}
 	if menu.Item(m.NewForwardMenu()).Disabled(a.store.Len() == 0).Chosen() {
 		a.openFwdForm(m, nil, a.selectedHost())
+	}
+	if menu.Item(m.LocalTerminal()).Chosen() {
+		a.OpenLocalTerminal()
 	}
 	menu.Separator()
 	if menu.Item(m.ImportSSHConfigMenu()).Chosen() {
@@ -43,22 +50,20 @@ func (a *App) sidebarView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	bar := c.TitleBar()
 	ui.Column(c).Fill().Children(func() {
 		// The top band, level with the toolbar: the app's identity after
-		// the window controls (macOS), and adding a host.
+		// the window controls (macOS).
 		ui.Row(c.Key("sbhead")).Height(bandHeight(c)).Shrink(0).Padding(0, 10, 0, max(bar.Left+4, 14)).Gap(8).
 			AlignItems(ui.Center).DragWindow().Children(func() {
 			tile(c, icons.Terminal, theme.Brand, 22)
-			ui.Column(c).Gap(0).Shrink(1).Children(func() {
-				ui.Text(c, m.AppName()).FontSize(theme.Body).FontWeight(600).SingleLine()
-				ui.Text(c, m.HostCount(a.store.Len())).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine()
-			})
-			ui.Spacer(c)
-			// Adding: a new host, a host typed on the spot, or the
-			// hosts of ~/.ssh/config.
+			ui.Text(c, m.AppName()).FontSize(theme.Body).FontWeight(600).SingleLine().Shrink(1)
+		})
+		// The search, and beside it adding: a new host or group, a host
+		// typed on the spot, or the hosts of ~/.ssh/config.
+		ui.Row(c.Key("sbtools")).Padding(0, 8, 6, 12).Gap(4).AlignItems(ui.Center).Children(func() {
+			a.searchBox(c, m, tok)
 			(IconButton{Icon: icons.Add, Label: m.AddMenu()}).Show(c, "newhost").Menu(func(menu *ui.Menu) {
 				a.addMenu(menu, m)
 			})
 		})
-		ui.Box(c).Padding(0, 12, 6, 12).Children(func() { a.searchBox(c, m, tok) })
 		if a.store.Len() == 0 {
 			ui.Column(c).Padding(16).Gap(6).Children(func() {
 				ui.Text(c, m.NoHosts()).FontWeight(600)
@@ -76,22 +81,27 @@ func (a *App) sidebarView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 					})
 				}
 				for _, g := range groups {
-					ui.SidebarSection(c.Key("s:g:"+g), g, a.section("g:"+g), func() {
+					sec := ui.SidebarSection(c.Key("s:g:"+g), g, a.section("g:"+g), func() {
 						for _, h := range byGroup[g] {
 							a.hostItem(c, m, h, "")
 						}
+						if len(byGroup[g]) == 0 {
+							ui.Text(c, m.EmptyGroup()).FontSize(theme.Caption).TextColor(tok.TextMuted).Padding(2, 8, 6, 8)
+						}
 					})
+					a.groupSection(c, m, tok, sec, g)
 				}
 				if hs := byGroup[""]; len(hs) > 0 {
 					title := m.Ungrouped()
 					if len(groups) == 0 {
 						title = m.Hosts()
 					}
-					ui.SidebarSection(c.Key("s:none"), title, a.section("none"), func() {
+					sec := ui.SidebarSection(c.Key("s:none"), title, a.section("none"), func() {
 						for _, h := range hs {
 							a.hostItem(c, m, h, "")
 						}
 					})
+					a.hostDrops(sec, tok, "")
 				}
 				a.forwardsSection(c, m, tok)
 			}).Grow(1).FillWidth()
@@ -111,10 +121,10 @@ func (a *App) sidebarView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 				el := card(c, tok).Padding(10).Gap(10).FillWidth().Label(m.HostActions())
 				el.Children(func() {
 					ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
-						tile(c, icons.Host, tok.Tint(h.ID), 30)
+						hostAvatar(c, tok, h, 30)
 						ui.Column(c).Shrink(1).Gap(1).Children(func() {
-							ui.Text(c, h.Label()).FontWeight(600).SingleLine()
-							ui.Text(c, h.Target()).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine()
+							ui.Text(c, a.pv(h.Label())).FontWeight(600).SingleLine()
+							ui.Text(c, a.pv(h.Target())).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine()
 						})
 					})
 					ui.Row(c).Gap(2).AlignItems(ui.Center).Children(func() {
@@ -143,7 +153,45 @@ func (a *App) sidebarView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 				})
 			}
 		})
+		// The foot of the sidebar: how many hosts there are.
+		ui.Box(c).Height(1).Shrink(0).FillWidth().Background(tok.Line)
+		ui.Row(c.Key("sbfoot")).Height(statusBarHeight).Shrink(0).Padding(0, 12).AlignItems(ui.Center).Children(func() {
+			ui.Text(c, m.HostCount(a.store.Len())).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine()
+		})
 	})
+}
+
+// groupSection gives a group's section its menu, and takes the hosts
+// dropped on it.
+func (a *App) groupSection(c *ui.Context, m locales.Messages, tok theme.Tokens, sec ui.Element, g string) {
+	sec.ContextMenu(func(menu *ui.Menu) {
+		if menu.Item(m.NewHostInGroup()).Chosen() {
+			a.openEditor(nil)
+			a.form.group = g
+		}
+		if menu.Item(m.RenameGroup()).Chosen() {
+			a.openGroupForm(g, "")
+		}
+		if menu.Item(m.DeleteGroup()).Chosen() {
+			a.groupDelete, a.groupDeleting = g, true
+		}
+	})
+	a.hostDrops(sec, tok, g)
+}
+
+// hostDrops moves a host dropped from the sidebar on a section into the
+// section's group, "" for none.
+func (a *App) hostDrops(sec ui.Element, tok theme.Tokens, g string) {
+	if d, ok := ui.Drop[dragHost](sec); ok {
+		if h, ok := a.store.Get(d.ID); ok && h.Group != g {
+			a.store.SetGroup(d.ID, g)
+		}
+	}
+	if d, ok := ui.DragOver[dragHost](sec); ok {
+		if h, ok := a.store.Get(d.ID); ok && h.Group != g {
+			sec.Background(tok.Accent.Alpha(0.08))
+		}
+	}
 }
 
 // searchBox is the hosts' search field: a magnifier, the text, and while
@@ -152,7 +200,7 @@ func (a *App) sidebarView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 // cross in the theme's background, which the sidebar's clear material
 // makes invisible: hence a field of the app's own.
 func (a *App) searchBox(c *ui.Context, m locales.Messages, tok theme.Tokens) {
-	row := ui.Row(c.Key("hostsearch")).FillWidth().Height(30).Padding(0, 4, 0, 10).Gap(6).AlignItems(ui.Center).
+	row := ui.Row(c.Key("hostsearch")).Grow(1).Shrink(1).MinWidth(0).Height(30).Padding(0, 4, 0, 10).Gap(6).AlignItems(ui.Center).
 		Radius(theme.RadiusControl).Background(tok.Fill)
 	row.Children(func() {
 		ui.Icon(c, icons.Search.SVG).Size(14, 14).Shrink(0).TextColor(tok.TextMuted)
@@ -190,12 +238,13 @@ func (a *App) selectedHost() string {
 	return id
 }
 
+// hostItem is a host of the sidebar: its tile, then its name. The item
+// lays its children out reversed, so that the tile it is given (after its
+// label, as a badge) comes first.
 func (a *App) hostItem(c *ui.Context, m locales.Messages, h assets.Host, prefix string) {
-	icon := icons.Host.SVG
-	if h.Favorite && prefix == "" {
-		icon = icons.StarOn.SVG
-	}
-	it := ui.SidebarItem(c.Key(prefix+h.ID), prefix+h.ID, icon, h.Label()).Tooltip(a.hostTip(m, h)).Drag(dragHost{h.ID})
+	tok := currentTokens(c)
+	it := ui.SidebarItem(c.Key(prefix+h.ID), prefix+h.ID, nil, a.pv(h.Label())).Reverse().Tooltip(a.pv(a.hostTip(m, h))).Drag(dragHost{h.ID})
+	it.Children(func() { hostAvatar(c, tok, h, 20) })
 	if it.DoubleClicked() {
 		a.Connect(h.ID, openAt{})
 	}
@@ -223,6 +272,21 @@ func (a *App) hostItem(c *ui.Context, m locales.Messages, h assets.Host, prefix 
 		if menu.Item(m.Favorite()).Checked(h.Favorite).Chosen() {
 			a.store.SetFavorite(h.ID, !h.Favorite)
 		}
+		menu.Submenu(m.MoveToGroup(), func(sub *ui.Menu) {
+			if sub.Item(m.NoGroup()).Checked(h.Group == "").Chosen() && h.Group != "" {
+				a.store.SetGroup(h.ID, "")
+			}
+			sub.Separator()
+			for _, g := range a.store.Groups() {
+				if sub.Item(g).Checked(h.Group == g).Chosen() && h.Group != g {
+					a.store.SetGroup(h.ID, g)
+				}
+			}
+			sub.Separator()
+			if sub.Item(m.NewGroupEllipsis()).Chosen() {
+				a.openGroupForm("", h.ID)
+			}
+		})
 		if menu.Item(m.Edit()).Chosen() {
 			hh := h
 			a.openEditor(&hh)

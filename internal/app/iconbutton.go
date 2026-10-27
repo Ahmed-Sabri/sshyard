@@ -31,6 +31,10 @@ type IconButton struct {
 	Danger bool
 	// Size is the icon's size; 0 is 16. Small is 14, for dense rows.
 	Size float32
+	// Badge is a count shown on the button's corner, as transfers to go;
+	// "" shows none. BadgeDanger draws it red, for failures.
+	Badge       string
+	BadgeDanger bool
 }
 
 // Small is the icon size of IconButtons in dense rows (tabs, pane headers).
@@ -81,7 +85,18 @@ func (b IconButton) Show(c *ui.Context, key string) ui.Element {
 	if b.Active && b.On != nil {
 		ic = b.On
 	}
-	el.Children(func() { ui.Icon(c, ic.SVG).Width(size).Height(size).TextColor(fg) })
+	el.Children(func() {
+		ui.Icon(c, ic.SVG).Width(size).Height(size).TextColor(fg)
+		if b.Badge != "" {
+			bg := th.Accent
+			if b.BadgeDanger {
+				bg = th.Danger
+			}
+			ui.Box(c).Absolute().Top(-4).Right(-5).Height(15).MinWidth(15).Padding(0, 4).Radius(theme.Capsule).Background(bg).Center().Children(func() {
+				ui.Text(c, b.Badge).FontSize(theme.Caption).FontWeight(600).TextColor(ui.Hex("#FFFFFF")).SingleLine()
+			})
+		}
+	})
 	return el
 }
 

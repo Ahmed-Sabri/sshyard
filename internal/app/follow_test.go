@@ -1,8 +1,10 @@
 package app
 
 import (
+	"github.com/Licoy/sshyard/internal/session"
 	"io"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -41,30 +43,44 @@ func TestFilesFollowTerminal(t *testing.T) {
 	tc := terminalBeside(t, a, tt, fc)
 	waitFor(t, tt, "terminal up", func() bool { return !tc.up.IsZero() })
 
-	// The shell reports nothing: after a while, the snippet.
-	if tt.HasText(cwdSnippet) {
-		t.Fatal("snippet at once")
+	// The shell reports nothing, and the server cannot tell (it runs no
+	// commands): after a while, a line saying so, and the snippet a click
+	// away.
+	const noReport = "This shell doesn’t report its folder, so Files can’t follow it."
+	if tt.HasText(noReport) {
+		t.Fatal("notice at once")
 	}
+	waitFor(t, tt, "probe failed", func() bool { return tc.probe == probeFailed })
 	tt.Move(600, 700) // over nothing that has a tooltip
 	tt.Advance(noReportAfter + time.Second)
+	tt.Frame()
+	if !tt.HasText(noReport) || tt.HasText(cwdSnippet) {
+		t.Fatalf("no notice, or the snippet in the pane: %q", tt.Texts())
+	}
+	a.ws.Activate(fc.id)
+	tt.Frame()
+	mustClick(t, tt, "How to follow this shell")
 	tt.Frame()
 	if !tt.HasText(cwdSnippet) {
 		t.Fatalf("no snippet in %q", tt.Texts())
 	}
-	a.ws.Activate(fc.id)
-	tt.Frame()
 	mustClick(t, tt, "Copy")
 	tt.Frame()
 	if tt.Clipboard() != cwdSnippet {
 		t.Errorf("clipboard %q", tt.Clipboard())
+	}
+	mustClick(t, tt, "Close")
+	tt.Frame()
+	if fc.fs.snippetOpen {
+		t.Error("snippet sheet not closed")
 	}
 
 	// cd /var/log: the Files pane goes there.
 	tc.s.Term.WriteString("\x1b]7;file://box" + logs + "\x07")
 	tt.Frame()
 	waitFor(t, tt, "followed", func() bool { return fc.fs.remote.dir == logs && tt.HasText("syslog") })
-	if tt.HasText(cwdSnippet) {
-		t.Error("snippet after a report")
+	if tt.HasText(noReport) {
+		t.Error("notice after a report")
 	}
 
 	// Stopped in the header: it stays.
@@ -96,6 +112,49 @@ func TestFilesFollowTerminal(t *testing.T) {
 	tt.Frame()
 	if fc.fs.remote.dir != etc {
 		t.Errorf("followed with the host switch off: %q", fc.fs.remote.dir)
+	}
+}
+
+// TestFilesFollowProbe follows a shell that does not report its folder:
+// the server finds it by its tag, and says where it is.
+func TestFilesFollowProbe(t *testing.T) {
+	var dir atomic.Value
+	dir.Store("")
+	a, tt, fc, root := filesPaneOn(t, func(srv *sshtest.Server) {
+		srv.Exec = func(ch ssh.Channel, cmd string) int {
+			if !strings.HasPrefix(cmd, "sh -c ") || !strings.Contains(cmd, session.TagEnv) {
+				return 127
+			}
+			io.WriteString(ch, dir.Load().(string)+"\n")
+			return 0
+		}
+	})
+	write(t, filepath.Join(root, "srv", "app.log"), "x")
+	write(t, filepath.Join(root, "srv", "sub", "deep.txt"), "x")
+	srvDir := sftpsvc.RemoteJoin(fc.fs.remote.dir, "srv")
+	subDir := sftpsvc.RemoteJoin(srvDir, "sub")
+	dir.Store(srvDir)
+	h, _ := a.store.Get(fc.host.ID)
+	h.CwdFollow = true
+	if _, err := a.store.Update(h); err != nil {
+		t.Fatal(err)
+	}
+	tc := terminalBeside(t, a, tt, fc)
+	waitFor(t, tt, "terminal up", func() bool { return !tc.up.IsZero() })
+	if _, ok := tc.s.Tag(); !ok {
+		t.Fatal("shell not tagged")
+	}
+	waitFor(t, tt, "followed", func() bool { return fc.fs.remote.dir == srvDir && tt.HasText("app.log") })
+	// cd sub: read again a moment later.
+	dir.Store(subDir)
+	waitFor(t, tt, "followed again", func() bool {
+		tt.Advance(probeEvery)
+		return fc.fs.remote.dir == subDir && tt.HasText("deep.txt")
+	})
+	tt.Advance(noReportAfter + time.Second)
+	tt.Frame()
+	if tt.HasText("This shell doesn’t report its folder, so Files can’t follow it.") || tc.probe == probeFailed {
+		t.Errorf("notice while the server tells: %q", tt.Texts())
 	}
 }
 

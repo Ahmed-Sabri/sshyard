@@ -49,10 +49,10 @@ func (a *App) railView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 		toggle(inspectMonitor, icons.Monitor, icons.MonitorOn, m.SystemMonitor())
 		toggle(inspectHost, icons.Info, icons.InfoOn, m.HostDetails())
 		ui.Box(c.Key("sep")).Width(16).Height(1).Shrink(0).MarginY(theme.Space(1)).Background(tok.Line)
-		if (IconButton{Icon: icons.Folder, Label: m.OpenFilesBeside(), Disabled: cn == nil}).Clicked(c, "files") {
+		if (IconButton{Icon: icons.Folder, Label: m.OpenFilesBeside(), Disabled: !remoteOnly(cn)}).Clicked(c, "files") {
 			a.OpenFilesBeside()
 		}
-		if (IconButton{Icon: icons.Robot, Label: m.OpenAIRight(), Disabled: cn == nil}).Clicked(c, "ai") {
+		if (IconButton{Icon: icons.Robot, Label: m.OpenAIRight(), Disabled: !remoteOnly(cn)}).Clicked(c, "ai") {
 			a.OpenAIBeside()
 		}
 		if (IconButton{Icon: icons.Forward, Label: m.NewForwardMenu(), Disabled: a.store.Len() == 0}).Clicked(c, "fwd") {
@@ -243,7 +243,11 @@ func (a *App) monitorPanel(c *ui.Context, m locales.Messages, tok theme.Tokens) 
 			rd, reason = col.View()
 		}
 	}
-	panelCard(c, tok, "sys", icons.Host, tok.Tint(h.ID), m.SysSection(), "", func() {
+	if isLocal(h.ID) {
+		panelNote(c, tok, m.MonitorLocal())
+		return
+	}
+	panelCard(c, tok, "sys", icons.Host, hostTint(tok, h), m.SysSection(), "", func() {
 		osName, lat, up := dash, dash, dash
 		if rd.OS != "" {
 			osName = rd.OS
@@ -257,7 +261,7 @@ func (a *App) monitorPanel(c *ui.Context, m locales.Messages, tok theme.Tokens) 
 				tickDur(c, d)
 			}
 		}
-		facts(c, tok, fam, m.FieldHost(), h.Label(), m.SysOS(), osName, m.SysLatency(), lat, m.SysConnectedFor(), up, m.SysAddress(), h.Target())
+		facts(c, tok, fam, m.FieldHost(), a.pv(h.Label()), m.SysOS(), osName, m.SysLatency(), lat, m.SysConnectedFor(), up, m.SysAddress(), a.pv(h.Target()))
 	})
 	switch {
 	case tc == nil:
@@ -465,18 +469,18 @@ func (a *App) hostPanel(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 		panelNote(c, tok, m.InspectorEmpty())
 		return
 	}
-	temp := isTemp(h.ID)
+	temp, local := isTemp(h.ID), isLocal(h.ID)
 	card(c.Key("hosthero"), tok).FillWidth().Padding(theme.Space(3)).Gap(theme.Space(3)).Children(func() {
 		ui.Row(c).Gap(10).AlignItems(ui.Center).FillWidth().Children(func() {
-			tile(c, icons.Host, tok.Tint(h.ID), 36)
+			hostAvatar(c, tok, h, 36)
 			ui.Column(c).Gap(2).Grow(1).Shrink(1).Children(func() {
 				ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
-					ui.Text(c, h.Label()).FontSize(theme.Title3).FontWeight(600).SingleLine().Shrink(1)
+					ui.Text(c, a.pv(h.Label())).FontSize(theme.Title3).FontWeight(600).SingleLine().Shrink(1)
 					if temp {
 						tempBadge(c, m, tok)
 					}
 				})
-				ui.Text(c, h.Target()).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine()
+				ui.Text(c, a.pv(h.Target())).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine()
 			})
 		})
 		ui.Row(c).Gap(2).AlignItems(ui.Center).FillWidth().Children(func() {
@@ -484,22 +488,26 @@ func (a *App) hostPanel(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 				a.Connect(h.ID, openAt{})
 			}
 			ui.Spacer(c)
-			if iconButton(c, "hfiles", icons.Folder, m.OpenFiles()) {
+			if (IconButton{Icon: icons.Folder, Label: m.OpenFiles(), Disabled: local}).Clicked(c, "hfiles") {
 				a.OpenFiles(h.ID, openAt{}, nil)
 			}
 			fav := m.AddFavorite()
 			if h.Favorite {
 				fav = m.RemoveFavorite()
 			}
-			if (IconButton{Icon: icons.Star, On: icons.StarOn, Label: fav, Active: h.Favorite, Toggle: true, Disabled: temp}).Clicked(c, "hfav") {
+			if (IconButton{Icon: icons.Star, On: icons.StarOn, Label: fav, Active: h.Favorite, Toggle: true, Disabled: temp || local}).Clicked(c, "hfav") {
 				a.store.SetFavorite(h.ID, !h.Favorite)
 			}
-			if (IconButton{Icon: icons.Edit, Label: m.EditHost(), Disabled: temp}).Clicked(c, "hedit") {
+			if (IconButton{Icon: icons.Edit, Label: m.EditHost(), Disabled: temp || local}).Clicked(c, "hedit") {
 				hh := h
 				a.openEditor(&hh)
 			}
 		})
 	})
+	if local {
+		panelNote(c, tok, m.LocalTerminalNote())
+		return
+	}
 	dash := m.MetricsDash()
 	or := func(s string) string {
 		if s == "" {
@@ -514,7 +522,7 @@ func (a *App) hostPanel(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	var jumps []string
 	path, _ := a.store.JumpPath(h.ID)
 	for _, j := range path {
-		jumps = append(jumps, j.Label())
+		jumps = append(jumps, a.pv(j.Label()))
 	}
 	panes := 0
 	for _, o := range a.conns {
@@ -524,7 +532,7 @@ func (a *App) hostPanel(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	}
 	panelCard(c, tok, "hostinfo", icons.Proxy, tok.TintAt(7), m.ConnectionSection(), "", func() {
 		facts(c, tok, "",
-			m.SysAddress(), h.Address, m.FieldPort(), strconv.Itoa(h.Port),
+			m.SysAddress(), a.pv(h.Address), m.FieldPort(), strconv.Itoa(h.Port),
 			m.FieldUser(), or(h.User), m.FieldGroup(), or(h.Group),
 			m.FieldProxy(), proxy, m.OpenPanes(), strconv.Itoa(panes))
 		ui.Column(c).Gap(2).FillWidth().Children(func() {

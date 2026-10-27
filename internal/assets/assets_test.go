@@ -405,3 +405,60 @@ func TestHostOSC52(t *testing.T) {
 		t.Fatalf("%+v", got)
 	}
 }
+
+// TestEmptyGroups: a group made on its own is kept, saved and listed
+// while empty; renaming moves its hosts, deleting ungroups them.
+func TestEmptyGroups(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "hosts.json")
+	s, _ := Open(path)
+	web, _ := s.Add(Host{Name: "web", Address: "10.0.0.5", User: "u", Group: "Prod"})
+	if err := s.AddGroup("  Staging "); err != nil {
+		t.Fatal(err)
+	}
+	var fe *FieldError
+	if err := s.AddGroup("prod"); !errors.As(err, &fe) || fe.Reason != "taken" {
+		t.Fatalf("a group of a host's name in another case: %v", err)
+	}
+	if err := s.AddGroup(" "); !errors.As(err, &fe) || fe.Reason != "required" {
+		t.Fatalf("a blank group: %v", err)
+	}
+	s, _ = Open(path)
+	if g := s.Groups(); len(g) != 2 || g[0] != "Prod" || g[1] != "Staging" {
+		t.Fatalf("groups after reopening %v", g)
+	}
+	if err := s.SetGroup(web.ID, "Staging"); err != nil {
+		t.Fatal(err)
+	}
+	// Prod had only web: an implicit group goes with its last host.
+	if g := s.Groups(); len(g) != 1 || g[0] != "Staging" {
+		t.Fatalf("groups after moving %v", g)
+	}
+	if err := s.RenameGroup("Staging", "QA"); err != nil {
+		t.Fatal(err)
+	}
+	if h, _ := s.Get(web.ID); h.Group != "QA" {
+		t.Fatalf("renamed group's host is in %q", h.Group)
+	}
+	if err := s.RenameGroup("nope", "x"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("renaming a missing group: %v", err)
+	}
+	if err := s.DeleteGroup("QA"); err != nil {
+		t.Fatal(err)
+	}
+	if h, _ := s.Get(web.ID); h.Group != "" || len(s.Groups()) != 0 {
+		t.Fatalf("after deleting: %q %v", h.Group, s.Groups())
+	}
+}
+
+func TestIconAndColor(t *testing.T) {
+	s, _ := Open("")
+	h, err := s.Add(Host{Address: "h", User: "u", Icon: " 🚀🔥✨ ", Color: "purple"})
+	if err != nil || h.Icon != "🚀🔥" || h.Color != "purple" {
+		t.Fatalf("%q %q %v", h.Icon, h.Color, err)
+	}
+	h.Icon, h.Color = "icon:database", "#ff0000"
+	h, _ = s.Update(h)
+	if h.Icon != "icon:database" || h.Color != "" {
+		t.Fatalf("%q %q", h.Icon, h.Color)
+	}
+}

@@ -5,6 +5,7 @@ package theme
 
 import (
 	"math"
+	"slices"
 
 	"github.com/egoist/mygo/ui"
 )
@@ -239,6 +240,19 @@ var Tints = [][2]ui.Color{
 	{ui.Hex("#FF2D55"), ui.Hex("#FF375F")}, // pink
 	{ui.Hex("#FF3B30"), ui.Hex("#FF453A")}, // red
 	{ui.Hex("#007AFF"), ui.Hex("#0A84FF")}, // blue
+}
+
+// TintNames name the Tints, in order: what a host saves as its color.
+var TintNames = []string{"green", "orange", "teal", "purple", "indigo", "pink", "red", "blue"}
+
+// TintNamed is the tint of a name of TintNames for the mode; ok is false
+// for any other name, "" too.
+func (t Tokens) TintNamed(name string) (c ui.Color, ok bool) {
+	i := slices.Index(TintNames, name)
+	if i < 0 {
+		return c, false
+	}
+	return t.TintAt(i), true
 }
 
 // Tint is the system color picked for name, the same for every run.

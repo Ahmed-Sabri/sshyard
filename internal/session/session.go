@@ -50,6 +50,10 @@ type Options struct {
 	// NoShell connects without a shell or PTY, for a files (SFTP) pane:
 	// the connection is kept, probed and reconnected like a shell's.
 	NoShell bool
+	// Local runs the user's shell on this computer, in a pseudo-terminal,
+	// instead of connecting anywhere: the Config is not used, and the
+	// session has no Client. It ends, Exited, with the shell.
+	Local bool
 }
 
 // Status is a session's state, for the UI.
@@ -82,6 +86,7 @@ type Session struct {
 	client  *ssh.Client
 	release func() // lets go of client: closes it, or hands it back to the pool
 	shell   *ssh.Session
+	local   localPTY
 	stdin   io.WriteCloser
 	cols    int
 	rows    int
@@ -99,6 +104,11 @@ type Session struct {
 	latencyOK bool
 	// probeNote wakes keepAlive when SetProbe changes the interval.
 	probeNote chan struct{}
+	// tag marks the shell's environment (TagEnv), tagged once the server
+	// took it, so that ShellCwd finds the shell among the server's
+	// processes.
+	tag    string
+	tagged bool
 }
 
 // New returns a session of cols×rows; Start connects it.
@@ -118,7 +128,7 @@ func New(cfg Config, opts Options, cols, rows int) *Session {
 	if opts.Term == "" {
 		opts.Term = "xterm-256color"
 	}
-	s := &Session{cfg: cfg, opts: opts, cols: max(cols, 1), rows: max(rows, 1), wake: make(chan struct{}, 1), done: make(chan struct{}), probeNote: make(chan struct{}, 1)}
+	s := &Session{cfg: cfg, opts: opts, cols: max(cols, 1), rows: max(rows, 1), wake: make(chan struct{}, 1), done: make(chan struct{}), probeNote: make(chan struct{}, 1), tag: newTag()}
 	s.Term = vt.New(s.cols, s.rows)
 	if opts.Scrollback > 0 {
 		s.Term.SetScrollback(opts.Scrollback)
@@ -252,7 +262,7 @@ func (s *Session) Close() {
 		return
 	}
 	s.closed = true
-	cancel, shell := s.cancel, s.shell
+	cancel, shell, local := s.cancel, s.shell, s.local
 	s.status.State = Closed
 	s.mu.Unlock()
 	if cancel != nil {
@@ -261,6 +271,9 @@ func (s *Session) Close() {
 	if shell != nil {
 		// Only this session's channel: the connection may serve others.
 		shell.Close()
+	}
+	if local != nil {
+		local.Close()
 	}
 	s.changed()
 }
@@ -292,11 +305,14 @@ func (s *Session) Resize(cols, rows int) {
 		return
 	}
 	s.cols, s.rows = cols, rows
-	shell := s.shell
+	shell, local := s.shell, s.local
 	s.mu.Unlock()
 	s.Term.Resize(cols, rows)
 	if shell != nil {
 		shell.WindowChange(rows, cols)
+	}
+	if local != nil {
+		local.Resize(cols, rows)
 	}
 	s.changed()
 }
@@ -399,6 +415,9 @@ func (s *Session) broken(client *ssh.Client) {
 }
 
 func (s *Session) connect(ctx context.Context) error {
+	if s.opts.Local {
+		return s.connectLocal()
+	}
 	client, release, err := s.dial(ctx)
 	if err != nil {
 		return err
@@ -436,6 +455,9 @@ func (s *Session) connect(ctx context.Context) error {
 	if err := shell.RequestPty(s.opts.Term, rows, cols, modes); err != nil {
 		return fail(err)
 	}
+	// Servers take LC_* by default (AcceptEnv): one that does not just
+	// leaves the shell untagged.
+	tagged := shell.Setenv(TagEnv, s.tag) == nil
 	stdin, err := shell.StdinPipe()
 	if err != nil {
 		return fail(err)
@@ -454,7 +476,7 @@ func (s *Session) connect(ctx context.Context) error {
 		s.mu.Unlock()
 		return fail(context.Canceled)
 	}
-	s.client, s.release, s.shell, s.stdin = client, release, shell, stdin
+	s.client, s.release, s.shell, s.stdin, s.tagged = client, release, shell, stdin, tagged
 	s.status.State, s.status.Err, s.status.Attempt = Connected, nil, 0
 	s.status.Connects++
 	s.mu.Unlock()
@@ -466,8 +488,11 @@ func (s *Session) connect(ctx context.Context) error {
 // and the error when the connection was lost.
 func (s *Session) serve(ctx context.Context) error {
 	s.mu.Lock()
-	client, shell := s.client, s.shell
+	client, shell, local := s.client, s.shell, s.local
 	s.mu.Unlock()
+	if local != nil {
+		return s.serveLocal(ctx, local)
+	}
 
 	lost := make(chan error, 1)
 	go s.keepAlive(ctx, client, lost)

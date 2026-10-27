@@ -22,8 +22,8 @@ func (a *App) aiPane(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, tok
 	head.Children(func() {
 		row := ui.Row(c.Key("head")).Height(36).Shrink(0).Padding(0, 6, 0, 10).Gap(8).AlignItems(ui.Center).Drag(dragSession{cn.id}).Label(m.PaneActions())
 		row.Children(func() {
-			softTile(c, kindIcon(layout.AI, t.Focus == n.ID), tok.Tint(cn.host.ID), 22)
-			title := ui.Text(c, m.AiPane(cn.host.Label())).FontWeight(600).FontSize(theme.Footnote).SingleLine().Shrink(1)
+			softTile(c, kindIcon(layout.AI, t.Focus == n.ID), hostTint(tok, a.liveHost(cn.host)), 22)
+			title := ui.Text(c, m.AiPane(a.pv(cn.host.Label()))).FontWeight(600).FontSize(theme.Footnote).SingleLine().Shrink(1)
 			if t.Focus != n.ID && len(t.Panes()) > 1 {
 				title.TextColor(tok.TextMuted)
 			}

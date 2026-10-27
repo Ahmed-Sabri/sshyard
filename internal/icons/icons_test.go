@@ -37,3 +37,22 @@ func TestStyles(t *testing.T) {
 		}
 	}
 }
+
+func TestHostIcons(t *testing.T) {
+	seen := map[string]bool{}
+	for _, h := range HostIcons {
+		if h.Key == "" || seen[h.Key] || h.Icon == nil {
+			t.Errorf("bad host icon %q", h.Key)
+		}
+		seen[h.Key] = true
+		if ic, ok := HostIconOf(h.Key); !ok || ic != h.Icon {
+			t.Errorf("HostIconOf(%q)", h.Key)
+		}
+	}
+	if AutoHostIcons > len(HostIcons) {
+		t.Fatal("more automatic icons than icons")
+	}
+	if _, ok := HostIconOf("nope"); ok {
+		t.Error("an unknown key has an icon")
+	}
+}

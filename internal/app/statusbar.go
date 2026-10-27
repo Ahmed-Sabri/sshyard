@@ -51,16 +51,18 @@ func (a *App) statusSession(c *ui.Context, m locales.Messages, tok theme.Tokens)
 	}
 	ui.Row(c.Key("who")).Gap(6).Shrink(1).MinWidth(0).AlignItems(ui.Center).Children(func() {
 		if cn.s != nil {
-			dot(c, stateColor(tok, st.State)).Label(a.statusText(m, h, st, c.Now()))
+			dot(c, stateColor(tok, st.State)).Label(a.pv(a.statusText(m, h, st, c.Now())))
 		}
-		ui.Text(c, h.Label()).FontSize(theme.Caption).FontWeight(600).SingleLine().Shrink(0)
-		ui.Text(c, h.Target()).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine().Shrink(1)
+		ui.Text(c, a.pv(h.Label())).FontSize(theme.Caption).FontWeight(600).SingleLine().Shrink(0)
+		ui.Text(c, a.pv(h.Target())).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine().Shrink(1)
 	})
 	if cn.s == nil || st.State != session.Connected {
 		return
 	}
-	d, ok := cn.s.Latency()
-	statusItem(c, "lat", icons.Monitor, latencyValue(m, d, ok), latencyText(m, d, ok), latencyColor(tok, d, ok))
+	if !isLocal(h.ID) {
+		d, ok := cn.s.Latency()
+		statusItem(c, "lat", icons.Monitor, latencyValue(m, d, ok), latencyText(m, d, ok), latencyColor(tok, d, ok))
+	}
 	if tc := a.monitorConn(cn); tc != nil && !tc.up.IsZero() {
 		since := c.Now().Sub(tc.up)
 		statusItem(c, "up", icons.Uptime, fmtDur(m, since), m.SysConnectedFor()+" "+fmtDur(m, since), tok.TextMuted)
@@ -119,6 +121,11 @@ func themeIcon(md theme.Mode) *icons.Icon {
 
 func (a *App) statusActions(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	ui.Row(c.Key("actions")).Shrink(0).Gap(theme.Space(1)).AlignItems(ui.Center).Children(func() {
+		if (IconButton{Icon: icons.LocalShell, Label: m.LocalTerminal(), Size: Small}).Clicked(c, "localterm") {
+			if _, err := a.OpenLocalTerminal(); err != nil {
+				c.AddToast(ui.Toast{Title: m.ErrGeneric(err.Error()), Type: "error"})
+			}
+		}
 		(IconButton{Icon: themeIcon(a.settings.Theme), Label: m.Theme(), Size: Small}).Show(c, "theme").Menu(func(menu *ui.Menu) {
 			for i, md := range theme.Modes {
 				label := []string{m.ThemeAuto(), m.ThemeLight(), m.ThemeDark()}[i]
@@ -131,6 +138,11 @@ func (a *App) statusActions(c *ui.Context, m locales.Messages, tok theme.Tokens)
 				}
 			}
 		})
+		if (IconButton{Icon: icons.Privacy, On: icons.PrivacyOn, Label: m.PrivacyMode(), Size: Small, Active: a.settings.Privacy, Toggle: true}).Clicked(c, "privacy") {
+			if err := a.TogglePrivacy(); err != nil {
+				c.AddToast(ui.Toast{Title: m.ErrGeneric(err.Error()), Type: "error"})
+			}
+		}
 		short := a.page == pageSettings && a.prefNow() == prefShortcuts
 		if (IconButton{Icon: icons.Shortcuts, Label: m.ShortcutsSection(), Size: Small, Active: short}).Clicked(c, "shortcuts") {
 			a.openSettings(prefShortcuts)

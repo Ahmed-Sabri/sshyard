@@ -30,6 +30,7 @@ func (a *App) View(c *ui.Context) {
 	tok := theme.For(a.settings.Theme, base.Dark)
 	c.SetTheme(tok.Apply(base))
 	m := locales.In(c.Locale())
+	a.localName = m.LocalTerminal()
 	a.fontToasts(c, m)
 
 	a.shortcuts(c)
@@ -88,6 +89,7 @@ func (a *App) View(c *ui.Context) {
 		})
 	})
 	a.editorView(c, m)
+	a.groupView(c, m)
 	a.credView(c, m)
 	a.proxyView(c, m)
 	a.fwdView(c, m)

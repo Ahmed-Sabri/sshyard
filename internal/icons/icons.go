@@ -118,7 +118,58 @@ var (
 	Sent       = load("arrow-up-line")
 	Received   = load("arrow-down-line")
 	Uptime     = load("time-line")
+	Privacy    = load("eye-off-line")
+	PrivacyOn  = load("eye-off-fill")
+	Transfers  = Network
+	LocalShell = load("terminal-window-line")
 )
+
+// HostIcon is an icon a host can be given, by the key it is saved under.
+type HostIcon struct {
+	Key  string
+	Icon *Icon
+}
+
+// HostIcons are the icons a host can be given. The first AutoHostIcons
+// are the ones a host without its own is given, from its address.
+var HostIcons = []HostIcon{
+	{"server", Host},
+	{"database", load("database-2-line")},
+	{"cloud", load("cloud-line")},
+	{"computer", LocalDisk},
+	{"laptop", load("macbook-line")},
+	{"router", load("router-line")},
+	{"storage", load("hard-drive-2-line")},
+	{"container", load("box-3-line")},
+	{"code", load("code-s-slash-line")},
+	{"rocket", load("rocket-line")},
+	{"planet", load("planet-line")},
+	{"test", load("flask-line")},
+	{"git", load("git-branch-line")},
+	{"home", load("home-4-line")},
+	{"office", load("building-line")},
+	{"secure", load("shield-line")},
+	{"game", load("gamepad-line")},
+	{"ubuntu", load("ubuntu-line")},
+	{"centos", load("centos-line")},
+	{"apple", load("apple-line")},
+	{"windows", load("windows-line")},
+	{"android", load("android-line")},
+}
+
+// AutoHostIcons is how many of HostIcons, from the first, a host may be
+// given without choosing: those that say nothing of what it runs.
+const AutoHostIcons = 11
+
+// HostIconOf is the host icon of key.
+func HostIconOf(key string) (*Icon, bool) {
+	for _, h := range HostIcons {
+		if h.Key == key {
+			return h.Icon, true
+		}
+	}
+	return nil, false
+}
 
 // Get returns an icon by its Remix Icon name.
 func Get(name string) (*Icon, bool) {

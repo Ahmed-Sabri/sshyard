@@ -25,6 +25,9 @@ type Settings struct {
 	KeepAliveSeconds int     `json:"keepAliveSeconds"`
 	AutoReconnect    bool    `json:"autoReconnect"`
 	SidebarWidth     float32 `json:"sidebarWidth"`
+	// Privacy masks the IP addresses the app shows, for a screen share
+	// or a recording. What is typed in a form is shown as it is.
+	Privacy bool `json:"privacy,omitempty"`
 	// UIFont is the interface's font family, "" for the system's.
 	UIFont string `json:"uiFont,omitempty"`
 	// TerminalFont is the terminal's font family, "" for the system's

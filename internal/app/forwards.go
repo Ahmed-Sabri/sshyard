@@ -267,7 +267,7 @@ func (a *App) forwardItem(c *ui.Context, m locales.Messages, tok theme.Tokens, f
 	h, _ := a.store.Get(f.HostID)
 	label := f.Label()
 	row := ui.Row(c.Key("fwd:"+f.ID)).FillWidth().Shrink(0).Gap(8).Padding(3, 4, 3, 10).Radius(theme.RadiusControl).
-		AlignItems(ui.Center).Cursor(ui.CursorPointer).Label(m.FwdRowLabel(label)).Tooltip(fwdSummary(f) + " · " + h.Label())
+		AlignItems(ui.Center).Cursor(ui.CursorPointer).Label(m.FwdRowLabel(label)).Tooltip(a.pv(fwdSummary(f) + " · " + h.Label()))
 	if open {
 		row.Background(tok.Fill)
 	} else if row.Hovered() {
@@ -322,7 +322,7 @@ func (a *App) forwardItem(c *ui.Context, m locales.Messages, tok theme.Tokens, f
 		ui.Row(c).Gap(4).AlignItems(ui.Center).FillWidth().Children(func() {
 			ui.Column(c).Gap(1).Grow(1).Shrink(1).Children(func() {
 				ui.Text(c, text).FontSize(theme.Caption).TextColor(col)
-				ui.Text(c, fwdSummary(f)+" · "+h.Label()).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine()
+				ui.Text(c, a.pv(fwdSummary(f)+" · "+h.Label())).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine()
 			})
 			if (IconButton{Icon: icons.Edit, Label: m.EditForward(), Size: Small}).Clicked(c, "fwdedit:"+f.ID) {
 				ff := f

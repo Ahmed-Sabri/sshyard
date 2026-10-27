@@ -21,6 +21,10 @@ type hostForm struct {
 	orig                assets.Host
 	name, address, port string
 	user, group         string
+	// icon and color are the host's look as chosen (Host.Icon and
+	// Host.Color), "" for those picked from the address; emoji is the
+	// icon field's text
+	icon, color, emoji string
 	// auth is the label chosen in the auth select (see authChoices),
 	// "" until the editor first shows
 	auth      string
@@ -88,6 +92,10 @@ func (a *App) openEditor(h *assets.Host) {
 		f.orig = *h
 		f.name, f.address, f.port = h.Name, h.Address, strconv.Itoa(h.Port)
 		f.user, f.group, f.favorite, f.cwdFollow = h.User, h.Group, h.Favorite, h.CwdFollow
+		f.icon, f.color = h.Icon, h.Color
+		if !strings.HasPrefix(h.Icon, assets.IconPrefix) {
+			f.emoji = h.Icon
+		}
 		f.metricsIdx = metricsIndex(h.Metrics)
 		f.jumps = slices.Clone(h.JumpChain)
 		if p, ok := a.store.Proxy(h.ProxyID); ok {
@@ -168,6 +176,7 @@ func (a *App) SaveForm(m locales.Messages) bool {
 	h := f.orig
 	h.Name, h.Address, h.Port, h.User, h.Group = f.name, f.address, port, f.user, f.group
 	h.Favorite, h.CwdFollow, h.Metrics = f.favorite, f.cwdFollow, metricsMode(f.metricsIdx)
+	h.Icon, h.Color = f.icon, f.color
 	h.Auth, h.CredentialID = assets.AuthAsk, ""
 	for _, ch := range a.authChoices(m) {
 		if ch.label == f.auth {
@@ -266,7 +275,9 @@ func (a *App) editorView(c *ui.Context, m locales.Messages) {
 		f := a.form
 		tok := currentTokens(c)
 		sheet(ui.Modal(c, &a.editing, func() {
-			ui.Column(c).Gap(18).Width(480).Children(func() {
+			// The form scrolls between the title and the buttons when the
+			// window is too short for it.
+			ui.Column(c).Gap(18).Width(480).Shrink(1).MinHeight(0).Children(func() {
 				title := m.EditHost()
 				switch {
 				case f.promote != "":
@@ -279,11 +290,7 @@ func (a *App) editorView(c *ui.Context, m locales.Messages) {
 					if name == "" {
 						name = f.address
 					}
-					tint := theme.Brand
-					if !f.isNew {
-						tint = tok.Tint(f.orig.ID)
-					}
-					tile(c, icons.Host, tint, 36)
+					hostAvatar(c, tok, f.look(), 36)
 					ui.Column(c).Gap(1).Shrink(1).Children(func() {
 						sheetTitle(c, title)
 						if name != "" {
@@ -291,63 +298,66 @@ func (a *App) editorView(c *ui.Context, m locales.Messages) {
 						}
 					})
 				})
-				ui.Form(c, func() {
-					ui.Field(c, m.FieldName(), func() {
-						in := ui.TextInput(c.Key("f:name"), &f.name).Placeholder("web-01").AutoFocus()
-						a.editorHold.apply(c, f, in)
-					})
-					ui.Field(c, m.FieldHost(), func() { ui.TextInput(c.Key("f:addr"), &f.address).Placeholder("example.com") })
-					ui.Field(c, m.FieldPort(), func() { ui.TextInput(c.Key("f:port"), &f.port).Width(90) })
-					ui.Field(c, m.FieldUser(), func() { ui.TextInput(c.Key("f:user"), &f.user).Placeholder("root") })
-					ui.Field(c, m.FieldGroup(), func() { ui.TextInput(c.Key("f:group"), &f.group) })
-					ui.Field(c, m.FieldAuth(), func() {
-						if f.auth == "" {
-							f.auth = a.authLabel(m, f.orig)
-						}
-						var labels []string
-						for _, ch := range a.authChoices(m) {
-							labels = append(labels, ch.label)
-						}
-						labels = append(labels, m.NewCredentialChoice())
-						prev := f.auth
-						if ui.Select(c.Key("f:auth"), &f.auth, labels).Label(m.FieldAuth()).Changed() && f.auth == m.NewCredentialChoice() {
-							// The credential sheet replaces the editor, then
-							// comes back with the new credential chosen.
-							f.auth = prev
-							a.openCredForm(nil, f)
-							a.editing = false
-						}
-					})
-					ui.Field(c, "", func() {
-						ui.Collapsible(c.Key("f:net"), m.Network(), &f.netOpen, func() {
-							a.networkFields(c, m, tok, f)
+				ui.Scroll(c.Key("f:scroll")).Shrink(1).MinHeight(0).FillWidth().Children(func() {
+					ui.Form(c, func() {
+						ui.Field(c, m.FieldName(), func() {
+							in := ui.TextInput(c.Key("f:name"), &f.name).Placeholder("web-01").AutoFocus()
+							a.editorHold.apply(c, f, in)
 						})
-					})
-					ui.Field(c, m.MetricsBar(), func() {
-						ui.Column(c).Gap(4).Children(func() {
-							ui.Segmented(c.Key("f:met"), &f.metricsIdx, m.MetricsFollow(), m.MetricsHostOn(), m.MetricsHostOff()).Label(m.MetricsBar()).Disabled(!a.settings.MetricsEnabled)
-							if !a.settings.MetricsEnabled {
-								ui.Text(c, m.MetricsDisabledGlobally()).FontSize(theme.Caption).TextColor(tok.TextMuted)
+						ui.Field(c, m.FieldHost(), func() { ui.TextInput(c.Key("f:addr"), &f.address).Placeholder("example.com") })
+						ui.Field(c, m.FieldPort(), func() { ui.TextInput(c.Key("f:port"), &f.port).Width(90) })
+						ui.Field(c, m.FieldUser(), func() { ui.TextInput(c.Key("f:user"), &f.user).Placeholder("root") })
+						ui.Field(c, m.FieldGroup(), func() { ui.TextInput(c.Key("f:group"), &f.group) })
+						ui.Field(c, m.FieldAppearance(), func() { a.lookFields(c, m, tok, f) })
+						ui.Field(c, m.FieldAuth(), func() {
+							if f.auth == "" {
+								f.auth = a.authLabel(m, f.orig)
+							}
+							var labels []string
+							for _, ch := range a.authChoices(m) {
+								labels = append(labels, ch.label)
+							}
+							labels = append(labels, m.NewCredentialChoice())
+							prev := f.auth
+							if ui.Select(c.Key("f:auth"), &f.auth, labels).Label(m.FieldAuth()).Changed() && f.auth == m.NewCredentialChoice() {
+								// The credential sheet replaces the editor, then
+								// comes back with the new credential chosen.
+								f.auth = prev
+								a.openCredForm(nil, f)
+								a.editing = false
 							}
 						})
-					})
-					ui.Field(c, "", func() {
-						ui.Collapsible(c.Key("f:adv"), m.Advanced(), &f.advOpen, func() {
-							labels := syncOSC52Label(m, f)
-							ui.Column(c).Gap(6).FillWidth().Margin(8, 0, 0, 0).Children(func() {
-								ui.Text(c, m.Osc52Title()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
-								ui.Select(c.Key("f:osc52"), &f.osc52, labels).Label(m.Osc52Title()).FillWidth()
+						ui.Field(c, "", func() {
+							ui.Collapsible(c.Key("f:net"), m.Network(), &f.netOpen, func() {
+								a.networkFields(c, m, tok, f)
 							})
 						})
-					})
-					ui.Field(c, "", func() {
-						a.aiHostFields(c, m, tok, f)
-					})
-					ui.Field(c, "", func() {
-						ui.Column(c).Gap(6).Children(func() {
-							ui.Checkbox(c.Key("f:cwd"), &f.cwdFollow, m.CwdFollow())
-							ui.Text(c, m.HostCwdFollowHint()).FontSize(theme.Caption).TextColor(tok.TextMuted)
-							ui.Checkbox(c.Key("f:fav"), &f.favorite, m.Favorite())
+						ui.Field(c, m.MetricsBar(), func() {
+							ui.Column(c).Gap(4).Children(func() {
+								ui.Segmented(c.Key("f:met"), &f.metricsIdx, m.MetricsFollow(), m.MetricsHostOn(), m.MetricsHostOff()).Label(m.MetricsBar()).Disabled(!a.settings.MetricsEnabled)
+								if !a.settings.MetricsEnabled {
+									ui.Text(c, m.MetricsDisabledGlobally()).FontSize(theme.Caption).TextColor(tok.TextMuted)
+								}
+							})
+						})
+						ui.Field(c, "", func() {
+							ui.Collapsible(c.Key("f:adv"), m.Advanced(), &f.advOpen, func() {
+								labels := syncOSC52Label(m, f)
+								ui.Column(c).Gap(6).FillWidth().Margin(8, 0, 0, 0).Children(func() {
+									ui.Text(c, m.Osc52Title()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
+									ui.Select(c.Key("f:osc52"), &f.osc52, labels).Label(m.Osc52Title()).FillWidth()
+								})
+							})
+						})
+						ui.Field(c, "", func() {
+							a.aiHostFields(c, m, tok, f)
+						})
+						ui.Field(c, "", func() {
+							ui.Column(c).Gap(6).Children(func() {
+								ui.Checkbox(c.Key("f:cwd"), &f.cwdFollow, m.CwdFollow())
+								ui.Text(c, m.HostCwdFollowHint()).FontSize(theme.Caption).TextColor(tok.TextMuted)
+								ui.Checkbox(c.Key("f:fav"), &f.favorite, m.Favorite())
+							})
 						})
 					})
 				})

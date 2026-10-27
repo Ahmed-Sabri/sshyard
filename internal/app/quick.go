@@ -26,6 +26,9 @@ func isTemp(id string) bool { return strings.HasPrefix(id, tempPrefix) }
 
 // host is the saved or temporary host of id.
 func (a *App) host(id string) (assets.Host, bool) {
+	if isLocal(id) {
+		return a.localHost(), true
+	}
 	if h, ok := a.store.Get(id); ok {
 		return h, true
 	}

@@ -28,6 +28,19 @@ precmd_functions+=(_sshyard_cwd)`
 // before a following Files pane offers the snippet.
 const noReportAfter = 3 * time.Second
 
+// probeEvery is how often the directory of a shell that does not report
+// it is read from the server, while a Files pane follows it.
+const probeEvery = 2 * time.Second
+
+// probeState is how far reading a shell's directory from its server went.
+type probeState int
+
+const (
+	probeIdle probeState = iota
+	probeRunning
+	probeFailed // for this connect: not Linux, or the tag was refused
+)
+
 // following reports whether the Files pane cn follows the terminal: its
 // host allows it and the pane did not stop.
 func (a *App) following(cn *conn) bool {
@@ -74,7 +87,11 @@ func (a *App) followCwd(now time.Time) {
 				continue
 			}
 			lead := a.leadTerminal(items, fc)
-			if lead == nil || lead.cwd == "" {
+			if lead == nil {
+				continue
+			}
+			a.probeCwd(lead, now)
+			if lead.cwd == "" {
 				continue
 			}
 			s := &fc.fs.remote
@@ -91,6 +108,49 @@ func (a *App) followCwd(now time.Time) {
 			}
 		}
 	}
+}
+
+// probeCwd reads the directory of tc's shell from its server, for a shell
+// that does not report it (OSC 7): the server finds the shell by the tag
+// of its environment (session.ShellCwd). It runs at most every
+// probeEvery, and not again on a connection where it failed.
+func (a *App) probeCwd(tc *conn, now time.Time) {
+	if tc.up.IsZero() || tc.s.Term.Cwd() != "" {
+		return
+	}
+	connects := tc.s.Status().Connects
+	if tc.probeConn != connects {
+		tc.probeConn, tc.probe, tc.probeAt = connects, probeIdle, time.Time{}
+	}
+	if tc.probe != probeIdle || now.Sub(tc.probeAt) < probeEvery {
+		return
+	}
+	tag, ok := tc.s.Tag()
+	client := tc.s.Client()
+	if !ok || client == nil {
+		tc.probe = probeFailed
+		return
+	}
+	tc.probe = probeRunning
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), hostnameTimeout)
+		d, err := session.ShellCwd(ctx, client, tag)
+		cancel()
+		a.post(func() {
+			if tc.probeConn != connects || tc.probe != probeRunning {
+				return
+			}
+			if err != nil {
+				tc.probe = probeFailed
+				return
+			}
+			tc.probe, tc.probeAt = probeIdle, time.Now()
+			if tc.s.Term.Cwd() == "" && d != tc.cwd {
+				a.cwdSeq++
+				tc.cwd, tc.cwdSeq = d, a.cwdSeq
+			}
+		})
+	}()
 }
 
 // leadTerminal is the terminal of items on fc's host that reported its
@@ -127,33 +187,73 @@ func (a *App) followButton(c *ui.Context, t *layout.Tab, n *layout.Node, cn *con
 	}
 }
 
-// noReportView offers the snippet when the pane follows a terminal that
-// has been up a while without saying where it is.
+// noReportView says, in a line, when the pane follows a terminal that
+// has been up a while without saying where it is, and the server could
+// not tell either. The snippet that makes the shell say is a click away.
 func (a *App) noReportView(c *ui.Context, t *layout.Tab, cn *conn, tok theme.Tokens, m locales.Messages) {
-	if !a.following(cn) {
+	if !a.following(cn) || cn.fs.noReportHidden {
 		return
 	}
 	lead := a.leadTerminal(t.Items(), cn)
-	if lead == nil || lead.cwd != "" || lead.up.IsZero() {
+	if lead == nil || lead.up.IsZero() || lead.s.Term.Cwd() != "" {
+		return
+	}
+	if lead.probe != probeFailed {
+		// The server tells: read it again in a while.
+		c.After(probeEvery)
+		return
+	}
+	if lead.cwd != "" {
 		return
 	}
 	if wait := noReportAfter - c.Now().Sub(lead.up); wait > 0 {
 		c.After(wait)
 		return
 	}
-	ui.Column(c.Key("noreport")).FillWidth().Gap(6).Padding(8).Radius(theme.RadiusCard - 2).Background(tok.Accent.Alpha(0.08)).Children(func() {
-		ui.Row(c).FillWidth().AlignItems(ui.Center).Gap(6).Children(func() {
-			ui.Icon(c, icons.Follow.SVG).Size(14, 14).TextColor(tok.Accent)
-			ui.Text(c, m.FollowNoReport()).FontSize(theme.Footnote).Grow(1).Shrink(1)
-			if (IconButton{Icon: icons.CopyPath, Label: m.CopySnippet(), Size: Small}).Clicked(c, "copysnippet") {
-				c.WriteClipboard(cwdSnippet)
-			}
-		})
-		code := ui.Text(c, cwdSnippet).FontSize(theme.Caption).TextColor(tok.TextMuted).Selectable()
-		if a.fonts.term != "" {
-			code.Font(a.fonts.term)
+	ui.Row(c.Key("noreport")).FillWidth().AlignItems(ui.Center).Gap(6).Padding(2, 4, 2, 8).Radius(theme.RadiusCard - 2).Background(tok.Fill).Children(func() {
+		ui.Icon(c, icons.Follow.SVG).Size(14, 14).Shrink(0).TextColor(tok.TextMuted)
+		ui.Text(c, m.FollowNoReport()).FontSize(theme.Footnote).TextColor(tok.TextMuted).SingleLine().Grow(1).Shrink(1)
+		if (IconButton{Icon: icons.Info, Label: m.FollowHowTo(), Size: Small}).Clicked(c, "howto") {
+			cn.fs.snippetOpen = true
+		}
+		if (IconButton{Icon: icons.Close, Label: m.HideNotice(), Size: Small}).Clicked(c, "hidenoreport") {
+			cn.fs.noReportHidden = true
 		}
 	})
+}
+
+// snippetView is the sheet with the snippet that makes a shell report
+// its directory.
+func (a *App) snippetView(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages) {
+	fs := cn.fs
+	if !fs.snippetOpen {
+		return
+	}
+	sheet(ui.Modal(c, &fs.snippetOpen, func() {
+		ui.Column(c).Gap(14).Width(540).Children(func() {
+			ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
+				tile(c, icons.Follow, theme.Brand, 36)
+				sheetTitle(c, m.FollowHowTo())
+			})
+			ui.Text(c, m.FollowHowToText()).FontSize(theme.Body).TextColor(tok.TextMuted)
+			ui.Box(c).FillWidth().Padding(10, 12).Radius(theme.RadiusCard - 2).Background(tok.Fill).Children(func() {
+				code := ui.Text(c, cwdSnippet).FontSize(theme.Caption).Selectable()
+				if a.fonts.term != "" {
+					code.Font(a.fonts.term)
+				}
+			})
+			ui.Row(c).Gap(8).Children(func() {
+				ui.Spacer(c)
+				if pill(c, m.CopySnippet(), false, false, false) {
+					c.WriteClipboard(cwdSnippet)
+					c.AddToast(ui.Toast{Title: m.Copied(), Type: "success"})
+				}
+				if pill(c, m.Close(), true, false, false) {
+					fs.snippetOpen = false
+				}
+			})
+		})
+	}), tok)
 }
 
 // nameState is how far asking a terminal's server its hostname went.
