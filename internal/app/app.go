@@ -173,7 +173,11 @@ type App struct {
 	live  bool
 
 	// interface state
-	page        page
+	page page
+	// pref is the settings page showing, inspector the panel open beside
+	// the panes, "" for none
+	pref        prefPage
+	inspector   inspectorKind
 	selected    string // host chosen in the sidebar
 	search      string
 	searchFocus bool // the search field takes the focus next frame

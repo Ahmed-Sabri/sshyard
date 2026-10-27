@@ -422,10 +422,10 @@ func TestFilesPaneFromHost(t *testing.T) {
 func TestSettingsToggle(t *testing.T) {
 	a, tt := newTestApp(t)
 	mustClick(t, tt, "Settings")
-	if a.page != pageSettings {
+	if a.page != pageSettings || a.prefNow() != prefAppearance {
 		t.Fatal("settings did not open")
 	}
-	mustClick(t, tt, "Settings")
+	mustClick(t, tt, "Back to Sessions")
 	if a.page != pageWorkspace {
 		t.Fatal("settings did not close")
 	}
@@ -642,11 +642,16 @@ func TestFontSettings(t *testing.T) {
 	if c.tv.family != "monospace" {
 		t.Errorf("default terminal family %q", c.tv.family)
 	}
-	a.page = pageSettings
+	a.openSettings(prefAppearance)
 	tt.Frame()
-	for _, s := range []string{"Interface font", "Terminal font", "Monospaced fonts only"} {
+	if !tt.HasText("Interface font") {
+		t.Errorf("appearance misses the interface font: %q", tt.Texts())
+	}
+	mustClick(t, tt, "Terminal")
+	tt.Frame()
+	for _, s := range []string{"Terminal font", "Monospaced fonts only"} {
 		if !tt.HasText(s) {
-			t.Errorf("settings miss %q: %q", s, tt.Texts())
+			t.Errorf("terminal settings miss %q: %q", s, tt.Texts())
 		}
 	}
 	s := a.Settings()

@@ -596,6 +596,16 @@ func (msgs Messages) ErrTimeout(host string) string {
 	return Catalog.Format(msgs.locale, "errTimeout", map[string]any{"host": host})
 }
 
+// ErrNoBanner says "{host} accepted the connection, but its SSH server sent nothing. Check that sshd is running and that no firewall drop…"
+// in the language the app shows.
+func ErrNoBanner(host string) string { return In(i18n.Locale()).ErrNoBanner(host) }
+
+// ErrNoBanner says "{host} accepted the connection, but its SSH server sent nothing. Check that sshd is running and that no firewall drop…"
+// in the language of msgs.
+func (msgs Messages) ErrNoBanner(host string) string {
+	return Catalog.Format(msgs.locale, "errNoBanner", map[string]any{"host": host})
+}
+
 // ErrClosed says "The session ended: {detail}"
 // in the language the app shows.
 func ErrClosed(detail string) string { return In(i18n.Locale()).ErrClosed(detail) }
@@ -5718,4 +5728,714 @@ func AiRequestFailed(detail string) string { return In(i18n.Locale()).AiRequestF
 // in the language of msgs.
 func (msgs Messages) AiRequestFailed(detail string) string {
 	return Catalog.Format(msgs.locale, "aiRequestFailed", map[string]any{"detail": detail})
+}
+
+// BackToSessions says "Back to Sessions"
+// in the language the app shows.
+func BackToSessions() string { return In(i18n.Locale()).BackToSessions() }
+
+// BackToSessions says "Back to Sessions"
+// in the language of msgs.
+func (msgs Messages) BackToSessions() string {
+	return Catalog.Format(msgs.locale, "backToSessions", nil)
+}
+
+// SettingsGroupPreferences says "Preferences"
+// in the language the app shows.
+func SettingsGroupPreferences() string { return In(i18n.Locale()).SettingsGroupPreferences() }
+
+// SettingsGroupPreferences says "Preferences"
+// in the language of msgs.
+func (msgs Messages) SettingsGroupPreferences() string {
+	return Catalog.Format(msgs.locale, "settingsGroupPreferences", nil)
+}
+
+// SettingsGroupManage says "Manage"
+// in the language the app shows.
+func SettingsGroupManage() string { return In(i18n.Locale()).SettingsGroupManage() }
+
+// SettingsGroupManage says "Manage"
+// in the language of msgs.
+func (msgs Messages) SettingsGroupManage() string {
+	return Catalog.Format(msgs.locale, "settingsGroupManage", nil)
+}
+
+// SettingsGroupHelp says "Help"
+// in the language the app shows.
+func SettingsGroupHelp() string { return In(i18n.Locale()).SettingsGroupHelp() }
+
+// SettingsGroupHelp says "Help"
+// in the language of msgs.
+func (msgs Messages) SettingsGroupHelp() string {
+	return Catalog.Format(msgs.locale, "settingsGroupHelp", nil)
+}
+
+// MonitoringSection says "Monitoring"
+// in the language the app shows.
+func MonitoringSection() string { return In(i18n.Locale()).MonitoringSection() }
+
+// MonitoringSection says "Monitoring"
+// in the language of msgs.
+func (msgs Messages) MonitoringSection() string {
+	return Catalog.Format(msgs.locale, "monitoringSection", nil)
+}
+
+// ShortcutsSection says "Keyboard Shortcuts"
+// in the language the app shows.
+func ShortcutsSection() string { return In(i18n.Locale()).ShortcutsSection() }
+
+// ShortcutsSection says "Keyboard Shortcuts"
+// in the language of msgs.
+func (msgs Messages) ShortcutsSection() string {
+	return Catalog.Format(msgs.locale, "shortcutsSection", nil)
+}
+
+// AboutSection says "About"
+// in the language the app shows.
+func AboutSection() string { return In(i18n.Locale()).AboutSection() }
+
+// AboutSection says "About"
+// in the language of msgs.
+func (msgs Messages) AboutSection() string {
+	return Catalog.Format(msgs.locale, "aboutSection", nil)
+}
+
+// AppearanceDesc says "How SSHYard looks: theme, language and the interface font."
+// in the language the app shows.
+func AppearanceDesc() string { return In(i18n.Locale()).AppearanceDesc() }
+
+// AppearanceDesc says "How SSHYard looks: theme, language and the interface font."
+// in the language of msgs.
+func (msgs Messages) AppearanceDesc() string {
+	return Catalog.Format(msgs.locale, "appearanceDesc", nil)
+}
+
+// TerminalDesc says "Fonts, connection behaviour and the remote clipboard of terminal panes."
+// in the language the app shows.
+func TerminalDesc() string { return In(i18n.Locale()).TerminalDesc() }
+
+// TerminalDesc says "Fonts, connection behaviour and the remote clipboard of terminal panes."
+// in the language of msgs.
+func (msgs Messages) TerminalDesc() string {
+	return Catalog.Format(msgs.locale, "terminalDesc", nil)
+}
+
+// MonitoringDesc says "Live CPU, memory, disk and network readings of the hosts you are connected to."
+// in the language the app shows.
+func MonitoringDesc() string { return In(i18n.Locale()).MonitoringDesc() }
+
+// MonitoringDesc says "Live CPU, memory, disk and network readings of the hosts you are connected to."
+// in the language of msgs.
+func (msgs Messages) MonitoringDesc() string {
+	return Catalog.Format(msgs.locale, "monitoringDesc", nil)
+}
+
+// FilesDesc says "How the files pane transfers and opens files."
+// in the language the app shows.
+func FilesDesc() string { return In(i18n.Locale()).FilesDesc() }
+
+// FilesDesc says "How the files pane transfers and opens files."
+// in the language of msgs.
+func (msgs Messages) FilesDesc() string {
+	return Catalog.Format(msgs.locale, "filesDesc", nil)
+}
+
+// AiDesc says "Agents, permissions and model providers of the AI assistant."
+// in the language the app shows.
+func AiDesc() string { return In(i18n.Locale()).AiDesc() }
+
+// AiDesc says "Agents, permissions and model providers of the AI assistant."
+// in the language of msgs.
+func (msgs Messages) AiDesc() string {
+	return Catalog.Format(msgs.locale, "aiDesc", nil)
+}
+
+// CredentialsDesc says "Passwords and keys that hosts share. Secrets stay in the system keychain."
+// in the language the app shows.
+func CredentialsDesc() string { return In(i18n.Locale()).CredentialsDesc() }
+
+// CredentialsDesc says "Passwords and keys that hosts share. Secrets stay in the system keychain."
+// in the language of msgs.
+func (msgs Messages) CredentialsDesc() string {
+	return Catalog.Format(msgs.locale, "credentialsDesc", nil)
+}
+
+// ProxiesDesc says "SOCKS5 and HTTP proxies that hosts connect through."
+// in the language the app shows.
+func ProxiesDesc() string { return In(i18n.Locale()).ProxiesDesc() }
+
+// ProxiesDesc says "SOCKS5 and HTTP proxies that hosts connect through."
+// in the language of msgs.
+func (msgs Messages) ProxiesDesc() string {
+	return Catalog.Format(msgs.locale, "proxiesDesc", nil)
+}
+
+// ShortcutsDesc says "SSHYard's own shortcuts. Every other key goes to the shell."
+// in the language the app shows.
+func ShortcutsDesc() string { return In(i18n.Locale()).ShortcutsDesc() }
+
+// ShortcutsDesc says "SSHYard's own shortcuts. Every other key goes to the shell."
+// in the language of msgs.
+func (msgs Messages) ShortcutsDesc() string {
+	return Catalog.Format(msgs.locale, "shortcutsDesc", nil)
+}
+
+// AboutDesc says "Version, updates and information about SSHYard."
+// in the language the app shows.
+func AboutDesc() string { return In(i18n.Locale()).AboutDesc() }
+
+// AboutDesc says "Version, updates and information about SSHYard."
+// in the language of msgs.
+func (msgs Messages) AboutDesc() string {
+	return Catalog.Format(msgs.locale, "aboutDesc", nil)
+}
+
+// FontsSection says "Fonts"
+// in the language the app shows.
+func FontsSection() string { return In(i18n.Locale()).FontsSection() }
+
+// FontsSection says "Fonts"
+// in the language of msgs.
+func (msgs Messages) FontsSection() string {
+	return Catalog.Format(msgs.locale, "fontsSection", nil)
+}
+
+// ConnectionSection says "Connection"
+// in the language the app shows.
+func ConnectionSection() string { return In(i18n.Locale()).ConnectionSection() }
+
+// ConnectionSection says "Connection"
+// in the language of msgs.
+func (msgs Messages) ConnectionSection() string {
+	return Catalog.Format(msgs.locale, "connectionSection", nil)
+}
+
+// ClipboardSection says "Clipboard"
+// in the language the app shows.
+func ClipboardSection() string { return In(i18n.Locale()).ClipboardSection() }
+
+// ClipboardSection says "Clipboard"
+// in the language of msgs.
+func (msgs Messages) ClipboardSection() string {
+	return Catalog.Format(msgs.locale, "clipboardSection", nil)
+}
+
+// AiConsentSection says "Hosts that confirmed sending data"
+// in the language the app shows.
+func AiConsentSection() string { return In(i18n.Locale()).AiConsentSection() }
+
+// AiConsentSection says "Hosts that confirmed sending data"
+// in the language of msgs.
+func (msgs Messages) AiConsentSection() string {
+	return Catalog.Format(msgs.locale, "aiConsentSection", nil)
+}
+
+// AiProvidersSection says "Model providers"
+// in the language the app shows.
+func AiProvidersSection() string { return In(i18n.Locale()).AiProvidersSection() }
+
+// AiProvidersSection says "Model providers"
+// in the language of msgs.
+func (msgs Messages) AiProvidersSection() string {
+	return Catalog.Format(msgs.locale, "aiProvidersSection", nil)
+}
+
+// AboutTagline says "A native SSH client for macOS, Windows and Linux."
+// in the language the app shows.
+func AboutTagline() string { return In(i18n.Locale()).AboutTagline() }
+
+// AboutTagline says "A native SSH client for macOS, Windows and Linux."
+// in the language of msgs.
+func (msgs Messages) AboutTagline() string {
+	return Catalog.Format(msgs.locale, "aboutTagline", nil)
+}
+
+// AboutInfo says "Information"
+// in the language the app shows.
+func AboutInfo() string { return In(i18n.Locale()).AboutInfo() }
+
+// AboutInfo says "Information"
+// in the language of msgs.
+func (msgs Messages) AboutInfo() string {
+	return Catalog.Format(msgs.locale, "aboutInfo", nil)
+}
+
+// AboutVersion says "Version"
+// in the language the app shows.
+func AboutVersion() string { return In(i18n.Locale()).AboutVersion() }
+
+// AboutVersion says "Version"
+// in the language of msgs.
+func (msgs Messages) AboutVersion() string {
+	return Catalog.Format(msgs.locale, "aboutVersion", nil)
+}
+
+// AboutPlatform says "Platform"
+// in the language the app shows.
+func AboutPlatform() string { return In(i18n.Locale()).AboutPlatform() }
+
+// AboutPlatform says "Platform"
+// in the language of msgs.
+func (msgs Messages) AboutPlatform() string {
+	return Catalog.Format(msgs.locale, "aboutPlatform", nil)
+}
+
+// AboutDataFolder says "Data folder"
+// in the language the app shows.
+func AboutDataFolder() string { return In(i18n.Locale()).AboutDataFolder() }
+
+// AboutDataFolder says "Data folder"
+// in the language of msgs.
+func (msgs Messages) AboutDataFolder() string {
+	return Catalog.Format(msgs.locale, "aboutDataFolder", nil)
+}
+
+// AboutDataInMemory says "In memory, not saved"
+// in the language the app shows.
+func AboutDataInMemory() string { return In(i18n.Locale()).AboutDataInMemory() }
+
+// AboutDataInMemory says "In memory, not saved"
+// in the language of msgs.
+func (msgs Messages) AboutDataInMemory() string {
+	return Catalog.Format(msgs.locale, "aboutDataInMemory", nil)
+}
+
+// OpenDataFolder says "Open Data Folder"
+// in the language the app shows.
+func OpenDataFolder() string { return In(i18n.Locale()).OpenDataFolder() }
+
+// OpenDataFolder says "Open Data Folder"
+// in the language of msgs.
+func (msgs Messages) OpenDataFolder() string {
+	return Catalog.Format(msgs.locale, "openDataFolder", nil)
+}
+
+// AboutSecrets says "Secret storage"
+// in the language the app shows.
+func AboutSecrets() string { return In(i18n.Locale()).AboutSecrets() }
+
+// AboutSecrets says "Secret storage"
+// in the language of msgs.
+func (msgs Messages) AboutSecrets() string {
+	return Catalog.Format(msgs.locale, "aboutSecrets", nil)
+}
+
+// SecretsKeychain says "System keychain"
+// in the language the app shows.
+func SecretsKeychain() string { return In(i18n.Locale()).SecretsKeychain() }
+
+// SecretsKeychain says "System keychain"
+// in the language of msgs.
+func (msgs Messages) SecretsKeychain() string {
+	return Catalog.Format(msgs.locale, "secretsKeychain", nil)
+}
+
+// SecretsMemory says "Memory only, for this run"
+// in the language the app shows.
+func SecretsMemory() string { return In(i18n.Locale()).SecretsMemory() }
+
+// SecretsMemory says "Memory only, for this run"
+// in the language of msgs.
+func (msgs Messages) SecretsMemory() string {
+	return Catalog.Format(msgs.locale, "secretsMemory", nil)
+}
+
+// AboutLinks says "Links"
+// in the language the app shows.
+func AboutLinks() string { return In(i18n.Locale()).AboutLinks() }
+
+// AboutLinks says "Links"
+// in the language of msgs.
+func (msgs Messages) AboutLinks() string {
+	return Catalog.Format(msgs.locale, "aboutLinks", nil)
+}
+
+// SourceCode says "Source code"
+// in the language the app shows.
+func SourceCode() string { return In(i18n.Locale()).SourceCode() }
+
+// SourceCode says "Source code"
+// in the language of msgs.
+func (msgs Messages) SourceCode() string {
+	return Catalog.Format(msgs.locale, "sourceCode", nil)
+}
+
+// ReportIssue says "Report an issue"
+// in the language the app shows.
+func ReportIssue() string { return In(i18n.Locale()).ReportIssue() }
+
+// ReportIssue says "Report an issue"
+// in the language of msgs.
+func (msgs Messages) ReportIssue() string {
+	return Catalog.Format(msgs.locale, "reportIssue", nil)
+}
+
+// ShortcutStopAI says "Stop the AI turn"
+// in the language the app shows.
+func ShortcutStopAI() string { return In(i18n.Locale()).ShortcutStopAI() }
+
+// ShortcutStopAI says "Stop the AI turn"
+// in the language of msgs.
+func (msgs Messages) ShortcutStopAI() string {
+	return Catalog.Format(msgs.locale, "shortcutStopAI", nil)
+}
+
+// ShortcutSaveFile says "Save the file in the editor"
+// in the language the app shows.
+func ShortcutSaveFile() string { return In(i18n.Locale()).ShortcutSaveFile() }
+
+// ShortcutSaveFile says "Save the file in the editor"
+// in the language of msgs.
+func (msgs Messages) ShortcutSaveFile() string {
+	return Catalog.Format(msgs.locale, "shortcutSaveFile", nil)
+}
+
+// SystemMonitor says "System Monitor"
+// in the language the app shows.
+func SystemMonitor() string { return In(i18n.Locale()).SystemMonitor() }
+
+// SystemMonitor says "System Monitor"
+// in the language of msgs.
+func (msgs Messages) SystemMonitor() string {
+	return Catalog.Format(msgs.locale, "systemMonitor", nil)
+}
+
+// HostDetails says "Host Details"
+// in the language the app shows.
+func HostDetails() string { return In(i18n.Locale()).HostDetails() }
+
+// HostDetails says "Host Details"
+// in the language of msgs.
+func (msgs Messages) HostDetails() string {
+	return Catalog.Format(msgs.locale, "hostDetails", nil)
+}
+
+// ClosePanel says "Close Panel"
+// in the language the app shows.
+func ClosePanel() string { return In(i18n.Locale()).ClosePanel() }
+
+// ClosePanel says "Close Panel"
+// in the language of msgs.
+func (msgs Messages) ClosePanel() string {
+	return Catalog.Format(msgs.locale, "closePanel", nil)
+}
+
+// InspectorEmpty says "Open a session to see its host here."
+// in the language the app shows.
+func InspectorEmpty() string { return In(i18n.Locale()).InspectorEmpty() }
+
+// InspectorEmpty says "Open a session to see its host here."
+// in the language of msgs.
+func (msgs Messages) InspectorEmpty() string {
+	return Catalog.Format(msgs.locale, "inspectorEmpty", nil)
+}
+
+// MonitorNoTerminal says "Open a terminal on this host to read its metrics."
+// in the language the app shows.
+func MonitorNoTerminal() string { return In(i18n.Locale()).MonitorNoTerminal() }
+
+// MonitorNoTerminal says "Open a terminal on this host to read its metrics."
+// in the language of msgs.
+func (msgs Messages) MonitorNoTerminal() string {
+	return Catalog.Format(msgs.locale, "monitorNoTerminal", nil)
+}
+
+// MonitorOff says "Metrics are turned off for this host."
+// in the language the app shows.
+func MonitorOff() string { return In(i18n.Locale()).MonitorOff() }
+
+// MonitorOff says "Metrics are turned off for this host."
+// in the language of msgs.
+func (msgs Messages) MonitorOff() string {
+	return Catalog.Format(msgs.locale, "monitorOff", nil)
+}
+
+// MonitorWaiting says "Waiting for the first reading…"
+// in the language the app shows.
+func MonitorWaiting() string { return In(i18n.Locale()).MonitorWaiting() }
+
+// MonitorWaiting says "Waiting for the first reading…"
+// in the language of msgs.
+func (msgs Messages) MonitorWaiting() string {
+	return Catalog.Format(msgs.locale, "monitorWaiting", nil)
+}
+
+// MonitorNotConnected says "The session is not connected."
+// in the language the app shows.
+func MonitorNotConnected() string { return In(i18n.Locale()).MonitorNotConnected() }
+
+// MonitorNotConnected says "The session is not connected."
+// in the language of msgs.
+func (msgs Messages) MonitorNotConnected() string {
+	return Catalog.Format(msgs.locale, "monitorNotConnected", nil)
+}
+
+// SysSection says "System"
+// in the language the app shows.
+func SysSection() string { return In(i18n.Locale()).SysSection() }
+
+// SysSection says "System"
+// in the language of msgs.
+func (msgs Messages) SysSection() string {
+	return Catalog.Format(msgs.locale, "sysSection", nil)
+}
+
+// SysOS says "Operating system"
+// in the language the app shows.
+func SysOS() string { return In(i18n.Locale()).SysOS() }
+
+// SysOS says "Operating system"
+// in the language of msgs.
+func (msgs Messages) SysOS() string {
+	return Catalog.Format(msgs.locale, "sysOS", nil)
+}
+
+// SysAddress says "Address"
+// in the language the app shows.
+func SysAddress() string { return In(i18n.Locale()).SysAddress() }
+
+// SysAddress says "Address"
+// in the language of msgs.
+func (msgs Messages) SysAddress() string {
+	return Catalog.Format(msgs.locale, "sysAddress", nil)
+}
+
+// SysLatency says "Latency"
+// in the language the app shows.
+func SysLatency() string { return In(i18n.Locale()).SysLatency() }
+
+// SysLatency says "Latency"
+// in the language of msgs.
+func (msgs Messages) SysLatency() string {
+	return Catalog.Format(msgs.locale, "sysLatency", nil)
+}
+
+// SysConnectedFor says "Connected for"
+// in the language the app shows.
+func SysConnectedFor() string { return In(i18n.Locale()).SysConnectedFor() }
+
+// SysConnectedFor says "Connected for"
+// in the language of msgs.
+func (msgs Messages) SysConnectedFor() string {
+	return Catalog.Format(msgs.locale, "sysConnectedFor", nil)
+}
+
+// CpuCores says "{count, plural, one {# core} other {# cores}}"
+// in the language the app shows.
+func CpuCores(count int) string { return In(i18n.Locale()).CpuCores(count) }
+
+// CpuCores says "{count, plural, one {# core} other {# cores}}"
+// in the language of msgs.
+func (msgs Messages) CpuCores(count int) string {
+	return Catalog.Format(msgs.locale, "cpuCores", map[string]any{"count": count})
+}
+
+// CpuUsage says "Average usage"
+// in the language the app shows.
+func CpuUsage() string { return In(i18n.Locale()).CpuUsage() }
+
+// CpuUsage says "Average usage"
+// in the language of msgs.
+func (msgs Messages) CpuUsage() string {
+	return Catalog.Format(msgs.locale, "cpuUsage", nil)
+}
+
+// LoadAverage says "Load average"
+// in the language the app shows.
+func LoadAverage() string { return In(i18n.Locale()).LoadAverage() }
+
+// LoadAverage says "Load average"
+// in the language of msgs.
+func (msgs Messages) LoadAverage() string {
+	return Catalog.Format(msgs.locale, "loadAverage", nil)
+}
+
+// MemorySection says "Memory"
+// in the language the app shows.
+func MemorySection() string { return In(i18n.Locale()).MemorySection() }
+
+// MemorySection says "Memory"
+// in the language of msgs.
+func (msgs Messages) MemorySection() string {
+	return Catalog.Format(msgs.locale, "memorySection", nil)
+}
+
+// MemRAM says "RAM"
+// in the language the app shows.
+func MemRAM() string { return In(i18n.Locale()).MemRAM() }
+
+// MemRAM says "RAM"
+// in the language of msgs.
+func (msgs Messages) MemRAM() string {
+	return Catalog.Format(msgs.locale, "memRAM", nil)
+}
+
+// MemSwap says "Swap"
+// in the language the app shows.
+func MemSwap() string { return In(i18n.Locale()).MemSwap() }
+
+// MemSwap says "Swap"
+// in the language of msgs.
+func (msgs Messages) MemSwap() string {
+	return Catalog.Format(msgs.locale, "memSwap", nil)
+}
+
+// NetworkSection says "Network"
+// in the language the app shows.
+func NetworkSection() string { return In(i18n.Locale()).NetworkSection() }
+
+// NetworkSection says "Network"
+// in the language of msgs.
+func (msgs Messages) NetworkSection() string {
+	return Catalog.Format(msgs.locale, "networkSection", nil)
+}
+
+// DisksSection says "Disks"
+// in the language the app shows.
+func DisksSection() string { return In(i18n.Locale()).DisksSection() }
+
+// DisksSection says "Disks"
+// in the language of msgs.
+func (msgs Messages) DisksSection() string {
+	return Catalog.Format(msgs.locale, "disksSection", nil)
+}
+
+// GpuSection says "GPU"
+// in the language the app shows.
+func GpuSection() string { return In(i18n.Locale()).GpuSection() }
+
+// GpuSection says "GPU"
+// in the language of msgs.
+func (msgs Messages) GpuSection() string {
+	return Catalog.Format(msgs.locale, "gpuSection", nil)
+}
+
+// NoData says "No data"
+// in the language the app shows.
+func NoData() string { return In(i18n.Locale()).NoData() }
+
+// NoData says "No data"
+// in the language of msgs.
+func (msgs Messages) NoData() string {
+	return Catalog.Format(msgs.locale, "noData", nil)
+}
+
+// OpenPanes says "Open panes"
+// in the language the app shows.
+func OpenPanes() string { return In(i18n.Locale()).OpenPanes() }
+
+// OpenPanes says "Open panes"
+// in the language of msgs.
+func (msgs Messages) OpenPanes() string {
+	return Catalog.Format(msgs.locale, "openPanes", nil)
+}
+
+// AuthLabelCredential says "Saved credential {name}"
+// in the language the app shows.
+func AuthLabelCredential(name string) string { return In(i18n.Locale()).AuthLabelCredential(name) }
+
+// AuthLabelCredential says "Saved credential {name}"
+// in the language of msgs.
+func (msgs Messages) AuthLabelCredential(name string) string {
+	return Catalog.Format(msgs.locale, "authLabelCredential", map[string]any{"name": name})
+}
+
+// JumpHosts says "Jump hosts"
+// in the language the app shows.
+func JumpHosts() string { return In(i18n.Locale()).JumpHosts() }
+
+// JumpHosts says "Jump hosts"
+// in the language of msgs.
+func (msgs Messages) JumpHosts() string {
+	return Catalog.Format(msgs.locale, "jumpHosts", nil)
+}
+
+// StatusNoSession says "No active session"
+// in the language the app shows.
+func StatusNoSession() string { return In(i18n.Locale()).StatusNoSession() }
+
+// StatusNoSession says "No active session"
+// in the language of msgs.
+func (msgs Messages) StatusNoSession() string {
+	return Catalog.Format(msgs.locale, "statusNoSession", nil)
+}
+
+// StatusSessions says "{count, plural, one {# session} other {# sessions}}"
+// in the language the app shows.
+func StatusSessions(count int) string { return In(i18n.Locale()).StatusSessions(count) }
+
+// StatusSessions says "{count, plural, one {# session} other {# sessions}}"
+// in the language of msgs.
+func (msgs Messages) StatusSessions(count int) string {
+	return Catalog.Format(msgs.locale, "statusSessions", map[string]any{"count": count})
+}
+
+// StatusForwards says "{count, plural, one {# forward running} other {# forwards running}}"
+// in the language the app shows.
+func StatusForwards(count int) string { return In(i18n.Locale()).StatusForwards(count) }
+
+// StatusForwards says "{count, plural, one {# forward running} other {# forwards running}}"
+// in the language of msgs.
+func (msgs Messages) StatusForwards(count int) string {
+	return Catalog.Format(msgs.locale, "statusForwards", map[string]any{"count": count})
+}
+
+// StatusUpdate says "Update"
+// in the language the app shows.
+func StatusUpdate() string { return In(i18n.Locale()).StatusUpdate() }
+
+// StatusUpdate says "Update"
+// in the language of msgs.
+func (msgs Messages) StatusUpdate() string {
+	return Catalog.Format(msgs.locale, "statusUpdate", nil)
+}
+
+// StatusWorkingDir says "Working directory"
+// in the language the app shows.
+func StatusWorkingDir() string { return In(i18n.Locale()).StatusWorkingDir() }
+
+// StatusWorkingDir says "Working directory"
+// in the language of msgs.
+func (msgs Messages) StatusWorkingDir() string {
+	return Catalog.Format(msgs.locale, "statusWorkingDir", nil)
+}
+
+// DurSeconds says "{n}s"
+// in the language the app shows.
+func DurSeconds(n string) string { return In(i18n.Locale()).DurSeconds(n) }
+
+// DurSeconds says "{n}s"
+// in the language of msgs.
+func (msgs Messages) DurSeconds(n string) string {
+	return Catalog.Format(msgs.locale, "durSeconds", map[string]any{"n": n})
+}
+
+// DurMinutes says "{n}m"
+// in the language the app shows.
+func DurMinutes(n string) string { return In(i18n.Locale()).DurMinutes(n) }
+
+// DurMinutes says "{n}m"
+// in the language of msgs.
+func (msgs Messages) DurMinutes(n string) string {
+	return Catalog.Format(msgs.locale, "durMinutes", map[string]any{"n": n})
+}
+
+// DurHours says "{h}h {m}m"
+// in the language the app shows.
+func DurHours(h string, m string) string { return In(i18n.Locale()).DurHours(h, m) }
+
+// DurHours says "{h}h {m}m"
+// in the language of msgs.
+func (msgs Messages) DurHours(h string, m string) string {
+	return Catalog.Format(msgs.locale, "durHours", map[string]any{"h": h, "m": m})
+}
+
+// DurDays says "{d}d {h}h"
+// in the language the app shows.
+func DurDays(d string, h string) string { return In(i18n.Locale()).DurDays(d, h) }
+
+// DurDays says "{d}d {h}h"
+// in the language of msgs.
+func (msgs Messages) DurDays(d string, h string) string {
+	return Catalog.Format(msgs.locale, "durDays", map[string]any{"d": d, "h": h})
 }

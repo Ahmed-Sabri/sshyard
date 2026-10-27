@@ -34,8 +34,11 @@ func (a *App) View(c *ui.Context) {
 
 	a.shortcuts(c)
 	// The window: an edge-to-edge sidebar on the window's material (or
-	// its solid fill), beside the canvas of the content, whose top band is
-	// the unified toolbar.
+	// its solid fill) holding the hosts, or the settings' pages while they
+	// show, beside the canvas of the content. The content's top band is
+	// the unified toolbar and its bottom one the status bar; in the
+	// workspace a rail of IconButtons runs down its right edge, with the
+	// panel it opens beside the panes.
 	clear := c.Vibrancy()
 	if clear {
 		c.Root().Background(ui.Transparent)
@@ -49,7 +52,11 @@ func (a *App) View(c *ui.Context) {
 		}
 		sb.Children(func() {
 			c.SetTheme(tok.SidebarTheme(base, clear))
-			a.sidebarView(c, m, tok)
+			if a.page == pageSettings {
+				a.settingsNav(c, m, tok)
+			} else {
+				a.sidebarView(c, m, tok)
+			}
 			c.SetTheme(tok.Apply(base))
 			if clear {
 				c.Root().Background(ui.Transparent)
@@ -58,12 +65,26 @@ func (a *App) View(c *ui.Context) {
 		ui.Box(c).Width(1).FillHeight().Background(tok.Line)
 		ui.Column(c.Key("main")).Grow(1).Shrink(1).FillHeight().Background(tok.Canvas).Children(func() {
 			a.tabStrip(c, m, tok)
-			switch a.page {
-			case pageSettings:
-				a.settingsPage(c, m, tok)
-			default:
-				a.terminalPage(c, m, tok)
-			}
+			ui.Row(c.Key("body")).Grow(1).Shrink(1).FillWidth().MinHeight(0).Children(func() {
+				ui.Column(c.Key("content")).Grow(1).Shrink(1).MinWidth(0).FillHeight().Children(func() {
+					switch a.page {
+					case pageSettings:
+						a.settingsPage(c, m, tok)
+					default:
+						a.terminalPage(c, m, tok)
+					}
+				})
+				if a.page != pageWorkspace {
+					return
+				}
+				if a.inspector != "" {
+					ui.Box(c).Width(1).FillHeight().Shrink(0).Background(tok.Line)
+					a.inspectorView(c, m, tok)
+				}
+				ui.Box(c).Width(1).FillHeight().Shrink(0).Background(tok.GlassEdge)
+				a.railView(c, m, tok)
+			})
+			a.statusBar(c, m, tok)
 		})
 	})
 	a.editorView(c, m)

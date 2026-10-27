@@ -116,7 +116,7 @@ func noSecrets(t *testing.T, dir string, secrets ...string) {
 // the password.
 func TestCredentialSheet(t *testing.T) {
 	a, tt := newTestApp(t)
-	a.page = pageSettings
+	a.openSettings(prefCredentials)
 	tt.SetSize(1200, 2200)
 	tt.Frame()
 	if !tt.HasText("Credentials") {

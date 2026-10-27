@@ -275,58 +275,48 @@ func (a *App) tabStrip(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 			})
 		}
 		ui.Spacer(c)
-		// One capsule of the actions: those on the focused session, a
-		// hairline, then settings.
-		on := a.page == pageSettings
+		// One capsule of the actions on the focused session. The settings
+		// are in the status bar, the panels in the rail.
+		cn := a.focused()
+		if cn == nil || a.page != pageWorkspace {
+			return
+		}
 		ui.Row(c.Key("actions")).Gap(0).Padding(2).Radius(theme.Capsule).Background(tok.Fill).AlignItems(ui.Center).Children(func() {
-			if cn := a.focused(); cn != nil && a.page == pageWorkspace {
-				add := (IconButton{Icon: icons.Add, Label: m.NewTab()}).Show(c, "newtab")
-				if add.Clicked() {
+			add := (IconButton{Icon: icons.Add, Label: m.NewTab()}).Show(c, "newtab")
+			if add.Clicked() {
+				a.Connect(cn.host.ID, openAt{})
+			}
+			add.ContextMenu(func(menu *ui.Menu) {
+				if menu.Item(m.NewTab()).Shortcut(appMods, ui.KeyT).Chosen() {
 					a.Connect(cn.host.ID, openAt{})
 				}
-				add.ContextMenu(func(menu *ui.Menu) {
-					if menu.Item(m.NewTab()).Shortcut(appMods, ui.KeyT).Chosen() {
-						a.Connect(cn.host.ID, openAt{})
-					}
-					if menu.Item(m.OpenAI()).Chosen() {
-						a.OpenAI(cn.host.ID, openAt{}, 0)
-					}
-					link := 0
-					if cn.kind == layout.Terminal {
-						link = cn.id
-					}
-					if menu.Item(m.OpenAIRight()).Chosen() {
-						if t := a.ws.ActiveTab(); t != nil {
-							a.OpenAI(cn.host.ID, openAt{pane: t.Focus, edge: layout.Right}, link)
-						}
-					}
-					if menu.Item(m.OpenAIBelow()).Chosen() {
-						if t := a.ws.ActiveTab(); t != nil {
-							a.OpenAI(cn.host.ID, openAt{pane: t.Focus, edge: layout.Bottom}, link)
-						}
-					}
-					menu.Separator()
-					if menu.Item(m.StopAllAI()).Shortcut(stopAllMods, ui.KeyPeriod).Chosen() {
-						a.StopAllAI()
-					}
-				})
-				if iconButton(c, "splitright", icons.SplitRight, m.SplitRight()) {
-					a.SplitFocused(layout.Right)
+				if menu.Item(m.OpenAI()).Chosen() {
+					a.OpenAI(cn.host.ID, openAt{}, 0)
 				}
-				if iconButton(c, "splitdown", icons.SplitDown, m.SplitDown()) {
-					a.SplitFocused(layout.Bottom)
+				link := 0
+				if cn.kind == layout.Terminal {
+					link = cn.id
 				}
-				ui.Box(c.Key("sep")).Width(1).Height(16).Margin(0, 4).Background(tok.Line)
+				if menu.Item(m.OpenAIRight()).Chosen() {
+					if t := a.ws.ActiveTab(); t != nil {
+						a.OpenAI(cn.host.ID, openAt{pane: t.Focus, edge: layout.Right}, link)
+					}
+				}
+				if menu.Item(m.OpenAIBelow()).Chosen() {
+					if t := a.ws.ActiveTab(); t != nil {
+						a.OpenAI(cn.host.ID, openAt{pane: t.Focus, edge: layout.Bottom}, link)
+					}
+				}
+				menu.Separator()
+				if menu.Item(m.StopAllAI()).Shortcut(stopAllMods, ui.KeyPeriod).Chosen() {
+					a.StopAllAI()
+				}
+			})
+			if iconButton(c, "splitright", icons.SplitRight, m.SplitRight()) {
+				a.SplitFocused(layout.Right)
 			}
-			if (IconButton{Icon: icons.Settings, On: icons.SettingsOn, Label: m.Settings(), Active: on, Toggle: true}).Clicked(c, "settings") {
-				if on {
-					a.page = pageWorkspace
-					if cn := a.focused(); cn != nil {
-						a.focusReq = cn.id
-					}
-				} else {
-					a.page = pageSettings
-				}
+			if iconButton(c, "splitdown", icons.SplitDown, m.SplitDown()) {
+				a.SplitFocused(layout.Bottom)
 			}
 		})
 	})

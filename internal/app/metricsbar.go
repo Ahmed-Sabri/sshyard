@@ -27,11 +27,12 @@ func (a *App) metricsWanted(h assets.Host) bool {
 	return true
 }
 
-// commitMetricsMount saves the extra mount after the settings page
-// closes on a field that still had the caret. On the page itself the
-// field saves on Enter and when focus leaves it.
+// commitMetricsMount saves the extra mount after the monitoring settings
+// close (or another settings page shows) on a field that still had the
+// caret. On the page itself the field saves on Enter and when focus
+// leaves it.
 func (a *App) commitMetricsMount() {
-	if a.page == pageSettings || !a.metMountFocus {
+	if (a.page == pageSettings && a.prefNow() == prefMonitoring) || !a.metMountFocus {
 		return
 	}
 	a.metMountFocus = false
@@ -354,15 +355,19 @@ func loadText(m locales.Messages, rd session.Reading) string {
 }
 
 func latencyText(m locales.Messages, d time.Duration, ok bool) string {
-	n := m.MetricsDash()
-	if ok {
-		num := "<1"
-		if d >= time.Millisecond {
-			num = strconv.FormatInt(d.Milliseconds(), 10)
-		}
-		n = m.MetricsLatency(num)
+	return m.MetricsLatencyLabel(latencyValue(m, d, ok))
+}
+
+// latencyValue is the latency alone, as "12 ms", or a dash.
+func latencyValue(m locales.Messages, d time.Duration, ok bool) string {
+	if !ok {
+		return m.MetricsDash()
 	}
-	return m.MetricsLatencyLabel(n)
+	num := "<1"
+	if d >= time.Millisecond {
+		num = strconv.FormatInt(d.Milliseconds(), 10)
+	}
+	return m.MetricsLatency(num)
 }
 
 func rootVol(vols []session.VolUse) (session.VolUse, bool) {
@@ -398,7 +403,7 @@ func (a *App) metricsItemMenu(el ui.Element, cn *conn, m locales.Messages) {
 			a.hideMetrics(cn.host.ID)
 		}
 		if menu.Item(m.OpenSettings()).Chosen() {
-			a.page = pageSettings
+			a.openSettings(prefMonitoring)
 		}
 	})
 }

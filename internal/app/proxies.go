@@ -218,7 +218,7 @@ func (a *App) proxyView(c *ui.Context, m locales.Messages) {
 
 // proxiesSection is the settings' list of proxies.
 func (a *App) proxiesSection(c *ui.Context, m locales.Messages, tok theme.Tokens) {
-	settingsSection(c, tok, icons.Proxy, tok.TintAt(3), m.Proxies(), func(g *settingsGroup) {
+	settingsSection(c, tok, nil, ui.Color{}, "", func(g *settingsGroup) {
 		ps := a.store.Proxies()
 		if len(ps) == 0 {
 			g.row(m.NoProxies(), "", func() {})

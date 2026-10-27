@@ -502,7 +502,7 @@ func TestMetricsDarwinDash(t *testing.T) {
 func TestMetricsMountCommits(t *testing.T) {
 	a, tt := newTestApp(t)
 	tt.SetSize(1200, 1400)
-	a.page = pageSettings
+	a.openSettings(prefMonitoring)
 	tt.Frame()
 	r, ok := tt.Find("Extra mount point")
 	if !ok {
@@ -535,7 +535,7 @@ func TestMetricsMountCommits(t *testing.T) {
 func TestMetricsSettingsControls(t *testing.T) {
 	a, tt := newTestApp(t)
 	tt.SetSize(1200, 1400)
-	a.page = pageSettings
+	a.openSettings(prefMonitoring)
 	tt.Frame()
 	for _, s := range []string{"Metrics bar", "Refresh interval", "Extra mount point", "Shown with the root disk. Empty shows the root only.", "1 s", "10 s"} {
 		if !tt.HasText(s) {

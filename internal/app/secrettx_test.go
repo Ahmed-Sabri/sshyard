@@ -263,7 +263,7 @@ func TestDeleteKeychainFailure(t *testing.T) {
 	}
 	a.closeProxyForm()
 	// From its row in Settings, the error is a toast.
-	a.page = pageSettings
+	a.openSettings(prefProxies)
 	tt.SetSize(1200, 2400)
 	tt.Advance(time.Minute) // the earlier toast goes
 	tt.Frame()

@@ -32,7 +32,7 @@ type providerForm struct {
 }
 
 func (a *App) aiSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, s *settings.Settings, changed *bool) {
-	settingsSection(c, tok, icons.Robot, tok.TintAt(3), m.AiSettings(), func(g *settingsGroup) {
+	settingsSection(c, tok, nil, ui.Color{}, "", func(g *settingsGroup) {
 		g.row(m.AiDefaultAgent(), "", func() {
 			opts := []string{m.AiBuiltin()}
 			cur := m.AiBuiltin()
@@ -84,13 +84,13 @@ func (a *App) aiSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, s 
 			}
 		})
 		g.row(m.AiContextLines(), "", func() {
-			if ui.NumberInput(c.Key("ailines"), &a.aiLines, 50, 2000, 10).Width(76).Changed() {
+			if ui.NumberInput(c.Key("ailines"), &a.aiLines, 50, 2000, 10).Changed() {
 				s.AIContextLines = int(a.aiLines)
 				*changed = true
 			}
 		})
 		g.row(m.AiAuditDays(), "", func() {
-			if ui.NumberInput(c.Key("aidays"), &a.aiDays, 1, 3650, 1).Width(76).Changed() {
+			if ui.NumberInput(c.Key("aidays"), &a.aiDays, 1, 3650, 1).Changed() {
 				s.AIAuditRetentionDays = int(a.aiDays)
 				*changed = true
 			}
@@ -102,7 +102,8 @@ func (a *App) aiSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, s 
 				*changed = true
 			}
 		})
-		g.divider()
+	})
+	settingsSection(c, tok, icons.InstallKey, tok.TintAt(0), m.AiConsentSection(), func(g *settingsGroup) {
 		if len(s.AIConsentHosts) == 0 {
 			ui.Row(c).MinHeight(44).Padding(8, 14).Children(func() {
 				ui.Text(c, m.AiConsentEmpty()).FontSize(theme.Body).TextColor(tok.TextMuted)
@@ -120,7 +121,8 @@ func (a *App) aiSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, s 
 				}
 			})
 		}
-		g.divider()
+	})
+	settingsSection(c, tok, icons.Robot, tok.TintAt(3), m.AiProvidersSection(), func(g *settingsGroup) {
 		if len(s.AIProviders) == 0 {
 			ui.Row(c).MinHeight(44).Padding(8, 14).Children(func() {
 				ui.Text(c, m.AiNoProvider()).FontSize(theme.Body).TextColor(tok.TextMuted)
@@ -217,10 +219,10 @@ func (a *App) providerSheet(c *ui.Context, m locales.Messages, tok theme.Tokens)
 			})
 			ui.Row(c).Gap(12).Children(func() {
 				ui.Field(c, m.AiProviderTemp(), func() {
-					ui.NumberInput(c.Key("ap:temp"), &f.temp, 0, 2, 0.1).Width(90)
+					ui.NumberInput(c.Key("ap:temp"), &f.temp, 0, 2, 0.1)
 				})
 				ui.Field(c, m.AiProviderTokens(), func() {
-					ui.NumberInput(c.Key("ap:tok"), &f.tokens, 0, 200000, 1).Width(110)
+					ui.NumberInput(c.Key("ap:tok"), &f.tokens, 0, 200000, 1)
 				})
 			})
 			ui.Field(c, m.AiAPIKey(), func() {

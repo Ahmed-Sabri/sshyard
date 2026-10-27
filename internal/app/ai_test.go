@@ -537,7 +537,7 @@ func TestFullAccessNeedsConfirmation(t *testing.T) {
 	})
 
 	t.Run("settings", func(t *testing.T) {
-		a.page = pageSettings
+		a.openSettings(prefAI)
 		tt.Frame()
 		if !tt.HasText("Terminal context lines") || !tt.HasText("Redact secrets") || !tt.HasText("Audit retention (days)") {
 			t.Fatalf("AI settings missing: %q", tt.Texts())
@@ -859,7 +859,7 @@ func TestForgetAIConsent(t *testing.T) {
 	a, tt := newTestApp(t)
 	tt.SetSize(1400, 3600)
 	h := savedHost(t, a, "web", "10.0.0.8")
-	a.page = pageSettings
+	a.openSettings(prefAI)
 	tt.Frame()
 	if !tt.HasText("No host has confirmed sending data to a model.") {
 		t.Fatalf("empty state missing: %q", tt.Texts())
@@ -902,7 +902,7 @@ func TestForgetAIConsent(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.p.DataDir = block
-	a.page = pageSettings
+	a.openSettings(prefAI)
 	tt.Frame()
 	mustClick(t, tt, "Forget AI consent for this host")
 	tt.Advance(300 * time.Millisecond)
@@ -992,7 +992,7 @@ func TestAISettingsProviderKeychain(t *testing.T) {
 	secrets := &failDel{Backend: mem}
 	a, tt := appIn(t, t.TempDir(), secrets)
 	tt.SetSize(1200, 3200)
-	a.page = pageSettings
+	a.openSettings(prefAI)
 	tt.Frame()
 	mustClick(t, tt, "Add Provider")
 	tt.Frame()
@@ -1043,7 +1043,7 @@ func TestAISettingsProviderKeychain(t *testing.T) {
 func TestAIProviderRejectsBadURLAndHeader(t *testing.T) {
 	a, tt := newTestApp(t)
 	tt.SetSize(1200, 3200)
-	a.page = pageSettings
+	a.openSettings(prefAI)
 	tt.Frame()
 	mustClick(t, tt, "Add Provider")
 	tt.Frame()

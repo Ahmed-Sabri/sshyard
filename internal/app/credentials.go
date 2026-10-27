@@ -622,7 +622,7 @@ func (a *App) credDeleteView(c *ui.Context, m locales.Messages) {
 
 // credentialsSection lists the credentials in Settings.
 func (a *App) credentialsSection(c *ui.Context, m locales.Messages, tok theme.Tokens) {
-	settingsSection(c, tok, icons.Key, tok.TintAt(2), m.Credentials(), func(g *settingsGroup) {
+	settingsSection(c, tok, nil, ui.Color{}, "", func(g *settingsGroup) {
 		crs := a.store.Credentials()
 		if len(crs) == 0 {
 			g.row(m.NoCredentials(), "", func() {})

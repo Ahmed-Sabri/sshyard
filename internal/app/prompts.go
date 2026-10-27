@@ -147,6 +147,8 @@ func errText(m locales.Messages, h assets.Host, err error) string {
 		return m.ErrNetwork(name, netReason(m, err))
 	case session.KindTimeout:
 		return m.ErrTimeout(name)
+	case session.KindNoBanner:
+		return m.ErrNoBanner(name)
 	case session.KindHostChanged:
 		return m.ErrHostKeyChanged(name)
 	case session.KindHostUnknown:

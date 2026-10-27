@@ -131,7 +131,9 @@ func TestProxySheetAndEditor(t *testing.T) {
 	m := locales.In("en")
 	mustClick(t, tt, "Settings")
 	tt.Frame()
-	if !tt.HasText("Proxies") || !tt.HasText(m.NoProxies()) {
+	mustClick(t, tt, "Proxies")
+	tt.Frame()
+	if !tt.HasText(m.NoProxies()) {
 		t.Fatalf("settings: %q", tt.Texts())
 	}
 	a.openProxyForm(nil, nil) // the "New Proxy" button, below the fold
@@ -161,7 +163,7 @@ func TestProxySheetAndEditor(t *testing.T) {
 		t.Errorf("proxy row: %q", tt.Texts())
 	}
 	// The host editor makes one in place, and comes back with it chosen.
-	mustClick(t, tt, "Settings")
+	mustClick(t, tt, "Back to Sessions")
 	a.openEditor(nil)
 	tt.Frame()
 	a.form.name, a.form.address, a.form.user = "web", "10.0.0.5", "root"
