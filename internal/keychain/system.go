@@ -7,7 +7,7 @@ import (
 )
 
 // System is the Backend of the operating system's keychain, mygo.Secrets,
-// under the app's identifier (com.licoy.sshyard).
+// under the app's identifier (com.sshyard.desktop).
 type System struct{}
 
 func mapErr(err error) error {

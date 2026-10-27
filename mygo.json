@@ -1,6 +1,6 @@
 {
   "name": "SSHYard",
-  "identifier": "com.licoy.sshyard",
+  "identifier": "com.sshyard.desktop",
   "version": "0.0.1",
   "icon": "resources/icon.png",
   "out": "build",
