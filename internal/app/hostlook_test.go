@@ -237,4 +237,20 @@ func TestLocalTerminal(t *testing.T) {
 	if _, err := a.OpenFiles(localID, openAt{}, nil); err != errLocalTerminalOnly {
 		t.Errorf("open files: %v", err)
 	}
+
+	// Another, with a tab open: under the focused pane, in its tab.
+	above := a.focused()
+	tabs := len(a.ws.Tabs)
+	if _, err := a.OpenLocalTerminal(); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	tt.Frame()
+	below := a.focused()
+	if len(a.ws.Tabs) != tabs || tab.Count(layout.Terminal) != 3 || below == above {
+		t.Fatalf("not split in the tab: %d tabs, %v", len(a.ws.Tabs), a.ws.Items())
+	}
+	if r1, r2 := a.paneBounds[above.id], a.paneBounds[below.id]; r2.Y <= r1.Y+r1.H/2 || r2.X != r1.X {
+		t.Errorf("new pane at %v, not under %v", r2, r1)
+	}
 }

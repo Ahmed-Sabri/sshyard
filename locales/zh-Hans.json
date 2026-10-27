@@ -686,5 +686,10 @@
   "iconCentOS": "CentOS",
   "iconApple": "macOS",
   "iconWindows": "Windows",
-  "iconAndroid": "Android"
+  "iconAndroid": "Android",
+  "windowMinimize": "最小化",
+  "windowMaximize": "最大化",
+  "windowRestore": "还原",
+  "windowClose": "关闭窗口",
+  "moreActions": "更多操作"
 }

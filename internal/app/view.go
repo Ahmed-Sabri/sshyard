@@ -34,10 +34,10 @@ func (a *App) View(c *ui.Context) {
 	a.fontToasts(c, m)
 
 	a.shortcuts(c)
-	// The window: an edge-to-edge sidebar on the window's material (or
-	// its solid fill) holding the hosts, or the settings' pages while they
-	// show, beside the canvas of the content. The content's top band is
-	// the unified toolbar and its bottom one the status bar; in the
+	// The window: one title bar across the top, on the window's material
+	// (or its solid fill) as the sidebar under it, which holds the hosts,
+	// or the settings' pages while they show, beside the canvas of the
+	// content. The content's bottom band is the status bar; in the
 	// workspace a rail of IconButtons runs down its right edge, with the
 	// panel it opens beside the panes.
 	clear := c.Vibrancy()
@@ -46,46 +46,48 @@ func (a *App) View(c *ui.Context) {
 	} else {
 		c.Root().Background(tok.Sidebar)
 	}
-	ui.Row(c).Fill().TextColor(tok.Text).Children(func() {
-		sb := ui.Box(c.Key("sidebar")).Width(a.sbWidth).FillHeight()
-		if !clear {
-			sb.Background(tok.Sidebar)
-		}
-		sb.Children(func() {
-			c.SetTheme(tok.SidebarTheme(base, clear))
-			if a.page == pageSettings {
-				a.settingsNav(c, m, tok)
-			} else {
-				a.sidebarView(c, m, tok)
+	ui.Column(c).Fill().TextColor(tok.Text).Children(func() {
+		a.titleBar(c, m, tok, clear)
+		ui.Row(c.Key("frame")).Grow(1).Shrink(1).MinHeight(0).FillWidth().Children(func() {
+			sb := ui.Box(c.Key("sidebar")).Width(a.sbWidth).FillHeight()
+			if !clear {
+				sb.Background(tok.Sidebar)
 			}
-			c.SetTheme(tok.Apply(base))
-			if clear {
-				c.Root().Background(ui.Transparent)
-			}
-		})
-		ui.Box(c).Width(1).FillHeight().Background(tok.Line)
-		ui.Column(c.Key("main")).Grow(1).Shrink(1).FillHeight().Background(tok.Canvas).Children(func() {
-			a.tabStrip(c, m, tok)
-			ui.Row(c.Key("body")).Grow(1).Shrink(1).FillWidth().MinHeight(0).Children(func() {
-				ui.Column(c.Key("content")).Grow(1).Shrink(1).MinWidth(0).FillHeight().Children(func() {
-					switch a.page {
-					case pageSettings:
-						a.settingsPage(c, m, tok)
-					default:
-						a.terminalPage(c, m, tok)
-					}
-				})
-				if a.page != pageWorkspace {
-					return
+			sb.Children(func() {
+				c.SetTheme(tok.SidebarTheme(base, clear))
+				if a.page == pageSettings {
+					a.settingsNav(c, m, tok)
+				} else {
+					a.sidebarView(c, m, tok)
 				}
-				if a.inspector != "" {
-					ui.Box(c).Width(1).FillHeight().Shrink(0).Background(tok.Line)
-					a.inspectorView(c, m, tok)
+				c.SetTheme(tok.Apply(base))
+				if clear {
+					c.Root().Background(ui.Transparent)
 				}
-				ui.Box(c).Width(1).FillHeight().Shrink(0).Background(tok.GlassEdge)
-				a.railView(c, m, tok)
 			})
-			a.statusBar(c, m, tok)
+			ui.Box(c).Width(1).FillHeight().Background(tok.Line)
+			ui.Column(c.Key("main")).Grow(1).Shrink(1).FillHeight().Background(tok.Canvas).Children(func() {
+				ui.Row(c.Key("body")).Grow(1).Shrink(1).FillWidth().MinHeight(0).Children(func() {
+					ui.Column(c.Key("content")).Grow(1).Shrink(1).MinWidth(0).FillHeight().Children(func() {
+						switch a.page {
+						case pageSettings:
+							a.settingsPage(c, m, tok)
+						default:
+							a.terminalPage(c, m, tok)
+						}
+					})
+					if a.page != pageWorkspace {
+						return
+					}
+					if a.inspector != "" {
+						ui.Box(c).Width(1).FillHeight().Shrink(0).Background(tok.Line)
+						a.inspectorView(c, m, tok)
+					}
+					ui.Box(c).Width(1).FillHeight().Shrink(0).Background(tok.GlassEdge)
+					a.railView(c, m, tok)
+				})
+				a.statusBar(c, m, tok)
+			})
 		})
 	})
 	a.editorView(c, m)

@@ -213,66 +213,103 @@ func toolbarTrail(bar ui.TitleBar) float32 {
 	return 12
 }
 
-func (a *App) tabStrip(c *ui.Context, m locales.Messages, tok theme.Tokens) {
-	// The unified toolbar: one glass band level with the sidebar's head,
-	// the tabs as capsules on a track, the actions grouped on the right.
-	// It drags the window, and keeps clear of the window buttons.
-	bar := c.TitleBar()
-	ui.Row(c.Key("toolbar")).Height(bandHeight(c)).Shrink(0).Padding(0, toolbarTrail(bar), 0, 12).Gap(8).AlignItems(ui.Center).
-		Background(tok.Glass).DragWindow().Children(func() {
-		if len(a.ws.Tabs) > 0 {
-			ui.Row(c.Key("tabs")).Shrink(1).Gap(2).Padding(3).Radius(theme.Capsule).Background(tok.Fill).Clip().AlignItems(ui.Center).Children(func() {
-				for i, t := range a.ws.Tabs {
-					active := i == a.ws.Active && a.page == pageWorkspace
-					cn := a.conns[t.Focused().ID]
-					chip := ui.Row(c.Key("tab:"+strconv.Itoa(t.ID))).Gap(6).Padding(0, 4, 0, 10).Height(28).Radius(theme.Capsule).AlignItems(ui.Center).
-						MaxWidth(220).Shrink(1).Cursor(ui.CursorPointer)
-					if active {
-						theme.Shadow(tok.Card).On(chip.Background(tok.Inset))
-					} else if chip.Hovered() {
-						chip.Background(tok.Hover)
-					}
-					if cn != nil {
-						chip.Drag(dragSession{cn.id})
-					}
-					chip.Children(func() {
-						if cn != nil {
-							ic := kindIcon(cn.kind, active)
-							col := tok.TextMuted
-							if active {
-								col = tok.Accent
-							}
-							ui.Icon(c, ic.SVG).Width(14).Height(14).Shrink(0).TextColor(col)
-						}
-						txt := ui.Text(c, a.tabLabel(t)).SingleLine().Shrink(1).FontSize(theme.Body)
-						if active {
-							txt.FontWeight(500)
-						} else {
-							txt.TextColor(tok.TextMuted)
-						}
-						if cn != nil && isTemp(cn.host.ID) {
-							tempBadge(c, m, tok)
-						}
-						if cn != nil && cn.s != nil {
-							dot(c, stateColor(tok, cn.s.Status().State))
-						}
-						a.tabAIMarks(c, t, tok, m)
-						if (IconButton{Icon: icons.Close, Label: m.CloseTab(), Size: Small}).Clicked(c, "x") {
-							a.closeTab(t)
-						}
-					})
-					chip.ContextMenu(func(menu *ui.Menu) {
-						if menu.Item(m.CloseTab()).Chosen() {
-							a.closeTab(t)
-						}
-					})
-					if chip.Clicked() {
-						a.ws.Active = i
-						a.page = pageWorkspace
-						a.focusReq = t.Focused().ID
-					}
+// tabHeight and tabWidth size a tab; tabs narrow alike when there are
+// many, as a browser's.
+const (
+	tabHeight = 32
+	tabWidth  = 180
+)
+
+// tabs are the browser's kind: standing on the bottom of the title bar,
+// the active one in the content's color and joined to it, with feet that
+// curve into the bar; the others flat, apart by short lines, and lit on
+// hover. Each shows the host as the sidebar does.
+func (a *App) tabs(c *ui.Context, m locales.Messages, tok theme.Tokens) {
+	active := -1
+	if a.page == pageWorkspace {
+		active = a.ws.Active
+	}
+	// Read when the tabs paint, once all have been built.
+	hovered := make([]bool, len(a.ws.Tabs))
+	ui.Row(c.Key("tabs")).Shrink(1).MinWidth(0).AlignSelf(ui.End).Height(tabHeight).Padding(0, theme.RadiusSmall).Children(func() {
+		for i, t := range a.ws.Tabs {
+			on := i == active
+			cn := a.conns[t.Focused().ID]
+			chip := ui.Row(c.Key("tab:"+strconv.Itoa(t.ID))).Gap(6).Padding(0, 4, 0, 10).Width(tabWidth).Shrink(1).MinWidth(72).
+				AlignItems(ui.Center).Cursor(ui.CursorPointer)
+			if cn != nil {
+				chip.Drag(dragSession{cn.id})
+			}
+			hovered[i] = chip.Hovered()
+			chip.Draw(func(p *ui.Painter, r ui.Rect) {
+				switch {
+				case on:
+					tabShape(p, r, tok.Canvas, tok.Line)
+				case hovered[i]:
+					p.Fill(ui.Rect{X: r.X + 2, Y: r.Y + 3, W: r.W - 4, H: r.H - 6}, tok.Hover, theme.RadiusControl)
+				}
+				if next := i + 1; next < len(hovered) && !on && next != active && !hovered[i] && !hovered[next] {
+					x := r.X + r.W - 0.5
+					p.Line(x, r.Y+r.H/2-7, x, r.Y+r.H/2+7, 1, tok.Line)
 				}
 			})
+			chip.Children(func() {
+				if cn != nil {
+					hostAvatar(c, tok, a.liveHost(cn.host), 16)
+				}
+				txt := ui.Text(c, a.tabLabel(t)).SingleLine().Grow(1).Shrink(1).MinWidth(0).FontSize(theme.Footnote)
+				if on {
+					txt.FontWeight(500)
+				} else {
+					txt.TextColor(tok.TextMuted)
+				}
+				if cn != nil && isTemp(cn.host.ID) {
+					tempBadge(c, m, tok)
+				}
+				if cn != nil && cn.s != nil {
+					dot(c, stateColor(tok, cn.s.Status().State))
+				}
+				a.tabAIMarks(c, t, tok, m)
+				if (IconButton{Icon: icons.Close, Label: m.CloseTab(), Size: Small}).Clicked(c, "x") {
+					a.closeTab(t)
+				}
+			})
+			chip.ContextMenu(func(menu *ui.Menu) {
+				if menu.Item(m.CloseTab()).Chosen() {
+					a.closeTab(t)
+				}
+			})
+			if chip.Clicked() {
+				a.ws.Active = i
+				a.page = pageWorkspace
+				a.focusReq = t.Focused().ID
+			}
+		}
+	})
+}
+
+// tabShape paints the active tab in r: rounded at the top, its feet
+// curving out into the bar at the bottom, filled with fill and edged
+// with line, open at the bottom where it joins the content.
+func tabShape(p *ui.Painter, r ui.Rect, fill, line ui.Color) {
+	rr, f := theme.RadiusControl, theme.RadiusSmall
+	x0, x1, y0, y1 := r.X, r.X+r.W, r.Y, r.Y+r.H
+	outline := func(path *ui.Path) *ui.Path {
+		return path.MoveTo(x0-f, y1).QuadTo(x0, y1, x0, y1-f).LineTo(x0, y0+rr).QuadTo(x0, y0, x0+rr, y0).
+			LineTo(x1-rr, y0).QuadTo(x1, y0, x1, y0+rr).LineTo(x1, y1-f).QuadTo(x1, y1, x1+f, y1)
+	}
+	var shape, edge ui.Path
+	p.FillPath(outline(&shape).Close(), fill)
+	p.StrokePath(outline(&edge), 1, line)
+}
+
+func (a *App) tabStrip(c *ui.Context, m locales.Messages, tok theme.Tokens) {
+	// The title bar's part over the content: the tabs on its foot, the
+	// actions grouped on the right, clear of the window buttons.
+	bar := c.TitleBar()
+	ui.Row(c.Key("toolbar")).Grow(1).Shrink(1).MinWidth(0).FillHeight().Padding(0, toolbarTrail(bar), 0, 12).Gap(8).AlignItems(ui.Center).Children(func() {
+		if len(a.ws.Tabs) > 0 {
+			a.tabs(c, m, tok)
 		}
 		ui.Spacer(c)
 		// One capsule of the actions on the focused session. The settings
@@ -320,7 +357,6 @@ func (a *App) tabStrip(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 			}
 		})
 	})
-	ui.Box(c).Height(1).Shrink(0).FillWidth().Background(tok.GlassEdge)
 }
 
 func (a *App) terminalPage(c *ui.Context, m locales.Messages, tok theme.Tokens) {
@@ -368,7 +404,7 @@ func (a *App) terminalPage(c *ui.Context, m locales.Messages, tok theme.Tokens) 
 		}
 	}
 	a.dropPreview = nil
-	ui.Box(c).Fill().Padding(6).Children(func() { a.nodeView(c, t, t.Root, tok, m) })
+	ui.Box(c).Fill().Padding(paneGap / 2).Children(func() { a.nodeView(c, t, t.Root, tok, m) })
 }
 
 func (a *App) ratio(n *layout.Node) *float32 {
@@ -404,6 +440,10 @@ func (a *App) nodeView(c *ui.Context, t *layout.Tab, n *layout.Node, tok theme.T
 	n.Ratio = *p / 100
 }
 
+// paneGap is the gutter between two panes, and from the edges of the
+// content: half of it round each pane and half round all.
+const paneGap = 4
+
 func (a *App) paneView(c *ui.Context, t *layout.Tab, n *layout.Node, tok theme.Tokens, m locales.Messages) {
 	cn := a.conns[n.Item.ID]
 	if cn == nil {
@@ -416,121 +456,133 @@ func (a *App) paneView(c *ui.Context, t *layout.Tab, n *layout.Node, tok theme.T
 	if cn.kind != layout.Terminal {
 		bg = tok.Inset
 	}
-	// Each pane is a card on the canvas, concentric with the window: a
-	// 12 pt radius in an 8 pt gutter, a hairline edge, a soft shadow.
-	pane := ui.Column(c.Key("pane:" + strconv.Itoa(n.ID))).Fill().Margin(4).Radius(theme.RadiusCard).Clip().Background(bg)
-	theme.Shadow(tok.Card).On(pane)
-	// The ask names a pane by number. Outline that pane in the accent
-	// color, wider than the focus hairline, until the question is gone.
-	if a.clipAsk != nil && a.clipAsk.open && a.clipAsk.pane == cn.id {
-		pane.Border(2, tok.Accent)
-	} else if multi && focused {
-		pane.Border(1, tok.Accent.Alpha(0.7))
-	} else {
-		pane.Border(1, tok.Line)
-	}
-	var st session.Status
-	if cn.s != nil {
-		st = cn.s.Status()
-	}
-	pane.Children(func() {
-		if cn.kind == layout.AI {
-			a.aiPane(c, t, n, cn, tok, m)
-			return
+	// Each pane is a card on the canvas: a hairline edge, a soft shadow,
+	// and the same gutter all round, paneGap between two panes and from
+	// the edges of the content. (The gutter is the padding of a box the
+	// card fills: a margin on a card that fills would push it out on the
+	// right and at the bottom.)
+	var pane ui.Element
+	ui.Box(c.Key("pw:" + strconv.Itoa(n.ID))).Fill().Padding(paneGap / 2).Children(func() {
+		pane = ui.Column(c.Key("pane:" + strconv.Itoa(n.ID))).Grow(1).Shrink(1).MinHeight(0).Radius(theme.RadiusCard).Clip().Background(bg)
+		theme.Shadow(tok.Card).On(pane)
+		// The ask names a pane by number. Outline that pane in the accent
+		// color, wider than the focus hairline, until the question is gone.
+		if a.clipAsk != nil && a.clipAsk.open && a.clipAsk.pane == cn.id {
+			pane.Border(2, tok.Accent)
+		} else if multi && focused {
+			pane.Border(1, tok.Accent.Alpha(0.7))
+		} else {
+			pane.Border(1, tok.Line)
 		}
-		head := ui.Row(c.Key("head")).Height(36).Shrink(0).Padding(0, 6, 0, 10).Gap(8).AlignItems(ui.Center).Drag(dragSession{cn.id}).Label(m.PaneActions())
-		head.Children(func() {
-			softTile(c, kindIcon(cn.kind, focused), hostTint(tok, a.liveHost(cn.host)), 22)
-			title := a.pv(cn.host.Label())
+		var st session.Status
+		if cn.s != nil {
+			st = cn.s.Status()
+		}
+		pane.Children(func() {
+			if cn.kind == layout.AI {
+				a.aiPane(c, t, n, cn, tok, m)
+				return
+			}
+			head := ui.Row(c.Key("head")).Height(36).Shrink(0).Padding(0, 6, 0, 10).Gap(8).AlignItems(ui.Center).Drag(dragSession{cn.id}).Label(m.PaneActions())
+			head.Children(func() {
+				// A terminal shows its host as the sidebar does; the others
+				// what they are, in its color.
+				if cn.kind == layout.Terminal {
+					hostAvatar(c, tok, a.liveHost(cn.host), 22)
+				} else {
+					softTile(c, kindIcon(cn.kind, focused), hostTint(tok, a.liveHost(cn.host)), 22)
+				}
+				title := a.pv(cn.host.Label())
+				switch cn.kind {
+				case layout.Files:
+					title = m.FilesPane(a.pv(cn.host.Label()))
+				case layout.Editor:
+					title = cn.ed.name
+				}
+				tt := ui.Text(c, title).FontWeight(600).FontSize(theme.Footnote).SingleLine()
+				if !focused && multi {
+					tt.TextColor(tok.TextMuted)
+				}
+				if cn.s != nil {
+					dot(c, stateColor(tok, st.State))
+				}
+				if cn.kind == layout.Terminal && cn.s != nil && cn.s.Term.Modes().MouseTracking {
+					// The program takes the mouse: say so, and how to select.
+					ui.Row(c.Key("mouse")).Shrink(0).AlignItems(ui.Center).Label(m.MouseReporting()).Tooltip(m.MouseReporting()).Children(func() {
+						ui.Icon(c, icons.Mouse.SVG).Size(14, 14).TextColor(tok.Accent)
+					})
+				}
+				if isTemp(cn.host.ID) {
+					tempBadge(c, m, tok)
+				}
+				if cn.kind == layout.Terminal {
+					a.paneForwards(c, m, tok, cn.host.ID)
+				}
+				ui.Text(c, a.pv(cn.host.Target())).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine().Shrink(1)
+				ui.Spacer(c)
+				if isTemp(cn.host.ID) {
+					if (IconButton{Icon: icons.Save, Label: m.SaveAsHost(), Size: Small}).Clicked(c, "saveas") {
+						t.Focus = n.ID
+						a.SaveTempAs(cn.id)
+					}
+				}
+				if cn.kind == layout.Terminal {
+					if (IconButton{Icon: icons.Search, Label: m.Find(), Size: Small, Active: a.finding && focused}).Clicked(c, "find") {
+						t.Focus = n.ID
+						a.finding = !(a.finding && focused)
+					}
+					if (IconButton{Icon: icons.Folder, Label: m.OpenFilesHere(), Size: Small, Disabled: !remoteOnly(cn)}).Clicked(c, "files") {
+						t.Focus = n.ID
+						a.OpenFiles(cn.host.ID, openAt{pane: n.ID, edge: layout.Right}, cn)
+					}
+				} else if cn.kind == layout.Editor {
+					a.editorActions(c, t, n, cn, m)
+				} else {
+					a.transfersButton(c, cn, m)
+					a.followButton(c, t, n, cn, m)
+					if (IconButton{Icon: icons.Terminal, Label: m.OpenTerminalBeside(), Size: Small}).Clicked(c, "term") {
+						t.Focus = n.ID
+						a.Connect(cn.host.ID, openAt{pane: n.ID, edge: layout.Right})
+					}
+				}
+				if (IconButton{Icon: icons.SplitRight, Label: m.SplitRight(), Size: Small}).Clicked(c, "splitright") {
+					t.Focus = n.ID
+					a.SplitFocused(layout.Right)
+				}
+				if (IconButton{Icon: icons.SplitDown, Label: m.SplitDown(), Size: Small}).Clicked(c, "splitdown") {
+					t.Focus = n.ID
+					a.SplitFocused(layout.Bottom)
+				}
+				if (IconButton{Icon: icons.Close, Label: m.ClosePane(), Size: Small, Danger: true}).Clicked(c, "close") {
+					a.closeSoon(cn.id)
+				}
+			})
+			if head.Clicked() {
+				t.Focus = n.ID
+				a.focusReq = cn.id
+			}
+			ui.Box(c).Height(1).Shrink(0).FillWidth().Background(tok.Line)
 			switch cn.kind {
 			case layout.Files:
-				title = m.FilesPane(a.pv(cn.host.Label()))
+				a.filesBody(c, t, n, cn, pane.Bounds().W, tok, m)
 			case layout.Editor:
-				title = cn.ed.name
-			}
-			tt := ui.Text(c, title).FontWeight(600).FontSize(theme.Footnote).SingleLine()
-			if !focused && multi {
-				tt.TextColor(tok.TextMuted)
-			}
-			if cn.s != nil {
-				dot(c, stateColor(tok, st.State))
-			}
-			if cn.kind == layout.Terminal && cn.s != nil && cn.s.Term.Modes().MouseTracking {
-				// The program takes the mouse: say so, and how to select.
-				ui.Row(c.Key("mouse")).Shrink(0).AlignItems(ui.Center).Label(m.MouseReporting()).Tooltip(m.MouseReporting()).Children(func() {
-					ui.Icon(c, icons.Mouse.SVG).Size(14, 14).TextColor(tok.Accent)
-				})
-			}
-			if isTemp(cn.host.ID) {
-				tempBadge(c, m, tok)
-			}
-			if cn.kind == layout.Terminal {
-				a.paneForwards(c, m, tok, cn.host.ID)
-			}
-			ui.Text(c, a.pv(cn.host.Target())).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine().Shrink(1)
-			ui.Spacer(c)
-			if isTemp(cn.host.ID) {
-				if (IconButton{Icon: icons.Save, Label: m.SaveAsHost(), Size: Small}).Clicked(c, "saveas") {
-					t.Focus = n.ID
-					a.SaveTempAs(cn.id)
+				a.editorBody(c, t, n, cn, tok, m)
+			default:
+				a.termElement(c, t, n, cn, &pal, m)
+				if st.State == session.Connected {
+					h := cn.host
+					if cur, ok := a.host(cn.host.ID); ok {
+						h = cur
+					}
+					if a.metricsWanted(h) {
+						a.metricsBar(c, cn, tok, m)
+					}
 				}
 			}
-			if cn.kind == layout.Terminal {
-				if (IconButton{Icon: icons.Search, Label: m.Find(), Size: Small, Active: a.finding && focused}).Clicked(c, "find") {
-					t.Focus = n.ID
-					a.finding = !(a.finding && focused)
-				}
-				if (IconButton{Icon: icons.Folder, Label: m.OpenFilesHere(), Size: Small, Disabled: !remoteOnly(cn)}).Clicked(c, "files") {
-					t.Focus = n.ID
-					a.OpenFiles(cn.host.ID, openAt{pane: n.ID, edge: layout.Right}, cn)
-				}
-			} else if cn.kind == layout.Editor {
-				a.editorActions(c, t, n, cn, m)
-			} else {
-				a.transfersButton(c, cn, m)
-				a.followButton(c, t, n, cn, m)
-				if (IconButton{Icon: icons.Terminal, Label: m.OpenTerminalBeside(), Size: Small}).Clicked(c, "term") {
-					t.Focus = n.ID
-					a.Connect(cn.host.ID, openAt{pane: n.ID, edge: layout.Right})
-				}
-			}
-			if (IconButton{Icon: icons.SplitRight, Label: m.SplitRight(), Size: Small}).Clicked(c, "splitright") {
-				t.Focus = n.ID
-				a.SplitFocused(layout.Right)
-			}
-			if (IconButton{Icon: icons.SplitDown, Label: m.SplitDown(), Size: Small}).Clicked(c, "splitdown") {
-				t.Focus = n.ID
-				a.SplitFocused(layout.Bottom)
-			}
-			if (IconButton{Icon: icons.Close, Label: m.ClosePane(), Size: Small, Danger: true}).Clicked(c, "close") {
-				a.closeSoon(cn.id)
+			if cn.s != nil && st.State != session.Connected {
+				a.banner(c, cn, st, tok, m)
 			}
 		})
-		if head.Clicked() {
-			t.Focus = n.ID
-			a.focusReq = cn.id
-		}
-		ui.Box(c).Height(1).Shrink(0).FillWidth().Background(tok.Line)
-		switch cn.kind {
-		case layout.Files:
-			a.filesBody(c, t, n, cn, pane.Bounds().W, tok, m)
-		case layout.Editor:
-			a.editorBody(c, t, n, cn, tok, m)
-		default:
-			a.termElement(c, t, n, cn, &pal, m)
-			if st.State == session.Connected {
-				h := cn.host
-				if cur, ok := a.host(cn.host.ID); ok {
-					h = cur
-				}
-				if a.metricsWanted(h) {
-					a.metricsBar(c, cn, tok, m)
-				}
-			}
-		}
-		if cn.s != nil && st.State != session.Connected {
-			a.banner(c, cn, st, tok, m)
-		}
 	})
 	a.paneDrops(n, cn, pane, tok)
 }

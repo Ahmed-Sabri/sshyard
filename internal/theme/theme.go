@@ -56,7 +56,7 @@ const (
 	RadiusControl float32 = 8   // inputs, list rows, selects, banners
 	RadiusCard    float32 = 12  // panes, settings groups, popovers
 	RadiusSheet   float32 = 16  // dialogs and sheets
-	Capsule       float32 = 999 // tabs, pill buttons, segmented tracks
+	Capsule       float32 = 999 // pill buttons, segmented tracks
 )
 
 // SpaceUnit is the step of the spacing scale: Space(n) is n steps.

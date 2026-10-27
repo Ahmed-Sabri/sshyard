@@ -47,18 +47,10 @@ func (a *App) section(key string) *bool {
 }
 
 func (a *App) sidebarView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
-	bar := c.TitleBar()
 	ui.Column(c).Fill().Children(func() {
-		// The top band, level with the toolbar: the app's identity after
-		// the window controls (macOS).
-		ui.Row(c.Key("sbhead")).Height(bandHeight(c)).Shrink(0).Padding(0, 10, 0, max(bar.Left+4, 14)).Gap(8).
-			AlignItems(ui.Center).DragWindow().Children(func() {
-			tile(c, icons.Terminal, theme.Brand, 22)
-			ui.Text(c, m.AppName()).FontSize(theme.Body).FontWeight(600).SingleLine().Shrink(1)
-		})
 		// The search, and beside it adding: a new host or group, a host
 		// typed on the spot, or the hosts of ~/.ssh/config.
-		ui.Row(c.Key("sbtools")).Padding(0, 8, 6, 12).Gap(4).AlignItems(ui.Center).Children(func() {
+		ui.Row(c.Key("sbtools")).Padding(8, 8, 6, 12).Gap(4).AlignItems(ui.Center).Children(func() {
 			a.searchBox(c, m, tok)
 			(IconButton{Icon: icons.Add, Label: m.AddMenu()}).Show(c, "newhost").Menu(func(menu *ui.Menu) {
 				a.addMenu(menu, m)
@@ -108,7 +100,7 @@ func (a *App) sidebarView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 			_ = sb
 		}
 		id := a.selectedHost()
-		ui.Column(c).Padding(10).Gap(8).Children(func() {
+		ui.Column(c).Padding(6, 8, 8, 8).Gap(6).Children(func() {
 			if !a.keychainOK {
 				ui.Row(c).Padding(8, 10).Gap(8).Radius(theme.RadiusControl).Background(tok.Warning.Alpha(0.12)).Children(func() {
 					ui.Icon(c, icons.Warning.SVG).Size(14, 14).Shrink(0).TextColor(tok.Warning)
@@ -117,36 +109,37 @@ func (a *App) sidebarView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 			}
 			if id != "" {
 				h, _ := a.store.Get(id)
-				// The chosen host's card: who it is, and what to do with it.
-				el := card(c, tok).Padding(10).Gap(10).FillWidth().Label(m.HostActions())
+				// The chosen host, set into the sidebar: who it is, and
+				// what to do with it on the same line; the rarer actions
+				// in its menu.
+				el := ui.Row(c.Key("hostcard")).Padding(6, 4, 6, 8).Gap(8).AlignItems(ui.Center).FillWidth().
+					Radius(theme.RadiusControl).Background(tok.Fill).Border(1, tok.Line).Label(m.HostActions())
 				el.Children(func() {
-					ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
-						hostAvatar(c, tok, h, 30)
-						ui.Column(c).Shrink(1).Gap(1).Children(func() {
-							ui.Text(c, a.pv(h.Label())).FontWeight(600).SingleLine()
-							ui.Text(c, a.pv(h.Target())).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine()
-						})
+					hostAvatar(c, tok, h, 28)
+					ui.Column(c).Grow(1).Shrink(1).MinWidth(0).Gap(1).Children(func() {
+						ui.Text(c, a.pv(h.Label())).FontSize(theme.Footnote).FontWeight(600).SingleLine()
+						ui.Text(c, a.pv(h.Target())).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine()
 					})
-					ui.Row(c).Gap(2).AlignItems(ui.Center).Children(func() {
-						if pill(c, m.Connect(), true, false, false) {
-							a.Connect(id, openAt{})
-						}
-						ui.Spacer(c)
-						if iconButton(c, "files", icons.Folder, m.OpenFiles()) {
-							a.OpenFiles(id, openAt{}, nil)
-						}
+					if (IconButton{Icon: icons.Run, On: icons.RunOn, Label: m.Connect(), Active: true, Size: Small}).Clicked(c, "connect") {
+						a.Connect(id, openAt{})
+					}
+					if (IconButton{Icon: icons.Folder, Label: m.OpenFiles(), Size: Small}).Clicked(c, "files") {
+						a.OpenFiles(id, openAt{}, nil)
+					}
+					(IconButton{Icon: icons.More, Label: m.MoreActions(), Size: Small}).Show(c, "more").Menu(func(menu *ui.Menu) {
 						fav := m.AddFavorite()
 						if h.Favorite {
 							fav = m.RemoveFavorite()
 						}
-						if (IconButton{Icon: icons.Star, On: icons.StarOn, Label: fav, Active: h.Favorite, Toggle: true}).Clicked(c, "fav") {
+						if menu.Item(fav).Chosen() {
 							a.store.SetFavorite(id, !h.Favorite)
 						}
-						if iconButton(c, "edit", icons.Edit, m.EditHost()) {
+						if menu.Item(m.EditHost()).Chosen() {
 							hh := h
 							a.openEditor(&hh)
 						}
-						if (IconButton{Icon: icons.Delete, Label: m.DeleteHost(), Danger: true}).Clicked(c, "delete") {
+						menu.Separator()
+						if menu.Item(m.DeleteHost()).Chosen() {
 							a.deleteID, a.deleting = id, true
 						}
 					})

@@ -6959,3 +6959,53 @@ func IconAndroid() string { return In(i18n.Locale()).IconAndroid() }
 func (msgs Messages) IconAndroid() string {
 	return Catalog.Format(msgs.locale, "iconAndroid", nil)
 }
+
+// WindowMinimize says "Minimize"
+// in the language the app shows.
+func WindowMinimize() string { return In(i18n.Locale()).WindowMinimize() }
+
+// WindowMinimize says "Minimize"
+// in the language of msgs.
+func (msgs Messages) WindowMinimize() string {
+	return Catalog.Format(msgs.locale, "windowMinimize", nil)
+}
+
+// WindowMaximize says "Maximize"
+// in the language the app shows.
+func WindowMaximize() string { return In(i18n.Locale()).WindowMaximize() }
+
+// WindowMaximize says "Maximize"
+// in the language of msgs.
+func (msgs Messages) WindowMaximize() string {
+	return Catalog.Format(msgs.locale, "windowMaximize", nil)
+}
+
+// WindowRestore says "Restore"
+// in the language the app shows.
+func WindowRestore() string { return In(i18n.Locale()).WindowRestore() }
+
+// WindowRestore says "Restore"
+// in the language of msgs.
+func (msgs Messages) WindowRestore() string {
+	return Catalog.Format(msgs.locale, "windowRestore", nil)
+}
+
+// WindowClose says "Close Window"
+// in the language the app shows.
+func WindowClose() string { return In(i18n.Locale()).WindowClose() }
+
+// WindowClose says "Close Window"
+// in the language of msgs.
+func (msgs Messages) WindowClose() string {
+	return Catalog.Format(msgs.locale, "windowClose", nil)
+}
+
+// MoreActions says "More Actions"
+// in the language the app shows.
+func MoreActions() string { return In(i18n.Locale()).MoreActions() }
+
+// MoreActions says "More Actions"
+// in the language of msgs.
+func (msgs Messages) MoreActions() string {
+	return Catalog.Format(msgs.locale, "moreActions", nil)
+}

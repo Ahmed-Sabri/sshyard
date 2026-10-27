@@ -64,6 +64,10 @@ func windowVibrancy() mygo.Vibrancy {
 	return mygo.VibrancyNone
 }
 
+// ownWindowButtons says the app draws the window's buttons in its title
+// bar: on Linux and Windows. macOS keeps its traffic lights.
+func ownWindowButtons() bool { return runtime.GOOS != "darwin" }
+
 func main() {
 	mygo.App.WhenReady(func() {
 		// Linux: size the window buttons' bar to its buttons (see gtkfix).
@@ -86,6 +90,9 @@ func main() {
 			TitleBarStyle:        mygo.TitleBarHiddenInset,
 			TitleBarHeight:       52,
 			TrafficLightPosition: &mygo.Point{X: 18, Y: 18},
+			// Linux and Windows: the title bar draws the window's
+			// buttons, in the app's look (app.WindowControls).
+			HideWindowButtons: ownWindowButtons(),
 			// The sidebar's glass: the system's material on macOS, where
 			// the sidebar leaves its fill clear; a solid fill elsewhere.
 			Vibrancy:        windowVibrancy(),
@@ -95,6 +102,19 @@ func main() {
 		})
 		w.OnMinimize(func() { a.SetMinimized(true) })
 		w.OnRestore(func() { a.SetMinimized(false) })
+		if ownWindowButtons() {
+			// Off the frame that clicked them: closing the window there
+			// would take it down under the view.
+			a.SetWindow(app.WindowControls{
+				Minimize:   func() { go w.Minimize() },
+				Maximize:   func() { go w.Maximize() },
+				Unmaximize: func() { go w.Unmaximize() },
+				Close:      func() { go w.Close() },
+			})
+			a.SetMaximized(w.IsMaximized())
+			w.OnMaximize(func() { a.SetMaximized(true) })
+			w.OnUnmaximize(func() { a.SetMaximized(false) })
+		}
 	})
 	if err := mygo.App.Run(); err != nil {
 		log.Fatal(err)

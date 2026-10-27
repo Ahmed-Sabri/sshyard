@@ -686,5 +686,10 @@
   "iconCentOS": "CentOS",
   "iconApple": "macOS",
   "iconWindows": "Windows",
-  "iconAndroid": "Android"
+  "iconAndroid": "Android",
+  "windowMinimize": "Minimize",
+  "windowMaximize": "Maximize",
+  "windowRestore": "Restore",
+  "windowClose": "Close Window",
+  "moreActions": "More Actions"
 }

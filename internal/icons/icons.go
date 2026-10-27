@@ -122,6 +122,11 @@ var (
 	PrivacyOn  = load("eye-off-fill")
 	Transfers  = Network
 	LocalShell = load("terminal-window-line")
+	// The window's own buttons, where the view draws them (Linux, Windows).
+	WinMinimize = load("subtract-line")
+	WinMaximize = load("checkbox-blank-line")
+	WinRestore  = load("checkbox-multiple-blank-line")
+	More        = load("more-line")
 )
 
 // HostIcon is an icon a host can be given, by the key it is saved under.

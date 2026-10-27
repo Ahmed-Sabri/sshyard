@@ -27,9 +27,14 @@ func (a *App) localHost() assets.Host {
 	return assets.Host{ID: localID, Name: name}
 }
 
-// OpenLocalTerminal opens a shell of this computer in a new tab.
+// OpenLocalTerminal opens a shell of this computer under the focused
+// pane, split from it in its tab, or in a new tab when there is none.
 func (a *App) OpenLocalTerminal() (int, error) {
-	return a.open(localID, layout.Terminal, openAt{}, nil)
+	var at openAt
+	if t := a.ws.ActiveTab(); t != nil && t.Focus != 0 {
+		at = openAt{pane: t.Focus, edge: layout.Bottom}
+	}
+	return a.open(localID, layout.Terminal, at, nil)
 }
 
 // remoteOnly says a pane is on a server, where files and AI can open.

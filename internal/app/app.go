@@ -232,10 +232,14 @@ type App struct {
 	clip                     clipGate
 	clipAsk                  *oscAsk
 	sbWidth                  float32
-	updateCheck              bool
-	themeIdx                 int
-	autoRecon                bool
-	fonts                    fontState
+	// win is the window's buttons where the app draws them (see
+	// WindowControls), maximized whether the window is
+	win         *WindowControls
+	maximized   bool
+	updateCheck bool
+	themeIdx    int
+	autoRecon   bool
+	fonts       fontState
 	// paneBounds are where the panes were last frame, by session
 	paneBounds map[int]ui.Rect
 	// dropPreview is where a drag in progress would land, nil for none

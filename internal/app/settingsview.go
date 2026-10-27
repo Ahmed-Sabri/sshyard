@@ -114,19 +114,12 @@ func (a *App) closeSettings() {
 	}
 }
 
-// settingsNav is the sidebar while the settings show: back to the
-// sessions, then the pages in groups, as System Settings lists them.
+// settingsNav is the sidebar while the settings show: the pages in
+// groups, as System Settings lists them (the way back is in the title
+// bar).
 func (a *App) settingsNav(c *ui.Context, m locales.Messages, tok theme.Tokens) {
-	bar := c.TitleBar()
 	cur := a.prefNow()
 	ui.Column(c).Fill().Children(func() {
-		ui.Row(c.Key("sethead")).Height(bandHeight(c)).Shrink(0).Padding(0, 10, 0, max(bar.Left+4, 10)).Gap(4).
-			AlignItems(ui.Center).DragWindow().Children(func() {
-			if (IconButton{Icon: icons.Back, Label: m.BackToSessions()}).Clicked(c, "back") {
-				a.closeSettings()
-			}
-			ui.Text(c, m.Settings()).FontSize(theme.Title3).FontWeight(600).SingleLine()
-		})
 		ui.Scroll(c.Key("setnav")).Grow(1).Shrink(1).FillWidth().Children(func() {
 			ui.Column(c).FillWidth().Padding(theme.Space(1), theme.Space(2.5), theme.Space(3), theme.Space(2.5)).Gap(2).Children(func() {
 				for gi, g := range prefGroups(m, tok) {
