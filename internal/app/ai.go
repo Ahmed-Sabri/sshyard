@@ -17,6 +17,8 @@ import (
 	"github.com/Licoy/sshyard/internal/layout"
 	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/internal/vt"
+	"github.com/egoist/mygo/ui"
+	"github.com/egoist/mygo/ui/markdown"
 )
 
 // aiState is one AI pane's session. The timeline is touched on the UI
@@ -39,8 +41,16 @@ type aiState struct {
 	gen      int
 	pending  *aiPend
 	onlyDiff bool
-	modeIdx  int
 	tools    agent.Tools
+
+	// md is how the pane shows Markdown, its code blocks with its own
+	// actions; scroll follows the end of the timeline unless the user
+	// scrolled up from it. copied is the code last copied, until when
+	// it shows that it was.
+	md         *markdown.Options
+	scroll     ui.ScrollState
+	copied     string
+	copiedTill time.Time
 }
 
 type aiItem struct {
@@ -170,8 +180,29 @@ func (a *App) providerByID(id string) *settings.AIProvider {
 	return nil
 }
 
+// defaultProvider is the provider a pane asks until it is given another:
+// the one set as the default, else the first; "" when there is none.
+func (a *App) defaultProvider() string {
+	if p := a.providerByID(a.settings.AIDefaultProvider); p != nil {
+		return p.ID
+	}
+	if len(a.settings.AIProviders) > 0 {
+		return a.settings.AIProviders[0].ID
+	}
+	return ""
+}
+
+// paneProvider is the provider c asks: its own while it exists, else the
+// default; nil when there is none.
+func (a *App) paneProvider(c *conn) *settings.AIProvider {
+	if p := a.providerByID(c.ai.provider); p != nil {
+		return p
+	}
+	return a.providerByID(a.defaultProvider())
+}
+
 func (a *App) aiClient(c *conn) (*openai.Client, error) {
-	p := a.providerByID(c.ai.provider)
+	p := a.paneProvider(c)
 	if p == nil || p.Model == "" || p.BaseURL == "" {
 		return nil, errAIProvider
 	}
@@ -442,8 +473,11 @@ func (a *App) onAIDone(id int, err error) {
 
 func (a *App) scrubAI(c *conn, err error) string {
 	msg := err.Error()
-	if c.ai != nil && c.ai.provider != "" {
-		if b, e := a.kc.Get(keychain.AIKey(c.ai.provider)); e == nil && len(b) > 0 {
+	if c.ai == nil {
+		return msg
+	}
+	if p := a.paneProvider(c); p != nil {
+		if b, e := a.kc.Get(keychain.AIKey(p.ID)); e == nil && len(b) > 0 {
 			msg = strings.ReplaceAll(msg, string(b), "[redacted]")
 		}
 	}
@@ -557,6 +591,35 @@ func stripInsert(s string) string {
 		}
 		return r
 	}, s)
+}
+
+// syncLink links c, an AI pane in tab t, to a terminal of its host in t:
+// the focused one, else the one it has while it is still there, else the
+// first. The pane works with its tab's terminal; it is not chosen.
+func (a *App) syncLink(t *layout.Tab, c *conn) {
+	var focus, kept, first *conn
+	for _, p := range t.Panes() {
+		o := a.conns[p.Item.ID]
+		if o == nil || o.kind != layout.Terminal || o.host.ID != c.host.ID {
+			continue
+		}
+		switch {
+		case p.ID == t.Focus:
+			focus = o
+		case o.id == c.ai.link:
+			kept = o
+		}
+		if first == nil {
+			first = o
+		}
+	}
+	c.ai.link = 0
+	for _, o := range []*conn{focus, kept, first} {
+		if o != nil {
+			c.ai.link = o.id
+			break
+		}
+	}
 }
 
 // AskAI sends selection to the AI pane last used on that host, or splits

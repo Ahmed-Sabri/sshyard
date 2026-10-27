@@ -147,6 +147,12 @@ var (
 	Extract     = load("inbox-unarchive-line")
 	Image       = load("image-line")
 	SelectAll   = load("checkbox-multiple-line")
+	Send        = load("send-plane-2-line")
+	Model       = load("brain-line")
+	// The AI permission modes: asks first, reviewed, full access.
+	ModeAsk    = InstallKey
+	ModeReview = load("eye-line")
+	ModeFull   = load("lock-unlock-line")
 )
 
 // HostIcon is an icon a host can be given, by the key it is saved under.

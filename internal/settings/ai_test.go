@@ -27,6 +27,7 @@ func TestAINormalize(t *testing.T) {
 	s.AIContextLines = 3
 	s.AIAuditRetentionDays = 0
 	s.AIReviewProvider = "missing"
+	s.AIDefaultProvider = "missing"
 	s.AIProviders = []AIProvider{{ID: "p", Name: "n", BaseURL: "https://example.test/v1", Model: "m"}}
 	s.Normalize()
 	if s.AIDefaultAgent != "builtin" || s.AIDefaultMode != "ask" || s.AIContextLines != 50 || s.AIAuditRetentionDays != 90 {
@@ -34,6 +35,14 @@ func TestAINormalize(t *testing.T) {
 	}
 	if s.AIReviewProvider != "" {
 		t.Fatalf("unknown review provider kept: %q", s.AIReviewProvider)
+	}
+	if s.AIDefaultProvider != "" {
+		t.Fatalf("unknown default provider kept: %q", s.AIDefaultProvider)
+	}
+	s.AIDefaultProvider = " p "
+	s.Normalize()
+	if s.AIDefaultProvider != "p" {
+		t.Fatalf("default provider %q", s.AIDefaultProvider)
 	}
 
 	// "full" from a file is kept; the UI is what requires the confirmation.

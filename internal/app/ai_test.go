@@ -508,8 +508,13 @@ func TestFullAccessNeedsConfirmation(t *testing.T) {
 			t.Fatal(err)
 		}
 		tt.Frame()
-		mustClick(t, tt, "Full access")
-		tt.Frame()
+		pickFull := func() {
+			mustClick(t, tt, "Permission")
+			tt.Frame()
+			mustClick(t, tt, "Full access")
+			tt.Frame()
+		}
+		pickFull()
 		if !tt.HasText("I understand all actions will run without confirmation") {
 			t.Fatalf("texts %q", tt.Texts())
 		}
@@ -519,8 +524,7 @@ func TestFullAccessNeedsConfirmation(t *testing.T) {
 			t.Fatal("full access without the checkbox")
 		}
 		if !tt.HasText("I understand all actions will run without confirmation") {
-			mustClick(t, tt, "Full access")
-			tt.Frame()
+			pickFull()
 		}
 		mustClick(t, tt, "I understand all actions will run without confirmation")
 		tt.Frame()

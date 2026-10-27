@@ -606,10 +606,7 @@ func (a *App) makeConn(hostID string, kind layout.Kind, link int) (*conn, error)
 		if agentName == "" {
 			agentName = "builtin"
 		}
-		c.ai = &aiState{agent: agentName, link: link}
-		if len(a.settings.AIProviders) == 1 {
-			c.ai.provider = a.settings.AIProviders[0].ID
-		}
+		c.ai = &aiState{agent: agentName, link: link, provider: a.defaultProvider()}
 		a.conns[c.id] = c
 		return c, nil
 	}

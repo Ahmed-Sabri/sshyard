@@ -128,9 +128,23 @@ func (a *App) aiSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, s 
 				ui.Text(c, m.AiNoProvider()).FontSize(theme.Body).TextColor(tok.TextMuted)
 			})
 		}
+		def := s.AIDefaultProvider
+		if def == "" && len(s.AIProviders) > 0 {
+			def = s.AIProviders[0].ID
+		}
 		for _, p := range s.AIProviders {
 			p := p
 			g.row(providerLabel(p), p.BaseURL, func() {
+				// The default shows a filled star; a star on another
+				// makes it the default.
+				star := IconButton{Icon: icons.Star, On: icons.StarOn, Label: m.AiSetDefaultProvider(), Active: p.ID == def}
+				if star.Active {
+					star.Label = m.AiDefaultProvider()
+				}
+				if star.Clicked(c, "prov:def:"+p.ID) && !star.Active {
+					s.AIDefaultProvider = p.ID
+					*changed = true
+				}
 				if iconButton(c, "prov:edit:"+p.ID, icons.Edit, m.Edit()) {
 					pp := p
 					a.openProvider(&pp)
@@ -359,6 +373,9 @@ func (a *App) deleteProvider(id string) error {
 	s.AIProviders = next
 	if s.AIReviewProvider == id {
 		s.AIReviewProvider = ""
+	}
+	if s.AIDefaultProvider == id {
+		s.AIDefaultProvider = ""
 	}
 	for _, c := range a.conns {
 		if c.ai != nil && c.ai.provider == id {

@@ -21,6 +21,10 @@ type menuEntry struct {
 	// Mods and Key are the shortcut shown beside it; Key 0 shows none.
 	Mods ui.Modifiers
 	Key  ui.Key
+	// Note is a line below the label that says more of it; "" for none.
+	Note string
+	// Tint colors its icon; zero is the muted text color.
+	Tint ui.Color
 	// Checked marks the entry with a check, Danger tints it red.
 	Disabled, Checked, Danger bool
 	// Sep makes the entry a separator.
@@ -144,10 +148,23 @@ func menuLabels(entries []menuEntry) []string {
 // key, which is unique in the window: the app's own, drawn as its
 // popovers are, an icon on each entry. entries runs only while it shows.
 func (a *App) menuButton(c *ui.Context, key string, b IconButton, entries func() []menuEntry) ui.Element {
+	b.Active = b.Active || a.menu.key == key
+	return a.dropDown(c, key, b.Show(c, key), b.Disabled, entries)
+}
+
+// menuChip is ch opening a drop-down menu of entries below it, under key,
+// as menuButton is an IconButton: for a choice that shows what is chosen.
+func (a *App) menuChip(c *ui.Context, key string, ch chip, entries func() []menuEntry) ui.Element {
+	ch.open = a.menu.key == key
+	return a.dropDown(c, key, ch.show(c, key), false, entries)
+}
+
+// dropDown makes el, a button under key, open a drop-down menu of entries
+// below it while it is not disabled.
+func (a *App) dropDown(c *ui.Context, key string, el ui.Element, disabled bool, entries func() []menuEntry) ui.Element {
 	open := a.menu.key == key
-	b.Active = b.Active || open
-	el := b.Show(c, key).Role(ui.RoleMenuButton).Expanded(open)
-	if el.Clicked() && !b.Disabled {
+	el.Role(ui.RoleMenuButton).Expanded(open)
+	if el.Clicked() && !disabled {
 		if open {
 			a.menu = dropMenu{}
 		} else {
@@ -241,13 +258,25 @@ func (a *App) menuRow(c *ui.Context, tok theme.Tokens, e menuEntry, i, level int
 	}
 	row.Children(func() {
 		ic := ui.Box(c).Size(16, 16).Shrink(0)
+		tint := muted
+		if e.Tint != (ui.Color{}) && !lit && !e.Disabled {
+			tint = e.Tint
+		}
 		switch {
 		case e.Lead != nil:
 			ic.Children(e.Lead)
 		case e.Icon != nil:
-			ic.Children(func() { ui.Icon(c, e.Icon.SVG).Size(16, 16).TextColor(muted) })
+			ic.Children(func() { ui.Icon(c, e.Icon.SVG).Size(16, 16).TextColor(tint) })
 		}
-		ui.Text(c, e.Label).FontSize(theme.Body).TextColor(fg).SingleLine().Grow(1).Shrink(1).MinWidth(0)
+		if e.Note == "" {
+			ui.Text(c, e.Label).FontSize(theme.Body).TextColor(fg).SingleLine().Grow(1).Shrink(1).MinWidth(0)
+		} else {
+			ic.AlignSelf(ui.Start).Margin(1, 0, 0, 0)
+			ui.Column(c).Gap(1).Grow(1).Shrink(1).MinWidth(0).Children(func() {
+				ui.Text(c, e.Label).FontSize(theme.Body).TextColor(fg).SingleLine()
+				ui.Text(c, e.Note).FontSize(theme.Caption).TextColor(muted).SingleLine()
+			})
+		}
 		if e.Key != 0 {
 			ui.Text(c, shortcutText(runtime.GOOS, e.Mods, e.Key)).FontSize(theme.Footnote).TextColor(muted).SingleLine().
 				Shrink(0).MarginStart(theme.Space(4))
@@ -300,4 +329,45 @@ func shortcutText(goos string, mods ui.Modifiers, key ui.Key) string {
 		sep = ""
 	}
 	return strings.Join(keyCaps(goos, mods, key), sep)
+}
+
+// chip is a capsule button showing a choice, its icon and label in tint
+// over a light wash of it, and a chevron: what opens a drop-down menu of
+// the choices (menuChip), as a permission or a model.
+type chip struct {
+	Icon  *icons.Icon
+	Label string
+	// Tip names what it chooses, from the locale catalog: its tooltip
+	// and accessible label.
+	Tip string
+	// Tint colors it; zero is the muted text color.
+	Tint ui.Color
+	open bool
+}
+
+// chipLabelWidth is the widest a chip's label grows; a longer one is cut.
+const chipLabelWidth = 150
+
+// show builds the chip under key and returns it.
+func (ch chip) show(c *ui.Context, key string) ui.Element {
+	tok := currentTokens(c)
+	tint, wash := ch.Tint, float32(0.12)
+	if tint == (ui.Color{}) {
+		tint, wash = tok.TextMuted, 0.10
+	}
+	el := ui.ButtonBase(c.Key("chip:"+key)).Label(ch.Tip).Tooltip(ch.Tip).Padding(3, 6, 3, 8).Gap(4).
+		AlignItems(ui.Center).Radius(theme.Capsule).Shrink(0).Cursor(ui.CursorPointer)
+	switch {
+	case el.Pressed():
+		wash *= 2.4
+	case el.Hovered() || ch.open:
+		wash *= 1.7
+	}
+	el.Background(tint.Alpha(wash))
+	el.Children(func() {
+		ui.Icon(c, ch.Icon.SVG).Size(14, 14).Shrink(0).TextColor(tint)
+		ui.Text(c, ch.Label).FontSize(theme.Footnote).FontWeight(500).TextColor(tint).SingleLine().MaxWidth(chipLabelWidth)
+		ui.Icon(c, icons.Collapse.SVG).Size(12, 12).Shrink(0).TextColor(tint)
+	})
+	return el
 }

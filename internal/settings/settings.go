@@ -70,6 +70,9 @@ type Settings struct {
 	AIDefaultMode string `json:"aiDefaultMode,omitempty"`
 	// AIReviewProvider is an AIProviders ID, or empty for no review model.
 	AIReviewProvider string `json:"aiReviewProvider,omitempty"`
+	// AIDefaultProvider is the AIProviders ID a new AI pane asks, or empty
+	// for the first of them.
+	AIDefaultProvider string `json:"aiDefaultProvider,omitempty"`
 	// AIContextLines is how many lines of the linked terminal are sent
 	// with a question, 50 to 2000.
 	AIContextLines int `json:"aiContextLines,omitempty"`
@@ -230,6 +233,10 @@ func (s *Settings) normalizeAI(d Settings) {
 	s.AIReviewProvider = strings.TrimSpace(s.AIReviewProvider)
 	if s.AIReviewProvider != "" && !known[s.AIReviewProvider] {
 		s.AIReviewProvider = ""
+	}
+	s.AIDefaultProvider = strings.TrimSpace(s.AIDefaultProvider)
+	if s.AIDefaultProvider != "" && !known[s.AIDefaultProvider] {
+		s.AIDefaultProvider = ""
 	}
 	s.AIConsentHosts = cleanList(s.AIConsentHosts)
 }

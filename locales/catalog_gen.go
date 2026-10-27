@@ -4870,6 +4870,46 @@ func (msgs Messages) AiModeFull() string {
 	return Catalog.Format(msgs.locale, "aiModeFull", nil)
 }
 
+// AiModeAskNote says "Asks you before every action"
+// in the language the app shows.
+func AiModeAskNote() string { return In(i18n.Locale()).AiModeAskNote() }
+
+// AiModeAskNote says "Asks you before every action"
+// in the language of msgs.
+func (msgs Messages) AiModeAskNote() string {
+	return Catalog.Format(msgs.locale, "aiModeAskNote", nil)
+}
+
+// AiModeReviewNote says "A review model allows safe actions"
+// in the language the app shows.
+func AiModeReviewNote() string { return In(i18n.Locale()).AiModeReviewNote() }
+
+// AiModeReviewNote says "A review model allows safe actions"
+// in the language of msgs.
+func (msgs Messages) AiModeReviewNote() string {
+	return Catalog.Format(msgs.locale, "aiModeReviewNote", nil)
+}
+
+// AiModeFullNote says "Every action runs without asking"
+// in the language the app shows.
+func AiModeFullNote() string { return In(i18n.Locale()).AiModeFullNote() }
+
+// AiModeFullNote says "Every action runs without asking"
+// in the language of msgs.
+func (msgs Messages) AiModeFullNote() string {
+	return Catalog.Format(msgs.locale, "aiModeFullNote", nil)
+}
+
+// AiPermission says "Permission"
+// in the language the app shows.
+func AiPermission() string { return In(i18n.Locale()).AiPermission() }
+
+// AiPermission says "Permission"
+// in the language of msgs.
+func (msgs Messages) AiPermission() string {
+	return Catalog.Format(msgs.locale, "aiPermission", nil)
+}
+
 // AiModeInherit says "Inherit"
 // in the language the app shows.
 func AiModeInherit() string { return In(i18n.Locale()).AiModeInherit() }
@@ -5000,36 +5040,6 @@ func (msgs Messages) AiInsert() string {
 	return Catalog.Format(msgs.locale, "aiInsert", nil)
 }
 
-// AiLinkedTerminal says "Linked terminal"
-// in the language the app shows.
-func AiLinkedTerminal() string { return In(i18n.Locale()).AiLinkedTerminal() }
-
-// AiLinkedTerminal says "Linked terminal"
-// in the language of msgs.
-func (msgs Messages) AiLinkedTerminal() string {
-	return Catalog.Format(msgs.locale, "aiLinkedTerminal", nil)
-}
-
-// AiNoTerminal says "No terminal"
-// in the language the app shows.
-func AiNoTerminal() string { return In(i18n.Locale()).AiNoTerminal() }
-
-// AiNoTerminal says "No terminal"
-// in the language of msgs.
-func (msgs Messages) AiNoTerminal() string {
-	return Catalog.Format(msgs.locale, "aiNoTerminal", nil)
-}
-
-// AiAgent says "Agent"
-// in the language the app shows.
-func AiAgent() string { return In(i18n.Locale()).AiAgent() }
-
-// AiAgent says "Agent"
-// in the language of msgs.
-func (msgs Messages) AiAgent() string {
-	return Catalog.Format(msgs.locale, "aiAgent", nil)
-}
-
 // AiBuiltin says "Built-in"
 // in the language the app shows.
 func AiBuiltin() string { return In(i18n.Locale()).AiBuiltin() }
@@ -5068,6 +5078,16 @@ func AiProvider() string { return In(i18n.Locale()).AiProvider() }
 // in the language of msgs.
 func (msgs Messages) AiProvider() string {
 	return Catalog.Format(msgs.locale, "aiProvider", nil)
+}
+
+// AiManageProviders says "Manage Providers…"
+// in the language the app shows.
+func AiManageProviders() string { return In(i18n.Locale()).AiManageProviders() }
+
+// AiManageProviders says "Manage Providers…"
+// in the language of msgs.
+func (msgs Messages) AiManageProviders() string {
+	return Catalog.Format(msgs.locale, "aiManageProviders", nil)
 }
 
 // AiSend says "Send"
@@ -5302,6 +5322,26 @@ func (msgs Messages) AiReviewProvider() string {
 	return Catalog.Format(msgs.locale, "aiReviewProvider", nil)
 }
 
+// AiDefaultProvider says "Default provider"
+// in the language the app shows.
+func AiDefaultProvider() string { return In(i18n.Locale()).AiDefaultProvider() }
+
+// AiDefaultProvider says "Default provider"
+// in the language of msgs.
+func (msgs Messages) AiDefaultProvider() string {
+	return Catalog.Format(msgs.locale, "aiDefaultProvider", nil)
+}
+
+// AiSetDefaultProvider says "Set as Default Provider"
+// in the language the app shows.
+func AiSetDefaultProvider() string { return In(i18n.Locale()).AiSetDefaultProvider() }
+
+// AiSetDefaultProvider says "Set as Default Provider"
+// in the language of msgs.
+func (msgs Messages) AiSetDefaultProvider() string {
+	return Catalog.Format(msgs.locale, "aiSetDefaultProvider", nil)
+}
+
 // AiReviewNone says "None"
 // in the language the app shows.
 func AiReviewNone() string { return In(i18n.Locale()).AiReviewNone() }
@@ -5522,14 +5562,34 @@ func (msgs Messages) AiReviewNote() string {
 	return Catalog.Format(msgs.locale, "aiReviewNote", nil)
 }
 
-// AiEmpty says "Ask a question to start."
+// AiEmpty says "Answers draw on this tab’s terminal. Commands and file changes follow the permission below."
 // in the language the app shows.
 func AiEmpty() string { return In(i18n.Locale()).AiEmpty() }
 
-// AiEmpty says "Ask a question to start."
+// AiEmpty says "Answers draw on this tab’s terminal. Commands and file changes follow the permission below."
 // in the language of msgs.
 func (msgs Messages) AiEmpty() string {
 	return Catalog.Format(msgs.locale, "aiEmpty", nil)
+}
+
+// AiEmptyTitle says "What should we do on {host}?"
+// in the language the app shows.
+func AiEmptyTitle(host string) string { return In(i18n.Locale()).AiEmptyTitle(host) }
+
+// AiEmptyTitle says "What should we do on {host}?"
+// in the language of msgs.
+func (msgs Messages) AiEmptyTitle(host string) string {
+	return Catalog.Format(msgs.locale, "aiEmptyTitle", map[string]any{"host": host})
+}
+
+// AiWorking says "Working…"
+// in the language the app shows.
+func AiWorking() string { return In(i18n.Locale()).AiWorking() }
+
+// AiWorking says "Working…"
+// in the language of msgs.
+func (msgs Messages) AiWorking() string {
+	return Catalog.Format(msgs.locale, "aiWorking", nil)
 }
 
 // AiPaused says "Paused after 25 tool calls."
