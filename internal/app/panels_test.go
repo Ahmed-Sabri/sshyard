@@ -163,8 +163,8 @@ func TestStatusBar(t *testing.T) {
 	if a.page != pageSettings {
 		t.Fatal("the title bar's settings did not open them")
 	}
-	if !tt.HasText("No active session") {
-		t.Fatal("the status bar left the settings")
+	if tt.HasText("No active session") {
+		t.Fatal("the status bar shows in the settings")
 	}
 }
 

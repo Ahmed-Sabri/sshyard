@@ -43,8 +43,8 @@ func (a *App) View(c *ui.Context) {
 	// The window: one title bar across the top, on the window's material
 	// (or its solid fill) as the sidebar under it, which holds the hosts,
 	// or the settings' pages while they show, beside the canvas of the
-	// content. The content's bottom band is the status bar; in the
-	// workspace a rail of IconButtons runs down its right edge, with the
+	// content. In the workspace the content's bottom band is the status
+	// bar, and a rail of IconButtons runs down its right edge, with the
 	// panel it opens beside the panes.
 	// Each part shows the material as the appearance settings say: the
 	// sidebar and the title bar (clear), and the content (clearContent),
@@ -97,7 +97,9 @@ func (a *App) View(c *ui.Context) {
 					ui.Box(c).Width(1).FillHeight().Shrink(0).Background(tok.GlassEdge)
 					a.railView(c, m, tok)
 				})
-				a.statusBar(c, m, tok)
+				if a.page == pageWorkspace {
+					a.statusBar(c, m, tok)
+				}
 			})
 		})
 	})
