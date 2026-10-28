@@ -5442,11 +5442,11 @@ func (msgs Messages) AiConsentTitle() string {
 	return Catalog.Format(msgs.locale, "aiConsentTitle", nil)
 }
 
-// AiConsentBody says "Terminal output and file contents will be sent to the selected model provider."
+// AiConsentBody says "Terminal output and file contents will be sent to the selected model provider or external ACP program."
 // in the language the app shows.
 func AiConsentBody() string { return In(i18n.Locale()).AiConsentBody() }
 
-// AiConsentBody says "Terminal output and file contents will be sent to the selected model provider."
+// AiConsentBody says "Terminal output and file contents will be sent to the selected model provider or external ACP program."
 // in the language of msgs.
 func (msgs Messages) AiConsentBody() string {
 	return Catalog.Format(msgs.locale, "aiConsentBody", nil)
@@ -9134,4 +9134,356 @@ func SecretsReasonDiskFull() string { return In(i18n.Locale()).SecretsReasonDisk
 // in the language of msgs.
 func (msgs Messages) SecretsReasonDiskFull() string {
 	return Catalog.Format(msgs.locale, "secretsReasonDiskFull", nil)
+}
+
+// SkillConflict says "A file with this name is managed by the user and was not changed"
+// in the language the app shows.
+func SkillConflict() string { return In(i18n.Locale()).SkillConflict() }
+
+// SkillConflict says "A file with this name is managed by the user and was not changed"
+// in the language of msgs.
+func (msgs Messages) SkillConflict() string {
+	return Catalog.Format(msgs.locale, "skillConflict", nil)
+}
+
+// SkillUnavailable says "Unable to read the Skill file"
+// in the language the app shows.
+func SkillUnavailable() string { return In(i18n.Locale()).SkillUnavailable() }
+
+// SkillUnavailable says "Unable to read the Skill file"
+// in the language of msgs.
+func (msgs Messages) SkillUnavailable() string {
+	return Catalog.Format(msgs.locale, "skillUnavailable", nil)
+}
+
+// SkillRefreshFailed says "Skill update failed: {detail}"
+// in the language the app shows.
+func SkillRefreshFailed(detail string) string { return In(i18n.Locale()).SkillRefreshFailed(detail) }
+
+// SkillRefreshFailed says "Skill update failed: {detail}"
+// in the language of msgs.
+func (msgs Messages) SkillRefreshFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "skillRefreshFailed", map[string]any{"detail": detail})
+}
+
+// McpTokenRotatedSkillFailed says "Token rotated, but some Skill updates failed: {detail}"
+// in the language the app shows.
+func McpTokenRotatedSkillFailed(detail string) string {
+	return In(i18n.Locale()).McpTokenRotatedSkillFailed(detail)
+}
+
+// McpTokenRotatedSkillFailed says "Token rotated, but some Skill updates failed: {detail}"
+// in the language of msgs.
+func (msgs Messages) McpTokenRotatedSkillFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "mcpTokenRotatedSkillFailed", map[string]any{"detail": detail})
+}
+
+// SkillOperationFailed says "{agent}: operation failed, check directory permissions"
+// in the language the app shows.
+func SkillOperationFailed(agent string) string { return In(i18n.Locale()).SkillOperationFailed(agent) }
+
+// SkillOperationFailed says "{agent}: operation failed, check directory permissions"
+// in the language of msgs.
+func (msgs Messages) SkillOperationFailed(agent string) string {
+	return Catalog.Format(msgs.locale, "skillOperationFailed", map[string]any{"agent": agent})
+}
+
+// AiSettingsSaveFailed says "Unable to save AI settings; the change was not applied"
+// in the language the app shows.
+func AiSettingsSaveFailed() string { return In(i18n.Locale()).AiSettingsSaveFailed() }
+
+// AiSettingsSaveFailed says "Unable to save AI settings; the change was not applied"
+// in the language of msgs.
+func (msgs Messages) AiSettingsSaveFailed() string {
+	return Catalog.Format(msgs.locale, "aiSettingsSaveFailed", nil)
+}
+
+// AiHTTPFailed says "Provider response failed (HTTP {status})"
+// in the language the app shows.
+func AiHTTPFailed(status string) string { return In(i18n.Locale()).AiHTTPFailed(status) }
+
+// AiHTTPFailed says "Provider response failed (HTTP {status})"
+// in the language of msgs.
+func (msgs Messages) AiHTTPFailed(status string) string {
+	return Catalog.Format(msgs.locale, "aiHTTPFailed", map[string]any{"status": status})
+}
+
+// AiFailureTimeout says "AI request timed out"
+// in the language the app shows.
+func AiFailureTimeout() string { return In(i18n.Locale()).AiFailureTimeout() }
+
+// AiFailureTimeout says "AI request timed out"
+// in the language of msgs.
+func (msgs Messages) AiFailureTimeout() string {
+	return Catalog.Format(msgs.locale, "aiFailureTimeout", nil)
+}
+
+// AiFailureNetwork says "AI request failed to connect to the provider"
+// in the language the app shows.
+func AiFailureNetwork() string { return In(i18n.Locale()).AiFailureNetwork() }
+
+// AiFailureNetwork says "AI request failed to connect to the provider"
+// in the language of msgs.
+func (msgs Messages) AiFailureNetwork() string {
+	return Catalog.Format(msgs.locale, "aiFailureNetwork", nil)
+}
+
+// AiFailureProtocol says "Provider response has an invalid protocol format"
+// in the language the app shows.
+func AiFailureProtocol() string { return In(i18n.Locale()).AiFailureProtocol() }
+
+// AiFailureProtocol says "Provider response has an invalid protocol format"
+// in the language of msgs.
+func (msgs Messages) AiFailureProtocol() string {
+	return Catalog.Format(msgs.locale, "aiFailureProtocol", nil)
+}
+
+// AiFailureIncomplete says "Provider response ended before completion"
+// in the language the app shows.
+func AiFailureIncomplete() string { return In(i18n.Locale()).AiFailureIncomplete() }
+
+// AiFailureIncomplete says "Provider response ended before completion"
+// in the language of msgs.
+func (msgs Messages) AiFailureIncomplete() string {
+	return Catalog.Format(msgs.locale, "aiFailureIncomplete", nil)
+}
+
+// AiFailureSize says "Provider response exceeded the size limit"
+// in the language the app shows.
+func AiFailureSize() string { return In(i18n.Locale()).AiFailureSize() }
+
+// AiFailureSize says "Provider response exceeded the size limit"
+// in the language of msgs.
+func (msgs Messages) AiFailureSize() string {
+	return Catalog.Format(msgs.locale, "aiFailureSize", nil)
+}
+
+// AiFailureRequest says "AI request failed during model or tool execution"
+// in the language the app shows.
+func AiFailureRequest() string { return In(i18n.Locale()).AiFailureRequest() }
+
+// AiFailureRequest says "AI request failed during model or tool execution"
+// in the language of msgs.
+func (msgs Messages) AiFailureRequest() string {
+	return Catalog.Format(msgs.locale, "aiFailureRequest", nil)
+}
+
+// SkillPermissionDenied says "No permission to access the directory"
+// in the language the app shows.
+func SkillPermissionDenied() string { return In(i18n.Locale()).SkillPermissionDenied() }
+
+// SkillPermissionDenied says "No permission to access the directory"
+// in the language of msgs.
+func (msgs Messages) SkillPermissionDenied() string {
+	return Catalog.Format(msgs.locale, "skillPermissionDenied", nil)
+}
+
+// SkillReadFailed says "Unable to read Skill"
+// in the language the app shows.
+func SkillReadFailed() string { return In(i18n.Locale()).SkillReadFailed() }
+
+// SkillReadFailed says "Unable to read Skill"
+// in the language of msgs.
+func (msgs Messages) SkillReadFailed() string {
+	return Catalog.Format(msgs.locale, "skillReadFailed", nil)
+}
+
+// SkillWriteFailed says "Unable to write Skill"
+// in the language the app shows.
+func SkillWriteFailed() string { return In(i18n.Locale()).SkillWriteFailed() }
+
+// SkillWriteFailed says "Unable to write Skill"
+// in the language of msgs.
+func (msgs Messages) SkillWriteFailed() string {
+	return Catalog.Format(msgs.locale, "skillWriteFailed", nil)
+}
+
+// AiSettingsRollbackFailed says "Unable to save AI settings or restore the previous key; AI requests have been stopped, check the provider key"
+// in the language the app shows.
+func AiSettingsRollbackFailed() string { return In(i18n.Locale()).AiSettingsRollbackFailed() }
+
+// AiSettingsRollbackFailed says "Unable to save AI settings or restore the previous key; AI requests have been stopped, check the provider key"
+// in the language of msgs.
+func (msgs Messages) AiSettingsRollbackFailed() string {
+	return Catalog.Format(msgs.locale, "aiSettingsRollbackFailed", nil)
+}
+
+// AiBackend says "Assistant backend"
+// in the language the app shows.
+func AiBackend() string { return In(i18n.Locale()).AiBackend() }
+
+// AiBackend says "Assistant backend"
+// in the language of msgs.
+func (msgs Messages) AiBackend() string {
+	return Catalog.Format(msgs.locale, "aiBackend", nil)
+}
+
+// AiACP says "External ACP"
+// in the language the app shows.
+func AiACP() string { return In(i18n.Locale()).AiACP() }
+
+// AiACP says "External ACP"
+// in the language of msgs.
+func (msgs Messages) AiACP() string {
+	return Catalog.Format(msgs.locale, "aiACP", nil)
+}
+
+// AiACPConfigure says "Configure ACP Agent"
+// in the language the app shows.
+func AiACPConfigure() string { return In(i18n.Locale()).AiACPConfigure() }
+
+// AiACPConfigure says "Configure ACP Agent"
+// in the language of msgs.
+func (msgs Messages) AiACPConfigure() string {
+	return Catalog.Format(msgs.locale, "aiACPConfigure", nil)
+}
+
+// AiACPCommand says "ACP executable"
+// in the language the app shows.
+func AiACPCommand() string { return In(i18n.Locale()).AiACPCommand() }
+
+// AiACPCommand says "ACP executable"
+// in the language of msgs.
+func (msgs Messages) AiACPCommand() string {
+	return Catalog.Format(msgs.locale, "aiACPCommand", nil)
+}
+
+// AiACPArgs says "Arguments"
+// in the language the app shows.
+func AiACPArgs() string { return In(i18n.Locale()).AiACPArgs() }
+
+// AiACPArgs says "Arguments"
+// in the language of msgs.
+func (msgs Messages) AiACPArgs() string {
+	return Catalog.Format(msgs.locale, "aiACPArgs", nil)
+}
+
+// AiACPArgsNote says "One argument per line, passed directly without a shell"
+// in the language the app shows.
+func AiACPArgsNote() string { return In(i18n.Locale()).AiACPArgsNote() }
+
+// AiACPArgsNote says "One argument per line, passed directly without a shell"
+// in the language of msgs.
+func (msgs Messages) AiACPArgsNote() string {
+	return Catalog.Format(msgs.locale, "aiACPArgsNote", nil)
+}
+
+// AiACPConfigNote says "Use an ACP-compatible executable installed on this computer; authenticate in that program before sending a message"
+// in the language the app shows.
+func AiACPConfigNote() string { return In(i18n.Locale()).AiACPConfigNote() }
+
+// AiACPConfigNote says "Use an ACP-compatible executable installed on this computer; authenticate in that program before sending a message"
+// in the language of msgs.
+func (msgs Messages) AiACPConfigNote() string {
+	return Catalog.Format(msgs.locale, "aiACPConfigNote", nil)
+}
+
+// AiACPCommandRequired says "Enter an ACP executable; NUL characters are not allowed"
+// in the language the app shows.
+func AiACPCommandRequired() string { return In(i18n.Locale()).AiACPCommandRequired() }
+
+// AiACPCommandRequired says "Enter an ACP executable; NUL characters are not allowed"
+// in the language of msgs.
+func (msgs Messages) AiACPCommandRequired() string {
+	return Catalog.Format(msgs.locale, "aiACPCommandRequired", nil)
+}
+
+// AiBackendUnavailable says "Assistant backend unavailable; select Built-in or External ACP"
+// in the language the app shows.
+func AiBackendUnavailable() string { return In(i18n.Locale()).AiBackendUnavailable() }
+
+// AiBackendUnavailable says "Assistant backend unavailable; select Built-in or External ACP"
+// in the language of msgs.
+func (msgs Messages) AiBackendUnavailable() string {
+	return Catalog.Format(msgs.locale, "aiBackendUnavailable", nil)
+}
+
+// AiACPAuthRequired says "ACP agent requires login; authenticate in the external program, then send your message again"
+// in the language the app shows.
+func AiACPAuthRequired() string { return In(i18n.Locale()).AiACPAuthRequired() }
+
+// AiACPAuthRequired says "ACP agent requires login; authenticate in the external program, then send your message again"
+// in the language of msgs.
+func (msgs Messages) AiACPAuthRequired() string {
+	return Catalog.Format(msgs.locale, "aiACPAuthRequired", nil)
+}
+
+// AiACPStartFailed says "Unable to start ACP; check the executable and arguments"
+// in the language the app shows.
+func AiACPStartFailed() string { return In(i18n.Locale()).AiACPStartFailed() }
+
+// AiACPStartFailed says "Unable to start ACP; check the executable and arguments"
+// in the language of msgs.
+func (msgs Messages) AiACPStartFailed() string {
+	return Catalog.Format(msgs.locale, "aiACPStartFailed", nil)
+}
+
+// AiACPProtocolFailed says "ACP initialization or protocol negotiation failed; check that the program supports ACP version 1"
+// in the language the app shows.
+func AiACPProtocolFailed() string { return In(i18n.Locale()).AiACPProtocolFailed() }
+
+// AiACPProtocolFailed says "ACP initialization or protocol negotiation failed; check that the program supports ACP version 1"
+// in the language of msgs.
+func (msgs Messages) AiACPProtocolFailed() string {
+	return Catalog.Format(msgs.locale, "aiACPProtocolFailed", nil)
+}
+
+// AiACPSessionFailed says "ACP session failed; check the external program and retry"
+// in the language the app shows.
+func AiACPSessionFailed() string { return In(i18n.Locale()).AiACPSessionFailed() }
+
+// AiACPSessionFailed says "ACP session failed; check the external program and retry"
+// in the language of msgs.
+func (msgs Messages) AiACPSessionFailed() string {
+	return Catalog.Format(msgs.locale, "aiACPSessionFailed", nil)
+}
+
+// AiACPIncomplete says "ACP agent stopped before completing the turn"
+// in the language the app shows.
+func AiACPIncomplete() string { return In(i18n.Locale()).AiACPIncomplete() }
+
+// AiACPIncomplete says "ACP agent stopped before completing the turn"
+// in the language of msgs.
+func (msgs Messages) AiACPIncomplete() string {
+	return Catalog.Format(msgs.locale, "aiACPIncomplete", nil)
+}
+
+// AiACPSafetyWarning says "ACP agent requested an unsafe approval mode; SSHYard restricted or stopped the session"
+// in the language the app shows.
+func AiACPSafetyWarning() string { return In(i18n.Locale()).AiACPSafetyWarning() }
+
+// AiACPSafetyWarning says "ACP agent requested an unsafe approval mode; SSHYard restricted or stopped the session"
+// in the language of msgs.
+func (msgs Messages) AiACPSafetyWarning() string {
+	return Catalog.Format(msgs.locale, "aiACPSafetyWarning", nil)
+}
+
+// AiACPHostFailed says "Unable to connect to this host; check its credentials and host-key trust"
+// in the language the app shows.
+func AiACPHostFailed() string { return In(i18n.Locale()).AiACPHostFailed() }
+
+// AiACPHostFailed says "Unable to connect to this host; check its credentials and host-key trust"
+// in the language of msgs.
+func (msgs Messages) AiACPHostFailed() string {
+	return Catalog.Format(msgs.locale, "aiACPHostFailed", nil)
+}
+
+// AiACPFilesFailed says "Unable to prepare remote files; check SFTP access for this host"
+// in the language the app shows.
+func AiACPFilesFailed() string { return In(i18n.Locale()).AiACPFilesFailed() }
+
+// AiACPFilesFailed says "Unable to prepare remote files; check SFTP access for this host"
+// in the language of msgs.
+func (msgs Messages) AiACPFilesFailed() string {
+	return Catalog.Format(msgs.locale, "aiACPFilesFailed", nil)
+}
+
+// AiACPCloseFailed says "The ACP session stopped, but cleanup reported a failure; check the external program before retrying"
+// in the language the app shows.
+func AiACPCloseFailed() string { return In(i18n.Locale()).AiACPCloseFailed() }
+
+// AiACPCloseFailed says "The ACP session stopped, but cleanup reported a failure; check the external program before retrying"
+// in the language of msgs.
+func (msgs Messages) AiACPCloseFailed() string {
+	return Catalog.Format(msgs.locale, "aiACPCloseFailed", nil)
 }

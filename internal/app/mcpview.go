@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -74,7 +75,11 @@ func (a *App) prefAgents(c *ui.Context, m locales.Messages, tok theme.Tokens, s 
 			}
 			if (IconButton{Icon: icons.Refresh, Label: m.McpNewToken(), Danger: true}).Clicked(c, "mcp:newtoken") {
 				if err := a.newMCPToken(); err != nil {
-					c.AddToast(ui.Toast{Title: m.ErrGeneric(err.Error()), Type: "error"})
+					if a.mcp.err == nil && a.mcp.skillErr != nil {
+						c.AddToast(ui.Toast{Title: m.McpTokenRotatedSkillFailed(skillErrorText(m, a.mcp.skillErr)), Type: "error"})
+					} else {
+						c.AddToast(ui.Toast{Title: m.ErrGeneric(err.Error()), Type: "error"})
+					}
 				} else {
 					c.AddToast(ui.Toast{Title: m.McpNewTokenDone(), Type: "success"})
 				}
@@ -132,7 +137,11 @@ func (a *App) prefAgents(c *ui.Context, m locales.Messages, tok theme.Tokens, s 
 // inject, update or remove it. Injecting needs the server on; removing
 // does not.
 func (a *App) skillSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, serving bool) {
+	a.clearResolvedSkillErrors()
 	settingsSection(c, tok, icons.Skill, tok.TintAt(3), m.SkillSection(), func(g *settingsGroup) {
+		if a.mcp.skillErr != nil {
+			g.row(m.SkillRefreshFailed(skillErrorText(m, a.mcp.skillErr)), "", func() {})
+		}
 		g.row(m.SkillAbout(), m.SkillAboutNote(), func() {
 			if (IconButton{Icon: icons.Copy, Label: m.SkillCopyPrompt(), Disabled: !serving}).Clicked(c, "skill:prompt") {
 				c.WriteClipboard(a.skillPrompt())
@@ -146,16 +155,16 @@ func (a *App) skillSettings(c *ui.Context, m locales.Messages, tok theme.Tokens,
 				found++
 			}
 			note := map[skillState]string{skillNoAgent: m.SkillNoAgent(), skillMissing: m.SkillMissing(),
-				skillCurrent: m.SkillCurrent(), skillStale: m.SkillStale()}[st]
+				skillCurrent: m.SkillCurrent(), skillStale: m.SkillStale(), skillConflict: m.SkillConflict(), skillUnavailable: m.SkillUnavailable()}[st]
 			g.row(t.name, a.homePath(filepath.Dir(t.file()))+" · "+note, func() {
 				in := IconButton{Icon: icons.Download, Label: m.SkillInstallTo(t.name), Size: Small,
-					Disabled: !serving || st == skillNoAgent || st == skillCurrent}
+					Disabled: !serving || st == skillNoAgent || st == skillCurrent || st == skillConflict || st == skillUnavailable}
 				if st == skillStale {
 					in.Icon, in.Label = icons.Refresh, m.SkillUpdateIn(t.name)
 				}
 				if in.Clicked(c, "skill:in:"+t.id) {
 					if err := a.installSkill(t); err != nil {
-						c.AddToast(ui.Toast{Title: m.ErrGeneric(err.Error()), Type: "error"})
+						c.AddToast(ui.Toast{Title: skillErrorText(m, skillTargetError{target: t.name, cause: err}), Type: "error"})
 					} else {
 						c.AddToast(ui.Toast{Title: m.SkillInstalled(t.name), Type: "success"})
 					}
@@ -164,7 +173,7 @@ func (a *App) skillSettings(c *ui.Context, m locales.Messages, tok theme.Tokens,
 					Disabled: st != skillCurrent && st != skillStale}
 				if rm.Clicked(c, "skill:rm:"+t.id) {
 					if err := a.removeSkill(t); err != nil {
-						c.AddToast(ui.Toast{Title: m.ErrGeneric(err.Error()), Type: "error"})
+						c.AddToast(ui.Toast{Title: skillErrorText(m, skillTargetError{target: t.name, cause: err}), Type: "error"})
 					} else {
 						c.AddToast(ui.Toast{Title: m.SkillRemoved(t.name), Type: "success"})
 					}
@@ -176,13 +185,35 @@ func (a *App) skillSettings(c *ui.Context, m locales.Messages, tok theme.Tokens,
 			if pill(c, m.SkillInstallAll(), true, false, !serving || found == 0) {
 				n, err := a.installSkills()
 				if err != nil {
-					c.AddToast(ui.Toast{Title: m.ErrGeneric(err.Error()), Type: "error"})
+					c.AddToast(ui.Toast{Title: skillErrorText(m, err), Type: "error"})
 				} else {
 					c.AddToast(ui.Toast{Title: m.SkillInstalledAll(strconv.Itoa(n)), Type: "success"})
 				}
 			}
 		})
 	})
+}
+
+func skillErrorText(m locales.Messages, err error) string {
+	var lines []string
+	for _, item := range skillErrorList(err) {
+		var failure skillTargetError
+		if !errors.As(item, &failure) {
+			lines = append(lines, m.SkillWriteFailed())
+			continue
+		}
+		reason := m.SkillWriteFailed()
+		switch {
+		case errors.Is(failure.cause, errSkillConflict):
+			reason = m.SkillConflict()
+		case errors.Is(failure.cause, os.ErrPermission):
+			reason = m.SkillPermissionDenied()
+		case failure.read:
+			reason = m.SkillReadFailed()
+		}
+		lines = append(lines, failure.target+": "+reason)
+	}
+	return strings.Join(lines, "; ")
 }
 
 // homePath is p with the home folder written ~.

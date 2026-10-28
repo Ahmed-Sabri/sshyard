@@ -42,7 +42,10 @@ func (a *App) aiPane(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, tok
 				tempBadge(c, m, tok)
 			}
 			ui.Spacer(c).Shrink(1)
-			a.providerChip(c, cn, tok, m)
+			a.agentChip(c, cn, tok, m)
+			if cn.ai.agent == "builtin" {
+				a.providerChip(c, cn, tok, m)
+			}
 			if (IconButton{Icon: icons.SplitRight, Label: m.SplitRight(), Size: Tiny}).Clicked(c, "splitright") {
 				t.Focus = n.ID
 				a.SplitFocused(layout.Right)
@@ -90,6 +93,7 @@ func (a *App) providerChip(c *ui.Context, cn *conn, tok theme.Tokens, m locales.
 		for _, p := range a.settings.AIProviders {
 			id := p.ID
 			e := menuEntry{Icon: icons.Model, Label: providerName(p), Checked: id == cur, Do: func() {
+				a.invalidateAI(cn)
 				cn.ai.provider = id
 				a.saveLayout()
 			}}
@@ -536,11 +540,46 @@ func toolOutput(m locales.Messages, s string) string {
 }
 
 func aiErrLine(m locales.Messages, s string) string {
+	if strings.HasPrefix(s, "http:") {
+		return m.AiHTTPFailed(strings.TrimPrefix(s, "http:"))
+	}
 	switch s {
 	case "key":
 		return m.AiNoKey()
+	case "backend":
+		return m.AiBackendUnavailable()
+	case "acp-auth":
+		return m.AiACPAuthRequired()
+	case "acp-host":
+		return m.AiACPHostFailed()
+	case "acp-files":
+		return m.AiACPFilesFailed()
+	case "acp-close":
+		return m.AiACPCloseFailed()
+	case "acp-start":
+		return m.AiACPStartFailed()
+	case "acp-protocol":
+		return m.AiACPProtocolFailed()
+	case "acp-session":
+		return m.AiACPSessionFailed()
+	case "acp-incomplete":
+		return m.AiACPIncomplete()
+	case "acp-warning":
+		return m.AiACPSafetyWarning()
 	case "provider":
 		return m.AiNoModel()
+	case "timeout":
+		return m.AiFailureTimeout()
+	case "network":
+		return m.AiFailureNetwork()
+	case "protocol":
+		return m.AiFailureProtocol()
+	case "incomplete":
+		return m.AiFailureIncomplete()
+	case "size":
+		return m.AiFailureSize()
+	case "request":
+		return m.AiFailureRequest()
 	default:
 		return m.AiRequestFailed(toolOutput(m, s))
 	}
@@ -564,6 +603,7 @@ func (a *App) aiSheets(c *ui.Context, m locales.Messages) {
 	a.fullSheet(c, m, tok)
 	a.askSheet(c, m, tok)
 	a.providerSheet(c, m, tok)
+	a.acpSheet(c, m, tok)
 	a.providerDelete(c, m)
 	a.mcpSheet(c, m, tok)
 }
@@ -584,7 +624,10 @@ func (a *App) consentSheet(c *ui.Context, m locales.Messages, tok theme.Tokens) 
 					ask.open = false
 				}
 				if pill(c, m.AiConsentConfirm(), true, false, false) {
-					a.grantConsent(ask.host)
+					if err := a.grantConsent(ask.host); err != nil {
+						c.AddToast(ui.Toast{Title: m.AiSettingsSaveFailed(), Type: "error"})
+						return
+					}
 					id, text := ask.conn, ask.text
 					ask.open = false
 					a.consent = nil

@@ -147,7 +147,7 @@ func TestMCPConnectAndRun(t *testing.T) {
 	}
 
 	recs, err := audit.New(a.p.DataDir).Read(audit.Filter{Host: h.ID})
-	if err != nil || len(recs) != 1 || recs[0].Agent != "mcp" || recs[0].Command != "echo hello; echo oops >&2; exit 3" || recs[0].ExitCode == nil || *recs[0].ExitCode != 3 {
+	if err != nil || len(recs) != 2 || recs[0].Verdict != "started" || recs[1].Agent != "mcp" || recs[1].Command != "echo hello; echo oops >&2; exit 3" || recs[1].ExitCode == nil || *recs[1].ExitCode != 3 {
 		t.Fatalf("audit %+v %v", recs, err)
 	}
 

@@ -13,8 +13,7 @@ import (
 )
 
 // TestAIPaneLayout checks the pane's controls: the provider in its
-// header, the permission first on the composer's row, and no choice of
-// terminal or agent.
+// header alongside the selected backend, with permission first on the composer row.
 func TestAIPaneLayout(t *testing.T) {
 	a, tt := newTestApp(t)
 	h := savedHost(t, a, "web", "10.0.0.8")
@@ -31,12 +30,16 @@ func TestAIPaneLayout(t *testing.T) {
 		t.Fatal(err)
 	}
 	tt.Frame()
-	for _, gone := range []string{"Linked terminal", "No terminal", "Agent", "Built-in"} {
+	for _, gone := range []string{"Linked terminal", "No terminal", "Agent"} {
 		if tt.HasText(gone) {
 			t.Fatalf("%q still shows", gone)
 		}
 	}
 	head := mustFind(t, tt, "Close Pane")
+	backend := mustFind(t, tt, "Built-in")
+	if backend.Y > head.Y+head.H || backend.Y+backend.H < head.Y {
+		t.Fatal("backend not in header")
+	}
 	prov := mustFind(t, tt, "Alpha")
 	if prov.Y > head.Y+head.H || prov.Y+prov.H < head.Y {
 		t.Fatalf("provider %v not in the header row %v", prov, head)
@@ -211,7 +214,7 @@ func TestAIDefaultProvider(t *testing.T) {
 	if a.Settings().AIDefaultProvider != "" {
 		t.Fatalf("deleted default kept: %q", a.Settings().AIDefaultProvider)
 	}
-	if p := a.paneProvider(a.conns[id]); p == nil || p.ID != "p1" || !tt.HasText("Alpha") {
+	if p := a.paneProvider(a.conns[id]); p != nil {
 		t.Fatalf("after delete %+v", p)
 	}
 }

@@ -11,6 +11,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -332,6 +333,9 @@ type App struct {
 	consent   *consentAsk
 	prov      *providerForm
 	provOpen  bool
+	acpForm   *acpForm
+	acpOpen   bool
+	acpWG     sync.WaitGroup
 	// provDelete asks before removing a provider and its keychain key.
 	provDeleting bool
 	provDeleteID string
@@ -467,8 +471,22 @@ func (a *App) ApplySettings(s settings.Settings) error {
 		return keychain.ErrLocked
 	}
 	s.Normalize()
+	if a.p.DataDir != "" {
+		if err := settings.Save(filepath.Join(a.p.DataDir, "settings.json"), s); err != nil {
+			return err
+		}
+	}
 	old := a.settings
 	a.settings = s
+	for _, c := range a.conns {
+		if c.ai == nil {
+			continue
+		}
+		all := c.ai.agent == "acp" && !reflect.DeepEqual(old.AIACP, s.AIACP) || old.AIReviewProvider != s.AIReviewProvider || old.AIRedact != s.AIRedact || old.AIDefaultMode != s.AIDefaultMode
+		if all || c.ai.agent == "builtin" && !reflect.DeepEqual(providerIn(old, c.ai.provider), providerIn(s, c.ai.provider)) || !reflect.DeepEqual(providerIn(old, old.AIReviewProvider), providerIn(s, s.AIReviewProvider)) {
+			a.invalidateAI(c)
+		}
+	}
 	if s.Theme != old.Theme && a.p.SetTheme != nil {
 		a.p.SetTheme(s.Theme)
 	}
@@ -503,10 +521,7 @@ func (a *App) ApplySettings(s settings.Settings) error {
 		a.syncMCP()
 	}
 	a.syncChoices()
-	if a.p.DataDir == "" {
-		return nil
-	}
-	return settings.Save(filepath.Join(a.p.DataDir, "settings.json"), s)
+	return nil
 }
 
 // Start applies the saved theme and language to the window.
@@ -572,6 +587,7 @@ func (a *App) Close() {
 	}
 	a.stopCollectors()
 	a.stopMCP()
+	a.waitMCP()
 	if !a.closing {
 		a.closing = true
 		a.saveLayout()
@@ -583,6 +599,7 @@ func (a *App) Close() {
 		}
 		c.close()
 	}
+	a.acpWG.Wait()
 	a.clipAsk = nil
 	a.fwds = map[string]*fwdRun{}
 	if a.kc != nil {

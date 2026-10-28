@@ -221,6 +221,12 @@ func (a *App) SaveForm(m locales.Messages) bool {
 		f.err = fieldError(m, err)
 		return false
 	}
+	for _, c := range a.conns {
+		if c.host.ID == h.ID {
+			a.invalidateAI(c)
+			a.refreshMode(c)
+		}
+	}
 	if f.promote != "" {
 		a.promote(f.promote, h)
 	}

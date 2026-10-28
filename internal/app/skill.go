@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -128,15 +129,23 @@ func (a *App) skillTargets() []skillTarget {
 type skillState int
 
 const (
-	skillNoAgent skillState = iota // the agent's folder is missing
-	skillMissing                   // not installed
-	skillCurrent                   // installed, as served now
-	skillStale                     // installed, for another token or port
+	skillNoAgent     skillState = iota // the agent's folder is missing
+	skillMissing                       // not installed
+	skillCurrent                       // installed, as served now
+	skillStale                         // installed, for another token or port
+	skillConflict                      // a file not owned by SSHYard
+	skillUnavailable                   // a file cannot be inspected
 )
 
 func (a *App) skillStateOf(t skillTarget) skillState {
-	b, err := os.ReadFile(t.file())
+	b, err := readOwnedSkill(t)
+	if errors.Is(err, errSkillConflict) {
+		return skillConflict
+	}
 	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return skillUnavailable
+		}
 		if fi, err := os.Stat(t.root); err != nil || !fi.IsDir() {
 			return skillNoAgent
 		}
@@ -152,11 +161,50 @@ func (a *App) skillStateOf(t skillTarget) skillState {
 // what it would say could not be used.
 var errSkillOff = errors.New("agent access is off")
 
+var errSkillConflict = errors.New("the existing skill is not managed by SSHYard")
+
+// Error text is safe for settings UI; callers can still inspect the underlying cause.
+type skillTargetError struct {
+	target string
+	cause  error
+	read   bool
+}
+
+func (e skillTargetError) Error() string { return e.target }
+func (e skillTargetError) Unwrap() error { return e.cause }
+
+// Refuse symlinked skill directories and files as well as user-owned content.
+// All install, refresh and removal paths share this ownership boundary.
+func readOwnedSkill(t skillTarget) ([]byte, error) {
+	for _, p := range []string{t.root, filepath.Join(t.root, "skills"), filepath.Dir(t.file()), t.file()} {
+		fi, err := os.Lstat(p)
+		if err != nil {
+			return nil, err
+		}
+		if fi.Mode()&os.ModeSymlink != 0 || (p == t.file() && !fi.Mode().IsRegular()) {
+			return nil, errSkillConflict
+		}
+	}
+	f, err := os.Open(t.file())
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	b, err := io.ReadAll(io.LimitReader(f, 1<<20))
+	if err == nil && (!strings.HasPrefix(string(b), skillHead+"description: Operate the user's SSH servers saved in SSHYard ") || len(b) == 1<<20) {
+		return nil, errSkillConflict
+	}
+	return b, err
+}
+
 // installSkill writes the skill for t, readable by the user only: it
 // holds the token.
 func (a *App) installSkill(t skillTarget) error {
 	if a.mcp.skill == "" {
 		return errSkillOff
+	}
+	if _, err := readOwnedSkill(t); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
 	}
 	dir := filepath.Dir(t.file())
 	if err := os.MkdirAll(dir, 0o700); err != nil {
@@ -174,16 +222,27 @@ func (a *App) installSkill(t skillTarget) error {
 	if err := f.Close(); err != nil {
 		return err
 	}
-	return os.Rename(f.Name(), t.file())
+	if err := os.Rename(f.Name(), t.file()); err != nil {
+		return err
+	}
+	a.clearResolvedSkillErrors()
+	return nil
 }
 
 // removeSkill deletes the skill for t, and its folder when nothing else
 // is in it.
 func (a *App) removeSkill(t skillTarget) error {
+	if _, err := readOwnedSkill(t); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return err
+	}
 	if err := os.Remove(t.file()); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 	_ = os.Remove(filepath.Dir(t.file()))
+	a.clearResolvedSkillErrors()
 	return nil
 }
 
@@ -191,29 +250,72 @@ func (a *App) removeSkill(t skillTarget) error {
 // how many.
 func (a *App) installSkills() (int, error) {
 	n := 0
+	var failures []error
 	for _, t := range a.skillTargets() {
 		if a.skillStateOf(t) == skillNoAgent {
 			continue
 		}
 		if err := a.installSkill(t); err != nil {
-			return n, fmt.Errorf("%s: %w", t.name, err)
+			failures = append(failures, skillTargetError{target: t.name, cause: err})
+			continue
 		}
 		n++
 	}
-	return n, nil
+	return n, errors.Join(failures...)
 }
 
 // refreshSkills rewrites the installed skills that are SSHYard's but out
 // of date, after a new token or port, so they keep working.
-func (a *App) refreshSkills() {
+func (a *App) refreshSkills() error {
+	var failures []error
 	for _, t := range a.skillTargets() {
-		if a.skillStateOf(t) != skillStale {
+		state := a.skillStateOf(t)
+		if state == skillUnavailable {
+			failures = append(failures, skillTargetError{target: t.name, cause: skillReadError(t), read: true})
 			continue
 		}
-		if b, err := os.ReadFile(t.file()); err == nil && strings.HasPrefix(string(b), skillHead) {
-			_ = a.installSkill(t)
+		if state != skillStale {
+			continue
+		}
+		if err := a.installSkill(t); err != nil {
+			failures = append(failures, skillTargetError{target: t.name, cause: err})
 		}
 	}
+	return errors.Join(failures...)
+}
+
+func skillReadError(t skillTarget) error { _, err := readOwnedSkill(t); return err }
+
+func skillErrorList(err error) []error {
+	if err == nil {
+		return nil
+	}
+	if joined, ok := err.(interface{ Unwrap() []error }); ok {
+		return joined.Unwrap()
+	}
+	return []error{err}
+}
+
+// A successful manual repair or removal clears its earlier refresh failure.
+func (a *App) clearResolvedSkillErrors() {
+	var unresolved []error
+	for _, err := range skillErrorList(a.mcp.skillErr) {
+		var failure skillTargetError
+		if !errors.As(err, &failure) {
+			unresolved = append(unresolved, err)
+			continue
+		}
+		for _, target := range a.skillTargets() {
+			if target.name != failure.target {
+				continue
+			}
+			state := a.skillStateOf(target)
+			if state == skillStale || state == skillUnavailable {
+				unresolved = append(unresolved, err)
+			}
+		}
+	}
+	a.mcp.skillErr = errors.Join(unresolved...)
 }
 
 // skillPrompt asks an agent to fetch the skill from the server and

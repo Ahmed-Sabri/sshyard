@@ -100,7 +100,7 @@ func TestSkillInject(t *testing.T) {
 		t.Fatalf("overwrote another skill: %q", b)
 	}
 	tt.Frame()
-	if !tt.HasText("~/.codex/skills/sshyard · Out of date") {
+	if !tt.HasText("~/.codex/skills/sshyard · A file with this name is managed by the user and was not changed") {
 		t.Fatalf("stale: %q", tt.Texts())
 	}
 

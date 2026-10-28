@@ -64,6 +64,8 @@ type Settings struct {
 	// AIDefaultAgent is the agent a new AI pane starts with. "builtin"
 	// is the in-process OpenAI-compatible agent.
 	AIDefaultAgent string `json:"aiDefaultAgent,omitempty"`
+	// AIACP is a user-supplied ACP executable; arguments are passed directly, without a shell
+	AIACP ACPConfig `json:"aiACP,omitempty"`
 	// AIDefaultMode is the global permission mode: ask, review or full.
 	// "full" is kept when a file already says so; the UI asks before
 	// writing it.
@@ -93,6 +95,12 @@ type Settings struct {
 	MCPEnabled bool `json:"mcpEnabled,omitempty"`
 	// MCPPort is the endpoint's port, 1024 to 65535.
 	MCPPort int `json:"mcpPort,omitempty"`
+}
+
+// ACPConfig describes the one external ACP backend
+type ACPConfig struct {
+	Command string   `json:"command,omitempty"`
+	Args    []string `json:"args,omitempty"`
 }
 
 // AIProvider is one built-in agent profile. Headers are non-secret;
@@ -210,6 +218,7 @@ func (s *Settings) Normalize() {
 var aiModes = map[string]bool{"ask": true, "review": true, "full": true}
 
 func (s *Settings) normalizeAI(d Settings) {
+	s.AIACP.Command = strings.TrimSpace(s.AIACP.Command)
 	s.AIDefaultAgent = strings.TrimSpace(s.AIDefaultAgent)
 	if s.AIDefaultAgent == "" {
 		s.AIDefaultAgent = d.AIDefaultAgent

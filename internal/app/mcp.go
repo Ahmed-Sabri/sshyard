@@ -32,11 +32,17 @@ type mcpState struct {
 	err   error
 	token string
 	// skill is the SKILL.md served and installed, for this token and port.
-	skill string
+	skill    string
+	skillErr error
 
-	mu       sync.Mutex
-	sessions []*mcpSession
-	next     int
+	mu         sync.Mutex
+	sessions   []*mcpSession
+	next       int
+	pending    int
+	generation uint64
+	life       context.Context
+	cancel     context.CancelFunc
+	work       sync.WaitGroup
 }
 
 // mcpSession is one connection an agent opened with connect. It holds a
@@ -47,6 +53,21 @@ type mcpSession struct {
 	client  *ssh.Client
 	release func()
 	since   time.Time
+	life    *mcpSessionLife
+}
+
+// The session owns command cancellation, never the shared SSH transport.
+type mcpSessionLife struct {
+	ctx    context.Context
+	cancel context.CancelFunc
+	runs   sync.WaitGroup
+	done   chan struct{}
+}
+
+func (s *mcpSession) close(done func()) {
+	s.life.cancel()
+	// Remote cancellation may wait for process cleanup; never block the UI thread.
+	go func() { defer done(); defer close(s.life.done); s.life.runs.Wait(); s.release() }()
 }
 
 // mcpAsk is the risk notice shown before the endpoint is turned on. at
@@ -87,7 +108,7 @@ func (a *App) syncMCP() {
 	}
 	a.mcp.err = err
 	if err == nil {
-		a.refreshSkills()
+		a.mcp.skillErr = a.refreshSkills()
 	}
 }
 
@@ -98,15 +119,23 @@ func (a *App) stopMCP() {
 		a.mcp.srv.Close()
 		a.mcp.srv = nil
 	}
-	a.mcp.err, a.mcp.skill = nil, ""
+	a.mcp.err, a.mcp.skill, a.mcp.skillErr = nil, "", nil
 	a.mcp.mu.Lock()
+	a.mcp.generation++
+	if a.mcp.cancel != nil {
+		a.mcp.cancel()
+	}
+	a.mcp.life, a.mcp.cancel = nil, nil
 	ss := a.mcp.sessions
 	a.mcp.sessions = nil
 	a.mcp.mu.Unlock()
 	for _, s := range ss {
-		s.release()
+		s.close(a.mcp.work.Done)
 	}
 }
+
+// waitMCP is the final app-close barrier, after stopMCP has cancelled work.
+func (a *App) waitMCP() { a.mcp.work.Wait() }
 
 // mcpToken is the endpoint's bearer token, made the first time.
 func (a *App) mcpToken() (string, error) {
@@ -129,7 +158,7 @@ func (a *App) newMCPToken() error {
 		return err
 	}
 	a.syncMCP()
-	return a.mcp.err
+	return errors.Join(a.mcp.err, a.mcp.skillErr)
 }
 
 // setMCP turns the endpoint on or off and saves it.
@@ -158,7 +187,7 @@ func (a *App) mcpSessionList() []mcpSession {
 	defer a.mcp.mu.Unlock()
 	out := make([]mcpSession, 0, len(a.mcp.sessions))
 	for _, s := range a.mcp.sessions {
-		out = append(out, *s)
+		out = append(out, mcpSession{id: s.id, host: s.host, since: s.since})
 	}
 	return out
 }
@@ -176,7 +205,7 @@ func (a *App) dropMCPSession(id string) bool {
 	if s == nil {
 		return false
 	}
-	s.release()
+	s.close(a.mcp.work.Done)
 	a.invalidate()
 	return true
 }
@@ -206,6 +235,12 @@ func schema(props string, required ...string) json.RawMessage {
 // goroutines: they read the store, the keychain and the pool, all safe
 // for that, and never the UI's state.
 func (a *App) mcpHandler(token string) *mcp.Handler {
+	a.mcp.mu.Lock()
+	if a.mcp.life == nil {
+		a.mcp.life, a.mcp.cancel = context.WithCancel(context.Background())
+	}
+	life := a.mcp.life
+	a.mcp.mu.Unlock()
 	if a.audit == nil && a.p.DataDir != "" {
 		a.audit = audit.New(a.p.DataDir)
 	}
@@ -233,7 +268,20 @@ func (a *App) mcpHandler(token string) *mcp.Handler {
 				Name:        "connect",
 				Description: "Open an SSH connection to a saved host with the credentials saved in SSHYard, which are never revealed. Returns a session_id for run_command. Fails if the host needs a password or passphrase typed, or its host key is not trusted yet.",
 				Schema:      schema(`"host_id":{"type":"string","description":"The id from list_hosts"}`, "host_id"),
-				Call:        a.mcpConnect,
+				Call: func(ctx context.Context, raw json.RawMessage) (string, error) {
+					request := ctx
+					ctx, cancel := context.WithCancel(life)
+					defer cancel()
+					stop := context.AfterFunc(request, cancel)
+					defer stop()
+					if request.Err() != nil {
+						return "", request.Err()
+					}
+					if life.Err() != nil {
+						return "", life.Err()
+					}
+					return a.mcpConnect(ctx, raw)
+				},
 			},
 			{
 				Name:        "run_command",
@@ -385,11 +433,34 @@ func (a *App) mcpConnect(ctx context.Context, raw json.RawMessage) (string, erro
 		return "", err
 	}
 	a.mcp.mu.Lock()
-	full := len(a.mcp.sessions) >= mcpMaxSessions
-	a.mcp.mu.Unlock()
-	if full {
-		return "", fmt.Errorf("%d sessions are open; disconnect one first", mcpMaxSessions)
+	if err := ctx.Err(); err != nil {
+		a.mcp.mu.Unlock()
+		return "", err
 	}
+	if len(a.mcp.sessions)+a.mcp.pending >= mcpMaxSessions {
+		a.mcp.mu.Unlock()
+		return "", fmt.Errorf("%d sessions are open or connecting; disconnect one first", mcpMaxSessions)
+	}
+	a.mcp.pending++
+	a.mcp.work.Add(1)
+	generation := a.mcp.generation
+	if a.mcp.life == nil {
+		a.mcp.life, a.mcp.cancel = context.WithCancel(context.Background())
+	}
+	ctx, cancel := context.WithCancel(ctx)
+	stop := context.AfterFunc(a.mcp.life, cancel)
+	a.mcp.mu.Unlock()
+	defer cancel()
+	defer stop()
+	reserved := true
+	defer func() {
+		if reserved {
+			a.mcp.mu.Lock()
+			a.mcp.pending--
+			a.mcp.mu.Unlock()
+		}
+		a.mcp.work.Done()
+	}()
 	cfg := a.hostConfig(h, nil, func(context.Context) (session.Credentials, error) { return a.mcpCredentials(h) })
 	for i := range cfg.Jumps {
 		id := cfg.Jumps[i].ID
@@ -405,10 +476,19 @@ func (a *App) mcpConnect(ctx context.Context, raw json.RawMessage) (string, erro
 	if err != nil {
 		return "", mcpDialErr(err)
 	}
-	s := &mcpSession{host: h, client: client, release: release, since: time.Now()}
 	a.mcp.mu.Lock()
+	if ctx.Err() != nil || generation != a.mcp.generation {
+		a.mcp.mu.Unlock()
+		release()
+		return "", context.Canceled
+	}
+	lifeCtx, lifeCancel := context.WithCancel(a.mcp.life)
+	s := &mcpSession{host: h, client: client, release: release, since: time.Now(), life: &mcpSessionLife{ctx: lifeCtx, cancel: lifeCancel, done: make(chan struct{})}}
 	a.mcp.next++
 	s.id = "s" + strconv.Itoa(a.mcp.next)
+	a.mcp.pending--
+	reserved = false
+	a.mcp.work.Add(1)
 	a.mcp.sessions = append(a.mcp.sessions, s)
 	a.mcp.mu.Unlock()
 	a.invalidate()
@@ -444,32 +524,60 @@ func (a *App) mcpRun(ctx context.Context, raw json.RawMessage, aud *audit.Log) (
 	if strings.TrimSpace(args.Command) == "" {
 		return "", errors.New("empty command")
 	}
-	s, err := a.mcpSession(args.SessionID)
-	if err != nil {
-		return "", err
+	a.mcp.mu.Lock()
+	var s *mcpSession
+	for _, candidate := range a.mcp.sessions {
+		if candidate.id == args.SessionID {
+			s = candidate
+			break
+		}
+	}
+	if s == nil {
+		a.mcp.mu.Unlock()
+		return "", fmt.Errorf("no session %q; call connect first", args.SessionID)
+	}
+	s.life.runs.Add(1)
+	a.mcp.mu.Unlock()
+	defer s.life.runs.Done()
+	if aud == nil {
+		return "", errors.New("audit unavailable; command was not executed")
+	}
+	if err := aud.Prepare(); err != nil {
+		return "", mcpAuditError{"audit unavailable; command was not executed", err}
 	}
 	timeout := mcpTimeout
 	if args.Timeout > 0 {
-		timeout = min(max(time.Duration(args.Timeout)*time.Second, remote.MinCommandTimeout), remote.MaxCommandTimeout)
+		timeout = time.Duration(min(max(args.Timeout, int(remote.MinCommandTimeout/time.Second)), int(remote.MaxCommandTimeout/time.Second))) * time.Second
 	}
 	run := remote.New(s.client, remote.Options{CommandTimeout: timeout, TurnTimeout: remote.MaxCommandTimeout})
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	stop := context.AfterFunc(s.life.ctx, cancel)
+	defer stop()
+	if s.life.ctx.Err() != nil {
+		cancel()
+	}
 	out := &commandOutput{remaining: (1 << 20) - 4096, cancel: cancel}
 	counted := &remote.CountingWriter{W: out}
 	start := time.Now()
+	if err := aud.Record(policy.AuditRecord{Time: start, SessionID: "mcp-" + s.id, PaneID: "mcp", Agent: "mcp", Host: s.host.ID, Mode: "mcp", Where: string(policy.Remote), Command: policy.Redact(args.Command), Verdict: "started", Decider: "mcp"}); err != nil {
+		return "", mcpAuditError{"audit unavailable; command was not executed", err}
+	}
 	code, err := run.Run(runCtx, args.Command, args.Cwd, counted, counted)
 	text, limited := out.result()
 	if aud != nil {
 		grade := policy.NewEngine().Classify(policy.Action{Where: policy.Remote, Tool: "run_command", Command: args.Command, Dir: args.Cwd},
 			policy.Scope{WritableRoots: s.host.AIPolicy.WritableRoots, Sensitive: s.host.AIPolicy.Sensitive})
 		exit := code
-		_ = aud.Record(policy.AuditRecord{
+		recordErr := aud.Record(policy.AuditRecord{
 			Time: start, SessionID: "mcp-" + s.id, PaneID: "mcp", Agent: "mcp", Host: s.host.ID, Mode: "mcp",
 			Where: string(policy.Remote), Category: string(grade.Category), Risk: grade.Risk.String(),
-			Command: policy.Redact(args.Command), Verdict: "mcp", Decider: "mcp", ExitCode: &exit,
+			Command: policy.Redact(args.Command), Verdict: mcpRunVerdict(err), Decider: "mcp", ExitCode: &exit,
 			DurationMS: time.Since(start).Milliseconds(), OutputBytes: counted.Bytes(),
 		})
+		if recordErr != nil {
+			return "", errors.Join(err, mcpAuditError{"command execution finished but audit recording failed; do not retry the command automatically", recordErr})
+		}
 	}
 	switch {
 	case limited && ctx.Err() == nil:
@@ -495,15 +603,46 @@ func (a *App) mcpSessions() string {
 	return toJSON(map[string]any{"sessions": list})
 }
 
-func (a *App) mcpDisconnect(_ context.Context, raw json.RawMessage) (string, error) {
+func (a *App) mcpDisconnect(ctx context.Context, raw json.RawMessage) (string, error) {
 	var args struct {
 		SessionID string `json:"session_id"`
 	}
 	if err := json.Unmarshal(raw, &args); err != nil {
 		return "", err
 	}
+	s, err := a.mcpSession(args.SessionID)
+	if err != nil {
+		return "", err
+	}
 	if !a.dropMCPSession(args.SessionID) {
 		return "", fmt.Errorf("no session %q", args.SessionID)
 	}
-	return toJSON(map[string]any{"disconnected": args.SessionID}), nil
+	select {
+	case <-s.life.done:
+		return toJSON(map[string]any{"disconnected": args.SessionID}), nil
+	case <-ctx.Done():
+		return "", fmt.Errorf("session cancellation requested; cleanup continues: %w", ctx.Err())
+	}
 }
+
+func mcpRunVerdict(err error) string {
+	if errors.Is(err, context.Canceled) {
+		return "cancelled"
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return "timeout"
+	}
+	if err != nil {
+		return "failed"
+	}
+	return "mcp"
+}
+
+// Keep the cause inspectable without exposing local audit paths to the agent.
+type mcpAuditError struct {
+	stage string
+	cause error
+}
+
+func (e mcpAuditError) Error() string { return e.stage }
+func (e mcpAuditError) Unwrap() error { return e.cause }

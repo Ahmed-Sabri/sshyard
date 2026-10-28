@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"net"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -30,6 +32,8 @@ type aiState struct {
 	mode     string // pane override; empty inherits
 	mu       sync.Mutex
 	resolved policy.Mode
+	dirty    bool
+	scope    policy.Scope
 
 	sess     *agent.Session
 	box      *modelBox
@@ -39,9 +43,11 @@ type aiState struct {
 	items    []aiItem
 	input    string
 	gen      int
+	turn     int
 	pending  *aiPend
 	onlyDiff bool
 	tools    agent.Tools
+	acp      *acpRuntime
 
 	// md is how the pane shows Markdown, its code blocks with its own
 	// actions; scroll follows the end of the timeline unless the user
@@ -99,6 +105,7 @@ func (b *modelBox) Stream(ctx context.Context, req openai.Request, emit func(ope
 var (
 	errAIKey      = errors.New("ai: no api key")
 	errAIProvider = errors.New("ai: no provider")
+	errAIBackend  = errors.New("ai: unsupported backend")
 )
 
 // OpenAI opens an assistant for hostID. link is a terminal pane to attach,
@@ -153,10 +160,17 @@ func (a *App) refreshMode(c *conn) {
 		return
 	}
 	a.refreshHost(c)
+	if (c.ai.sess != nil || c.ai.acp != nil) && !reflect.DeepEqual(c.ai.scope, a.aiScope(c)) {
+		a.invalidateAI(c)
+	}
 	m := policy.Resolve(policy.Mode(a.settings.AIDefaultMode), policy.Mode(c.host.AIPolicy.Mode), policy.Mode(c.ai.mode))
 	c.ai.mu.Lock()
+	changed := c.ai.resolved != "" && c.ai.resolved != m
 	c.ai.resolved = m
 	c.ai.mu.Unlock()
+	if changed && (c.ai.sess != nil || c.ai.acp != nil) {
+		a.invalidateAI(c)
+	}
 }
 
 func (a *App) modeOf(c *conn) policy.Mode {
@@ -192,17 +206,20 @@ func (a *App) defaultProvider() string {
 	return ""
 }
 
-// paneProvider is the provider c asks: its own while it exists, else the
-// default; nil when there is none.
+// paneProvider keeps an explicitly chosen provider pinned, including after
+// deletion; only a new, unselected pane inherits the default.
 func (a *App) paneProvider(c *conn) *settings.AIProvider {
-	if p := a.providerByID(c.ai.provider); p != nil {
-		return p
+	if c.ai.provider != "" {
+		return a.providerByID(c.ai.provider)
 	}
 	return a.providerByID(a.defaultProvider())
 }
 
 func (a *App) aiClient(c *conn) (*openai.Client, error) {
-	p := a.paneProvider(c)
+	return a.providerClient(a.paneProvider(c))
+}
+
+func (a *App) providerClient(p *settings.AIProvider) (*openai.Client, error) {
 	if p == nil || p.Model == "" || p.BaseURL == "" {
 		return nil, errAIProvider
 	}
@@ -221,10 +238,32 @@ func (a *App) aiClient(c *conn) (*openai.Client, error) {
 }
 
 func (a *App) ensureAI(c *conn) error {
-	if c.ai.sess != nil {
-		return nil
+	if c.ai.agent != "builtin" {
+		return errAIBackend
+	}
+	if c.ai.provider == "" {
+		c.ai.provider = a.defaultProvider()
 	}
 	a.refreshMode(c)
+	if c.ai.sess != nil {
+		if c.ai.box != nil && a.newModel == nil {
+			cl, err := a.aiClient(c)
+			c.ai.box.mu.Lock()
+			c.ai.box.s = nil
+			if err == nil {
+				c.ai.box.s = cl
+			}
+			c.ai.box.mu.Unlock()
+			if err != nil {
+				return err
+			}
+		}
+		if c.ai.dirty {
+			c.ai.sess.Configure(a.aiGate(c), a.settings.AIRedact)
+			c.ai.dirty = false
+		}
+		return nil
+	}
 	var streamer agent.Streamer
 	if a.newModel != nil {
 		streamer = a.newModel(c)
@@ -248,6 +287,13 @@ func (a *App) ensureAI(c *conn) error {
 		tools = newHostTools(a, c)
 	}
 	c.ai.tools = tools
+	c.ai.sess = agent.New(agent.Config{Model: streamer, Gate: a.aiGate(c), Tools: tools, Redact: a.settings.AIRedact})
+	c.ai.dirty = false
+	return nil
+}
+
+func (a *App) aiGate(c *conn) policy.Gate {
+	c.ai.scope = a.aiScope(c)
 	mode := func() policy.Mode { return a.modeOf(c) }
 	ask := aiPrompter{a: a, id: c.id}
 	var gate policy.Gate
@@ -255,7 +301,7 @@ func (a *App) ensureAI(c *conn) error {
 		gate = a.newGate(mode, ask)
 	} else {
 		var rev policy.Reviewer
-		if a.newModel == nil {
+		if (a.newModel == nil || c.ai.agent == "acp") && a.settings.AIReviewProvider != "" {
 			rev = aiReviewer{ask: a.reviewAsk(c)}
 		}
 		var aud policy.Auditor
@@ -279,8 +325,7 @@ func (a *App) ensureAI(c *conn) error {
 			Output:    func() string { return a.aiOutput(c) },
 		})
 	}
-	c.ai.sess = agent.New(agent.Config{Model: streamer, Gate: gate, Tools: tools, Redact: a.settings.AIRedact})
-	return nil
+	return gate
 }
 
 func (a *App) aiScope(c *conn) policy.Scope {
@@ -315,12 +360,12 @@ func (r aiReviewer) Review(ctx context.Context, in policy.ReviewInput) (bool, st
 }
 
 func (a *App) reviewAsk(c *conn) func(context.Context, string) (string, error) {
+	client, clientErr := a.providerClient(a.providerByID(a.settings.AIReviewProvider))
 	return func(ctx context.Context, prompt string) (string, error) {
-		box := c.ai.box
-		if box == nil {
-			return "", errAIProvider
+		if clientErr != nil {
+			return "", clientErr
 		}
-		msg, err := box.Stream(ctx, openai.Request{
+		msg, err := client.Stream(ctx, openai.Request{
 			MaxTokens: 200,
 			Messages: []openai.Message{
 				{Role: "system", Content: reviewSystem},
@@ -360,6 +405,10 @@ func (a *App) SendAI(id int, text string) {
 		a.consent = &consentAsk{host: c.host.ID, conn: id, text: text, open: true}
 		return
 	}
+	if c.ai.agent == "acp" {
+		a.sendACP(c, text)
+		return
+	}
 	if err := a.ensureAI(c); err != nil {
 		c.ai.items = append(c.ai.items, aiItem{kind: "user", text: text}, aiItem{kind: "err", text: aiErrText(err)})
 		return
@@ -370,8 +419,9 @@ func (a *App) SendAI(id int, text string) {
 	c.ai.gen++
 	meta := a.aiMeta(c)
 	term := a.aiTerminal(c)
+	session := c.ai.sess
 	a.launch(c, func(ctx context.Context, emit func(agent.Event)) error {
-		return c.ai.sess.Turn(ctx, text, meta, term, emit)
+		return session.Turn(ctx, text, meta, term, emit)
 	})
 }
 
@@ -381,18 +431,16 @@ func (a *App) ContinueAI(id int) {
 	if c == nil || c.ai == nil || c.ai.sess == nil || !c.ai.paused || c.ai.running {
 		return
 	}
+	session := c.ai.sess
 	a.launch(c, func(ctx context.Context, emit func(agent.Event)) error {
-		return c.ai.sess.Continue(ctx, emit)
+		return session.Continue(ctx, emit)
 	})
 }
 
 func (a *App) launch(c *conn, run func(context.Context, func(agent.Event)) error) {
-	if c.ai.box != nil && a.newModel == nil {
-		if cl, err := a.aiClient(c); err == nil {
-			c.ai.box.mu.Lock()
-			c.ai.box.s = cl
-			c.ai.box.mu.Unlock()
-		}
+	if err := a.ensureAI(c); err != nil {
+		c.ai.items = append(c.ai.items, aiItem{kind: "err", text: aiErrText(err)})
+		return
 	}
 	a.refreshMode(c)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -400,6 +448,8 @@ func (a *App) launch(c *conn, run func(context.Context, func(agent.Event)) error
 	c.ai.running = true
 	c.ai.paused = false
 	id := c.id
+	c.ai.turn++
+	turn := c.ai.turn
 	tools := c.ai.tools
 	if h, ok := tools.(*hostTools); ok {
 		h.snap()
@@ -413,10 +463,18 @@ func (a *App) launch(c *conn, run func(context.Context, func(agent.Event)) error
 				defer h.end()
 			}
 			return run(ctx, func(ev agent.Event) {
-				a.post(func() { a.onAIEvent(id, ev) })
+				a.post(func() {
+					if current := a.conns[id]; current != nil && current.ai != nil && current.ai.turn == turn {
+						a.onAIEvent(id, ev)
+					}
+				})
 			})
 		}()
-		a.post(func() { a.onAIDone(id, err) })
+		a.post(func() {
+			if current := a.conns[id]; current != nil && current.ai != nil && current.ai.turn == turn {
+				a.onAIDone(id, err)
+			}
+		})
 	}()
 }
 
@@ -465,33 +523,48 @@ func (a *App) onAIDone(id int, err error) {
 		c.ai.paused = true
 		return
 	}
-	if errors.Is(err, context.Canceled) {
+	var acpError *acpFailure
+	if errors.Is(err, context.Canceled) && !errors.As(err, &acpError) {
 		return
 	}
 	c.ai.items = append(c.ai.items, aiItem{kind: "err", text: a.scrubAI(c, err)})
 }
 
-func (a *App) scrubAI(c *conn, err error) string {
-	msg := err.Error()
-	if c.ai == nil {
-		return msg
-	}
-	if p := a.paneProvider(c); p != nil {
-		if b, e := a.kc.Get(keychain.AIKey(p.ID)); e == nil && len(b) > 0 {
-			msg = strings.ReplaceAll(msg, string(b), "[redacted]")
-		}
-	}
-	return msg
-}
+func (a *App) scrubAI(c *conn, err error) string { return aiErrText(err) }
 
+// Only typed, local failure details reach the UI; provider bodies, URLs and
+// arbitrary tool errors may contain credentials and are never rendered here
 func aiErrText(err error) string {
+	var acpError *acpFailure
+	if errors.As(err, &acpError) {
+		return acpError.Error()
+	}
+	var api *openai.APIError
+	var network net.Error
 	switch {
 	case errors.Is(err, errAIKey):
 		return "key"
+	case errors.Is(err, errAIBackend):
+		return "backend"
 	case errors.Is(err, errAIProvider):
 		return "provider"
+	case errors.Is(err, context.DeadlineExceeded):
+		return "timeout"
+	case errors.As(err, &api):
+		return "http:" + strconv.Itoa(api.Status)
+	case errors.Is(err, openai.ErrIncompleteResponse):
+		return "incomplete"
+	case errors.Is(err, openai.ErrProtocol):
+		return "protocol"
+	case errors.Is(err, openai.ErrTooBig):
+		return "size"
+	case errors.As(err, &network):
+		if network.Timeout() {
+			return "timeout"
+		}
+		return "network"
 	default:
-		return err.Error()
+		return "request"
 	}
 }
 
@@ -529,6 +602,10 @@ func (a *App) StopAI(id int) {
 	}
 	if c.ai.cancel != nil {
 		c.ai.cancel()
+	}
+	if c.ai.acp != nil {
+		c.ai.acp.close()
+		c.ai.acp = nil
 	}
 	if p := c.ai.pending; p != nil {
 		c.ai.pending = nil
@@ -655,13 +732,13 @@ func (a *App) consented(hostID string) bool {
 	return false
 }
 
-func (a *App) grantConsent(hostID string) {
+func (a *App) grantConsent(hostID string) error {
 	if a.consented(hostID) {
-		return
+		return nil
 	}
 	s := a.settings
 	s.AIConsentHosts = append(append([]string{}, s.AIConsentHosts...), hostID)
-	_ = a.ApplySettings(s)
+	return a.ApplySettings(s)
 }
 
 func (a *App) aiMeta(c *conn) agent.HostMeta {
@@ -698,6 +775,7 @@ func (a *App) setPaneMode(c *conn, mode string) {
 		a.openFull("pane", c.id)
 		return
 	}
+	a.invalidateAI(c)
 	c.ai.mode = mode
 	a.refreshMode(c)
 	a.saveLayout()
@@ -748,7 +826,7 @@ func (p aiPrompter) Ask(ctx context.Context, pr policy.Prompt) policy.Answer {
 	ch := make(chan policy.Answer, 1)
 	p.a.post(func() {
 		c := p.a.conns[p.id]
-		if c == nil || c.ai == nil {
+		if c == nil || c.ai == nil || ctx.Err() != nil {
 			select {
 			case ch <- policy.Cancelled:
 			default:
@@ -797,4 +875,39 @@ func (a *App) pendingAI() *conn {
 		}
 	}
 	return best
+}
+
+// invalidateAI cancels the current turn before applying new credentials or permissions
+// The session history stays in memory; the next turn gets a fresh gate and no old grants
+func (a *App) invalidateAI(c *conn) {
+	if c == nil || c.ai == nil {
+		return
+	}
+	a.StopAI(c.id)
+	c.ai.dirty = true
+	if c.ai.box != nil {
+		c.ai.box.mu.Lock()
+		c.ai.box.s = nil
+		c.ai.box.mu.Unlock()
+	}
+}
+
+func providerIn(s settings.Settings, id string) *settings.AIProvider {
+	if id == "" {
+		return nil
+	}
+	for i := range s.AIProviders {
+		if s.AIProviders[i].ID == id {
+			return &s.AIProviders[i]
+		}
+	}
+	return nil
+}
+
+func (a *App) invalidateAIProvider(id string) {
+	for _, c := range a.conns {
+		if c.ai != nil && (c.ai.agent == "builtin" && c.ai.provider == id || a.settings.AIReviewProvider == id) {
+			a.invalidateAI(c)
+		}
+	}
 }

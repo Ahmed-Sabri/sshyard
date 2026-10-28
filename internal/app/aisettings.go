@@ -34,19 +34,29 @@ type providerForm struct {
 func (a *App) aiSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, s *settings.Settings, changed *bool) {
 	settingsSection(c, tok, nil, ui.Color{}, "", func(g *settingsGroup) {
 		g.row(m.AiDefaultAgent(), "", func() {
-			opts := []string{m.AiBuiltin()}
+			opts := []string{m.AiBuiltin(), m.AiACP()}
 			cur := m.AiBuiltin()
-			if s.AIDefaultAgent != "" && s.AIDefaultAgent != "builtin" {
+			if s.AIDefaultAgent == "acp" {
+				cur = m.AiACP()
+			}
+			if s.AIDefaultAgent != "" && s.AIDefaultAgent != "builtin" && s.AIDefaultAgent != "acp" {
 				opts = append(opts, s.AIDefaultAgent)
 				cur = s.AIDefaultAgent
 			}
 			if ui.Select(c.Key("aiagentdef"), &cur, opts).Label(m.AiDefaultAgent()).Width(180).Changed() {
 				if cur == m.AiBuiltin() {
 					s.AIDefaultAgent = "builtin"
+				} else if cur == m.AiACP() {
+					s.AIDefaultAgent = "acp"
 				} else {
 					s.AIDefaultAgent = cur
 				}
 				*changed = true
+			}
+		})
+		g.row(m.AiACP(), m.AiACPConfigNote(), func() {
+			if pill(c, m.AiACPConfigure(), false, false, false) {
+				a.openACP()
 			}
 		})
 		g.row(m.AiDefaultMode(), "", func() {
@@ -323,11 +333,20 @@ func (a *App) saveProvider(m locales.Messages) bool {
 	if id == "" {
 		id = newProviderID()
 	}
+	var previousKey []byte
+	keyChanged := false
 	if key := strings.TrimSpace(f.key); key != "" {
+		previousKey, err = a.kc.Get(keychain.AIKey(id))
+		if err != nil && !errors.Is(err, keychain.ErrNotFound) {
+			f.err = m.ErrGeneric(secretStoreErrorText(m, err))
+			return false
+		}
 		if err := a.kc.Set(keychain.AIKey(id), []byte(key)); err != nil {
 			f.err = m.ErrGeneric(secretStoreErrorText(m, err))
 			return false
 		}
+		keyChanged = true
+		a.invalidateAIProvider(id)
 	} else if f.isNew {
 		f.err = m.AiNoKey()
 		return false
@@ -347,7 +366,18 @@ func (a *App) saveProvider(m locales.Messages) bool {
 	}
 	s.AIProviders = next
 	if err := a.ApplySettings(s); err != nil {
-		f.err = m.ErrGeneric(err.Error())
+		f.err = m.AiSettingsSaveFailed()
+		if keyChanged {
+			var rollback error
+			if previousKey == nil {
+				rollback = a.kc.Delete(keychain.AIKey(id))
+			} else {
+				rollback = a.kc.Set(keychain.AIKey(id), previousKey)
+			}
+			if rollback != nil {
+				f.err = m.AiSettingsRollbackFailed()
+			}
+		}
 		return false
 	}
 	f.key = ""
@@ -360,6 +390,8 @@ func (a *App) saveProvider(m locales.Messages) bool {
 }
 
 func (a *App) deleteProvider(id string) error {
+	// Revoke cached clients even if metadata persistence subsequently fails
+	a.invalidateAIProvider(id)
 	if err := a.kc.Delete(keychain.AIKey(id)); err != nil && !errors.Is(err, keychain.ErrNotFound) {
 		return err
 	}
@@ -376,12 +408,6 @@ func (a *App) deleteProvider(id string) error {
 	}
 	if s.AIDefaultProvider == id {
 		s.AIDefaultProvider = ""
-	}
-	for _, c := range a.conns {
-		if c.ai != nil && c.ai.provider == id {
-			c.ai.provider = ""
-			a.saveLayout()
-		}
 	}
 	return a.ApplySettings(s)
 }
