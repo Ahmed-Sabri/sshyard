@@ -1,10 +1,12 @@
 package app
 
 import (
+	"errors"
 	"math"
 	"runtime"
 	"strings"
 
+	"github.com/Licoy/sshyard/internal/session"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/internal/vt"
 	"github.com/egoist/mygo/ui"
@@ -33,7 +35,9 @@ type shapeKey struct {
 }
 
 type termView struct {
-	target ptyTarget
+	target         ptyTarget
+	snippetSending bool // UI-thread state, cleared when the captured write returns
+	inputError     func(error)
 	// clear leaves the background to the pane's translucent fill, for a
 	// content area on the window's material (settings.ContentMaterial)
 	clear bool
@@ -440,7 +444,9 @@ func (v *termView) send(b []byte) {
 	}
 	v.offset = 0
 	v.selected = false
-	v.target.Write(b)
+	if _, err := v.target.Write(b); errors.Is(err, session.ErrInputBusy) && v.inputError != nil {
+		v.inputError(errSnippetBusy)
+	}
 }
 
 // reports says whether the program gets the mouse: it asked, the view is

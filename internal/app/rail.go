@@ -22,10 +22,11 @@ import (
 type inspectorKind string
 
 const (
-	inspectMonitor inspectorKind = "monitor"
-	inspectUsage   inspectorKind = "usage"
-	inspectHost    inspectorKind = "host"
-	inspectDocker  inspectorKind = "docker"
+	inspectMonitor  inspectorKind = "monitor"
+	inspectUsage    inspectorKind = "usage"
+	inspectHost     inspectorKind = "host"
+	inspectDocker   inspectorKind = "docker"
+	inspectSnippets inspectorKind = "snippets"
 )
 
 // railWidth is the rail's width, the status bar's height; inspectorWidth
@@ -55,6 +56,7 @@ func (a *App) railView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 		toggle(inspectMonitor, icons.Monitor, icons.MonitorOn, m.SystemMonitor())
 		toggle(inspectUsage, icons.Usage, icons.UsageOn, m.ProcessUsage())
 		toggle(inspectHost, icons.Info, icons.InfoOn, m.HostDetails())
+		toggle(inspectSnippets, icons.API, nil, m.Snippets())
 		ui.Box(c.Key("sep")).Width(14).Height(1).Shrink(0).MarginY(theme.Space(1)).Background(tok.Line)
 		if (IconButton{Icon: icons.Folder, Label: m.OpenFilesBeside(), Disabled: !remoteOnly(cn), Size: Small}).Clicked(c, "files") {
 			a.OpenFilesBeside()
@@ -83,6 +85,10 @@ func (a *App) railView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 // inspectorView is the panel the rail opened: a title bar, and the
 // panel's cards scrolling under it.
 func (a *App) inspectorView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
+	if a.inspector == inspectSnippets {
+		a.snippetsPanel(c, m, tok)
+		return
+	}
 	title, width, tables := m.SystemMonitor(), float32(inspectorWidth), false
 	switch a.inspector {
 	case inspectHost:

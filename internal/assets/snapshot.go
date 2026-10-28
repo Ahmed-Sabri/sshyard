@@ -14,13 +14,14 @@ type Snapshot struct {
 	Proxies     []Proxy      `json:"proxies"`
 	Forwards    []Forward    `json:"forwards"`
 	Groups      []string     `json:"groups,omitempty"`
+	Snippets    []Snippet    `json:"snippets,omitempty"`
 }
 
 // Snapshot returns a copy of every entry.
 func (s *Store) Snapshot() Snapshot {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return Snapshot{Hosts: slices.Clone(s.hosts), Credentials: slices.Clone(s.creds), Proxies: slices.Clone(s.proxies), Forwards: slices.Clone(s.forwards), Groups: slices.Clone(s.groups)}
+	return Snapshot{Hosts: slices.Clone(s.hosts), Credentials: slices.Clone(s.creds), Proxies: slices.Clone(s.proxies), Forwards: slices.Clone(s.forwards), Groups: slices.Clone(s.groups), Snippets: slices.Clone(s.snippets)}
 }
 
 // ValidID reports whether id can name an entry: what NewID makes, and no
@@ -67,7 +68,8 @@ func (s *Store) Restore(in Snapshot) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	h, c, p, f, g := slices.Clone(s.hosts), slices.Clone(s.creds), slices.Clone(s.proxies), slices.Clone(s.forwards), slices.Clone(s.groups)
-	undo := func() { s.hosts, s.creds, s.proxies, s.forwards, s.groups = h, c, p, f, g }
+	n := slices.Clone(s.snippets)
+	undo := func() { s.hosts, s.creds, s.proxies, s.forwards, s.groups, s.snippets = h, c, p, f, g, n }
 	if err := s.merge(in); err != nil {
 		undo()
 		return err
@@ -138,6 +140,16 @@ func (s *Store) merge(in Snapshot) error {
 			return &FieldError{"host", "unknown"}
 		}
 		s.forwards = upsert(s.forwards, x, func(f Forward) string { return f.ID })
+	}
+	for _, x := range in.Snippets {
+		x.Normalize()
+		if !ValidID(x.ID) {
+			return badID
+		}
+		if err := x.Validate(); err != nil {
+			return err
+		}
+		s.snippets = upsert(s.snippets, x, func(n Snippet) string { return n.ID })
 	}
 	for _, name := range in.Groups {
 		name = strings.TrimSpace(name)

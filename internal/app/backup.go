@@ -76,6 +76,9 @@ func backupSecretKeys(snap assets.Snapshot, provs []settings.AIProvider) []strin
 	for _, f := range snap.Forwards {
 		out = append(out, keychain.ForwardPassword(f.ID))
 	}
+	for _, n := range snap.Snippets {
+		out = append(out, keychain.SnippetContent(n.ID))
+	}
 	for _, p := range provs {
 		out = append(out, keychain.AIKey(p.ID))
 	}
@@ -123,11 +126,26 @@ func (a *App) restoreBackup(m locales.Messages, p backupPayload) error {
 			return errBadBackup
 		}
 	}
+	for _, n := range snap.Snippets {
+		if v, ok := p.Secrets[keychain.SnippetContent(n.ID)]; ok {
+			if err := assets.ValidateSnippetContent(string(v)); err != nil {
+				return errBadBackup
+			}
+		}
+	}
 	tx := &secretTx{kc: a.kc}
 	var changes []keychain.Change
 	for _, key := range backupSecretKeys(snap, p.Settings.AIProviders) {
 		if v := p.Secrets[key]; len(v) > 0 {
 			changes = append(changes, keychain.Change{Key: key, Value: v})
+		}
+	}
+	// Restoring metadata without its body clears any existing same-ID body;
+	// the entry remains unavailable until the user supplies its command.
+	for _, n := range snap.Snippets {
+		key := keychain.SnippetContent(n.ID)
+		if _, ok := p.Secrets[key]; !ok {
+			changes = append(changes, keychain.Change{Key: key, Delete: true})
 		}
 	}
 	if err := tx.setBatch(changes); err != nil {
@@ -169,6 +187,9 @@ func backupIDs(snap assets.Snapshot, provs []settings.AIProvider) []string {
 	}
 	for _, f := range snap.Forwards {
 		out = append(out, f.ID)
+	}
+	for _, n := range snap.Snippets {
+		out = append(out, n.ID)
 	}
 	for _, p := range provs {
 		out = append(out, p.ID)

@@ -34,7 +34,7 @@ func (s *Session) connectLocal() error {
 		p.Close()
 		return context.Canceled
 	}
-	s.local, s.stdin = p, p
+	s.local, s.stdin = p, &serializedInput{WriteCloser: p}
 	s.status.State, s.status.Err, s.status.Attempt = Connected, nil, 0
 	s.status.Connects++
 	s.mu.Unlock()

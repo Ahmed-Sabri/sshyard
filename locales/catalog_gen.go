@@ -9487,3 +9487,377 @@ func AiACPCloseFailed() string { return In(i18n.Locale()).AiACPCloseFailed() }
 func (msgs Messages) AiACPCloseFailed() string {
 	return Catalog.Format(msgs.locale, "aiACPCloseFailed", nil)
 }
+
+// Snippets says "Snippets"
+// in the language the app shows.
+func Snippets() string { return In(i18n.Locale()).Snippets() }
+
+// Snippets says "Snippets"
+// in the language of msgs.
+func (msgs Messages) Snippets() string {
+	return Catalog.Format(msgs.locale, "snippets", nil)
+}
+
+// SnippetNew says "New Snippet"
+// in the language the app shows.
+func SnippetNew() string { return In(i18n.Locale()).SnippetNew() }
+
+// SnippetNew says "New Snippet"
+// in the language of msgs.
+func (msgs Messages) SnippetNew() string {
+	return Catalog.Format(msgs.locale, "snippetNew", nil)
+}
+
+// SnippetEdit says "Edit Snippet"
+// in the language the app shows.
+func SnippetEdit() string { return In(i18n.Locale()).SnippetEdit() }
+
+// SnippetEdit says "Edit Snippet"
+// in the language of msgs.
+func (msgs Messages) SnippetEdit() string {
+	return Catalog.Format(msgs.locale, "snippetEdit", nil)
+}
+
+// SnippetContent says "Content"
+// in the language the app shows.
+func SnippetContent() string { return In(i18n.Locale()).SnippetContent() }
+
+// SnippetContent says "Content"
+// in the language of msgs.
+func (msgs Messages) SnippetContent() string {
+	return Catalog.Format(msgs.locale, "snippetContent", nil)
+}
+
+// SnippetImmediate says "Send immediately (press Enter)"
+// in the language the app shows.
+func SnippetImmediate() string { return In(i18n.Locale()).SnippetImmediate() }
+
+// SnippetImmediate says "Send immediately (press Enter)"
+// in the language of msgs.
+func (msgs Messages) SnippetImmediate() string {
+	return Catalog.Format(msgs.locale, "snippetImmediate", nil)
+}
+
+// SnippetInsert says "Insert only"
+// in the language the app shows.
+func SnippetInsert() string { return In(i18n.Locale()).SnippetInsert() }
+
+// SnippetInsert says "Insert only"
+// in the language of msgs.
+func (msgs Messages) SnippetInsert() string {
+	return Catalog.Format(msgs.locale, "snippetInsert", nil)
+}
+
+// SnippetSendEnter says "Send + Enter"
+// in the language the app shows.
+func SnippetSendEnter() string { return In(i18n.Locale()).SnippetSendEnter() }
+
+// SnippetSendEnter says "Send + Enter"
+// in the language of msgs.
+func (msgs Messages) SnippetSendEnter() string {
+	return Catalog.Format(msgs.locale, "snippetSendEnter", nil)
+}
+
+// SnippetNoTarget says "Focus a connected terminal to send"
+// in the language the app shows.
+func SnippetNoTarget() string { return In(i18n.Locale()).SnippetNoTarget() }
+
+// SnippetNoTarget says "Focus a connected terminal to send"
+// in the language of msgs.
+func (msgs Messages) SnippetNoTarget() string {
+	return Catalog.Format(msgs.locale, "snippetNoTarget", nil)
+}
+
+// SnippetTarget says "Target: {host} · Terminal {number}"
+// in the language the app shows.
+func SnippetTarget(host string, number string) string {
+	return In(i18n.Locale()).SnippetTarget(host, number)
+}
+
+// SnippetTarget says "Target: {host} · Terminal {number}"
+// in the language of msgs.
+func (msgs Messages) SnippetTarget(host string, number string) string {
+	return Catalog.Format(msgs.locale, "snippetTarget", map[string]any{"host": host, "number": number})
+}
+
+// SnippetSearch says "Search name, content or group"
+// in the language the app shows.
+func SnippetSearch() string { return In(i18n.Locale()).SnippetSearch() }
+
+// SnippetSearch says "Search name, content or group"
+// in the language of msgs.
+func (msgs Messages) SnippetSearch() string {
+	return Catalog.Format(msgs.locale, "snippetSearch", nil)
+}
+
+// SnippetAllGroups says "All groups"
+// in the language the app shows.
+func SnippetAllGroups() string { return In(i18n.Locale()).SnippetAllGroups() }
+
+// SnippetAllGroups says "All groups"
+// in the language of msgs.
+func (msgs Messages) SnippetAllGroups() string {
+	return Catalog.Format(msgs.locale, "snippetAllGroups", nil)
+}
+
+// SnippetFilterGroup says "Filter snippets by group"
+// in the language the app shows.
+func SnippetFilterGroup() string { return In(i18n.Locale()).SnippetFilterGroup() }
+
+// SnippetFilterGroup says "Filter snippets by group"
+// in the language of msgs.
+func (msgs Messages) SnippetFilterGroup() string {
+	return Catalog.Format(msgs.locale, "snippetFilterGroup", nil)
+}
+
+// SnippetEmpty says "No matching snippets"
+// in the language the app shows.
+func SnippetEmpty() string { return In(i18n.Locale()).SnippetEmpty() }
+
+// SnippetEmpty says "No matching snippets"
+// in the language of msgs.
+func (msgs Messages) SnippetEmpty() string {
+	return Catalog.Format(msgs.locale, "snippetEmpty", nil)
+}
+
+// SnippetPreview says "Preview {name}"
+// in the language the app shows.
+func SnippetPreview(name string) string { return In(i18n.Locale()).SnippetPreview(name) }
+
+// SnippetPreview says "Preview {name}"
+// in the language of msgs.
+func (msgs Messages) SnippetPreview(name string) string {
+	return Catalog.Format(msgs.locale, "snippetPreview", map[string]any{"name": name})
+}
+
+// SnippetMore says "More actions for {name}"
+// in the language the app shows.
+func SnippetMore(name string) string { return In(i18n.Locale()).SnippetMore(name) }
+
+// SnippetMore says "More actions for {name}"
+// in the language of msgs.
+func (msgs Messages) SnippetMore(name string) string {
+	return Catalog.Format(msgs.locale, "snippetMore", map[string]any{"name": name})
+}
+
+// SnippetDuplicate says "Duplicate"
+// in the language the app shows.
+func SnippetDuplicate() string { return In(i18n.Locale()).SnippetDuplicate() }
+
+// SnippetDuplicate says "Duplicate"
+// in the language of msgs.
+func (msgs Messages) SnippetDuplicate() string {
+	return Catalog.Format(msgs.locale, "snippetDuplicate", nil)
+}
+
+// SnippetSent says "Sent to terminal"
+// in the language the app shows.
+func SnippetSent() string { return In(i18n.Locale()).SnippetSent() }
+
+// SnippetSent says "Sent to terminal"
+// in the language of msgs.
+func (msgs Messages) SnippetSent() string {
+	return Catalog.Format(msgs.locale, "snippetSent", nil)
+}
+
+// SnippetDelete says "Delete Snippet"
+// in the language the app shows.
+func SnippetDelete() string { return In(i18n.Locale()).SnippetDelete() }
+
+// SnippetDelete says "Delete Snippet"
+// in the language of msgs.
+func (msgs Messages) SnippetDelete() string {
+	return Catalog.Format(msgs.locale, "snippetDelete", nil)
+}
+
+// SnippetDeleteConfirm says "Delete {name}? Its saved content will also be removed."
+// in the language the app shows.
+func SnippetDeleteConfirm(name string) string { return In(i18n.Locale()).SnippetDeleteConfirm(name) }
+
+// SnippetDeleteConfirm says "Delete {name}? Its saved content will also be removed."
+// in the language of msgs.
+func (msgs Messages) SnippetDeleteConfirm(name string) string {
+	return Catalog.Format(msgs.locale, "snippetDeleteConfirm", map[string]any{"name": name})
+}
+
+// SnippetMissing says "Content missing — edit to complete"
+// in the language the app shows.
+func SnippetMissing() string { return In(i18n.Locale()).SnippetMissing() }
+
+// SnippetMissing says "Content missing — edit to complete"
+// in the language of msgs.
+func (msgs Messages) SnippetMissing() string {
+	return Catalog.Format(msgs.locale, "snippetMissing", nil)
+}
+
+// SnippetReadFailed says "Read failed: {reason}"
+// in the language the app shows.
+func SnippetReadFailed(reason string) string { return In(i18n.Locale()).SnippetReadFailed(reason) }
+
+// SnippetReadFailed says "Read failed: {reason}"
+// in the language of msgs.
+func (msgs Messages) SnippetReadFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "snippetReadFailed", map[string]any{"reason": reason})
+}
+
+// SnippetSaveFailed says "Save failed: {reason}"
+// in the language the app shows.
+func SnippetSaveFailed(reason string) string { return In(i18n.Locale()).SnippetSaveFailed(reason) }
+
+// SnippetSaveFailed says "Save failed: {reason}"
+// in the language of msgs.
+func (msgs Messages) SnippetSaveFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "snippetSaveFailed", map[string]any{"reason": reason})
+}
+
+// SnippetDeleteFailed says "Delete failed: {reason}"
+// in the language the app shows.
+func SnippetDeleteFailed(reason string) string { return In(i18n.Locale()).SnippetDeleteFailed(reason) }
+
+// SnippetDeleteFailed says "Delete failed: {reason}"
+// in the language of msgs.
+func (msgs Messages) SnippetDeleteFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "snippetDeleteFailed", map[string]any{"reason": reason})
+}
+
+// SnippetTooLong says "{field} exceeds the size limit"
+// in the language the app shows.
+func SnippetTooLong(field string) string { return In(i18n.Locale()).SnippetTooLong(field) }
+
+// SnippetTooLong says "{field} exceeds the size limit"
+// in the language of msgs.
+func (msgs Messages) SnippetTooLong(field string) string {
+	return Catalog.Format(msgs.locale, "snippetTooLong", map[string]any{"field": field})
+}
+
+// SnippetInvalid says "{field} contains invalid text"
+// in the language the app shows.
+func SnippetInvalid(field string) string { return In(i18n.Locale()).SnippetInvalid(field) }
+
+// SnippetInvalid says "{field} contains invalid text"
+// in the language of msgs.
+func (msgs Messages) SnippetInvalid(field string) string {
+	return Catalog.Format(msgs.locale, "snippetInvalid", map[string]any{"field": field})
+}
+
+// SnippetDisconnected says "Terminal disconnected"
+// in the language the app shows.
+func SnippetDisconnected() string { return In(i18n.Locale()).SnippetDisconnected() }
+
+// SnippetDisconnected says "Terminal disconnected"
+// in the language of msgs.
+func (msgs Messages) SnippetDisconnected() string {
+	return Catalog.Format(msgs.locale, "snippetDisconnected", nil)
+}
+
+// SnippetUnsafe says "This terminal cannot safely insert this content, use a shell supporting bracketed paste or adjust the content"
+// in the language the app shows.
+func SnippetUnsafe() string { return In(i18n.Locale()).SnippetUnsafe() }
+
+// SnippetUnsafe says "This terminal cannot safely insert this content, use a shell supporting bracketed paste or adjust the content"
+// in the language of msgs.
+func (msgs Messages) SnippetUnsafe() string {
+	return Catalog.Format(msgs.locale, "snippetUnsafe", nil)
+}
+
+// SnippetSendFailed says "Terminal input failed"
+// in the language the app shows.
+func SnippetSendFailed() string { return In(i18n.Locale()).SnippetSendFailed() }
+
+// SnippetSendFailed says "Terminal input failed"
+// in the language of msgs.
+func (msgs Messages) SnippetSendFailed() string {
+	return Catalog.Format(msgs.locale, "snippetSendFailed", nil)
+}
+
+// SnippetBusy says "A snippet is being sent, try again after it finishes"
+// in the language the app shows.
+func SnippetBusy() string { return In(i18n.Locale()).SnippetBusy() }
+
+// SnippetBusy says "A snippet is being sent, try again after it finishes"
+// in the language of msgs.
+func (msgs Messages) SnippetBusy() string {
+	return Catalog.Format(msgs.locale, "snippetBusy", nil)
+}
+
+// SnippetStorageFailed says "Local storage operation failed"
+// in the language the app shows.
+func SnippetStorageFailed() string { return In(i18n.Locale()).SnippetStorageFailed() }
+
+// SnippetStorageFailed says "Local storage operation failed"
+// in the language of msgs.
+func (msgs Messages) SnippetStorageFailed() string {
+	return Catalog.Format(msgs.locale, "snippetStorageFailed", nil)
+}
+
+// SnippetStageRead says "read encrypted content"
+// in the language the app shows.
+func SnippetStageRead() string { return In(i18n.Locale()).SnippetStageRead() }
+
+// SnippetStageRead says "read encrypted content"
+// in the language of msgs.
+func (msgs Messages) SnippetStageRead() string {
+	return Catalog.Format(msgs.locale, "snippetStageRead", nil)
+}
+
+// SnippetStageWrite says "write encrypted content"
+// in the language the app shows.
+func SnippetStageWrite() string { return In(i18n.Locale()).SnippetStageWrite() }
+
+// SnippetStageWrite says "write encrypted content"
+// in the language of msgs.
+func (msgs Messages) SnippetStageWrite() string {
+	return Catalog.Format(msgs.locale, "snippetStageWrite", nil)
+}
+
+// SnippetStageMetadata says "save metadata"
+// in the language the app shows.
+func SnippetStageMetadata() string { return In(i18n.Locale()).SnippetStageMetadata() }
+
+// SnippetStageMetadata says "save metadata"
+// in the language of msgs.
+func (msgs Messages) SnippetStageMetadata() string {
+	return Catalog.Format(msgs.locale, "snippetStageMetadata", nil)
+}
+
+// SnippetStageRollback says "restore previous data"
+// in the language the app shows.
+func SnippetStageRollback() string { return In(i18n.Locale()).SnippetStageRollback() }
+
+// SnippetStageRollback says "restore previous data"
+// in the language of msgs.
+func (msgs Messages) SnippetStageRollback() string {
+	return Catalog.Format(msgs.locale, "snippetStageRollback", nil)
+}
+
+// SnippetFailureDetail says "{stage}: {reason}"
+// in the language the app shows.
+func SnippetFailureDetail(stage string, reason string) string {
+	return In(i18n.Locale()).SnippetFailureDetail(stage, reason)
+}
+
+// SnippetFailureDetail says "{stage}: {reason}"
+// in the language of msgs.
+func (msgs Messages) SnippetFailureDetail(stage string, reason string) string {
+	return Catalog.Format(msgs.locale, "snippetFailureDetail", map[string]any{"stage": stage, "reason": reason})
+}
+
+// SnippetInsertAction says "Insert {name} only"
+// in the language the app shows.
+func SnippetInsertAction(name string) string { return In(i18n.Locale()).SnippetInsertAction(name) }
+
+// SnippetInsertAction says "Insert {name} only"
+// in the language of msgs.
+func (msgs Messages) SnippetInsertAction(name string) string {
+	return Catalog.Format(msgs.locale, "snippetInsertAction", map[string]any{"name": name})
+}
+
+// SnippetSendAction says "Send {name} and press Enter"
+// in the language the app shows.
+func SnippetSendAction(name string) string { return In(i18n.Locale()).SnippetSendAction(name) }
+
+// SnippetSendAction says "Send {name} and press Enter"
+// in the language of msgs.
+func (msgs Messages) SnippetSendAction(name string) string {
+	return Catalog.Format(msgs.locale, "snippetSendAction", map[string]any{"name": name})
+}

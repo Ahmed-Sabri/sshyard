@@ -201,6 +201,7 @@ type App struct {
 	// the panes, "" for none
 	pref      prefPage
 	inspector inspectorKind
+	snippets  snippetState
 	// tabStart is the first tab the title bar shows when not all fit, the
 	// others in its menu of more tabs; tabRoom the width they had
 	tabStart int
@@ -683,6 +684,7 @@ func (a *App) makeConn(hostID string, kind layout.Kind, link int) (*conn, error)
 		}
 	} else {
 		c.tv = newTermView(sessTarget{c.s}, float32(a.settings.TerminalFontSize))
+		c.tv.inputError = a.snippetSendResult
 		c.tv.family = a.termFamily()
 		a.armOSC52(c)
 		if a.termSeq == nil {

@@ -87,7 +87,7 @@ type Session struct {
 	release func() // lets go of client: closes it, or hands it back to the pool
 	shell   *ssh.Session
 	local   localPTY
-	stdin   io.WriteCloser
+	stdin   *serializedInput
 	cols    int
 	rows    int
 	cancel  context.CancelFunc
@@ -133,10 +133,7 @@ func New(cfg Config, opts Options, cols, rows int) *Session {
 	if opts.Scrollback > 0 {
 		s.Term.SetScrollback(opts.Scrollback)
 	}
-	s.Term.Reply = func(b []byte) {
-		b = append([]byte(nil), b...)
-		go s.Write(b)
-	}
+	s.Term.Reply = s.replyInput
 	return s
 }
 
@@ -476,7 +473,7 @@ func (s *Session) connect(ctx context.Context) error {
 		s.mu.Unlock()
 		return fail(context.Canceled)
 	}
-	s.client, s.release, s.shell, s.stdin, s.tagged = client, release, shell, stdin, tagged
+	s.client, s.release, s.shell, s.stdin, s.tagged = client, release, shell, &serializedInput{WriteCloser: stdin}, tagged
 	s.status.State, s.status.Err, s.status.Attempt = Connected, nil, 0
 	s.status.Connects++
 	s.mu.Unlock()

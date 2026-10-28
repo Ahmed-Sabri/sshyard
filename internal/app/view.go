@@ -77,8 +77,8 @@ func (a *App) View(c *ui.Context) {
 				}
 			})
 			ui.Box(c).Width(1).FillHeight().Background(tok.Line)
-			ui.Column(c.Key("main")).Grow(1).Shrink(1).FillHeight().Background(a.contentFill(tok.Canvas, canvasAlpha)).Children(func() {
-				ui.Row(c.Key("body")).Grow(1).Shrink(1).FillWidth().MinHeight(0).Children(func() {
+			ui.Column(c.Key("main")).Grow(1).Shrink(1).MinWidth(0).FillHeight().Background(a.contentFill(tok.Canvas, canvasAlpha)).Children(func() {
+				ui.Row(c.Key("body")).Grow(1).Shrink(1).MinWidth(0).FillWidth().MinHeight(0).Children(func() {
 					ui.Column(c.Key("content")).Grow(1).Shrink(1).MinWidth(0).FillHeight().Children(func() {
 						switch a.page {
 						case pageSettings:
@@ -105,6 +105,7 @@ func (a *App) View(c *ui.Context) {
 	})
 	a.editorView(c, m)
 	a.groupView(c, m)
+	a.snippetSheets(c, m)
 	a.credView(c, m)
 	a.proxyView(c, m)
 	a.backupView(c, m)

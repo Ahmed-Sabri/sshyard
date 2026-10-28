@@ -277,6 +277,7 @@ type Store struct {
 	creds    []Credential
 	proxies  []Proxy
 	forwards []Forward
+	snippets []Snippet
 	// groups are the groups made on their own, kept while empty; the
 	// groups hosts name are groups too.
 	groups []string
@@ -291,6 +292,7 @@ type file struct {
 	Proxies     []Proxy      `json:"proxies"`
 	Forwards    []Forward    `json:"forwards"`
 	Groups      []string     `json:"groups,omitempty"`
+	Snippets    []Snippet    `json:"snippets,omitempty"`
 }
 
 // Open reads the store at path; a missing file is an empty store. A file
@@ -333,7 +335,7 @@ func Open(path string) (*Store, error) {
 		}
 		return s, nil
 	}
-	s.hosts, s.creds, s.proxies, s.forwards, s.groups = f.Hosts, f.Credentials, f.Proxies, f.Forwards, f.Groups
+	s.hosts, s.creds, s.proxies, s.forwards, s.groups, s.snippets = f.Hosts, f.Credentials, f.Proxies, f.Forwards, f.Groups, f.Snippets
 	return s, nil
 }
 
@@ -345,7 +347,7 @@ func (s *Store) save() error {
 	if s.path == "" {
 		return nil
 	}
-	f := file{Version: SchemaVersion, Hosts: s.hosts, Credentials: s.creds, Proxies: s.proxies, Forwards: s.forwards, Groups: s.groups}
+	f := file{Version: SchemaVersion, Hosts: s.hosts, Credentials: s.creds, Proxies: s.proxies, Forwards: s.forwards, Groups: s.groups, Snippets: s.snippets}
 	// Empty lists are written as [], not null.
 	if f.Hosts == nil {
 		f.Hosts = []Host{}
@@ -369,9 +371,10 @@ func (s *Store) save() error {
 // commit saves, or undoes what fn changed when saving fails.
 func (s *Store) commit(fn func()) error {
 	h, c, p, f, g := slices.Clone(s.hosts), slices.Clone(s.creds), slices.Clone(s.proxies), slices.Clone(s.forwards), slices.Clone(s.groups)
+	n := slices.Clone(s.snippets)
 	fn()
 	if err := s.save(); err != nil {
-		s.hosts, s.creds, s.proxies, s.forwards, s.groups = h, c, p, f, g
+		s.hosts, s.creds, s.proxies, s.forwards, s.groups, s.snippets = h, c, p, f, g, n
 		return err
 	}
 	return nil

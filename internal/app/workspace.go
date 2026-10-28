@@ -248,7 +248,7 @@ func (a *App) terminalPage(c *ui.Context, m locales.Messages, tok theme.Tokens) 
 			ui.Text(c, m.WelcomeHint()).FontSize(theme.Body).TextColor(tok.TextMuted)
 			if a.store.Len() == 0 {
 				// No host yet: start from the ones ssh already knows.
-				ui.Row(c.Key("start")).Gap(8).MarginY(8).Children(func() {
+				ui.Row(c.Key("start")).FillWidth().Wrap().Justify(ui.Center).Gap(theme.Space(2)).MarginY(theme.Space(2)).Children(func() {
 					if pill(c, m.ImportSSHConfig(), true, false, false) {
 						a.OpenImport(m, "")
 					}
