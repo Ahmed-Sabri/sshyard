@@ -232,7 +232,7 @@ func (a *App) tabStrip(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 		} else {
 			a.tabs(c, m, tok)
 		}
-		ui.Row(c.Key("appbtns")).Shrink(0).Gap(theme.Space(1)).AlignItems(ui.Center).Children(func() {
+		barLine(c, "appbtns").Gap(theme.Space(1)).Children(func() {
 			a.appButtons(c, m)
 		})
 	})

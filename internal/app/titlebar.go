@@ -28,7 +28,8 @@ func (a *App) SetMaximized(on bool) { a.post(func() { a.maximized = on }) }
 // titleBar is the window's one band across the top, which drags it: over
 // the sidebar room for the traffic lights (macOS); over the content the
 // tabs, joining it, and at the end the app's own buttons, then the
-// window's buttons where the app draws them.
+// window's buttons where the app draws them. Every control in it centers
+// on the band's middle, the traffic lights' line (barLine).
 func (a *App) titleBar(c *ui.Context, m locales.Messages, tok theme.Tokens, clear bool) {
 	bar := c.TitleBar()
 	row := ui.Row(c.Key("titlebar")).Height(bandHeight(c)).Shrink(0).FillWidth().AlignItems(ui.Center).DragWindow()
@@ -81,6 +82,12 @@ func (a *App) appButtons(c *ui.Context, m locales.Messages) {
 	}
 }
 
+// barLine is a row of the title bar's controls, centered on the band's
+// middle, where the traffic lights are and a tab's title is.
+func barLine(c *ui.Context, key string) ui.Element {
+	return ui.Row(c.Key(key)).FillHeight().Shrink(0).AlignItems(ui.Center)
+}
+
 // windowButtons minimize, maximize or restore, and close the window, where
 // the app draws them (WindowControls).
 func (a *App) windowButtons(c *ui.Context, m locales.Messages, tok theme.Tokens) {
@@ -88,7 +95,7 @@ func (a *App) windowButtons(c *ui.Context, m locales.Messages, tok theme.Tokens)
 	if w == nil {
 		return
 	}
-	ui.Row(c.Key("winbtns")).Shrink(0).Gap(theme.Space(1)).Padding(0, 10, 0, 0).AlignItems(ui.Center).Children(func() {
+	barLine(c, "winbtns").Gap(theme.Space(1)).Padding(0, 10, 0, 0).Children(func() {
 		ui.Box(c).Width(1).Height(20).Shrink(0).Margin(0, 6, 0, 0).Background(tok.Line)
 		if iconButton(c, "winmin", icons.WinMinimize, m.WindowMinimize()) {
 			w.Minimize()

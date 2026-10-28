@@ -111,8 +111,30 @@ func TestTitleBar(t *testing.T) {
 	}
 }
 
+// TestTitleBarLine centers every control of the title bar on the band's
+// middle, where the traffic lights are, in a band of any height: the
+// tab's title, the new tab's button, the app's buttons and the window's.
+func TestTitleBarLine(t *testing.T) {
+	a, tt := newTestApp(t)
+	a.SetWindow(WindowControls{Minimize: func() {}, Maximize: func() {}, Close: func() {}})
+	if _, err := a.open(localID, layout.Terminal, openAt{}, nil); err != nil {
+		t.Fatal(err)
+	}
+	for _, band := range []float32{toolbarHeight, 52} {
+		tt.SetTitleBar(ui.TitleBar{Height: band})
+		tt.Frame()
+		tt.Frame()
+		for _, s := range []string{"Local terminal", "Close Tab", "New Tab", "Check for Updates", "GitHub Repository", "Settings", "Minimize", "Close Window"} {
+			r := mustFind(t, tt, s)
+			if mid := r.Y + r.H/2; math.Abs(float64(mid-band/2)) > 0.5 {
+				t.Errorf("band %v: %s centered at %v, not on its middle", band, s, mid)
+			}
+		}
+	}
+}
+
 // TestPaneGutter keeps panes as far from each other as from the edges of
-// the content.
+// the content, and the active tab over the first pane's edge.
 func TestPaneGutter(t *testing.T) {
 	a, tt := newTestApp(t)
 	if _, err := a.OpenLocalTerminal(); err != nil {
@@ -138,6 +160,10 @@ func TestPaneGutter(t *testing.T) {
 	if p1.Y != p2.Y || p1.H != p2.H {
 		t.Errorf("panes %v and %v not level", p1, p2)
 	}
+	// The tab stands over the first pane's edge: its left, a tab's width
+	// before its close button and padding.
+	x := mustFind(t, tt, "Close Tab")
+	near("tab", x.X+x.W+6-tabWidth, p1.X)
 }
 
 // TestTabs centres the tabs' capsule in the title bar, shows a tab's
@@ -159,9 +185,9 @@ func TestTabs(t *testing.T) {
 	if !ok {
 		t.Fatalf("no tabs in %q", tt.Texts())
 	}
-	// Centred in the tab, which stands on the band's foot.
-	if mid := first.Y + first.H/2; math.Abs(float64(mid-(toolbarHeight-tabHeight/2))) > 1 {
-		t.Errorf("tab text at %v, not centred in the tab", first)
+	// On the band's middle, though the tab stands on its foot.
+	if mid := first.Y + first.H/2; math.Abs(float64(mid-toolbarHeight/2)) > 1 {
+		t.Errorf("tab text at %v, not on the band's middle", first)
 	}
 	// One close button, the active tab's; the other's with the pointer.
 	closes := func() (n int) {

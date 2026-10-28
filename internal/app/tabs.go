@@ -15,13 +15,14 @@ import (
 // tabHeight and tabWidth size a tab, which stands on the title bar's
 // foot; tabs narrow alike when there are many, as a browser's, down to
 // tabMinWidth. tabInset is the track's padding at its sides, room for the
-// active tab's flare; tabGap the room between two; tabRadius rounds a
-// tab's top and its flare.
+// active tab's flare, which curves as wide: the content's gutter, so that
+// the first tab stands over the edge of the panes below; tabGap the room
+// between two; tabRadius rounds a tab's top.
 const (
-	tabHeight   = 32
+	tabHeight   = 36
 	tabWidth    = 200
 	tabMinWidth = 132
-	tabInset    = 8
+	tabInset    = paneGap
 	tabGap      = 2
 	tabRadius   = theme.RadiusControl
 )
@@ -91,7 +92,7 @@ func (a *App) tabs(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 			})
 		}
 		// The buttons after the tabs, level with their text.
-		ui.Row(c.Key("tabbtns")).Shrink(0).Height(tabHeight).Gap(tabGap).AlignItems(ui.Center).Children(func() {
+		barLine(c, "tabbtns").Gap(tabGap).Children(func() {
 			if k < len(a.ws.Tabs) {
 				a.moreTabs(c, m, tok, start, k)
 			} else {
@@ -173,7 +174,10 @@ func (a *App) newTabEntries(c *ui.Context, m locales.Messages) []menuEntry {
 // fill the content's, which the active one takes.
 func (a *App) tab(c *ui.Context, m locales.Messages, tok theme.Tokens, fill ui.Color, t *layout.Tab, i int, on bool, j int, hovered []bool, activeAt int) {
 	cn := a.conns[t.Focused().ID]
-	chip := ui.Row(c.Key("tab:"+strconv.Itoa(t.ID))).Height(tabHeight).Gap(8).Padding(0, 6, 0, 10).Width(tabWidth).Shrink(1).MinWidth(tabMinWidth).
+	// Its contents center on the band's middle, with the traffic lights
+	// and the buttons, over room at its foot, which joins the content.
+	foot := max(bandHeight(c)-tabHeight, 0)
+	chip := ui.Row(c.Key("tab:"+strconv.Itoa(t.ID))).Height(tabHeight).Gap(8).Padding(0, 6, foot, 10).Width(tabWidth).Shrink(1).MinWidth(tabMinWidth).
 		AlignItems(ui.Center).Radius(tabRadius, tabRadius, 0, 0).Cursor(ui.CursorPointer)
 	if cn != nil {
 		chip.Drag(dragSession{cn.id})
@@ -192,13 +196,13 @@ func (a *App) tab(c *ui.Context, m locales.Messages, tok theme.Tokens, fill ui.C
 			tabEdge(p, r, fill, tok.Line)
 			return
 		case hovered[j]:
-			// Lit as a capsule clear of the foot, not joining the content.
-			p.Fill(ui.Rect{X: r.X, Y: r.Y + 3, W: r.W, H: r.H - 6}, lit, tabRadius)
+			// Lit as a capsule round its contents, not joining the content.
+			p.Fill(ui.Rect{X: r.X, Y: r.Y + 3, W: r.W, H: r.H - foot - 6}, lit, tabRadius)
 			return
 		}
 		if next := j + 1; next < len(hovered) && next != activeAt && !hovered[j] && !hovered[next] {
-			x := r.X + r.W + tabGap/2
-			p.Line(x, r.Y+r.H/2-7, x, r.Y+r.H/2+7, 1, tok.Line)
+			x, mid := r.X+r.W+tabGap/2, r.Y+(r.H-foot)/2
+			p.Line(x, mid-7, x, mid+7, 1, tok.Line)
 		}
 	})
 	chip.Children(func() {
@@ -243,15 +247,15 @@ func (a *App) tab(c *ui.Context, m locales.Messages, tok theme.Tokens, fill ui.C
 // side, and its hairline round the sides and the top, where it stands on
 // the title bar.
 func tabEdge(p *ui.Painter, r ui.Rect, fill, line ui.Color) {
-	const R = tabRadius
+	const R, F = tabRadius, tabInset
 	l, rt, top, b := r.X, r.X+r.W, r.Y, r.Y+r.H
 	var flare ui.Path
-	flare.MoveTo(l-R, b).QuadTo(l, b, l, b-R).LineTo(l, b).Close()
-	flare.MoveTo(rt+R, b).QuadTo(rt, b, rt, b-R).LineTo(rt, b).Close()
+	flare.MoveTo(l-F, b).QuadTo(l, b, l, b-F).LineTo(l, b).Close()
+	flare.MoveTo(rt+F, b).QuadTo(rt, b, rt, b-F).LineTo(rt, b).Close()
 	p.FillPath(&flare, fill)
 	var edge ui.Path
-	edge.MoveTo(l-R, b-0.5).QuadTo(l+0.5, b-0.5, l+0.5, b-R).LineTo(l+0.5, top+R).QuadTo(l+0.5, top+0.5, l+R, top+0.5).
-		LineTo(rt-R, top+0.5).QuadTo(rt-0.5, top+0.5, rt-0.5, top+R).LineTo(rt-0.5, b-R).QuadTo(rt-0.5, b-0.5, rt+R, b-0.5)
+	edge.MoveTo(l-F, b-0.5).QuadTo(l+0.5, b-0.5, l+0.5, b-F).LineTo(l+0.5, top+R).QuadTo(l+0.5, top+0.5, l+R, top+0.5).
+		LineTo(rt-R, top+0.5).QuadTo(rt-0.5, top+0.5, rt-0.5, top+R).LineTo(rt-0.5, b-F).QuadTo(rt-0.5, b-0.5, rt+F, b-0.5)
 	p.StrokePath(&edge, 1, line)
 }
 
