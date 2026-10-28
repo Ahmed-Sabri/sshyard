@@ -33,3 +33,18 @@ func TestRunNilClient(t *testing.T) {
 		t.Fatal("nil client")
 	}
 }
+
+func TestPerCommandTimeoutPreservesTurnDeadline(t *testing.T) {
+	r := New(nil, Options{TurnTimeout: 20 * time.Millisecond})
+	r.BeginTurn()
+	r.mu.Lock()
+	end := r.turnEnd
+	r.mu.Unlock()
+	if got := r.deadline(t.Context(), MaxCommandTimeout); !got.Equal(end) {
+		t.Fatalf("deadline %v want %v", got, end)
+	}
+	// Changing a call's timeout must not start a fresh turn.
+	if got := r.deadline(t.Context(), MinCommandTimeout); !got.Equal(end) {
+		t.Fatalf("deadline reset %v", got)
+	}
+}

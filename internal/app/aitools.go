@@ -10,6 +10,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Licoy/sshyard/internal/ai/remote"
 	"github.com/Licoy/sshyard/internal/assets"
@@ -134,6 +135,7 @@ func (h *hostTools) ReadFile(ctx context.Context, p string) (string, bool, error
 
 type toolArgs struct {
 	Command string `json:"command"`
+	Timeout int64  `json:"timeout"`
 	Dir     string `json:"dir"`
 	Path    string `json:"path"`
 	Content string `json:"content"`
@@ -145,7 +147,9 @@ func (h *hostTools) Call(ctx context.Context, name string, raw json.RawMessage) 
 	h.counted = false
 	var args toolArgs
 	if len(bytes.TrimSpace(raw)) > 0 {
-		_ = json.Unmarshal(raw, &args)
+		if err := json.Unmarshal(raw, &args); err != nil {
+			return "invalid tool arguments", 1, err
+		}
 	}
 	switch name {
 	case "host_info":
@@ -161,7 +165,7 @@ func (h *hostTools) Call(ctx context.Context, name string, raw json.RawMessage) 
 	}
 	switch name {
 	case "list_dir":
-		return h.list(args.Path)
+		return h.list(ctx, args.Path)
 	case "read_file":
 		text, ok, err := h.ReadFile(ctx, args.Path)
 		if err != nil {
@@ -174,9 +178,9 @@ func (h *hostTools) Call(ctx context.Context, name string, raw json.RawMessage) 
 	case "search_files":
 		return h.search(ctx, args.Path, args.Query)
 	case "write_file":
-		return h.write(args.Path, args.Content)
+		return h.write(ctx, args.Path, args.Content)
 	default:
-		return h.command(ctx, args.Command, args.Dir)
+		return h.commandTimeout(ctx, args.Command, args.Dir, args.Timeout)
 	}
 }
 
@@ -201,10 +205,10 @@ func trimLines(text string, n int) string {
 	return strings.Join(lines, "\n")
 }
 
-func (h *hostTools) list(dir string) (string, int, error) {
-	es, err := h.sftp.List(dir)
+func (h *hostTools) list(ctx context.Context, dir string) (string, int, error) {
+	es, err := h.sftp.ListContext(ctx, dir)
 	if err != nil {
-		return err.Error(), 1, nil
+		return toolErr(ctx, err)
 	}
 	var b strings.Builder
 	for _, e := range es {
@@ -225,9 +229,9 @@ func (h *hostTools) search(ctx context.Context, dir, query string) (string, int,
 	if query == "" {
 		return "empty query", 1, nil
 	}
-	es, err := h.sftp.List(dir)
+	es, err := h.sftp.ListContext(ctx, dir)
 	if err != nil {
-		return err.Error(), 1, nil
+		return toolErr(ctx, err)
 	}
 	var b strings.Builder
 	n, total := 0, 0
@@ -254,25 +258,34 @@ func (h *hostTools) search(ctx context.Context, dir, query string) (string, int,
 	return b.String(), 0, nil
 }
 
-func (h *hostTools) write(p, content string) (string, int, error) {
+func (h *hostTools) write(ctx context.Context, p, content string) (string, int, error) {
 	was := h.vers[p]
-	if _, err := h.files.Write(p, []byte(content), was); err != nil {
+	if _, err := h.files.WriteContext(ctx, p, []byte(content), was); err != nil {
 		if errors.Is(err, sftpsvc.ErrChanged) {
-			return "the file changed on the server; nothing was written", 1, nil
+			return "the file changed on the server; read it again before writing", 1, nil
 		}
-		return err.Error(), 1, nil
+		return toolErr(ctx, err)
 	}
 	delete(h.vers, p)
 	return "wrote " + p, 0, nil
 }
 
 func (h *hostTools) command(ctx context.Context, cmd, dir string) (string, int, error) {
+	return h.commandTimeout(ctx, cmd, dir, 0)
+}
+
+func (h *hostTools) commandTimeout(ctx context.Context, cmd, dir string, seconds int64) (string, int, error) {
+	timeout := remote.DefaultCommandTimeout
+	if seconds != 0 {
+		seconds = max(5, min(1800, seconds))
+		timeout = time.Duration(seconds) * time.Second
+	}
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	output := &commandOutput{remaining: (1 << 20) - 4096, cancel: cancel}
 	cwOut := &remote.CountingWriter{W: output}
 	cwErr := &remote.CountingWriter{W: output}
-	code, err := h.run.Run(runCtx, cmd, dir, cwOut, cwErr)
+	code, err := h.run.RunWithTimeout(runCtx, cmd, dir, cwOut, cwErr, timeout)
 	h.nbytes = cwOut.Bytes() + cwErr.Bytes()
 	h.counted = true
 	text, limited := output.result()

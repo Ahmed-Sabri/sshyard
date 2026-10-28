@@ -91,11 +91,20 @@ func TestWriteConfirmAndRefuseChangedFile(t *testing.T) {
 	}
 	mustClick(t, tt, "Allow once")
 	waitFor(t, tt, "refused", func() bool {
-		return paneHas(a, id, "the file changed on the server; nothing was written") && !a.conns[id].ai.running
+		return paneHas(a, id, "the file changed on the server; read it again before writing") && !a.conns[id].ai.running
 	})
 	b, err := os.ReadFile(conf)
 	if err != nil || string(b) != "raced\n" {
 		t.Fatalf("file %q err %v", b, err)
+	}
+	var changed agent.ToolCard
+	for _, it := range a.conns[id].ai.items {
+		if it.tool.ID == "w2" {
+			changed = it.tool
+		}
+	}
+	if changed.Phase != "done" || changed.Exit != 1 || !strings.Contains(changed.Output, "the file changed on the server; read it again before writing") {
+		t.Fatalf("changed file card %+v", changed)
 	}
 }
 

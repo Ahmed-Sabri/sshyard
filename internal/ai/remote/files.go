@@ -40,11 +40,16 @@ func (f *Files) Read(path string) ([]byte, sftpsvc.Version, error) {
 
 // Write replaces path with data when it is still was.
 func (f *Files) Write(path string, data []byte, was sftpsvc.Version) (sftpsvc.Version, error) {
-	p, err := f.ResolvePath(context.Background(), path)
+	return f.WriteContext(context.Background(), path, data, was)
+}
+
+// WriteContext cancels only this write session; completed renames are not rolled back.
+func (f *Files) WriteContext(ctx context.Context, path string, data []byte, was sftpsvc.Version) (sftpsvc.Version, error) {
+	p, err := f.ResolvePath(ctx, path)
 	if err != nil {
 		return sftpsvc.Version{}, err
 	}
-	return f.c.WriteFileNoLinks(p, data, was)
+	return f.c.WriteFileNoLinksContext(ctx, p, data, was)
 }
 
 // ResolvePath checks every component before policy authorization.

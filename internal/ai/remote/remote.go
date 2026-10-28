@@ -109,8 +109,8 @@ func (r *Runner) ensureTurn() {
 	}
 }
 
-func (r *Runner) deadline(ctx context.Context) time.Time {
-	d := time.Now().Add(r.cmdTimeout)
+func (r *Runner) deadline(ctx context.Context, timeout time.Duration) time.Time {
+	d := time.Now().Add(timeout)
 	r.mu.Lock()
 	end := r.turnEnd
 	r.mu.Unlock()
@@ -176,6 +176,12 @@ func acquire(ctx context.Context, c *ssh.Client) (func(), error) {
 // kill the process group, then SIGKILL after KillGrace, and return only
 // once the group is gone.
 func (r *Runner) Run(ctx context.Context, cmd, dir string, stdout, stderr io.Writer) (int, error) {
+	return r.RunWithTimeout(ctx, cmd, dir, stdout, stderr, r.cmdTimeout)
+}
+
+// RunWithTimeout preserves this runner's turn clock and shared host quota.
+func (r *Runner) RunWithTimeout(ctx context.Context, cmd, dir string, stdout, stderr io.Writer, timeout time.Duration) (int, error) {
+	timeout = commandTimeout(timeout)
 	if r.client == nil {
 		return -1, errors.New("remote: no client")
 	}
@@ -186,7 +192,7 @@ func (r *Runner) Run(ctx context.Context, cmd, dir string, stdout, stderr io.Wri
 		return -1, err
 	}
 	r.ensureTurn()
-	deadline := r.deadline(ctx)
+	deadline := r.deadline(ctx, timeout)
 	if !time.Now().Before(deadline) {
 		return -1, context.DeadlineExceeded
 	}
@@ -200,7 +206,7 @@ func (r *Runner) Run(ctx context.Context, cmd, dir string, stdout, stderr io.Wri
 	if err := ctx.Err(); err != nil {
 		return -1, err
 	}
-	deadline = r.deadline(ctx)
+	deadline = r.deadline(ctx, timeout)
 	if !time.Now().Before(deadline) {
 		return -1, context.DeadlineExceeded
 	}

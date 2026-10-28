@@ -51,7 +51,7 @@ type Client struct {
 	// conn is the connection, for a second SFTP session (dirPager)
 	conn       *ssh.Client
 	operation  *ssh.Session
-	operations chan struct{}
+	operations *operationPool
 }
 
 // New opens SFTP on an SSH connection; closing the Client does not close
@@ -85,6 +85,22 @@ func (c *Client) Home() (string, error) { return c.c.Getwd() }
 // List lists a remote directory, directories first.
 func (c *Client) List(dir string) ([]Entry, error) {
 	es, _, err := c.ListUnfinished(dir)
+	return es, err
+}
+
+// ListContext interrupts a stalled listing on its own SFTP channel.
+func (c *Client) ListContext(ctx context.Context, dir string) ([]Entry, error) {
+	sub, err := c.operationClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer sub.Close()
+	stop := context.AfterFunc(ctx, func() { sub.Close() })
+	defer stop()
+	es, err := sub.List(dir)
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	return es, err
 }
 

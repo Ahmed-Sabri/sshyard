@@ -119,6 +119,9 @@ func New(cfg Config) *Session {
 	}
 }
 
+// Configure updates an idle session after its previous turn has stopped
+func (s *Session) Configure(gate policy.Gate, redact bool) { s.gate = gate; s.redact = redact }
+
 // Paused reports whether the session is waiting for Continue.
 func (s *Session) Paused() bool { return s.paused }
 
@@ -231,11 +234,12 @@ func (s *Session) drain(ctx context.Context, emit func(Event)) error {
 
 func (s *Session) execOne(ctx context.Context, call openai.ToolCall, emit func(Event)) error {
 	raw := strings.TrimSpace(call.Arguments)
-	if !json.Valid([]byte(raw)) {
-		raw = "{}"
+	fields, err := toolArguments(call.Name, raw)
+	if err != nil {
+		s.emitTool(emit, ToolCard{ID: call.ID, Name: call.Name, Phase: "done", Exit: 1, Output: err.Error()})
+		s.appendTool(call.ID, err.Error())
+		return nil
 	}
-	fields := map[string]any{}
-	_ = json.Unmarshal([]byte(raw), &fields)
 	act := actionFor(call.Name, fields)
 	if resolver, ok := s.tools.(interface {
 		ResolvePath(context.Context, string) (string, error)

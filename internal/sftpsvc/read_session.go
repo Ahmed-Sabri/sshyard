@@ -14,16 +14,16 @@ var ErrOperationsBusy = errors.New("sftp: too many pending operations")
 
 var operationPools = struct {
 	sync.Mutex
-	slots map[*ssh.Client]chan struct{}
-}{slots: make(map[*ssh.Client]chan struct{})}
+	slots map[*ssh.Client]*operationPool
+}{slots: make(map[*ssh.Client]*operationPool)}
 
-func operationSlots(conn *ssh.Client) chan struct{} {
+func operationSlots(conn *ssh.Client) *operationPool {
 	operationPools.Lock()
 	defer operationPools.Unlock()
 	if slots := operationPools.slots[conn]; slots != nil {
 		return slots
 	}
-	slots := make(chan struct{}, 4)
+	slots := &operationPool{changed: make(chan struct{})}
 	operationPools.slots[conn] = slots
 	go func() {
 		conn.Wait()
@@ -37,13 +37,9 @@ func operationSlots(conn *ssh.Client) chan struct{} {
 // operationClient bounds pending SSH channel opens, which SSH cannot cancel.
 // Once a channel exists, cancellation closes it before subsystem negotiation.
 func (c *Client) operationClient(ctx context.Context) (*Client, error) {
-	if err := ctx.Err(); err != nil {
+	reservation, err := c.operations.reserve(ctx)
+	if err != nil {
 		return nil, err
-	}
-	select {
-	case c.operations <- struct{}{}:
-	default:
-		return nil, ErrOperationsBusy
 	}
 	type result struct {
 		c   *Client
@@ -51,8 +47,11 @@ func (c *Client) operationClient(ctx context.Context) (*Client, error) {
 	}
 	ready := make(chan result)
 	go func() {
-		defer func() { <-c.operations }()
 		sub, err := c.negotiateOperation(ctx)
+		// Negotiation no longer occupies a pending-open slot once it finishes.
+		// Release before handing the client to a caller that may open again.
+		// A cancelled NewSession keeps its slot until negotiation really ends.
+		reservation.release()
 		select {
 		case ready <- result{sub, err}:
 		case <-ctx.Done():
@@ -63,13 +62,23 @@ func (c *Client) operationClient(ctx context.Context) (*Client, error) {
 	}()
 	select {
 	case got := <-ready:
+		if err := ctx.Err(); err != nil {
+			if got.c != nil {
+				got.c.Close()
+			}
+			return nil, err
+		}
 		return got.c, got.err
 	case <-ctx.Done():
+		reservation.abandon()
 		return nil, ctx.Err()
 	}
 }
 
 func (c *Client) negotiateOperation(ctx context.Context) (*Client, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	session, err := c.conn.NewSession()
 	if err != nil {
 		return nil, err

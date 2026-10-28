@@ -565,9 +565,30 @@ func (c *Client) WriteFileNoLinks(p string, data []byte, was Version) (Version, 
 	return c.writeFile(p, data, was, true)
 }
 
+// WriteFileNoLinksContext keeps validation and atomic replacement on a dedicated
+// cancellable session. Cancellation cannot undo a rename already completed.
+func (c *Client) WriteFileNoLinksContext(ctx context.Context, p string, data []byte, was Version) (Version, error) {
+	sub, err := c.operationClient(ctx)
+	if err != nil {
+		return Version{}, err
+	}
+	defer sub.Close()
+	stop := context.AfterFunc(ctx, func() { sub.Close() })
+	defer stop()
+	ver, err := sub.writeFileContext(ctx, p, data, was, true)
+	if ctx.Err() != nil {
+		return Version{}, ctx.Err()
+	}
+	return ver, err
+}
+
 func (c *Client) writeFile(p string, data []byte, was Version, noLinks bool) (Version, error) {
+	return c.writeFileContext(context.Background(), p, data, was, noLinks)
+}
+
+func (c *Client) writeFileContext(ctx context.Context, p string, data []byte, was Version, noLinks bool) (Version, error) {
 	if noLinks {
-		if _, err := c.ResolvePath(context.Background(), p); err != nil {
+		if _, err := c.resolvePath(ctx, p); err != nil {
 			return Version{}, err
 		}
 	}
@@ -582,7 +603,16 @@ func (c *Client) writeFile(p string, data []byte, was Version, noLinks bool) (Ve
 			return Version{}, ErrChanged
 		}
 		if was.Sum != ([sha256.Size]byte{}) {
-			_, cur, err := c.readFileContext(context.Background(), p, max(DefaultReadLimit, was.Size), noLinks)
+			limit := max(DefaultReadLimit, was.Size)
+			if limit > 1<<30 {
+				return Version{}, ErrReadLimit
+			}
+			if noLinks {
+				if _, err := c.resolvePath(ctx, p); err != nil {
+					return Version{}, err
+				}
+			}
+			_, cur, err := c.readBounded(p, limit)
 			if err != nil {
 				return Version{}, err
 			}
@@ -616,7 +646,7 @@ func (c *Client) writeFile(p string, data []byte, was Version, noLinks bool) (Ve
 		f.Close()
 	}
 	if noLinks {
-		if _, err := c.ResolvePath(context.Background(), p); err != nil {
+		if _, err := c.resolvePath(ctx, p); err != nil {
 			return Version{}, err
 		}
 	}

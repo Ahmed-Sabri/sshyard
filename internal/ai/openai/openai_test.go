@@ -236,7 +236,7 @@ func TestTemperatureOmittedWhenZero(t *testing.T) {
 		b, _ := io.ReadAll(r.Body)
 		body = string(b)
 		w.Header().Set("Content-Type", "text/event-stream")
-		io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"z\"}}]}\n\ndata: [DONE]\n\n")
+		io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"z\"},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n")
 	}))
 	defer srv.Close()
 	c := &Client{BaseURL: srv.URL, APIKey: "test-key-not-real", Model: "m"}

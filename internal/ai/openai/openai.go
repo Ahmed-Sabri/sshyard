@@ -106,6 +106,11 @@ func (e *APIError) Error() string {
 // Test checks the endpoint with a tiny request and no tools.
 func (c *Client) Test(ctx context.Context) error {
 	_, err := c.Stream(ctx, Request{Messages: []Message{{Role: "user", Content: "ping"}}, MaxTokens: 1}, nil)
+	// An explicit token-limit completion is expected for this one-token probe;
+	// missing completion or malformed responses must still fail.
+	if errors.Is(err, ErrTokenLimit) {
+		return nil
+	}
 	return err
 }
 
@@ -293,7 +298,7 @@ func (c *Client) httpError(resp *http.Response) error {
 
 type sseChunk struct {
 	Choices []struct {
-		Delta struct {
+		Delta *struct {
 			Content   string `json:"content"`
 			Reasoning string `json:"reasoning_content"`
 			Reason    string `json:"reasoning"`
@@ -322,6 +327,14 @@ type callAcc struct {
 func (c *Client) readStream(body io.Reader, emit func(Event)) (Message, error) {
 	r := &countReader{r: io.LimitReader(body, int64(c.maxBytes())+1), max: c.maxBytes()}
 	br := bufio.NewReader(r)
+	// JSON-compatible endpoints may prefix a response with whitespace.
+	for {
+		b, err := br.Peek(1)
+		if err != nil || !bytes.ContainsAny(b, " \t\r\n") {
+			break
+		}
+		br.Discard(1)
+	}
 	peek, err := br.Peek(1)
 	if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, ErrTooBig) {
 		return Message{}, err
@@ -351,6 +364,12 @@ func (c *Client) readStream(body io.Reader, emit func(Event)) (Message, error) {
 			return nil
 		}
 		d := ch.Choices[0]
+		if d.Delta == nil {
+			return fmt.Errorf("%w: choice has no delta", ErrProtocol)
+		}
+		if msg.Finish != "" {
+			return fmt.Errorf("%w: data after completion", ErrProtocol)
+		}
 		if d.FinishReason != "" {
 			msg.Finish = d.FinishReason
 		}
@@ -365,6 +384,9 @@ func (c *Client) readStream(body io.Reader, emit func(Event)) (Message, error) {
 			}
 		}
 		for _, tc := range d.Delta.ToolCalls {
+			if tc.Index < 0 {
+				return fmt.Errorf("%w: negative tool index", ErrProtocol)
+			}
 			acc := calls[tc.Index]
 			if acc == nil {
 				acc = &callAcc{}
@@ -373,9 +395,15 @@ func (c *Client) readStream(body io.Reader, emit func(Event)) (Message, error) {
 			}
 			acc.seen = true
 			if tc.ID != "" {
+				if acc.id != "" && acc.id != tc.ID {
+					return fmt.Errorf("%w: conflicting tool id", ErrProtocol)
+				}
 				acc.id = tc.ID
 			}
 			if tc.Function.Name != "" {
+				if acc.name != "" && acc.name != tc.Function.Name {
+					return fmt.Errorf("%w: conflicting tool name", ErrProtocol)
+				}
 				acc.name = tc.Function.Name
 			}
 			acc.args.WriteString(tc.Function.Arguments)
@@ -392,13 +420,16 @@ func (c *Client) readStream(body io.Reader, emit func(Event)) (Message, error) {
 		acc := calls[i]
 		msg.ToolCalls = append(msg.ToolCalls, ToolCall{ID: acc.id, Name: acc.name, Arguments: acc.args.String()})
 	}
+	if err := validateMessage(msg); err != nil {
+		return Message{}, err
+	}
 	return msg, nil
 }
 
 func decodeJSON(b []byte, emit func(Event)) (Message, error) {
 	var parsed struct {
 		Choices []struct {
-			Message struct {
+			Message *struct {
 				Content   string `json:"content"`
 				ToolCalls []struct {
 					ID       string `json:"id"`
@@ -424,14 +455,57 @@ func decodeJSON(b []byte, emit func(Event)) (Message, error) {
 		return Message{}, errors.New("openai: response has no choices")
 	}
 	ch := parsed.Choices[0]
+	if ch.Message == nil {
+		return Message{}, fmt.Errorf("%w: choice has no message", ErrProtocol)
+	}
 	msg := Message{Content: ch.Message.Content, Finish: ch.FinishReason}
 	for _, tc := range ch.Message.ToolCalls {
 		msg.ToolCalls = append(msg.ToolCalls, ToolCall{ID: tc.ID, Name: tc.Function.Name, Arguments: tc.Function.Arguments})
+	}
+	if err := validateMessage(msg); err != nil {
+		return Message{}, err
 	}
 	if emit != nil && msg.Content != "" {
 		emit(Event{Content: msg.Content})
 	}
 	return msg, nil
+}
+
+var (
+	ErrProtocol           = errors.New("openai: invalid response protocol")
+	ErrIncompleteResponse = errors.New("openai: incomplete response")
+	// ErrTokenLimit is an explicit, structurally complete length response with
+	// no tool calls. It remains incomplete for normal assistant turns.
+	ErrTokenLimit = fmt.Errorf("%w: output token limit reached", ErrIncompleteResponse)
+)
+
+func validateMessage(msg Message) error {
+	switch msg.Finish {
+	case "stop":
+		if len(msg.ToolCalls) != 0 {
+			return fmt.Errorf("%w: tools without tool_calls completion", ErrProtocol)
+		}
+	case "length":
+		if len(msg.ToolCalls) != 0 {
+			return fmt.Errorf("%w: token limit interrupted tool calls", ErrProtocol)
+		}
+		return ErrTokenLimit
+	case "tool_calls":
+		if len(msg.ToolCalls) == 0 {
+			return fmt.Errorf("%w: no completed tools", ErrProtocol)
+		}
+	default:
+		return fmt.Errorf("%w: missing or unsuccessful completion", ErrIncompleteResponse)
+	}
+	ids := make(map[string]bool)
+	for _, tc := range msg.ToolCalls {
+		args := bytes.TrimSpace([]byte(tc.Arguments))
+		if strings.TrimSpace(tc.ID) == "" || strings.TrimSpace(tc.Name) == "" || ids[tc.ID] || len(args) == 0 || args[0] != '{' || !json.Valid(args) {
+			return fmt.Errorf("%w: incomplete tool call", ErrProtocol)
+		}
+		ids[tc.ID] = true
+	}
+	return nil
 }
 
 var errDone = errors.New("sse done")
@@ -468,6 +542,9 @@ func consumeSSE(br *bufio.Reader, fn func(data string) error) error {
 				rest := strings.TrimPrefix(line, "data:")
 				rest = strings.TrimPrefix(rest, " ")
 				data = append(data, rest)
+			case strings.HasPrefix(line, "event:"), strings.HasPrefix(line, "id:"), strings.HasPrefix(line, "retry:"):
+			default:
+				// SSE ignores unknown fields, including names without a colon.
 			}
 		}
 		if err != nil {
@@ -503,7 +580,7 @@ func (c *countReader) Read(p []byte) (int, error) {
 }
 
 func (c *Client) scrub(err error) error {
-	if err == nil || c.APIKey == "" || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, ErrTooBig) || errors.Is(err, ErrBaseURL) {
+	if err == nil || c.APIKey == "" || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, ErrTooBig) || errors.Is(err, ErrBaseURL) || errors.Is(err, ErrProtocol) || errors.Is(err, ErrIncompleteResponse) {
 		return err
 	}
 	msg := err.Error()

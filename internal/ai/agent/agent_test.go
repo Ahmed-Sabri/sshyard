@@ -75,7 +75,7 @@ func TestRefusalIsTheToolResult(t *testing.T) {
 func TestPauseAfter25AndContinue(t *testing.T) {
 	calls := make([]openai.ToolCall, 26)
 	for i := range calls {
-		calls[i] = openai.ToolCall{ID: fmt.Sprintf("c%d", i), Name: "host_info", Arguments: fmt.Sprintf(`{"n":"c%d"}`, i)}
+		calls[i] = openai.ToolCall{ID: fmt.Sprintf("c%d", i), Name: "run_command", Arguments: fmt.Sprintf(`{"command":"c%d"}`, i)}
 	}
 	model := &scriptModel{replies: []openai.Message{
 		{Role: "assistant", ToolCalls: calls},
@@ -342,7 +342,7 @@ func TestToolErrorContinuesTheTurn(t *testing.T) {
 	}
 }
 
-func TestInvalidArgsStillAuthorized(t *testing.T) {
+func TestInvalidArgsNeverAuthorized(t *testing.T) {
 	model := &scriptModel{replies: []openai.Message{
 		{Role: "assistant", ToolCalls: []openai.ToolCall{{ID: "c1", Name: "run_command", Arguments: "not-json"}}},
 		{Role: "assistant", Content: "ok"},
@@ -353,8 +353,11 @@ func TestInvalidArgsStillAuthorized(t *testing.T) {
 	if err := s.Turn(t.Context(), "go", HostMeta{Name: "web"}, "", nil); err != nil {
 		t.Fatal(err)
 	}
-	if gate.actions[0].Command != "" || len(tools.calls) != 1 || !strings.Contains(tools.calls[0], "{}") {
-		t.Fatalf("action %+v calls %v", gate.actions[0], tools.calls)
+	if len(gate.actions) != 0 || len(tools.calls) != 0 {
+		t.Fatalf("actions %+v calls %v", gate.actions, tools.calls)
+	}
+	if !messageHas(model.reqs[1].Messages, "tool", "JSON object") {
+		t.Fatal("missing explicit tool failure")
 	}
 }
 

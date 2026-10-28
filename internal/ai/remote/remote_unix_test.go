@@ -737,3 +737,25 @@ func waitDead(t *testing.T, id int, group bool) {
 	}
 	t.Fatalf("process %d still running", id)
 }
+
+func TestRunWithTimeoutUsesCallLimitAndPreservesTurn(t *testing.T) {
+	r := New(dialBash(t, nil), Options{TurnTimeout: 100 * time.Millisecond})
+	r.BeginTurn()
+	time.Sleep(150 * time.Millisecond)
+	start := time.Now()
+	exit, err := r.RunWithTimeout(t.Context(), "printf must-not-run", "", nil, nil, MaxCommandTimeout)
+	if exit != -1 || !errors.Is(err, context.DeadlineExceeded) || time.Since(start) > time.Second {
+		t.Fatalf("expired turn: exit=%d err=%v", exit, err)
+	}
+	r.BeginTurn()
+	r.mu.Lock()
+	end := r.turnEnd
+	r.mu.Unlock()
+	_, _ = r.RunWithTimeout(t.Context(), "true", "", nil, nil, MaxCommandTimeout)
+	r.mu.Lock()
+	got := r.turnEnd
+	r.mu.Unlock()
+	if !got.Equal(end) {
+		t.Fatal("per-command timeout reset the turn clock")
+	}
+}
