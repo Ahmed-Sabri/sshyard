@@ -1,6 +1,9 @@
 package policy
 
-import "regexp"
+import (
+	"regexp"
+	"strings"
+)
 
 // Redact masks secrets in text that may be written to the audit log or
 // sent to a model. It is a best-effort scan, not a parser.
@@ -13,11 +16,16 @@ import "regexp"
 // user:password in URLs. An attached mysql -p value that is only letters
 // (the shape of a short flag such as -print) is left alone unless the
 // text names mysql or mariadb.
-func Redact(s string) string {
+func Redact(s string) string { return redact(s, false) }
+
+// RedactLines masks the same secrets while preserving line offsets for file slices
+func RedactLines(s string) string { return redact(s, true) }
+
+func redact(s string, keepLines bool) string {
 	if s == "" {
 		return s
 	}
-	s = pemRE.ReplaceAllString(s, "[REDACTED-PRIVATE-KEY]")
+	s = pemRE.ReplaceAllStringFunc(s, func(m string) string { return preserveRedactedLines(m, "[REDACTED-PRIVATE-KEY]", keepLines) })
 	s = urlRE.ReplaceAllString(s, "${1}${2}:[REDACTED]@")
 	s = bearerRE.ReplaceAllString(s, "Bearer [REDACTED]")
 	s = awsRE.ReplaceAllString(s, "[REDACTED-AWS-KEY]")
@@ -30,7 +38,7 @@ func Redact(s string) string {
 		if parts[4][0] == '"' || parts[4][0] == '\'' {
 			value = parts[4][:1] + value + parts[4][:1]
 		}
-		return parts[1] + parts[2] + parts[3] + value
+		return preserveRedactedLines(m, parts[1]+parts[2]+parts[3]+value, keepLines)
 	})
 	s = longFlagRE.ReplaceAllString(s, "${1} [REDACTED]")
 	s = redactMySQLPassword(s)
@@ -78,4 +86,11 @@ func redactMySQLPassword(s string) string {
 		}
 		return lead + flag + "[REDACTED]"
 	})
+}
+
+func preserveRedactedLines(raw, replacement string, keep bool) string {
+	if keep {
+		replacement += strings.Repeat("\n", strings.Count(raw, "\n")-strings.Count(replacement, "\n"))
+	}
+	return replacement
 }

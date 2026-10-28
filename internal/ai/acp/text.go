@@ -69,10 +69,7 @@ func sliceLines(s string, line, limit *int) (string, error) {
 	}
 	end := len(lines)
 	if limit != nil {
-		end = start + *limit
-		if end > len(lines) {
-			end = len(lines)
-		}
+		end = start + min(*limit, len(lines)-start)
 	}
 	return strings.Join(lines[start:end], "\n"), nil
 }

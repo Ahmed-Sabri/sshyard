@@ -71,3 +71,16 @@ func TestRedact(t *testing.T) {
 		}
 	})
 }
+
+func TestRedactLinesPreservesFileOffsets(t *testing.T) {
+	for _, text := range []string{"head\n-----BEGIN PRIVATE KEY-----\nsecret\n-----END PRIVATE KEY-----\nafter", "head\npassword=\"first\nsecond\"\nafter"} {
+		got := RedactLines(text)
+		if strings.Count(got, "\n") != strings.Count(text, "\n") || strings.Contains(got, "secret") || strings.Contains(got, "second") {
+			t.Fatalf("line preserving redaction: %q", got)
+		}
+		source, redacted := strings.Split(text, "\n"), strings.Split(got, "\n")
+		if redacted[len(source)-1] != "after" {
+			t.Fatalf("trailing line moved: %q", got)
+		}
+	}
+}

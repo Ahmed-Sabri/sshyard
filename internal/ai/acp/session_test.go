@@ -463,7 +463,7 @@ func TestTerminalLifecycleKillAndRefusal(t *testing.T) {
 		t.Fatal(err)
 	}
 	d = waitDiag(t, s2, "term-kill exit=")
-	if !strings.Contains(d, "term-kill exit=1") || !strings.Contains(d, "unknown terminal") {
+	if !strings.Contains(d, "term-kill exit=-1") || !strings.Contains(d, "unknown terminal") {
 		t.Fatalf("kill diag %s", d)
 	}
 
@@ -567,7 +567,7 @@ func TestPermissionByKindAndStop(t *testing.T) {
 	}
 	select {
 	case err := <-errc:
-		if err != nil {
+		if !errors.Is(err, context.Canceled) {
 			t.Fatal(err)
 		}
 	case <-time.After(5 * time.Second):
@@ -867,6 +867,11 @@ func TestRequestPermissionSpoofedReadIsLocalAndAsked(t *testing.T) {
 	})}
 	s := mustStart(t, "", Config{Gate: gate})
 	kind := sdk.ToolKindExecute
+	turn, turnErr := s.beginTurn(t.Context())
+	if turnErr != nil {
+		t.Fatal(turnErr)
+	}
+	defer s.finishTurn(turn)
 	resp, err := s.RequestPermission(t.Context(), sdk.RequestPermissionRequest{
 		SessionId: s.sid,
 		Options: []sdk.PermissionOption{
@@ -919,6 +924,11 @@ func (m *appearFile) Write(string, []byte, sftpsvc.Version) (sftpsvc.Version, er
 func TestWriteNewFileRefusesWhenItAppears(t *testing.T) {
 	files := &appearFile{}
 	s := mustStart(t, "", Config{Gate: &fixedGate{run: true}, Files: files})
+	turn, turnErr := s.beginTurn(t.Context())
+	if turnErr != nil {
+		t.Fatal(turnErr)
+	}
+	defer s.finishTurn(turn)
 	_, err := s.WriteTextFile(t.Context(), sdk.WriteTextFileRequest{
 		SessionId: s.sid,
 		Path:      "/home/me/new.txt",
@@ -949,4 +959,17 @@ func (m *memFiles) ReadContext(ctx context.Context, p string, limit int64) ([]by
 func (m *appearFile) ResolvePath(_ context.Context, p string) (string, error) { return p, nil }
 func (m *appearFile) ReadContext(ctx context.Context, p string, limit int64) ([]byte, sftpsvc.Version, error) {
 	return m.Read(p)
+}
+
+func (m *memFiles) WriteContext(ctx context.Context, p string, data []byte, was sftpsvc.Version) (sftpsvc.Version, error) {
+	if err := ctx.Err(); err != nil {
+		return sftpsvc.Version{}, err
+	}
+	return m.Write(p, data, was)
+}
+func (m *appearFile) WriteContext(ctx context.Context, p string, data []byte, was sftpsvc.Version) (sftpsvc.Version, error) {
+	if err := ctx.Err(); err != nil {
+		return sftpsvc.Version{}, err
+	}
+	return m.Write(p, data, was)
 }

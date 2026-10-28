@@ -26,6 +26,7 @@ type termProc struct {
 	done    chan struct{}
 	mu      sync.Mutex
 	exit    *int
+	err     error
 }
 
 func (t *termProc) finished() bool {
@@ -47,6 +48,11 @@ func (t *termProc) exitCode() (int, bool) {
 }
 
 func (s *Session) CreateTerminal(ctx context.Context, p sdk.CreateTerminalRequest) (sdk.CreateTerminalResponse, error) {
+	ctx, release, err := s.callbackContext(ctx, p.SessionId)
+	if err != nil {
+		return sdk.CreateTerminalResponse{}, err
+	}
+	defer release()
 	if err := s.checkSession(p.SessionId); err != nil {
 		return sdk.CreateTerminalResponse{}, err
 	}
@@ -82,7 +88,7 @@ func (s *Session) CreateTerminal(ctx context.Context, p sdk.CreateTerminalReques
 		return sdk.CreateTerminalResponse{}, errExec
 	}
 	s.mu.Lock()
-	if s.closing {
+	if s.closing || s.turn == nil || s.turn.stopped || ctx.Err() != nil {
 		s.mu.Unlock()
 		return sdk.CreateTerminalResponse{}, errSession
 	}
@@ -97,13 +103,14 @@ func (s *Session) CreateTerminal(ctx context.Context, p sdk.CreateTerminalReques
 		return sdk.CreateTerminalResponse{}, errTooMany
 	}
 	id := newTermID()
-	tctx, cancel := context.WithCancel(context.Background())
+	tctx, cancel := context.WithCancel(s.turn.ctx)
 	t := &termProc{
 		id: id, ctx: tctx, cancel: cancel,
 		buf: &tailBuf{limit: limit}, cmd: quoted, dir: dir, env: env,
 		act: act, verdict: v, done: make(chan struct{}),
 	}
 	s.terms[id] = t
+	s.turn.terms = append(s.turn.terms, t)
 	s.wg.Add(1)
 	s.mu.Unlock()
 	go s.runTerm(t)
@@ -121,11 +128,16 @@ func (s *Session) runTerm(t *termProc) {
 	} else {
 		exit, err = s.cfg.Exec.Run(t.ctx, t.cmd, t.dir, t.buf, t.buf)
 	}
-	if err != nil && exit == 0 {
-		exit = 1
+	if err != nil {
+		if t.ctx.Err() != nil {
+			exit = -1
+		} else if exit == 0 {
+			exit = 1
+		}
 	}
 	t.mu.Lock()
 	t.exit = &exit
+	t.err = err
 	t.mu.Unlock()
 	_, _, total := t.buf.snapshot()
 	s.gate.Done(t.act, t.verdict, exit, time.Since(start).Milliseconds(), int64(total))
@@ -140,7 +152,7 @@ func (s *Session) TerminalOutput(ctx context.Context, p sdk.TerminalOutputReques
 		return sdk.TerminalOutputResponse{}, errTerminal
 	}
 	out, truncated, _ := t.buf.snapshot()
-	resp := sdk.TerminalOutputResponse{Output: out, Truncated: truncated}
+	resp := sdk.TerminalOutputResponse{Output: s.outbound(out), Truncated: truncated}
 	if code, ok := t.exitCode(); ok {
 		resp.ExitStatus = &sdk.TerminalExitStatus{ExitCode: &code}
 	}

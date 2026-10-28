@@ -173,8 +173,11 @@ func (a *agent) Prompt(ctx context.Context, params sdk.PromptRequest) (sdk.Promp
 		switch {
 		case b.Text != nil:
 			kinds = append(kinds, "text")
+			fmt.Fprintf(os.Stderr, "prompt-text %q\n", b.Text.Text)
 		case b.Resource != nil:
 			kinds = append(kinds, "resource")
+			encoded, _ := json.Marshal(b.Resource)
+			fmt.Fprintf(os.Stderr, "prompt-resource %s\n", encoded)
 		default:
 			kinds = append(kinds, "other")
 		}
@@ -236,6 +239,14 @@ func (a *agent) step(ctx context.Context, line string) error {
 		return a.doTermRaw(ctx, rest)
 	case "term-store":
 		return a.doTermStore(ctx)
+	case "term-release-running":
+		created, err := a.conn.CreateTerminal(ctx, sdk.CreateTerminalRequest{SessionId: sdk.SessionId(a.sid), Command: "sleep", Args: []string{"30"}})
+		if err != nil {
+			return err
+		}
+		_, err = a.conn.ReleaseTerminal(ctx, sdk.ReleaseTerminalRequest{SessionId: sdk.SessionId(a.sid), TerminalId: created.TerminalId})
+		fmt.Fprintln(os.Stderr, "released-running")
+		return err
 	case "crash":
 		fmt.Fprintln(os.Stderr, "boom")
 		os.Exit(2)
@@ -667,7 +678,10 @@ func (a *agent) doTool(ctx context.Context, rest string) error {
 	})
 }
 
-func (a *agent) Cancel(context.Context, sdk.CancelNotification) error { return nil }
+func (a *agent) Cancel(context.Context, sdk.CancelNotification) error {
+	fmt.Fprintln(os.Stderr, "cancel-notification")
+	return nil
+}
 func (a *agent) Logout(context.Context, sdk.LogoutRequest) (sdk.LogoutResponse, error) {
 	return sdk.LogoutResponse{}, sdk.NewMethodNotFound(sdk.AgentMethodLogout)
 }

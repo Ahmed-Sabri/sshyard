@@ -13,6 +13,11 @@ import (
 )
 
 func (s *Session) ReadTextFile(ctx context.Context, p sdk.ReadTextFileRequest) (sdk.ReadTextFileResponse, error) {
+	ctx, release, err := s.callbackContext(ctx, p.SessionId)
+	if err != nil {
+		return sdk.ReadTextFileResponse{}, err
+	}
+	defer release()
 	if err := s.checkSession(p.SessionId); err != nil {
 		return sdk.ReadTextFileResponse{}, err
 	}
@@ -42,14 +47,18 @@ func (s *Session) ReadTextFile(ctx context.Context, p sdk.ReadTextFileRequest) (
 	}
 	data, _, err := s.readFile(ctx, remote)
 	if err != nil {
-		s.finish(act, v, 1, start, 0)
+		s.finish(act, v, failureExit(err), start, 0)
 		return sdk.ReadTextFileResponse{}, err
 	}
 	if len(data) > readCap {
 		s.finish(act, v, 1, start, len(data))
 		return sdk.ReadTextFileResponse{}, errors.New("file exceeds 10MB")
 	}
-	text, err := sliceLines(string(data), p.Line, p.Limit)
+	output := string(data)
+	if s.cfg.Redact {
+		output = policy.RedactLines(output)
+	}
+	text, err := sliceLines(output, p.Line, p.Limit)
 	if err != nil {
 		s.finish(act, v, 1, start, len(data))
 		return sdk.ReadTextFileResponse{}, err
@@ -59,6 +68,11 @@ func (s *Session) ReadTextFile(ctx context.Context, p sdk.ReadTextFileRequest) (
 }
 
 func (s *Session) WriteTextFile(ctx context.Context, p sdk.WriteTextFileRequest) (sdk.WriteTextFileResponse, error) {
+	ctx, release, err := s.callbackContext(ctx, p.SessionId)
+	if err != nil {
+		return sdk.WriteTextFileResponse{}, err
+	}
+	defer release()
 	if err := s.checkSession(p.SessionId); err != nil {
 		return sdk.WriteTextFileResponse{}, err
 	}
@@ -93,7 +107,7 @@ func (s *Session) WriteTextFile(ctx context.Context, p sdk.WriteTextFileRequest)
 	}
 	readExit := 0
 	if readErr != nil {
-		readExit = 1
+		readExit = failureExit(readErr)
 	}
 	s.finish(readAct, readVerdict, readExit, readStart, len(data))
 	if readErr != nil && !errors.Is(readErr, fs.ErrNotExist) {
@@ -124,12 +138,12 @@ func (s *Session) WriteTextFile(ctx context.Context, p sdk.WriteTextFileRequest)
 			s.finish(act, v, 1, start, 0)
 			return sdk.WriteTextFileResponse{}, errors.New("file appeared since the diff was made")
 		} else if !errors.Is(err, fs.ErrNotExist) {
-			s.finish(act, v, 1, start, 0)
+			s.finish(act, v, failureExit(err), start, 0)
 			return sdk.WriteTextFileResponse{}, err
 		}
 	}
-	if _, err := s.cfg.Files.Write(remote, []byte(p.Content), ver); err != nil {
-		s.finish(act, v, 1, start, 0)
+	if _, err := s.cfg.Files.WriteContext(ctx, remote, []byte(p.Content), ver); err != nil {
+		s.finish(act, v, failureExit(err), start, 0)
 		if errors.Is(err, sftpsvc.ErrChanged) {
 			return sdk.WriteTextFileResponse{}, errors.New("file changed since it was read")
 		}
@@ -140,6 +154,11 @@ func (s *Session) WriteTextFile(ctx context.Context, p sdk.WriteTextFileRequest)
 }
 
 func (s *Session) RequestPermission(ctx context.Context, p sdk.RequestPermissionRequest) (sdk.RequestPermissionResponse, error) {
+	ctx, release, err := s.callbackContext(ctx, p.SessionId)
+	if err != nil {
+		return sdk.RequestPermissionResponse{}, err
+	}
+	defer release()
 	if err := s.checkSession(p.SessionId); err != nil {
 		return sdk.RequestPermissionResponse{}, err
 	}
@@ -208,4 +227,17 @@ func (s *Session) resolveFile(ctx context.Context, p string) (string, error) {
 }
 func (s *Session) readFile(ctx context.Context, p string) ([]byte, sftpsvc.Version, error) {
 	return s.cfg.Files.ReadContext(ctx, p, readCap)
+}
+
+func failureExit(err error) int {
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return -1
+	}
+	return 1
+}
+func (s *Session) outbound(text string) string {
+	if s.cfg.Redact {
+		return policy.Redact(text)
+	}
+	return text
 }

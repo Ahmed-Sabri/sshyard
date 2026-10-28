@@ -11,6 +11,8 @@ import (
 var (
 	// ErrProtocolVersion means the agent did not negotiate protocol version 1.
 	ErrProtocolVersion = errors.New("agent protocol version is not 1")
+	// ErrInterruptedSession requires restarting before another turn: ACP callbacks carry no turn identity.
+	ErrInterruptedSession = errors.New("agent session was interrupted and must be restarted")
 	// ErrUnsupportedAuth means the agent offered no agent-type login.
 	ErrUnsupportedAuth = errors.New("unsupported authentication method")
 
@@ -22,14 +24,14 @@ var (
 )
 
 // Files is the remote file seam. A1's *remote.Files implements it:
-// Read and Write use sftpsvc.Version, and a changed file returns
+// ReadContext and WriteContext use sftpsvc.Version, and a changed file returns
 // sftpsvc.ErrChanged. Nil means the host is not connected yet; the gate
 // still runs, and the call then fails.
 type Files interface {
 	ResolvePath(context.Context, string) (string, error)
 	ReadContext(context.Context, string, int64) ([]byte, sftpsvc.Version, error)
 	Read(path string) ([]byte, sftpsvc.Version, error)
-	Write(path string, data []byte, was sftpsvc.Version) (sftpsvc.Version, error)
+	WriteContext(ctx context.Context, path string, data []byte, was sftpsvc.Version) (sftpsvc.Version, error)
 }
 
 // EnvRunner is an optional extra on policy.Exec. That interface has no

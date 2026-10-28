@@ -23,6 +23,7 @@ type Config struct {
 	Env        map[string]string // the agent's own variables; still filtered
 	BaseEnv    []string          // KEY=VALUE. Nil uses os.Environ.
 	Type       string            // codex, claude, grok, custom
+	Redact     bool              // mask outbound text sent to the external agent
 	Gate       policy.Gate
 	Files      Files
 	Exec       policy.Exec
@@ -66,21 +67,24 @@ type Session struct {
 
 	stderrDone chan struct{}
 
-	mu        sync.Mutex
-	sid       sdk.SessionId
-	methods   []AuthChoice
-	authTried bool
-	pinned    string
-	bounced   bool
-	modelID   string
-	closing   bool
-	perms     []context.CancelFunc
-	terms     map[string]*termProc
+	mu          sync.Mutex
+	sid         sdk.SessionId
+	methods     []AuthChoice
+	authTried   bool
+	pinned      string
+	bounced     bool
+	modelID     string
+	closing     bool
+	turn        *activeTurn
+	interrupted bool
+	perms       []context.CancelFunc
+	terms       map[string]*termProc
 
 	updates   chan sdk.SessionNotification
 	closed    chan struct{}
 	wg        sync.WaitGroup
 	closeOnce sync.Once
+	closeErr  error
 }
 
 // Start launches the agent, initializes protocol version 1, and opens a
@@ -423,33 +427,46 @@ func (s *Session) Prompt(ctx context.Context, text string, resources []Resource)
 	}
 	blocks := make([]sdk.ContentBlock, 0, 1+len(resources))
 	if text != "" {
-		blocks = append(blocks, sdk.TextBlock(text))
+		blocks = append(blocks, sdk.TextBlock(s.outbound(text)))
 	}
 	for _, r := range resources {
 		if r.URI == "" {
 			return "", errInvalid
 		}
 		blocks = append(blocks, sdk.ResourceBlock(sdk.EmbeddedResourceResource{
-			TextResourceContents: &sdk.TextResourceContents{Uri: r.URI, Text: r.Text},
+			TextResourceContents: &sdk.TextResourceContents{Uri: s.outbound(r.URI), Text: s.outbound(r.Text)},
 		}))
 	}
 	if len(blocks) == 0 {
 		return "", errors.New("empty prompt")
 	}
-	done := make(chan struct{})
-	defer close(done)
-	go func() {
-		select {
-		case <-ctx.Done():
-			s.cancelPerms()
-			s.killTerms()
-		case <-done:
-		case <-s.closed:
-		}
-	}()
-	resp, err := s.conn.Prompt(ctx, sdk.PromptRequest{SessionId: sid, Prompt: blocks})
+
+	t, err := s.beginTurn(ctx)
 	if err != nil {
 		return "", err
+	}
+	defer s.finishTurn(t)
+	resp, err := s.conn.Prompt(t.ctx, sdk.PromptRequest{SessionId: sid, Prompt: blocks})
+	// Inspect cancellation after the SDK call instead of racing a done channel.
+	if ctx.Err() != nil || t.ctx.Err() != nil {
+		cancelErr := t.ctx.Err()
+		stopErr := s.stopTurn(t)
+		return "", errors.Join(cancelErr, stopErr)
+	}
+	s.drainTurn(t)
+	s.mu.Lock()
+	interrupted := t.interrupted
+	s.mu.Unlock()
+	if ctx.Err() != nil || interrupted {
+		cancelErr := ctx.Err()
+		if cancelErr == nil {
+			cancelErr = context.Canceled
+		}
+		stopErr := s.stopTurn(t)
+		return "", errors.Join(cancelErr, stopErr)
+	}
+	if err != nil || t.cleanupErr != nil {
+		return "", errors.Join(err, t.cleanupErr)
 	}
 	return string(resp.StopReason), nil
 }
@@ -476,18 +493,13 @@ func (s *Session) SetModel(ctx context.Context, value string) error {
 // Stop cancels the turn, answers every pending permission request with
 // Cancelled, and stops running terminals. The process keeps running.
 func (s *Session) Stop() error {
-	s.cancelPerms()
-	s.killTerms()
 	s.mu.Lock()
-	sid := s.sid
-	conn := s.conn
+	t := s.turn
 	s.mu.Unlock()
-	if sid == "" || conn == nil {
+	if t == nil {
 		return nil
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-	return conn.Cancel(ctx, sdk.CancelNotification{SessionId: sid})
+	return s.stopTurn(t)
 }
 
 // Close cancels the process, closes its stdin, waits, then kills it and
@@ -497,6 +509,7 @@ func (s *Session) Close() error {
 		s.mu.Lock()
 		s.closing = true
 		s.mu.Unlock()
+		s.closeErr = s.Stop()
 		s.cancelPerms()
 		s.killTerms()
 		if s.stdin != nil {
@@ -521,7 +534,7 @@ func (s *Session) Close() error {
 			_ = os.RemoveAll(s.sandbox)
 		}
 	})
-	return nil
+	return s.closeErr
 }
 
 // Sandbox is the empty directory the agent was started in.
