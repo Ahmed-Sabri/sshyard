@@ -2,8 +2,10 @@ package app
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Licoy/sshyard/internal/assets"
 	"github.com/Licoy/sshyard/internal/keychain"
@@ -136,14 +138,12 @@ func TestSnippetUISearchGroupMissingAndLanguages(t *testing.T) {
 	a.snippets.query = ""
 	a.inspector = inspectSnippets
 	tt.Frame()
-	mustClick(t, tt, m.SnippetFilterGroup())
-	tt.Frame()
 	mustClick(t, tt, "Other")
 	tt.Frame()
 	if tt.HasText("alpha") || !tt.HasText("beta") {
 		t.Fatal("group filter", tt.Texts())
 	}
-	a.snippets.group = ""
+	a.snippets.grouped, a.snippets.group = false, ""
 	a.snippets.selected = n.ID
 	if err := a.kc.Delete(keychain.SnippetContent(n.ID)); err != nil {
 		t.Fatal(err)
@@ -284,7 +284,7 @@ func TestSnippetUIFilterFollowsSavedAndDeletedGroup(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.inspector = inspectSnippets
-	a.snippets.group = "old"
+	a.snippets.grouped, a.snippets.group = true, "old"
 	a.openSnippet(m, n, false)
 	tt.Frame()
 	a.snippets.form.meta.Group = "new"
@@ -292,13 +292,13 @@ func TestSnippetUIFilterFollowsSavedAndDeletedGroup(t *testing.T) {
 		t.Fatal("save failed")
 	}
 	tt.Frame()
-	if a.snippets.group != "new" || !tt.HasText("move") {
+	if !a.snippets.grouped || a.snippets.group != "new" || !tt.HasText("move") {
 		t.Fatal("saved entry hidden")
 	}
 	a.snippets.deleteID = n.ID
 	a.confirmSnippetDelete(m)
 	tt.Frame()
-	if a.snippets.group != "" {
+	if a.snippets.grouped || a.snippets.group != "" {
 		t.Fatal("stale group filter")
 	}
 }
@@ -342,5 +342,225 @@ func TestSnippetUIWelcomeActionsStayInsideContent(t *testing.T) {
 			a.form = nil
 		}
 		tt.Frame()
+	}
+}
+
+func TestSnippetUIDefaultGroup(t *testing.T) {
+	a, tt := newTestApp(t)
+	m := locales.In("en")
+	if _, err := a.saveSnippet(assets.Snippet{Name: "named", Group: "Ops"}, "echo named"); err != nil {
+		t.Fatal(err)
+	}
+	mustClick(t, tt, m.Snippets())
+	tt.Frame()
+	mustClick(t, tt, m.SnippetNew())
+	tt.Frame()
+	if a.snippets.form.meta.Group != "" {
+		t.Fatal("new snippet not in the default group")
+	}
+	tt.Type("plain")
+	tt.Frame()
+	// The choice lists the default group and the named ones, besides
+	// the panel's tabs.
+	defaults, ops := countExact(tt, m.SnippetDefaultGroup()), countExact(tt, "Ops")
+	tt.Advance(time.Second)
+	tt.Key(0, ui.KeyTab)
+	tt.Key(0, ui.KeyDown)
+	tt.Frame()
+	if countExact(tt, m.SnippetDefaultGroup()) <= defaults || countExact(tt, "Ops") <= ops {
+		t.Fatal("group options", tt.Texts())
+	}
+	tt.Key(0, ui.KeyEscape)
+	tt.Frame()
+	a.snippets.form.content = "echo plain"
+	if !a.saveSnippetForm(m) {
+		t.Fatal(a.snippets.form.err)
+	}
+	tt.Frame()
+	n, _ := a.store.Snippet(a.snippets.selected)
+	if n.Name != "plain" || n.Group != "" {
+		t.Fatal(n)
+	}
+	mustClick(t, tt, m.SnippetDefaultGroup())
+	tt.Frame()
+	if !a.snippets.grouped || a.snippets.group != "" || !tt.HasText("plain") || tt.HasText("named") {
+		t.Fatal("default group filter", tt.Texts())
+	}
+	// A new entry starts in the group the list shows.
+	a.snippets.grouped, a.snippets.group = true, "Ops"
+	mustClick(t, tt, m.SnippetNew())
+	tt.Frame()
+	if a.snippets.form.meta.Group != "Ops" {
+		t.Fatal("new entry not in the filtered group")
+	}
+	// Searching for the default group's name finds its entries.
+	a.snippets.showing = false
+	tt.Frame()
+	a.snippets.grouped, a.snippets.group = false, ""
+	if !a.snippetMatches(m, n, "") || !a.snippetMatches(locales.In("zh-Hans"), assets.Snippet{Name: "x"}, "") {
+		t.Fatal("blank query")
+	}
+	a.snippets.query = "default"
+	if !a.snippetMatches(m, n, "echo plain") || a.snippetMatches(m, assets.Snippet{Name: "named", Group: "Ops"}, "echo named") {
+		t.Fatal("default group search")
+	}
+}
+
+func TestSnippetUIAddGroupInForm(t *testing.T) {
+	a, tt := newTestApp(t)
+	m := locales.In("en")
+	if _, err := a.saveSnippet(assets.Snippet{Name: "named", Group: "Ops"}, "echo named"); err != nil {
+		t.Fatal(err)
+	}
+	mustClick(t, tt, m.Snippets())
+	tt.Frame()
+	mustClick(t, tt, m.SnippetNew())
+	tt.Frame()
+	tt.Type("deploy")
+	tt.Frame()
+	mustClick(t, tt, m.NewGroup())
+	tt.Frame()
+	if !a.snippets.form.adding || !tt.HasText(m.SnippetGroupName()) {
+		t.Fatal("new group field missing", tt.Texts())
+	}
+	// The name field's focus hold yields to the new field.
+	if !tt.Focused(m.SnippetGroupName()) {
+		t.Fatal("new group field not focused")
+	}
+	tt.Type("Release")
+	tt.Frame()
+	mustClick(t, tt, m.SnippetAddGroup())
+	tt.Frame()
+	f := a.snippets.form
+	if f.adding || f.meta.Group != "Release" || f.err != "" {
+		t.Fatal("group not chosen", f.meta.Group, f.err)
+	}
+	// Enter adds the group as the button does.
+	mustClick(t, tt, m.NewGroup())
+	tt.Frame()
+	tt.Type("Hotfix")
+	tt.Key(0, ui.KeyEnter)
+	tt.Frame()
+	if f.adding || f.meta.Group != "Hotfix" || !a.snippets.showing {
+		t.Fatal("enter new group", f.adding, f.meta.Group, a.snippets.showing)
+	}
+	mustClick(t, tt, m.NewGroup())
+	tt.Frame()
+	tt.Type("Release")
+	mustClick(t, tt, m.SnippetAddGroup())
+	tt.Frame()
+	f.content = "echo deploy"
+	if !a.saveSnippetForm(m) {
+		t.Fatal(f.err)
+	}
+	tt.Frame()
+	n, _ := a.store.Snippet(a.snippets.selected)
+	if n.Name != "deploy" || n.Group != "Release" {
+		t.Fatal(n)
+	}
+	if got := a.snippetGroups(); !slices.Equal(got, []string{"Ops", "Release"}) {
+		t.Fatal(got)
+	}
+
+	// Names are checked and matched by the handler, the input owning its text.
+	a.openSnippet(m, n, false)
+	tt.Frame()
+	f = a.snippets.form
+	for _, c := range []struct{ in, want, err string }{
+		{"  ", "Release", m.RequiredField(m.FieldGroup())},
+		{strings.Repeat("g", 81), "Release", m.SnippetTooLong(m.FieldGroup())},
+		{" ops ", "Ops", ""},
+		{"DEFAULT", "", ""},
+		{"默认", "", ""},
+		{"New", "New", ""},
+	} {
+		f.meta.Group = "Release"
+		f.adding, f.newGroup = true, c.in
+		ok := a.addSnippetGroup(m, f)
+		if ok != (c.err == "") || f.meta.Group != c.want || f.err != c.err || f.adding != !ok {
+			t.Fatalf("%q: ok=%v group=%q err=%q adding=%v", c.in, ok, f.meta.Group, f.err, f.adding)
+		}
+	}
+	// Cancel leaves the choice as it was.
+	f.adding, f.newGroup, f.err = true, "", ""
+	tt.Frame()
+	mustClick(t, tt, m.SnippetCancelGroup())
+	tt.Frame()
+	if f.adding || f.meta.Group != "New" || !a.snippets.showing {
+		t.Fatal("cancel new group", f.adding, f.meta.Group, a.snippets.showing)
+	}
+}
+
+func TestSnippetUIIntroAndLayout(t *testing.T) {
+	a, tt := newTestApp(t)
+	m := locales.In("en")
+	a.inspector = inspectSnippets
+	tt.Frame()
+	// With no entries, the intro offers to make one, and no search or tabs.
+	if !tt.HasText(m.SnippetEmptyTitle()) || !tt.HasText(m.SnippetEmptyHint()) || tt.HasText(m.SnippetSearch()) || tt.HasText(m.SnippetAll()) {
+		t.Fatal("intro", tt.Texts())
+	}
+	if countExact(tt, m.SnippetNew()) < 3 { // the header's button, its tooltip, the intro's pill
+		t.Fatal("intro action missing", tt.Texts())
+	}
+	a.snippets.form, a.snippets.showing = nil, false
+
+	// Only default entries: neither tabs nor sections.
+	if _, err := a.saveSnippet(assets.Snippet{Name: "plain"}, "echo plain"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if tt.HasText(m.SnippetEmptyTitle()) || !tt.HasText(m.SnippetSearch()) || tt.HasText(m.SnippetAll()) || tt.HasText(m.SnippetDefaultGroup()) {
+		t.Fatal("default only", tt.Texts())
+	}
+
+	// Named groups bring tabs with counts, and sections while all show.
+	for _, n := range []assets.Snippet{{Name: "restart", Group: "Ops"}, {Name: "logs", Group: "Ops"}} {
+		if _, err := a.saveSnippet(n, "echo "+n.Name); err != nil {
+			t.Fatal(err)
+		}
+	}
+	tt.Frame()
+	for _, s := range []string{m.SnippetAll(), "3", "2", "1"} {
+		if !tt.HasText(s) {
+			t.Fatalf("tabs lack %q: %v", s, tt.Texts())
+		}
+	}
+	// A tab (its label and text) and a section each, for both groups.
+	if countExact(tt, "Ops") != 3 || countExact(tt, m.SnippetDefaultGroup()) != 3 {
+		t.Fatal("sections", tt.Texts())
+	}
+	mustClick(t, tt, "Ops")
+	tt.Frame()
+	if !a.snippets.grouped || a.snippets.group != "Ops" || tt.HasText("plain") || !tt.HasText("restart") || countExact(tt, "Ops") != 2 {
+		t.Fatal("tab filter", tt.Texts())
+	}
+	mustClick(t, tt, m.SnippetAll())
+	tt.Frame()
+	if a.snippets.grouped || !tt.HasText("plain") {
+		t.Fatal("all tab", tt.Texts())
+	}
+
+	// The search narrows the counts; its button clears it.
+	a.inspector = ""
+	tt.Frame()
+	a.snippets.query = "restart"
+	a.inspector = inspectSnippets
+	tt.Frame()
+	if tt.HasText("plain") || tt.HasText("logs") || !tt.HasText("restart") {
+		t.Fatal("search", tt.Texts())
+	}
+	mustClick(t, tt, m.ClearSearch())
+	tt.Frame()
+	if a.snippets.query != "" || !tt.HasText("plain") {
+		t.Fatal("clear search", a.snippets.query)
+	}
+	a.snippets.query = "nothing-matches"
+	a.inspector = ""
+	tt.Frame()
+	a.inspector = inspectSnippets
+	tt.Frame()
+	if !tt.HasText(m.SnippetEmpty()) {
+		t.Fatal("no match note", tt.Texts())
 	}
 }

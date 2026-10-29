@@ -2,8 +2,11 @@ package app
 
 import (
 	"errors"
+	"slices"
+	"strings"
 
 	"github.com/Licoy/sshyard/internal/assets"
+	"github.com/Licoy/sshyard/internal/icons"
 	"github.com/Licoy/sshyard/internal/keychain"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/locales"
@@ -13,6 +16,9 @@ import (
 type snippetForm struct {
 	meta         assets.Snippet
 	content, err string
+	// adding shows the field naming a new group in place of the choice.
+	adding   bool
+	newGroup string
 }
 
 func (a *App) openSnippet(m locales.Messages, n assets.Snippet, duplicate bool) {
@@ -42,7 +48,7 @@ func (a *App) saveSnippetForm(m locales.Messages) bool {
 		f.err = m.SnippetSaveFailed(snippetErrorText(m, err))
 		return false
 	}
-	if a.snippets.group != "" {
+	if a.snippets.grouped {
 		a.snippets.group = n.Group
 	}
 	a.snippets.selected = n.ID
@@ -59,7 +65,7 @@ func (a *App) confirmSnippetDelete(m locales.Messages) {
 	if a.snippets.selected == a.snippets.deleteID {
 		a.snippets.selected = ""
 	}
-	if a.snippets.group != "" {
+	if a.snippets.grouped && a.snippets.group != "" {
 		found := false
 		for _, g := range a.snippetGroups() {
 			if g == a.snippets.group {
@@ -67,11 +73,65 @@ func (a *App) confirmSnippetDelete(m locales.Messages) {
 			}
 		}
 		if !found {
-			a.snippets.group = ""
+			a.snippets.grouped, a.snippets.group = false, ""
 		}
 	}
 	a.snippets.err = ""
 }
+
+// snippetGroupField chooses the group, the default one for a new entry, or
+// names a new group in place.
+func (a *App) snippetGroupField(c *ui.Context, m locales.Messages, f *snippetForm) {
+	ui.Row(c).FillWidth().Gap(theme.Space(2)).AlignItems(ui.Center).Children(func() {
+		if f.adding {
+			in := ui.TextInput(c.Key("snippet:newGroup"), &f.newGroup).Placeholder(m.SnippetGroupName()).Label(m.SnippetGroupName()).AutoFocus().Grow(1).Shrink(1)
+			add := (IconButton{Icon: icons.Check, Label: m.SnippetAddGroup()}).Clicked(c, "snippet:group:add")
+			if in.Submitted() || add {
+				a.addSnippetGroup(m, f)
+			}
+			if (IconButton{Icon: icons.Close, Label: m.SnippetCancelGroup()}).Clicked(c, "snippet:group:cancel") {
+				f.adding, f.newGroup, f.err = false, "", ""
+			}
+			return
+		}
+		g := snippetGroupTitle(m, f.meta.Group)
+		options := []string{m.SnippetDefaultGroup()}
+		for _, name := range append(a.snippetGroups(), f.meta.Group) {
+			if name != "" && !slices.Contains(options, name) {
+				options = append(options, name)
+			}
+		}
+		if ui.Combobox(c.Key("snippet:group"), &g, options).Label(m.FieldGroup()).Grow(1).Shrink(1).Changed() {
+			f.meta.Group = snippetGroupName(g)
+		}
+		if (IconButton{Icon: icons.NewFolder, Label: m.NewGroup()}).Clicked(c, "snippet:group:new") {
+			f.adding, f.newGroup = true, ""
+		}
+	})
+}
+
+// addSnippetGroup chooses the group named in the form, an existing one when
+// the name differs only in case. The group exists once an entry is saved in it.
+func (a *App) addSnippetGroup(m locales.Messages, f *snippetForm) bool {
+	g := snippetGroupName(f.newGroup)
+	if strings.TrimSpace(f.newGroup) == "" {
+		f.err = m.RequiredField(m.FieldGroup())
+		return false
+	}
+	if err := assets.ValidateSnippetGroup(g); err != nil {
+		f.err = snippetErrorText(m, err)
+		return false
+	}
+	for _, name := range a.snippetGroups() {
+		if strings.EqualFold(name, g) {
+			g = name
+		}
+	}
+	f.meta.Group = g
+	f.adding, f.newGroup, f.err = false, "", ""
+	return true
+}
+
 func (a *App) snippetSheets(c *ui.Context, m locales.Messages) {
 	if f := a.snippets.form; f != nil {
 		tok := currentTokens(c)
@@ -85,10 +145,12 @@ func (a *App) snippetSheets(c *ui.Context, m locales.Messages) {
 				ui.Form(c, func() {
 					ui.Field(c, m.FieldName(), func() {
 						in := ui.TextInput(c.Key("snippet:name"), &f.meta.Name).Label(m.FieldName()).AutoFocus()
-						a.snippets.hold.apply(c, f, in)
+						if !f.adding {
+							a.snippets.hold.apply(c, f, in)
+						}
 					})
 					ui.Field(c, m.FieldGroup(), func() {
-						ui.Combobox(c.Key("snippet:group"), &f.meta.Group, a.snippetGroups()).Label(m.FieldGroup()).FillWidth()
+						a.snippetGroupField(c, m, f)
 					})
 					ui.Field(c, m.SnippetContent(), func() {
 						ui.TextArea(c.Key("snippet:content"), &f.content).Label(m.SnippetContent()).Font(a.termFamily()).FillWidth().Height(theme.Space(40))

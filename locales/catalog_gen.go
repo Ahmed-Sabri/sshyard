@@ -9590,14 +9590,74 @@ func (msgs Messages) SnippetSearch() string {
 	return Catalog.Format(msgs.locale, "snippetSearch", nil)
 }
 
-// SnippetAllGroups says "All groups"
+// SnippetDefaultGroup says "Default"
 // in the language the app shows.
-func SnippetAllGroups() string { return In(i18n.Locale()).SnippetAllGroups() }
+func SnippetDefaultGroup() string { return In(i18n.Locale()).SnippetDefaultGroup() }
 
-// SnippetAllGroups says "All groups"
+// SnippetDefaultGroup says "Default"
 // in the language of msgs.
-func (msgs Messages) SnippetAllGroups() string {
-	return Catalog.Format(msgs.locale, "snippetAllGroups", nil)
+func (msgs Messages) SnippetDefaultGroup() string {
+	return Catalog.Format(msgs.locale, "snippetDefaultGroup", nil)
+}
+
+// SnippetGroupName says "New group name"
+// in the language the app shows.
+func SnippetGroupName() string { return In(i18n.Locale()).SnippetGroupName() }
+
+// SnippetGroupName says "New group name"
+// in the language of msgs.
+func (msgs Messages) SnippetGroupName() string {
+	return Catalog.Format(msgs.locale, "snippetGroupName", nil)
+}
+
+// SnippetAddGroup says "Add group"
+// in the language the app shows.
+func SnippetAddGroup() string { return In(i18n.Locale()).SnippetAddGroup() }
+
+// SnippetAddGroup says "Add group"
+// in the language of msgs.
+func (msgs Messages) SnippetAddGroup() string {
+	return Catalog.Format(msgs.locale, "snippetAddGroup", nil)
+}
+
+// SnippetCancelGroup says "Cancel new group"
+// in the language the app shows.
+func SnippetCancelGroup() string { return In(i18n.Locale()).SnippetCancelGroup() }
+
+// SnippetCancelGroup says "Cancel new group"
+// in the language of msgs.
+func (msgs Messages) SnippetCancelGroup() string {
+	return Catalog.Format(msgs.locale, "snippetCancelGroup", nil)
+}
+
+// SnippetAll says "All"
+// in the language the app shows.
+func SnippetAll() string { return In(i18n.Locale()).SnippetAll() }
+
+// SnippetAll says "All"
+// in the language of msgs.
+func (msgs Messages) SnippetAll() string {
+	return Catalog.Format(msgs.locale, "snippetAll", nil)
+}
+
+// SnippetEmptyTitle says "No snippets yet"
+// in the language the app shows.
+func SnippetEmptyTitle() string { return In(i18n.Locale()).SnippetEmptyTitle() }
+
+// SnippetEmptyTitle says "No snippets yet"
+// in the language of msgs.
+func (msgs Messages) SnippetEmptyTitle() string {
+	return Catalog.Format(msgs.locale, "snippetEmptyTitle", nil)
+}
+
+// SnippetEmptyHint says "Save commands you use often, then insert or send them to the focused terminal in one click."
+// in the language the app shows.
+func SnippetEmptyHint() string { return In(i18n.Locale()).SnippetEmptyHint() }
+
+// SnippetEmptyHint says "Save commands you use often, then insert or send them to the focused terminal in one click."
+// in the language of msgs.
+func (msgs Messages) SnippetEmptyHint() string {
+	return Catalog.Format(msgs.locale, "snippetEmptyHint", nil)
 }
 
 // SnippetFilterGroup says "Filter snippets by group"

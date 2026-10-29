@@ -26,16 +26,21 @@ func (s Snippet) Validate() error {
 	if s.Name == "" {
 		return &FieldError{"snippetName", "required"}
 	}
-	for _, f := range []struct{ name, value string }{{"snippetName", s.Name}, {"snippetGroup", s.Group}} {
-		if !utf8.ValidString(f.value) {
-			return &FieldError{f.name, "invalid"}
-		}
-		if utf8.RuneCountInString(f.value) > 80 {
-			return &FieldError{f.name, "tooLong"}
-		}
-		if strings.ContainsFunc(f.value, unicode.IsControl) {
-			return &FieldError{f.name, "invalid"}
-		}
+	if err := checkSnippetText("snippetName", s.Name); err != nil {
+		return err
+	}
+	return ValidateSnippetGroup(s.Group)
+}
+
+// ValidateSnippetGroup checks a trimmed group name; "" is the default group.
+func ValidateSnippetGroup(group string) error { return checkSnippetText("snippetGroup", group) }
+
+func checkSnippetText(field, value string) error {
+	if !utf8.ValidString(value) || strings.ContainsFunc(value, unicode.IsControl) {
+		return &FieldError{field, "invalid"}
+	}
+	if utf8.RuneCountInString(value) > 80 {
+		return &FieldError{field, "tooLong"}
 	}
 	return nil
 }

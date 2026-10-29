@@ -15,10 +15,22 @@ import (
 
 type snippetState struct {
 	query, group, selected, err string
-	form                        *snippetForm
-	showing, deleting           bool
-	deleteID                    string
-	hold                        focusHold
+	// grouped filters the list by group, "" being the default group.
+	grouped           bool
+	form              *snippetForm
+	showing, deleting bool
+	deleteID          string
+	hold              focusHold
+}
+
+// snippetWidth is the snippets panel's width, room for a command line.
+const snippetWidth = 360
+
+// snippetHit is an entry the search matches, with its body as read.
+type snippetHit struct {
+	n    assets.Snippet
+	body string
+	err  error
 }
 
 func (a *App) snippetTarget() *conn {
@@ -29,114 +41,303 @@ func (a *App) snippetTarget() *conn {
 	return cn
 }
 
+// snippetsPanel is the snippets panel: the search and the groups over the
+// list, in sections by group, and at the foot the terminal they go to.
 func (a *App) snippetsPanel(c *ui.Context, m locales.Messages, tok theme.Tokens) {
-	ui.Column(c.Key("snippets")).Width(360).Shrink(0).FillHeight().Background(a.contentFill(tok.Canvas, canvasAlpha)).Children(func() {
-		ui.Row(c).Height(theme.Space(10)).Shrink(0).Padding(0, theme.Space(2), 0, theme.Space(4)).Gap(theme.Space(2)).AlignItems(ui.Center).Children(func() {
-			ui.Text(c, m.Snippets()).FontSize(theme.Body).FontWeight(600).Grow(1).Shrink(1).SingleLine()
+	all := a.store.Snippets()
+	ui.Column(c.Key("snippets")).Width(snippetWidth).Shrink(0).FillHeight().Background(a.contentFill(tok.Canvas, canvasAlpha)).Children(func() {
+		ui.Row(c).Height(toolbarHeight).Shrink(0).Padding(0, theme.Space(2), 0, theme.Space(4)).Gap(theme.Space(2)).AlignItems(ui.Center).Children(func() {
+			ui.Text(c, m.Snippets()).FontSize(theme.Body).FontWeight(600).Shrink(1).SingleLine()
+			if len(all) > 0 {
+				ui.Text(c, strconv.Itoa(len(all))).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine()
+			}
+			ui.Spacer(c)
 			if (IconButton{Icon: icons.Add, Label: m.SnippetNew(), Size: Small}).Clicked(c, "snippet:new") {
-				a.openSnippet(m, assets.Snippet{}, false)
+				a.openSnippet(m, assets.Snippet{Group: a.snippets.group}, false)
 			}
 			if (IconButton{Icon: icons.Close, Label: m.ClosePanel(), Size: Small}).Clicked(c, "snippet:close") {
 				a.inspector = ""
 			}
 		})
-		ui.Column(c).FillWidth().Shrink(0).Padding(0, theme.Space(3), theme.Space(2), theme.Space(3)).Gap(theme.Space(2)).Children(func() {
-			target := m.SnippetNoTarget()
-			if cn := a.snippetTarget(); cn != nil {
-				target = m.SnippetTarget(a.pv(cn.host.Label()), strconv.Itoa(cn.termNo))
-			}
-			panelNote(c, tok, target)
-			ui.TextInput(c.Key("snippet:search"), &a.snippets.query).Placeholder(m.SnippetSearch()).Label(m.SnippetSearch()).FillWidth()
-			a.menuChip(c, "snippet:groups", chip{Icon: icons.Folder, Label: a.snippetGroupLabel(m), Tip: m.SnippetFilterGroup()}, func() []menuEntry { return a.snippetGroupMenu(m) })
-			if a.snippets.err != "" {
-				ui.Text(c, a.snippets.err).FontSize(theme.Footnote).TextColor(tok.Danger)
-			}
-		})
-		ui.Scroll(c.Key("snippet:list")).Grow(1).Shrink(1).MinHeight(0).FillWidth().Children(func() {
-			ui.Column(c).FillWidth().Padding(0, theme.Space(3)).Gap(theme.Space(1)).Children(func() {
-				count := 0
-				for _, n := range a.store.Snippets() {
-					body, err := a.snippetContent(n.ID)
-					if !a.snippetMatches(n, body) {
-						continue
-					}
-					count++
-					a.snippetRow(c, m, tok, n, body, err)
-				}
-				if count == 0 {
-					panelNote(c, tok, m.SnippetEmpty())
-				}
-			})
-		})
-		a.snippetPreview(c, m, tok)
+		if len(all) == 0 {
+			a.snippetIntro(c, m, tok)
+		} else {
+			a.snippetList(c, m, tok, all)
+		}
+		a.snippetFoot(c, m, tok)
 	})
 }
 
-func (a *App) snippetGroupLabel(m locales.Messages) string {
-	if a.snippets.group == "" {
-		return m.SnippetAllGroups()
-	}
-	return a.snippets.group
+// snippetIntro takes the place of the list while there are no entries.
+func (a *App) snippetIntro(c *ui.Context, m locales.Messages, tok theme.Tokens) {
+	ui.Column(c.Key("snippet:intro")).Grow(1).FillWidth().Padding(theme.Space(8)).Gap(theme.Space(3)).AlignItems(ui.Center).Justify(ui.Center).Children(func() {
+		softTile(c, icons.API, tok.Accent, 44)
+		ui.Column(c).FillWidth().Gap(theme.Space(1)).AlignItems(ui.Center).Children(func() {
+			ui.Text(c, m.SnippetEmptyTitle()).FontSize(theme.Title3).FontWeight(600).TextAlign(ui.Center)
+			ui.Text(c, m.SnippetEmptyHint()).FontSize(theme.Footnote).TextColor(tok.TextMuted).TextAlign(ui.Center)
+		})
+		if pill(c, m.SnippetNew(), true, false, false) {
+			a.openSnippet(m, assets.Snippet{}, false)
+		}
+	})
 }
-func (a *App) snippetGroupMenu(m locales.Messages) []menuEntry {
-	out := []menuEntry{{Label: m.SnippetAllGroups(), Checked: a.snippets.group == "", Do: func() { a.snippets.group = "" }}}
-	for _, g := range a.snippetGroups() {
-		out = append(out, menuEntry{Label: g, Checked: a.snippets.group == g, Do: func() { a.snippets.group = g }})
+
+// snippetList is the search, the groups' tabs and the entries matching.
+func (a *App) snippetList(c *ui.Context, m locales.Messages, tok theme.Tokens, all []assets.Snippet) {
+	var hits []snippetHit
+	counts := map[string]int{}
+	for _, n := range all {
+		body, err := a.snippetContent(n.ID)
+		if a.snippetMatches(m, n, body) {
+			hits = append(hits, snippetHit{n, body, err})
+			counts[n.Group]++
+		}
 	}
-	return out
+	groups := a.snippetGroups()
+	ui.Column(c).FillWidth().Shrink(0).Padding(0, theme.Space(3), theme.Space(2), theme.Space(3)).Gap(theme.Space(2)).Children(func() {
+		a.snippetSearch(c, m, tok)
+		if a.snippets.err != "" {
+			ui.Row(c.Key("snippet:err")).FillWidth().Padding(theme.Space(2), theme.Space(2.5)).Gap(theme.Space(2)).Radius(theme.RadiusControl).
+				Background(tok.Danger.Alpha(0.12)).Border(1, tok.Danger.Alpha(0.3)).Children(func() {
+				ui.Icon(c, icons.Warning.SVG).Size(14, 14).Shrink(0).TextColor(tok.Danger)
+				ui.Text(c, a.snippets.err).FontSize(theme.Footnote).Grow(1).Shrink(1)
+			})
+		}
+	})
+	if len(groups) > 0 || a.snippets.grouped {
+		ui.ScrollHorizontal(c.Key("snippet:groups")).FillWidth().Shrink(0).Role(ui.RoleTabList).Label(m.SnippetFilterGroup()).Children(func() {
+			ui.Row(c).Gap(theme.Space(1.5)).Padding(0, theme.Space(3), theme.Space(2), theme.Space(3)).Children(func() {
+				a.snippetTab(c, tok, "all", m.SnippetAll(), len(hits), !a.snippets.grouped, func() { a.snippets.grouped, a.snippets.group = false, "" })
+				for _, g := range append([]string{""}, groups...) {
+					a.snippetTab(c, tok, "g:"+g, snippetGroupTitle(m, g), counts[g], a.snippets.grouped && a.snippets.group == g, func() { a.snippets.grouped, a.snippets.group = true, g })
+				}
+			})
+		})
+	}
+	ui.Box(c).Height(1).Shrink(0).FillWidth().Background(tok.Line)
+	ui.Scroll(c.Key("snippet:list")).Grow(1).Shrink(1).MinHeight(0).FillWidth().Children(func() {
+		ui.Column(c).FillWidth().Padding(theme.Space(2)).Gap(theme.Space(0.5)).Children(func() {
+			// In sections by group while all of them show, and there are any.
+			sections := !a.snippets.grouped && len(groups) > 0
+			shown, last := 0, "\x00"
+			for _, h := range hits {
+				if a.snippets.grouped && h.n.Group != a.snippets.group {
+					continue
+				}
+				if sections && h.n.Group != last {
+					last = h.n.Group
+					a.snippetSection(c, m, tok, last, counts[last], shown == 0)
+				}
+				shown++
+				a.snippetRow(c, m, tok, h.n, h.body, h.err)
+			}
+			if shown == 0 {
+				ui.Column(c).FillWidth().Padding(theme.Space(8), theme.Space(4)).AlignItems(ui.Center).Children(func() {
+					panelNote(c, tok, m.SnippetEmpty())
+				})
+			}
+		})
+	})
 }
+
+// snippetSearch is the search field, as the hosts' one: a magnifier, the
+// text and, while it holds any, an IconButton clearing it, as Escape does.
+func (a *App) snippetSearch(c *ui.Context, m locales.Messages, tok theme.Tokens) {
+	ui.Row(c.Key("snippet:search")).FillWidth().Height(30).Padding(0, theme.Space(1), 0, theme.Space(2.5)).Gap(theme.Space(1.5)).AlignItems(ui.Center).
+		Radius(theme.RadiusControl).Background(tok.Fill).Children(func() {
+		ui.Icon(c, icons.Search.SVG).Size(14, 14).Shrink(0).TextColor(tok.TextMuted)
+		in := ui.TextInputBase(c.Key("q"), &a.snippets.query).Placeholder(m.SnippetSearch()).Label(m.SnippetSearch()).Grow(1).Shrink(1).MinWidth(40)
+		if a.snippets.query != "" {
+			if (IconButton{Icon: icons.ClearText, Label: m.ClearSearch(), Size: Small}).Clicked(c, "clear") || in.Shortcut(0, ui.KeyEscape) {
+				a.snippets.query = ""
+				in.Focus()
+			}
+		} else {
+			// as high as with the button, so that the field keeps its size
+			ui.Box(c).Size(24, 24).Shrink(0)
+		}
+	})
+}
+
+// snippetTab is a capsule choosing a group, or all of them, with how many
+// of its entries match the search.
+func (a *App) snippetTab(c *ui.Context, tok theme.Tokens, key, label string, count int, on bool, choose func()) {
+	b := ui.ButtonBase(c.Key("snippet:tab:"+key)).Label(label).Role(ui.RoleTab).Selected(on).Padding(theme.Space(1), theme.Space(2.5)).
+		Gap(theme.Space(1.5)).Radius(theme.Capsule).AlignItems(ui.Center).Shrink(0).Cursor(ui.CursorPointer)
+	fg, muted := tok.Text, tok.TextMuted
+	switch {
+	case on:
+		b.Background(tok.Accent.Alpha(accentWash(tok)))
+		fg, muted = tok.Accent, tok.Accent.Alpha(0.75)
+	case b.Pressed():
+		b.Background(tok.Press)
+	case b.Hovered():
+		b.Background(tok.Hover)
+	default:
+		b.Background(tok.Fill)
+	}
+	b.Children(func() {
+		ui.Text(c, label).FontSize(theme.Footnote).FontWeight(500).TextColor(fg).SingleLine().MaxWidth(chipLabelWidth)
+		ui.Text(c, strconv.Itoa(count)).FontSize(theme.Caption).TextColor(muted).SingleLine()
+	})
+	if b.Clicked() {
+		choose()
+	}
+}
+
+// accentWash is how much accent fills what is chosen, more in the dark.
+func accentWash(tok theme.Tokens) float32 {
+	if tok.Dark {
+		return 0.22
+	}
+	return 0.12
+}
+
+// snippetSection heads the entries of a group in the list.
+func (a *App) snippetSection(c *ui.Context, m locales.Messages, tok theme.Tokens, g string, count int, first bool) {
+	top := theme.Space(3)
+	if first {
+		top = theme.Space(1)
+	}
+	ui.Row(c.Key("snippet:sec:"+g)).FillWidth().Padding(top, theme.Space(2), theme.Space(1), theme.Space(2)).Gap(theme.Space(1.5)).AlignItems(ui.Center).Children(func() {
+		dot(c, snippetTint(tok, g))
+		ui.Text(c, snippetGroupTitle(m, g)).FontSize(theme.Caption).FontWeight(600).TextColor(tok.TextMuted).Shrink(1).SingleLine()
+		ui.Text(c, strconv.Itoa(count)).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine()
+	})
+}
+
+// snippetTint is a group's identity tint, the accent for the default one.
+func snippetTint(tok theme.Tokens, g string) ui.Color {
+	if g == "" {
+		return tok.Accent
+	}
+	return tok.Tint(g)
+}
+
+// snippetFoot is the panel's foot: the terminal the entries go to, if any.
+func (a *App) snippetFoot(c *ui.Context, m locales.Messages, tok theme.Tokens) {
+	ui.Box(c).Height(1).Shrink(0).FillWidth().Background(tok.Line)
+	ui.Row(c.Key("snippet:foot")).Height(statusBarHeight).Shrink(0).Padding(0, theme.Space(4)).Gap(theme.Space(2)).AlignItems(ui.Center).Children(func() {
+		col, text := tok.TextMuted, m.SnippetNoTarget()
+		if cn := a.snippetTarget(); cn != nil {
+			col, text = tok.Success, m.SnippetTarget(a.pv(cn.host.Label()), strconv.Itoa(cn.termNo))
+		}
+		dot(c, col)
+		ui.Text(c, text).FontSize(theme.Caption).TextColor(tok.TextMuted).Shrink(1).SingleLine()
+	})
+}
+
+// snippetGroups returns the named groups in use; the default group, stored
+// as "", always exists and is not among them.
 func (a *App) snippetGroups() []string {
 	out := []string{}
 	seen := map[string]bool{}
 	for _, n := range a.store.Snippets() {
-		if n.Group != "" && !seen[n.Group] {
+		if n.Group != "" && !seen[n.Group] && snippetGroupName(n.Group) != "" {
 			out = append(out, n.Group)
 			seen[n.Group] = true
 		}
 	}
 	return out
 }
-func (a *App) snippetMatches(n assets.Snippet, body string) bool {
-	if a.snippets.group != "" && n.Group != a.snippets.group {
-		return false
+
+// snippetGroupTitle names a group, "" being the default group.
+func snippetGroupTitle(m locales.Messages, g string) string {
+	if g == "" {
+		return m.SnippetDefaultGroup()
 	}
-	return strings.Contains(strings.ToLower(n.Name+"\n"+n.Group+"\n"+body), strings.ToLower(strings.TrimSpace(a.snippets.query)))
+	return g
 }
-func (a *App) snippetRow(c *ui.Context, m locales.Messages, tok theme.Tokens, n assets.Snippet, body string, err error) {
-	ui.Row(c.Key("snippet:row:" + n.ID)).FillWidth().Gap(theme.Space(1)).AlignItems(ui.Center).Children(func() {
-		row := ui.ButtonBase(c.Key("snippet:select:" + n.ID)).Grow(1).Shrink(1).MinWidth(0).Padding(theme.Space(2)).Radius(theme.RadiusSmall).Label(m.SnippetPreview(n.Name))
-		if a.snippets.selected == n.ID {
-			row.Background(tok.Accent.Alpha(.12))
+
+// snippetGroupName maps the default group's name, in any language, to the
+// stored "", so that the choice survives a change of language.
+func snippetGroupName(g string) string {
+	g = strings.TrimSpace(g)
+	for _, l := range []string{"en", "zh-Hans"} {
+		if strings.EqualFold(g, locales.In(l).SnippetDefaultGroup()) {
+			return ""
 		}
-		row.Children(func() {
-			ui.Column(c).FillWidth().Gap(theme.Space(1)).Children(func() {
-				ui.Text(c, n.Name).FontSize(theme.Body).FontWeight(600).SingleLine()
-				preview := strings.SplitN(body, "\n", 2)[0]
-				if err != nil {
-					preview = snippetErrorText(m, err)
-				}
-				ui.Text(c, preview).Font(a.termFamily()).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine()
-				mode := m.SnippetInsert()
-				if n.SendEnter {
-					mode = m.SnippetSendEnter()
-				}
-				ui.Text(c, mode).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine()
+	}
+	return g
+}
+
+// snippetMatches reports whether the search matches an entry, by name,
+// group or body; the group chosen filters apart.
+func (a *App) snippetMatches(m locales.Messages, n assets.Snippet, body string) bool {
+	return strings.Contains(strings.ToLower(n.Name+"\n"+snippetGroupTitle(m, n.Group)+"\n"+body), strings.ToLower(strings.TrimSpace(a.snippets.query)))
+}
+
+// snippetRow is an entry: its tile, name and first line, with its action
+// and menu. Chosen, it opens on the whole body, its group and its mode;
+// only its action sends it, never a click on the row.
+func (a *App) snippetRow(c *ui.Context, m locales.Messages, tok theme.Tokens, n assets.Snippet, body string, err error) {
+	sel := a.snippets.selected == n.ID
+	label, ic, mode := m.SnippetInsertAction(n.Name), icons.Paste, m.SnippetInsert()
+	if n.SendEnter {
+		label, ic, mode = m.SnippetSendAction(n.Name), icons.Send, m.SnippetSendEnter()
+	}
+	target := a.snippetTarget()
+	disabled := err != nil || target == nil || target.tv.snippetSending
+	preview := strings.SplitN(body, "\n", 2)[0]
+	if err != nil {
+		body = snippetErrorText(m, err)
+		preview = body
+	}
+	more := "snippet:more:" + n.ID
+	box := ui.Column(c.Key("snippet:row:" + n.ID)).FillWidth().Radius(theme.RadiusControl)
+	switch {
+	case sel:
+		box.Background(tok.Accent.Alpha(accentWash(tok)))
+	case box.Hovered() || a.menu.key == more:
+		box.Background(tok.Hover)
+	}
+	box.Children(func() {
+		ui.Row(c).FillWidth().Padding(0, theme.Space(1), 0, 0).Gap(theme.Space(0.5)).AlignItems(ui.Center).Children(func() {
+			row := ui.ButtonBase(c.Key("snippet:select:" + n.ID)).Label(m.SnippetPreview(n.Name)).Selected(sel).Grow(1).Shrink(1).MinWidth(0).
+				Padding(theme.Space(2)).Gap(theme.Space(2.5)).AlignItems(ui.Center).Justify(ui.Start).Cursor(ui.CursorPointer)
+			// The row around it shows the choice, in place of the list's fill.
+			row.Background(tok.Accent.Alpha(0)).TextColor(tok.Text)
+			row.Children(func() {
+				softTile(c, icons.API, snippetTint(tok, n.Group), 28)
+				ui.Column(c).Grow(1).Shrink(1).MinWidth(0).Gap(theme.Space(0.5)).Children(func() {
+					ui.Text(c, n.Name).FontSize(theme.Body).FontWeight(600).SingleLine()
+					// Chosen, the whole body shows below instead.
+					if !sel {
+						tx := ui.Text(c, preview).Font(a.termFamily()).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine()
+						if err != nil {
+							tx.TextColor(tok.Warning)
+						}
+					}
+				})
+			})
+			if row.Clicked() {
+				a.snippets.selected = n.ID
+			}
+			if (IconButton{Icon: ic, Label: label, Disabled: disabled, Size: Small}).Clicked(c, "snippet:send:"+n.ID) {
+				a.startSnippet(m, n.ID, n.SendEnter)
+			}
+			a.menuButton(c, more, IconButton{Icon: icons.More, Label: m.SnippetMore(n.Name), Size: Small}, func() []menuEntry { return a.snippetMenu(m, n, disabled) })
+		})
+		if !sel {
+			return
+		}
+		// Under the name, past the tile.
+		ui.Column(c.Key("snippet:detail")).FillWidth().Padding(0, theme.Space(3), theme.Space(3), theme.Space(11.5)).Gap(theme.Space(2)).Children(func() {
+			ui.Scroll(c.Key("snippet:body")).FillWidth().MaxHeight(theme.Space(40)).Radius(theme.RadiusSmall).Background(tok.Inset).Border(1, tok.Line).Children(func() {
+				ui.Column(c).FillWidth().Padding(theme.Space(2), theme.Space(2.5)).Children(func() {
+					ui.Text(c, body).Font(a.termFamily()).FontSize(theme.Footnote)
+				})
+			})
+			ui.Row(c).FillWidth().Gap(theme.Space(1.5)).AlignItems(ui.Center).Children(func() {
+				ui.Icon(c, icons.Folder.SVG).Size(12, 12).Shrink(0).TextColor(tok.TextMuted)
+				ui.Text(c, snippetGroupTitle(m, n.Group)).FontSize(theme.Caption).TextColor(tok.TextMuted).Shrink(1).SingleLine()
+				ui.Box(c).Size(3, 3).Shrink(0).Radius(1.5).Background(tok.TextMuted)
+				ui.Icon(c, ic.SVG).Size(12, 12).Shrink(0).TextColor(tok.TextMuted)
+				ui.Text(c, mode).FontSize(theme.Caption).TextColor(tok.TextMuted).Shrink(1).SingleLine()
 			})
 		})
-		if row.Clicked() {
-			a.snippets.selected = n.ID
-		}
-		label, ic := m.SnippetInsertAction(n.Name), icons.Paste
-		if n.SendEnter {
-			label, ic = m.SnippetSendAction(n.Name), icons.Send
-		}
-		target := a.snippetTarget()
-		disabled := err != nil || target == nil || target.tv.snippetSending
-		if (IconButton{Icon: ic, Label: label, Disabled: disabled, Size: Small}).Clicked(c, "snippet:send:"+n.ID) {
-			a.startSnippet(m, n.ID, n.SendEnter)
-		}
-		a.menuButton(c, "snippet:more:"+n.ID, IconButton{Icon: icons.More, Label: m.SnippetMore(n.Name), Size: Small}, func() []menuEntry { return a.snippetMenu(m, n, disabled) })
 	})
+	a.contextMenu(box, func() []menuEntry { return a.snippetMenu(m, n, disabled) })
 }
 func (a *App) snippetMenu(m locales.Messages, n assets.Snippet, disabled bool) []menuEntry {
 	out := []menuEntry{{Icon: icons.Edit, Label: m.Edit(), Do: func() { a.openSnippet(m, n, false) }}, {Icon: icons.Copy, Label: m.SnippetDuplicate(), Do: func() { a.openSnippet(m, n, true) }}, {Icon: icons.Delete, Label: m.Delete(), Danger: true, Do: func() { a.snippets.deleteID = n.ID; a.snippets.deleting = true }}}
@@ -144,22 +345,6 @@ func (a *App) snippetMenu(m locales.Messages, n assets.Snippet, disabled bool) [
 		out = append(out, menuSep, menuEntry{Icon: icons.Paste, Label: m.SnippetInsert(), Disabled: disabled, Do: func() { a.startSnippet(m, n.ID, false) }})
 	}
 	return out
-}
-func (a *App) snippetPreview(c *ui.Context, m locales.Messages, tok theme.Tokens) {
-	n, ok := a.store.Snippet(a.snippets.selected)
-	if !ok {
-		return
-	}
-	ui.Scroll(c.Key("snippet:preview")).FillWidth().MaxHeight(theme.Space(40)).Shrink(1).Children(func() {
-		ui.Column(c).FillWidth().Padding(theme.Space(3)).Gap(theme.Space(2)).Children(func() {
-			ui.Text(c, n.Name).FontSize(theme.Body).FontWeight(600)
-			body, err := a.snippetContent(n.ID)
-			if err != nil {
-				body = snippetErrorText(m, err)
-			}
-			ui.Text(c, body).Font(a.termFamily()).FontSize(theme.Footnote)
-		})
-	})
 }
 func (a *App) startSnippet(m locales.Messages, id string, enter bool) {
 	a.snippets.err = ""
