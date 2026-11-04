@@ -53,17 +53,14 @@ Global rules for anyone (human or agent) changing SSHYard. Read this before you 
 
 ## Tests and checks
 
+- **Documentation-only changes: do not run any tests.** Review the documentation diff instead.
+- **Code changes: unless the current task explicitly requires broader verification, run only the unit tests covering the modified or newly added behavior.** Select the affected packages and test names with `go test -race -count=1 ./path/to/package -run '^(TestAffected|TestNew)$'`; replace the example package and names with the actual relevant tests. Do not run the full test suite (`go test ./...`, `go test -race ./...`, or equivalent), or unrelated tests. A commit or push alone is not a reason to broaden the test scope.
+- If relevant unit tests are missing, add focused coverage where appropriate and report any remaining coverage gap; do not substitute a full test run.
 - UI changes need a test with `ui.Tester` in `internal/app`. The tester's `HasText`/`Texts` include accessible labels, so count occurrences when checking tooltips. A field bound to a TextInput is overwritten from the input's own state on the next frame; drive such flows by calling the handler rather than setting the field and clicking.
-- Keep `go test -race`, `go vet` and `gofmt` clean in every commit. Before every push run:
+- Keep changed Go files formatted with `gofmt`; scope any required `go vet` checks to affected packages. Do not run repository-wide or cross-platform checks unless explicitly required by the current task.
+- After editing `locales/*.json`, regenerate the catalog:
 
 ```sh
-go test -race -count=1 ./...
-go vet ./...
-GOOS=windows go vet ./...
-GOOS=darwin go vet ./...
-gofmt -l .            # must print nothing
-
-# after editing locales/*.json
 GOFLAGS=-mod=mod go run github.com/egoist/mygo/cmd/mygo generate
 ```
 
@@ -77,7 +74,7 @@ go tool mygo build \
 
 ## CI and releases
 
-- CI is GitHub Actions (`.github/workflows/ci.yml`, `release.yml`); keep both green. `ci.yml` runs only on `v*` tags and by hand, never on pushes or pull requests (private repo, billed minutes), so the local checks above are the gate before a push; a release tag also waits for `ci.yml` on that tag.
+- CI is GitHub Actions (`.github/workflows/ci.yml`, `release.yml`); keep both green. `ci.yml` runs only on `v*` tags and by hand, never on pushes or pull requests (private repo, billed minutes), so local verification before a push follows the change-scoped rules above, including the documentation-only exemption; a release tag also waits for `ci.yml` on that tag.
 - `v<version>` is a stable release: `release.yml` builds, signs and verifies every platform, waits for `ci.yml` to pass on the same tag, then publishes the release as latest with all assets, `SHA256SUMS` and the notes (signing secrets: `.github/RELEASING.md`). A failed CI or build publishes nothing: re-run the failed jobs.
 - Release notes come from the conventional commits since the previous stable tag, through `cliff.toml` (git-cliff): the release body adds download links, the update manifests (the in-app update window) get the notes alone.
 - `v<version>-beta-<yyyymmddhhmmss>` is an internal beta: only `ci.yml` runs, it never makes a Release and beta builds have no update channel. The timestamp must be a real UTC time in 2020–2099.
