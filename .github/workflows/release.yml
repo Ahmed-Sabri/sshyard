@@ -1,9 +1,11 @@
 name: Release
 
-# Builds every platform, signs the update manifests and uploads them with the
-# installers to a DRAFT GitHub Release of the version in mygo.json (MyGo's
-# GitHub Releases channel: apps read update-<os>-<arch>.json from
-# releases/latest/download/ once the draft is published).
+# A v<version> tag (the version in mygo.json; bump.sh makes both) builds
+# every platform, signs the update manifests, waits for ci.yml to pass on
+# the tag, then publishes the release as latest with every asset at once:
+# MyGo's GitHub Releases channel reads update-<os>-<arch>.json from
+# releases/latest/download/. The notes come from cliff.toml: the release
+# gets them with download links, the update window without.
 #
 # Required signing and notarization secrets: see .github/RELEASING.md
 # Installed apps reject unsigned updates; production macOS builds require
@@ -15,26 +17,26 @@ name: Release
 on:
   push:
     tags: ["v*", "!v*-beta-*"]
-  workflow_dispatch:
 
 permissions:
-  contents: write # the draft release and its uploads
+  contents: read
 
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  draft-release:
+  preflight:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.v.outputs.version }}
       tag: ${{ steps.v.outputs.tag }}
     steps:
       - uses: actions/checkout@v7
-      - name: Check the version and required signing secrets
+      - name: Check the version, the release and required signing secrets
         id: v
         env:
+          GH_TOKEN: ${{ github.token }}
           MYGO_UPDATER_PRIVATE_KEY: ${{ secrets.MYGO_UPDATER_PRIVATE_KEY }}
           MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
@@ -48,8 +50,8 @@ jobs:
             echo "::error::$GITHUB_REF_NAME is an internal beta: betas are built by ci.yml only, never released."
             exit 1
           fi
-          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "$tag" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match mygo.json version $version (expected $tag)."
+          if [ "$GITHUB_REF_TYPE" != tag ] || [ "$GITHUB_REF_NAME" != "$tag" ]; then
+            echo "::error::$GITHUB_REF_NAME does not match mygo.json version $version (expected tag $tag)."
             exit 1
           fi
           for name in MYGO_UPDATER_PRIVATE_KEY MACOS_CERTIFICATE_P12_BASE64 MACOS_CERTIFICATE_PASSWORD APPLE_API_KEY_P8 APPLE_API_KEY_ID APPLE_API_ISSUER_ID; do
@@ -58,28 +60,91 @@ jobs:
               exit 1
             fi
           done
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1 &&
+            [ "$(gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" != true ]; then
+            echo "::error::Release $tag is already published; refusing to replace its assets."
+            exit 1
+          fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
-      - name: Create the draft release
+
+  release-notes:
+    needs: preflight
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.preflight.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Generate release notes
+        uses: orhun/git-cliff-action@v4
+        id: cliff
+        with:
+          config: cliff.toml
+          args: --latest --strip header
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      # release-notes.md is the release body, before the download links;
+      # CHANGELOG.md is its "## <version>" section, which mygo build puts
+      # into the update manifests for the update window.
+      - name: Write release notes
+        env:
+          RELEASE_NOTES: ${{ steps.cliff.outputs.content }}
+        run: |
+          mkdir -p release-notes
+          printf '%s\n' "$RELEASE_NOTES" > release-notes/release-notes.md
+          if ! grep -q '[^[:space:]]' release-notes/release-notes.md; then
+            printf 'Builds for macOS, Windows and Linux.\n' > release-notes/release-notes.md
+          fi
+          { printf '## %s\n\n' "$VERSION"; cat release-notes/release-notes.md; } > release-notes/CHANGELOG.md
+          cat release-notes/release-notes.md
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-notes
+          path: release-notes/
+          if-no-files-found: error
+
+  # ci.yml runs on the same tag push: the release waits for it rather than
+  # testing again. If CI fails, re-run its failed jobs, then re-run this
+  # workflow's failed jobs.
+  ci-gate:
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      actions: read
+      contents: read
+    env:
+      TAG: ${{ needs.preflight.outputs.tag }}
+    steps:
+      - name: Wait for CI on the tag
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.v.outputs.tag }}
         run: |
-          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
-            [ "$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = true ] || {
-              echo "::error::Release $TAG is already published; refusing to replace its assets."
+          for attempt in $(seq 1 170); do
+            runs="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA&event=push" |
+              jq --arg tag "$TAG" '[.workflow_runs[] | select(.head_branch == $tag) | {status, conclusion, html_url}]')"
+            if jq -e 'any(.[]; .conclusion == "success")' <<<"$runs" >/dev/null; then
+              echo "CI passed for $TAG"
+              exit 0
+            fi
+            if jq -e 'length > 0 and all(.[]; .status == "completed")' <<<"$runs" >/dev/null; then
+              jq -r '.[] | "CI \(.conclusion): \(.html_url)"' <<<"$runs"
+              echo "::error::CI did not pass for $TAG; re-run its failed jobs, then re-run this workflow's failed jobs"
               exit 1
-            }
-            echo "Draft $TAG exists; its files are replaced after validation."
-          elif [ "$GITHUB_REF_TYPE" = tag ]; then
-            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --verify-tag --title "$TAG" --generate-notes
-          else
-            # workflow_dispatch: the tag is created at this commit when the draft is published.
-            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --target "$GITHUB_SHA" --title "$TAG" --generate-notes
-          fi
+            fi
+            if [ "$attempt" -ge 20 ] && jq -e 'length == 0' <<<"$runs" >/dev/null; then
+              echo "::error::No CI run for $TAG at $GITHUB_SHA"
+              exit 1
+            fi
+            sleep 30
+          done
+          echo "::error::Timed out waiting for CI on $TAG"
+          exit 1
 
   build:
-    needs: draft-release
+    needs: [preflight, release-notes]
     name: build ${{ matrix.goos }}/${{ matrix.goarch }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -94,8 +159,7 @@ jobs:
       run:
         shell: bash
     env:
-      VERSION: ${{ needs.draft-release.outputs.version }}
-      TAG: ${{ needs.draft-release.outputs.tag }}
+      VERSION: ${{ needs.preflight.outputs.version }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
@@ -107,6 +171,15 @@ jobs:
         with:
           path: ~\AppData\Local\mygo\nsis-*
           key: nsis-${{ hashFiles('go.sum') }}
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-notes
+          path: release-notes
+      # Only in the runner's checkout, as macos-release.sh does
+      - name: Use the release notes for the update window
+        run: |
+          jq '.updates.changelog = "release-notes/CHANGELOG.md"' mygo.json > mygo.json.notes
+          mv mygo.json.notes mygo.json
       - name: Prepare macOS signing and notarization
         if: runner.os == 'macOS'
         env:
@@ -121,51 +194,75 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           MYGO_UPDATER_PRIVATE_KEY: ${{ secrets.MYGO_UPDATER_PRIVATE_KEY }}
         run: go tool mygo build -platform "${{ matrix.goos }}/${{ matrix.goarch }}"
-      - name: Check the manifest is signed
+      - name: Check the manifest is signed and has notes
         run: |
           m="build/${{ matrix.goos }}-${{ matrix.goarch }}/update-${{ matrix.goos }}-${{ matrix.goarch }}.json"
           jq -e '.signature | length > 0' "$m" > /dev/null || { echo "::error::$m is not signed"; exit 1; }
+          jq -e '.notes | length > 0' "$m" > /dev/null || { echo "::error::$m has no release notes"; exit 1; }
       - name: Verify macOS signature and notarization tickets
         if: runner.os == 'macOS'
         run: bash .github/macos-release.sh verify "${{ matrix.goarch }}"
       - name: Package extras
         run: bash .github/package-extras.sh "${{ matrix.goos }}" "${{ matrix.goarch }}" "$VERSION"
-      - name: Upload validated assets to the draft, manifests last
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Collect release assets
         run: |
-          [ "$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = true ] || {
-            echo "::error::Release $TAG must remain a draft until all builds finish."
-            exit 1
-          }
           shopt -s nullglob
           dir="build/${{ matrix.goos }}-${{ matrix.goarch }}"
-          files=("$dir"/*.tar.gz "$dir"/*.deb "$dir"/*.dmg "$dir"/*.zip "$dir"/*-setup-*.exe "$dir"/install.sh "$dir"/*.delta)
-          # install.sh is a literal path when absent; Windows does not produce it.
-          assets=()
-          for file in "${files[@]}"; do
-            if [ -f "$file" ]; then assets+=("$file"); fi
-          done
-          [ "${#assets[@]}" -gt 0 ] || { echo "::error::No release assets found"; exit 1; }
-          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber "${assets[@]}"
-          [ "$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = true ] || {
-            echo "::error::Release $TAG was published during upload; refusing to replace its update manifest."
-            exit 1
-          }
-          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber "$dir/update-${{ matrix.goos }}-${{ matrix.goarch }}.json"
+          mkdir -p dist
+          files=("$dir"/*.tar.gz "$dir"/*.deb "$dir"/*.dmg "$dir"/*.zip "$dir"/*-setup-*.exe "$dir"/*.delta "$dir"/update-*.json)
+          # install.sh is the same script for every target (macOS makes one
+          # too): the release takes Linux's, so merged assets never clash
+          if [ "${{ matrix.goos }}" = linux ]; then files+=("$dir"/install.sh); fi
+          [ "${#files[@]}" -gt 0 ] || { echo "::error::No release assets found"; exit 1; }
+          cp "${files[@]}" dist/
+          ls -la dist
       - uses: actions/upload-artifact@v7
         with:
-          name: sshyard-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: assets-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/*
           if-no-files-found: error
-          path: |
-            build/*/*.tar.gz
-            build/*/*.deb
-            build/*/*.dmg
-            build/*/*.zip
-            build/*/*-setup-*.exe
-            build/*/install.sh
-            build/*/update-*.json
-            build/*/*.delta
       - name: Remove macOS signing credentials
         if: always() && runner.os == 'macOS'
         run: bash .github/macos-release.sh cleanup
+
+  # Every asset is built, signed and verified, and CI passed: the release
+  # is made as a draft with all of them, then published as latest.
+  publish:
+    needs: [preflight, release-notes, ci-gate, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ needs.preflight.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: assets-*
+          path: dist
+          merge-multiple: true
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-notes
+          path: release-notes
+      - name: Write checksums
+        run: |
+          sums="$(cd dist && sha256sum -- *)"
+          printf '%s\n' "$sums" > dist/SHA256SUMS
+          cat dist/SHA256SUMS
+      - name: Append download links to the release notes
+        run: bash .github/release-download-notes.sh dist "$TAG" "$GITHUB_REPOSITORY" >> release-notes/release-notes.md
+      - name: Create and publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # A draft left by an earlier run is replaced; a published release never is
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            [ "$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = true ] || {
+              echo "::error::Release $TAG is already published; refusing to replace its assets."
+              exit 1
+            }
+            gh release delete "$TAG" --repo "$GITHUB_REPOSITORY" --yes
+          fi
+          gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --verify-tag --draft --title "$TAG" --notes-file release-notes/release-notes.md
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest

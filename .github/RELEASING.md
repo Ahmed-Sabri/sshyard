@@ -27,16 +27,17 @@ Issuer ID 从 [App Store Connect](https://appstoreconnect.apple.com/access/integ
 
 ## 工作流行为
 
-1. `release.yml` 在创建草稿前检查六项 Secrets 是否非空，已有正式发布会拒绝覆盖
+1. `release.yml` 先检查标签与 `mygo.json` 版本一致、六项 Secrets 非空，已有正式发布会拒绝覆盖；同时按 `cliff.toml` 用 git-cliff 生成上一个正式标签以来的发布说明，并等待同一标签上的 `ci.yml` 通过
 2. macOS runner 先解码 Base64 格式的证书和 Apple API 私钥，再导入证书到临时钥匙串，自动选择其中唯一有效的 Developer ID Application 签名身份；解码失败、找不到或存在多个身份时直接失败，无需单独配置签名身份；然后设置无人值守签名权限，并通过 `notarytool store-credentials` 校验、保存 Apple API 凭据
 3. 仅在 runner 工作目录中改写 `mygo.json` 的 `macos.signingIdentity` 和 `macos.notarize`；仓库配置与 beta CI 不变
 4. `go tool mygo build` 签署 App、DMG，向 Apple 提交公证并等待通过，再给 DMG 和用于更新的 App 装订公证票据
-5. 上传前验证更新清单有签名，并在 macOS 上执行 `codesign`、`stapler validate` 和 Gatekeeper `spctl` 验收；安装包、更新归档、delta 与附加 ZIP 先上传，更新清单最后上传
-6. macOS job 无论成功或失败都执行凭据清理；签名或公证失败时停止该平台上传，不生成未签名替代包
+5. 构建时把发布说明写入更新清单，供应用内更新窗口显示；验证更新清单有签名且带说明，并在 macOS 上执行 `codesign`、`stapler validate` 和 Gatekeeper `spctl` 验收
+6. macOS job 无论成功或失败都执行凭据清理；签名或公证失败时该平台没有产物，不生成未签名替代包
+7. 所有平台构建成功且 CI 通过后，汇总全部安装包、更新归档、delta、附加 ZIP 与更新清单，生成 `SHA256SUMS`，在发布说明后追加各平台下载链接，先建草稿上传全部资产，再自动发布为 latest
 
-所有平台构建完成后，再人工检查并发布草稿；构建过程中不要手动发布草稿；配置缺失、凭据无效或 Apple 服务失败可能留下空白或部分资产的草稿，修复后可重新运行工作流
+任一平台构建或 CI 失败时不会创建 Release；修复或重跑 CI 的失败 job 后，重跑本工作流的失败 job 即可；之前运行留下的草稿会被替换，已发布的版本不会被覆盖
 
-版本只修改 `mygo.json`；先推送版本提交，再由维护者创建对应 `v<version>` 标签；`v<version>-beta-<yyyymmddhhmmss>` 继续只运行 `ci.yml`，不会触发正式签名发布
+发布用 `./bump.sh -v <x.y.z> -p`：只修改 `mygo.json` 的版本，提交 `chore(release): bump version to <x.y.z>`（不进入发布说明），创建 `v<x.y.z>` 标签并推送分支与标签；不加 `-p` 只在本地提交和打标签；`v<version>-beta-<yyyymmddhhmmss>` 继续只运行 `ci.yml`，不会触发正式签名发布
 
 无凭据的失败路径检查可本地运行 `bash .github/macos-release-test.sh`，覆盖缺少 Secrets、签名身份解析与零个或多个身份的拒绝、钥匙串删除失败仍清理文件并保留失败状态
 

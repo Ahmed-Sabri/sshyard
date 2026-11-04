@@ -1,0 +1,39 @@
+# Release notes: release.yml runs git-cliff --latest on a v<version> tag,
+# which lists the commits since the previous tag, grouped by type. The
+# comment before each group name only orders the groups.
+[changelog]
+header = ""
+body = """
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | striptags | trim | upper_first }}
+{% for commit in commits %}
+- {% if commit.scope %}**{{ commit.scope }}**: {% endif %}{{ commit.message | split(pat="\n") | first | trim }} ([{{ commit.id | truncate(length=7, end="") }}](https://github.com/Licoy/sshyard/commit/{{ commit.id }}))
+{%- endfor %}
+{% endfor %}
+"""
+footer = ""
+trim = true
+
+[git]
+conventional_commits = true
+filter_unconventional = false
+split_commits = false
+commit_parsers = [
+  { message = "^feat", group = "<!-- 00 -->Features" },
+  { message = "^fix", group = "<!-- 01 -->Bug Fixes" },
+  { message = "^perf", group = "<!-- 02 -->Performance" },
+  { message = "^refactor", group = "<!-- 03 -->Refactoring" },
+  { message = "^docs", group = "<!-- 04 -->Documentation" },
+  { message = "^test", group = "<!-- 05 -->Tests" },
+  { message = "^build", group = "<!-- 06 -->Build" },
+  { message = "^ci", group = "<!-- 07 -->CI" },
+  { message = "^style", group = "<!-- 08 -->Style" },
+  # bump.sh's commit: the version itself is the release
+  { message = "^chore\\(release\\): bump version", skip = true },
+  { message = "^chore", group = "<!-- 09 -->Chores" },
+  { message = ".*", group = "<!-- 10 -->Other" },
+]
+filter_commits = false
+# Stable tags only: betas (v<version>-beta-<timestamp>) are never released
+tag_pattern = "^v[0-9]+\\.[0-9]+\\.[0-9]+$"
+sort_commits = "newest"

@@ -77,8 +77,9 @@ go tool mygo build \
 
 ## CI and releases
 
-- CI is GitHub Actions (`.github/workflows/ci.yml`, `release.yml`); keep both green. `ci.yml` runs only on `v*` tags and by hand, never on pushes or pull requests (private repo, billed minutes), so the local checks above are the gate.
-- `v<version>` is a stable release: `release.yml` builds and uploads into a **draft** release (it needs the secret `MYGO_UPDATER_PRIVATE_KEY`); publish the draft by hand.
+- CI is GitHub Actions (`.github/workflows/ci.yml`, `release.yml`); keep both green. `ci.yml` runs only on `v*` tags and by hand, never on pushes or pull requests (private repo, billed minutes), so the local checks above are the gate before a push; a release tag also waits for `ci.yml` on that tag.
+- `v<version>` is a stable release: `release.yml` builds, signs and verifies every platform, waits for `ci.yml` to pass on the same tag, then publishes the release as latest with all assets, `SHA256SUMS` and the notes (signing secrets: `.github/RELEASING.md`). A failed CI or build publishes nothing: re-run the failed jobs.
+- Release notes come from the conventional commits since the previous stable tag, through `cliff.toml` (git-cliff): the release body adds download links, the update manifests (the in-app update window) get the notes alone.
 - `v<version>-beta-<yyyymmddhhmmss>` is an internal beta: only `ci.yml` runs, it never makes a Release and beta builds have no update channel. The timestamp must be a real UTC time in 2020–2099.
 - The base `<version>` of any tag must equal `mygo.json`'s version, or the build fails.
-- To release: bump `mygo.json` `version`, push, then tag. Agents never push tags themselves.
+- To release: run the local checks, then `./bump.sh -v <x.y.z> -p`: it sets `mygo.json`'s version, commits `chore(release): bump version to <x.y.z>` (left out of the notes), tags `v<x.y.z>` and pushes both. Agents never push tags themselves.
