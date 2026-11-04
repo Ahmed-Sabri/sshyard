@@ -5,9 +5,9 @@ name: Release
 # GitHub Releases channel: apps read update-<os>-<arch>.json from
 # releases/latest/download/ once the draft is published).
 #
-# Needs the repository secret MYGO_UPDATER_PRIVATE_KEY: the contents of
-# mygo-update.key, the pair of updates.publicKey in mygo.json. Installed apps
-# reject unsigned updates, so without the secret this workflow fails.
+# Required signing and notarization secrets: see .github/RELEASING.md
+# Installed apps reject unsigned updates; production macOS builds require
+# Developer ID signing and successful Apple notarization before upload.
 
 # Internal beta tags (v<version>-beta-<yyyymmddhhmmss>) never make a
 # release: they are excluded here, and only ci.yml builds them (as
@@ -32,10 +32,15 @@ jobs:
       tag: ${{ steps.v.outputs.tag }}
     steps:
       - uses: actions/checkout@v7
-      - name: Check the version and the signing key
+      - name: Check the version and required signing secrets
         id: v
         env:
           MYGO_UPDATER_PRIVATE_KEY: ${{ secrets.MYGO_UPDATER_PRIVATE_KEY }}
+          MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
         run: |
           version="$(jq -r .version mygo.json)"
           tag="v$version"
@@ -47,10 +52,12 @@ jobs:
             echo "::error::Tag $GITHUB_REF_NAME does not match mygo.json version $version (expected $tag)."
             exit 1
           fi
-          if [ -z "$MYGO_UPDATER_PRIVATE_KEY" ]; then
-            echo "::error::Secret MYGO_UPDATER_PRIVATE_KEY is not set. Add the contents of mygo-update.key: gh secret set MYGO_UPDATER_PRIVATE_KEY < mygo-update.key. Installed apps only accept signed updates, so the release is not built without it."
-            exit 1
-          fi
+          for name in MYGO_UPDATER_PRIVATE_KEY MACOS_CERTIFICATE_P12_BASE64 MACOS_CERTIFICATE_PASSWORD APPLE_API_KEY_P8 APPLE_API_KEY_ID APPLE_API_ISSUER_ID; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Required secret $name is not set; see .github/RELEASING.md"
+              exit 1
+            fi
+          done
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
       - name: Create the draft release
@@ -59,7 +66,11 @@ jobs:
           TAG: ${{ steps.v.outputs.tag }}
         run: |
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
-            echo "Release $TAG exists; its files are replaced."
+            [ "$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = true ] || {
+              echo "::error::Release $TAG is already published; refusing to replace its assets."
+              exit 1
+            }
+            echo "Draft $TAG exists; its files are replaced after validation."
           elif [ "$GITHUB_REF_TYPE" = tag ]; then
             gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --draft --verify-tag --title "$TAG" --generate-notes
           else
@@ -96,23 +107,52 @@ jobs:
         with:
           path: ~\AppData\Local\mygo\nsis-*
           key: nsis-${{ hashFiles('go.sum') }}
-      - name: Build, sign updates, upload to the draft
+      - name: Prepare macOS signing and notarization
+        if: runner.os == 'macOS'
+        env:
+          MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+        run: bash .github/macos-release.sh prepare
+      - name: Build and sign updates
         env:
           GH_TOKEN: ${{ github.token }}
           MYGO_UPDATER_PRIVATE_KEY: ${{ secrets.MYGO_UPDATER_PRIVATE_KEY }}
-        run: go tool mygo build -platform "${{ matrix.goos }}/${{ matrix.goarch }}" -upload
+        run: go tool mygo build -platform "${{ matrix.goos }}/${{ matrix.goarch }}"
       - name: Check the manifest is signed
         run: |
           m="build/${{ matrix.goos }}-${{ matrix.goarch }}/update-${{ matrix.goos }}-${{ matrix.goarch }}.json"
           jq -e '.signature | length > 0' "$m" > /dev/null || { echo "::error::$m is not signed"; exit 1; }
-      - name: Package and upload extras
+      - name: Verify macOS signature and notarization tickets
+        if: runner.os == 'macOS'
+        run: bash .github/macos-release.sh verify "${{ matrix.goarch }}"
+      - name: Package extras
+        run: bash .github/package-extras.sh "${{ matrix.goos }}" "${{ matrix.goarch }}" "$VERSION"
+      - name: Upload validated assets to the draft, manifests last
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          bash .github/package-extras.sh "${{ matrix.goos }}" "${{ matrix.goarch }}" "$VERSION"
+          [ "$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = true ] || {
+            echo "::error::Release $TAG must remain a draft until all builds finish."
+            exit 1
+          }
           shopt -s nullglob
-          extras=(build/*/*.zip)
-          if [ ${#extras[@]} -gt 0 ]; then gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber "${extras[@]}"; fi
+          dir="build/${{ matrix.goos }}-${{ matrix.goarch }}"
+          files=("$dir"/*.tar.gz "$dir"/*.deb "$dir"/*.dmg "$dir"/*.zip "$dir"/*Setup*.exe "$dir"/install.sh "$dir"/*.delta)
+          # install.sh is a literal path when absent; only Linux produces it.
+          assets=()
+          for file in "${files[@]}"; do
+            if [ -f "$file" ]; then assets+=("$file"); fi
+          done
+          [ "${#assets[@]}" -gt 0 ] || { echo "::error::No release assets found"; exit 1; }
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber "${assets[@]}"
+          [ "$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = true ] || {
+            echo "::error::Release $TAG was published during upload; refusing to replace its update manifest."
+            exit 1
+          }
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber "$dir/update-${{ matrix.goos }}-${{ matrix.goarch }}.json"
       - uses: actions/upload-artifact@v7
         with:
           name: sshyard-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}
@@ -126,3 +166,6 @@ jobs:
             build/*/install.sh
             build/*/update-*.json
             build/*/*.delta
+      - name: Remove macOS signing credentials
+        if: always() && runner.os == 'macOS'
+        run: bash .github/macos-release.sh cleanup

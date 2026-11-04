@@ -6,7 +6,7 @@
   "out": "build",
   "i18n": { "dir": "locales", "source": "en" },
   "updates": {
-    "publicKey": "sxsIDXdLgpDiPmfJFlbTrJGl6sAvwIQbz6oC6WGKxsQ=",
+    "publicKey": "peCkTf50VMUGasVIxOZ3NLh9/uL0kWSSlu6Tf2dDVu8=",
     "github": "Licoy/sshyard"
   },
   "macos": {
