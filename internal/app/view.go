@@ -90,7 +90,7 @@ func (a *App) View(c *ui.Context) {
 					if a.page != pageWorkspace {
 						return
 					}
-					if a.inspector != "" {
+					if len(a.panels) > 0 {
 						ui.Box(c).Width(1).FillHeight().Shrink(0).Background(tok.Line)
 						a.inspectorView(c, m, tok)
 					}

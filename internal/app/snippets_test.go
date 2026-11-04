@@ -133,10 +133,10 @@ func TestSnippetUISearchGroupMissingAndLanguages(t *testing.T) {
 	tt.Key(0, ui.KeyBackspace)
 	tt.Frame()
 	// Close and reopen search input so a fresh query can be set through its handler.
-	a.inspector = ""
+	a.panels = nil
 	tt.Frame()
 	a.snippets.query = ""
-	a.inspector = inspectSnippets
+	a.panels = []inspectorKind{inspectSnippets}
 	tt.Frame()
 	mustClick(t, tt, "Other")
 	tt.Frame()
@@ -225,8 +225,8 @@ func TestSnippetUIFocusedTargetAndSend(t *testing.T) {
 	if !tt.Focused(m.Terminal() + " " + cn.host.Label()) {
 		t.Fatal("focus did not return to terminal")
 	}
-	if got != "\x1b[200~echo UI marker\x1b[201~" || a.inspector != inspectSnippets {
-		t.Fatalf("send %q inspector %q", got, a.inspector)
+	if got != "\x1b[200~echo UI marker\x1b[201~" || !a.panelOpen(inspectSnippets) {
+		t.Fatalf("send %q panels %q", got, a.panels)
 	}
 
 	tt.Key(0, ui.KeyEnter)
@@ -283,7 +283,7 @@ func TestSnippetUIFilterFollowsSavedAndDeletedGroup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.inspector = inspectSnippets
+	a.panels = []inspectorKind{inspectSnippets}
 	a.snippets.grouped, a.snippets.group = true, "old"
 	a.openSnippet(m, n, false)
 	tt.Frame()
@@ -306,7 +306,7 @@ func TestSnippetUIFilterFollowsSavedAndDeletedGroup(t *testing.T) {
 func TestSnippetUIWelcomeActionsStayInsideContent(t *testing.T) {
 	a, tt := newTestApp(t)
 	m := locales.In("en")
-	a.inspector = inspectSnippets
+	a.panels = []inspectorKind{inspectSnippets}
 	tt.SetSize(820, 520)
 	tt.Frame()
 	left := a.sbWidth + 1
@@ -494,7 +494,7 @@ func TestSnippetUIAddGroupInForm(t *testing.T) {
 func TestSnippetUIIntroAndLayout(t *testing.T) {
 	a, tt := newTestApp(t)
 	m := locales.In("en")
-	a.inspector = inspectSnippets
+	a.panels = []inspectorKind{inspectSnippets}
 	tt.Frame()
 	// With no entries, the intro offers to make one, and no search or tabs.
 	if !tt.HasText(m.SnippetEmptyTitle()) || !tt.HasText(m.SnippetEmptyHint()) || tt.HasText(m.SnippetSearch()) || tt.HasText(m.SnippetAll()) {
@@ -542,10 +542,10 @@ func TestSnippetUIIntroAndLayout(t *testing.T) {
 	}
 
 	// The search narrows the counts; its button clears it.
-	a.inspector = ""
+	a.panels = nil
 	tt.Frame()
 	a.snippets.query = "restart"
-	a.inspector = inspectSnippets
+	a.panels = []inspectorKind{inspectSnippets}
 	tt.Frame()
 	if tt.HasText("plain") || tt.HasText("logs") || !tt.HasText("restart") {
 		t.Fatal("search", tt.Texts())
@@ -556,9 +556,9 @@ func TestSnippetUIIntroAndLayout(t *testing.T) {
 		t.Fatal("clear search", a.snippets.query)
 	}
 	a.snippets.query = "nothing-matches"
-	a.inspector = ""
+	a.panels = nil
 	tt.Frame()
-	a.inspector = inspectSnippets
+	a.panels = []inspectorKind{inspectSnippets}
 	tt.Frame()
 	if !tt.HasText(m.SnippetEmpty()) {
 		t.Fatal("no match note", tt.Texts())

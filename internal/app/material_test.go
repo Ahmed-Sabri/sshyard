@@ -79,12 +79,12 @@ func TestRoundRows(t *testing.T) {
 	a, tt := newTestApp(t)
 	tt.SetSize(1400, 900)
 	cn := connected(t, a, tt, srv)
-	a.inspector = inspectDocker
+	a.panels = []inspectorKind{inspectDocker}
 	tt.Frame()
 	waitFor(t, tt, "the containers", func() bool { return tt.HasText("web") })
 	a.docker.view = 1
 	tt.Frame()
-	a.inspector = inspectUsage
+	a.panels = []inspectorKind{inspectUsage}
 	tt.Frame()
 	lists := map[string]*ui.ListState{"containers": &a.docker.ctrList, "images": &a.docker.imgList, "processes": &a.usage.list}
 	mustClick(t, tt, "Open Files for This Host")

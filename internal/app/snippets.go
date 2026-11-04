@@ -45,7 +45,7 @@ func (a *App) snippetTarget() *conn {
 // list, in sections by group, and at the foot the terminal they go to.
 func (a *App) snippetsPanel(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	all := a.store.Snippets()
-	ui.Column(c.Key("snippets")).Width(snippetWidth).Shrink(0).FillHeight().Background(a.contentFill(tok.Canvas, canvasAlpha)).Children(func() {
+	ui.Column(c.Key("snippets")).Fill().Children(func() {
 		ui.Row(c).Height(toolbarHeight).Shrink(0).Padding(0, theme.Space(2), 0, theme.Space(4)).Gap(theme.Space(2)).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, m.Snippets()).FontSize(theme.Body).FontWeight(600).Shrink(1).SingleLine()
 			if len(all) > 0 {
@@ -56,7 +56,7 @@ func (a *App) snippetsPanel(c *ui.Context, m locales.Messages, tok theme.Tokens)
 				a.openSnippet(m, assets.Snippet{Group: a.snippets.group}, false)
 			}
 			if (IconButton{Icon: icons.Close, Label: m.ClosePanel(), Size: Small}).Clicked(c, "snippet:close") {
-				a.inspector = ""
+				a.closePanel(inspectSnippets)
 			}
 		})
 		if len(all) == 0 {
@@ -68,9 +68,11 @@ func (a *App) snippetsPanel(c *ui.Context, m locales.Messages, tok theme.Tokens)
 	})
 }
 
-// snippetIntro takes the place of the list while there are no entries.
+// snippetIntro takes the place of the list while there are no entries,
+// in the middle of the panel; one shorter than it (under other panels)
+// cuts its edges rather than run into the foot.
 func (a *App) snippetIntro(c *ui.Context, m locales.Messages, tok theme.Tokens) {
-	ui.Column(c.Key("snippet:intro")).Grow(1).FillWidth().Padding(theme.Space(8)).Gap(theme.Space(3)).AlignItems(ui.Center).Justify(ui.Center).Children(func() {
+	ui.Column(c.Key("snippet:intro")).Grow(1).Shrink(1).MinHeight(0).Clip().FillWidth().Padding(theme.Space(4), theme.Space(8)).Gap(theme.Space(3)).AlignItems(ui.Center).Justify(ui.Center).Children(func() {
 		softTile(c, icons.API, tok.Accent, 44)
 		ui.Column(c).FillWidth().Gap(theme.Space(1)).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, m.SnippetEmptyTitle()).FontSize(theme.Title3).FontWeight(600).TextAlign(ui.Center)

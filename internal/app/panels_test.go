@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -191,8 +192,8 @@ func TestRailAndMonitor(t *testing.T) {
 	}
 	mustClick(t, tt, "System Monitor")
 	tt.Frame()
-	if a.inspector != inspectMonitor {
-		t.Fatalf("inspector %q", a.inspector)
+	if !a.panelOpen(inspectMonitor) {
+		t.Fatalf("panels %q", a.panels)
 	}
 	for _, s := range []string{"Average usage", "2 cores", "Load average", "RAM", "4.0G / 8.0G", "Swap", "eth0", "/data", "488.3M / 1.9G", "GPU 1", "Operating system", "linux", "Connected for"} {
 		if !tt.HasText(s) {
@@ -205,16 +206,28 @@ func TestRailAndMonitor(t *testing.T) {
 
 	mustClick(t, tt, "Host Details")
 	tt.Frame()
-	if a.inspector != inspectHost {
-		t.Fatalf("inspector %q", a.inspector)
+	// Panels stack: the monitor stays, the host's details under it.
+	if len(a.panels) != 2 || a.panels[0] != inspectMonitor || a.panels[1] != inspectHost || !tt.HasText("Average usage") {
+		t.Fatalf("panels %q", a.panels)
+	}
+	if mon, host := mustFind(t, tt, "Average usage"), mustFind(t, tt, "Jump hosts"); mon.Y >= host.Y {
+		t.Errorf("monitor at %v is not above the host's details at %v", mon, host)
 	}
 	for _, s := range []string{"Saved credential box-cred", "Jump hosts", "Open panes", "None (direct)"} {
 		if !tt.HasText(s) {
 			t.Errorf("host details miss %q: %q", s, tt.Texts())
 		}
 	}
+	if n := textCount(tt, "Close Panel"); n != 2 {
+		t.Fatalf("%d close buttons", n)
+	}
 	mustClick(t, tt, "Close Panel")
-	if a.inspector != "" {
+	tt.Frame()
+	if len(a.panels) != 1 || a.panels[0] != inspectHost {
+		t.Fatalf("closing the monitor left %q", a.panels)
+	}
+	mustClick(t, tt, "Close Panel")
+	if len(a.panels) != 0 {
 		t.Fatal("the panel did not close")
 	}
 
@@ -240,7 +253,7 @@ func TestMonitorMetricsOff(t *testing.T) {
 		t.Fatal(err)
 	}
 	connected(t, a, tt, srv)
-	a.inspector = inspectMonitor
+	a.panels = []inspectorKind{inspectMonitor}
 	tt.Frame()
 	if !tt.HasText("Metrics are turned off for this host.") {
 		t.Fatalf("texts %q", tt.Texts())
@@ -282,5 +295,43 @@ func TestNoBannerText(t *testing.T) {
 	}
 	if got := errText(locales.In("zh-Hans"), h, err); !strings.Contains(got, "SSH 服务没有任何响应") {
 		t.Errorf("zh: %q", got)
+	}
+}
+
+// TestPanelsStack: the rail's panels open together, each once, stacked
+// in the rail's order whatever the order they opened in, in a column as
+// wide as the widest wants.
+func TestPanelsStack(t *testing.T) {
+	a, tt := newTestApp(t)
+	for _, s := range []string{"Snippets", "System Monitor", "Docker", "Host Details", "Process Usage"} {
+		mustClick(t, tt, s)
+		tt.Frame()
+	}
+	a.openPanel(inspectMonitor) // once only
+	if want := []inspectorKind{inspectMonitor, inspectUsage, inspectHost, inspectSnippets, inspectDocker}; !slices.Equal(a.panels, want) {
+		t.Fatalf("panels %q, want %q", a.panels, want)
+	}
+	if n := textCount(tt, "Close Panel"); n != 5 {
+		t.Errorf("%d close buttons", n)
+	}
+	// Each panel's title is under the one before it. (The panels come
+	// before the rail, whose buttons have the same names.)
+	var y float32 = -1
+	for _, s := range []string{"System Monitor", "Process Usage", "Host Details", "Snippets", "Docker"} {
+		r := mustFind(t, tt, s)
+		if r.Y <= y || r.X > 1200-railWidth-1 {
+			t.Errorf("%s at %v, not a panel under the one before", s, r)
+		}
+		y = r.Y
+	}
+	a.togglePanel(inspectMonitor)
+	tt.Frame()
+	a.closePanel(inspectUsage)
+	a.closePanel(inspectDocker)
+	if want := []inspectorKind{inspectHost, inspectSnippets}; !slices.Equal(a.panels, want) {
+		t.Fatalf("panels %q, want %q", a.panels, want)
+	}
+	if w := max(panelWidth(inspectHost), panelWidth(inspectSnippets)); w != snippetWidth {
+		t.Errorf("column width %v", w)
 	}
 }

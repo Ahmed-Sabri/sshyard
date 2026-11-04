@@ -18,7 +18,7 @@ import (
 // opens beside the panes (the system monitor, the host's details) and
 // actions on the focused session.
 
-// inspectorKind is the panel open beside the panes.
+// inspectorKind is a panel open beside the panes.
 type inspectorKind string
 
 const (
@@ -29,6 +29,10 @@ const (
 	inspectSnippets inspectorKind = "snippets"
 )
 
+// panelOrder is the order the panels stack in, the rail's: opening or
+// closing one leaves the others where they are.
+var panelOrder = []inspectorKind{inspectMonitor, inspectUsage, inspectHost, inspectSnippets, inspectDocker}
+
 // railWidth is the rail's width, the status bar's height; inspectorWidth
 // the panel's, and tableInspectorWidth that of a panel of tables (usage,
 // Docker).
@@ -38,6 +42,60 @@ const (
 	tableInspectorWidth = 460
 )
 
+// panelWidth is the width panel k wants.
+func panelWidth(k inspectorKind) float32 {
+	switch k {
+	case inspectUsage, inspectDocker:
+		return tableInspectorWidth
+	case inspectSnippets:
+		return snippetWidth
+	}
+	return inspectorWidth
+}
+
+// panelOpen reports whether panel k shows.
+func (a *App) panelOpen(k inspectorKind) bool {
+	for _, p := range a.panels {
+		if p == k {
+			return true
+		}
+	}
+	return false
+}
+
+// openPanel shows panel k with the others open, in panelOrder.
+func (a *App) openPanel(k inspectorKind) {
+	if a.panelOpen(k) {
+		return
+	}
+	var out []inspectorKind
+	for _, p := range panelOrder {
+		if p == k || a.panelOpen(p) {
+			out = append(out, p)
+		}
+	}
+	a.panels = out
+}
+
+// closePanel hides panel k.
+func (a *App) closePanel(k inspectorKind) {
+	var out []inspectorKind
+	for _, p := range a.panels {
+		if p != k {
+			out = append(out, p)
+		}
+	}
+	a.panels = out
+}
+
+func (a *App) togglePanel(k inspectorKind) {
+	if a.panelOpen(k) {
+		a.closePanel(k)
+	} else {
+		a.openPanel(k)
+	}
+}
+
 // railView is the rail: the panels' toggles, then actions on the focused
 // session, then ways to reach a new host at the bottom.
 func (a *App) railView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
@@ -45,12 +103,8 @@ func (a *App) railView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	ui.Column(c.Key("rail")).Width(railWidth).Shrink(0).FillHeight().Padding(theme.Space(2), 0).Gap(theme.Space(1)).
 		AlignItems(ui.Center).Background(tok.Glass).Children(func() {
 		toggle := func(k inspectorKind, ic, on *icons.Icon, label string) {
-			if (IconButton{Icon: ic, On: on, Label: label, Active: a.inspector == k, Toggle: true, Size: Small}).Clicked(c, "insp:"+string(k)) {
-				if a.inspector == k {
-					a.inspector = ""
-				} else {
-					a.inspector = k
-				}
+			if (IconButton{Icon: ic, On: on, Label: label, Active: a.panelOpen(k), Toggle: true, Size: Small}).Clicked(c, "insp:"+string(k)) {
+				a.togglePanel(k)
 			}
 		}
 		toggle(inspectMonitor, icons.Monitor, icons.MonitorOn, m.SystemMonitor())
@@ -94,34 +148,68 @@ func (a *App) railView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	})
 }
 
-// inspectorView is the panel the rail opened: a title bar, and the
-// panel's cards scrolling under it.
+// inspectorView is the panels the rail opened, stacked in one column as
+// wide as the widest wants, each with its title bar over its cards; the
+// dividers between them resize them.
 func (a *App) inspectorView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
-	if a.inspector == inspectSnippets {
+	width := float32(0)
+	for _, k := range a.panels {
+		width = max(width, panelWidth(k))
+	}
+	ui.Column(c.Key("inspector")).Width(width).Shrink(0).FillHeight().Background(a.contentFill(tok.Canvas, canvasAlpha)).Children(func() {
+		a.panelStack(c, m, tok, a.panels)
+	})
+}
+
+// panelStack is ks, the first over the rest: the first takes an equal
+// share of the room until its divider is moved.
+func (a *App) panelStack(c *ui.Context, m locales.Messages, tok theme.Tokens, ks []inspectorKind) {
+	if len(ks) == 1 {
+		a.panelView(c, m, tok, ks[0])
+		return
+	}
+	var key strings.Builder
+	for _, k := range ks {
+		key.WriteString(string(k) + "/")
+	}
+	p, ok := a.stackPct[key.String()]
+	if !ok {
+		v := float32(100) / float32(len(ks))
+		p = &v
+		a.stackPct[key.String()] = p
+	}
+	ui.SplitVerticalPercent(c.Key("stack:"+key.String()), p,
+		func() { a.panelView(c, m, tok, ks[0]) },
+		func() { a.panelStack(c, m, tok, ks[1:]) }).Fill()
+}
+
+// panelView is panel k: its title bar, and its cards scrolling under it.
+func (a *App) panelView(c *ui.Context, m locales.Messages, tok theme.Tokens, k inspectorKind) {
+	if k == inspectSnippets {
 		a.snippetsPanel(c, m, tok)
 		return
 	}
-	title, width, tables := m.SystemMonitor(), float32(inspectorWidth), false
-	switch a.inspector {
+	title, tables := m.SystemMonitor(), false
+	switch k {
 	case inspectHost:
 		title = m.HostDetails()
 	case inspectUsage:
-		title, width, tables = m.ProcessUsage(), tableInspectorWidth, true
+		title, tables = m.ProcessUsage(), true
 	case inspectDocker:
-		title, width, tables = m.DockerManager(), tableInspectorWidth, true
+		title, tables = m.DockerManager(), true
 	}
-	ui.Column(c.Key("inspector")).Width(width).Shrink(0).FillHeight().Background(a.contentFill(tok.Canvas, canvasAlpha)).Children(func() {
+	ui.Column(c.Key("panel:" + string(k))).Fill().Children(func() {
 		ui.Row(c).Height(40).Shrink(0).Padding(0, 8, 0, 16).Gap(8).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, title).FontSize(theme.Body).FontWeight(600).Grow(1).Shrink(1).SingleLine()
 			if (IconButton{Icon: icons.Close, Label: m.ClosePanel(), Size: Small}).Clicked(c, "close") {
-				a.inspector = ""
+				a.closePanel(k)
 			}
 		})
 		if tables {
 			// Its tables scroll themselves: the panel gives them its height.
-			ui.Column(c.Key("body:"+string(a.inspector))).Grow(1).Shrink(1).MinHeight(0).FillWidth().
+			ui.Column(c.Key("body")).Grow(1).Shrink(1).MinHeight(0).FillWidth().
 				Padding(0, theme.Space(3), theme.Space(3), theme.Space(3)).Gap(theme.Space(2.5)).Children(func() {
-				if a.inspector == inspectUsage {
+				if k == inspectUsage {
 					a.usagePanel(c, m, tok)
 				} else {
 					a.dockerPanel(c, m, tok)
@@ -129,12 +217,11 @@ func (a *App) inspectorView(c *ui.Context, m locales.Messages, tok theme.Tokens)
 			})
 			return
 		}
-		ui.Scroll(c.Key("body:" + string(a.inspector))).Grow(1).Shrink(1).FillWidth().Children(func() {
+		ui.Scroll(c.Key("body")).Grow(1).Shrink(1).MinHeight(0).FillWidth().Children(func() {
 			ui.Column(c).FillWidth().Padding(0, theme.Space(3), theme.Space(3), theme.Space(3)).Gap(theme.Space(2.5)).Children(func() {
-				switch a.inspector {
-				case inspectMonitor:
+				if k == inspectMonitor {
 					a.monitorPanel(c, m, tok)
-				case inspectHost:
+				} else {
 					a.hostPanel(c, m, tok)
 				}
 			})

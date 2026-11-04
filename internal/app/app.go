@@ -203,11 +203,13 @@ type App struct {
 
 	// interface state
 	page page
-	// pref is the settings page showing, inspector the panel open beside
-	// the panes, "" for none
-	pref      prefPage
-	inspector inspectorKind
-	snippets  snippetState
+	// pref is the settings page showing; panels those open beside the
+	// panes, in panelOrder, and stackPct the share of each divider between
+	// them, by the panels from it down
+	pref     prefPage
+	panels   []inspectorKind
+	stackPct map[string]*float32
+	snippets snippetState
 	// tabStart is the first tab the title bar shows when not all fit, the
 	// others in its menu of more tabs; tabRoom the width they had
 	tabStart int
@@ -382,7 +384,7 @@ type App struct {
 
 // New opens the app's data.
 func New(p Platform) (*App, error) {
-	a := &App{p: p, ws: layout.New(), conns: map[int]*conn{}, pool: session.NewPool(), typed: map[string]string{}, typedGen: map[string]int{}, sections: map[string]*bool{}, temps: map[string]assets.Host{}, pct: map[int]*float32{}, fwds: map[string]*fwdRun{}, fwdOpen: map[string]bool{}, paneBounds: map[int]ui.Rect{}, metrics: map[string]*session.Collector{}, aiRecent: map[string]int{}}
+	a := &App{p: p, ws: layout.New(), conns: map[int]*conn{}, pool: session.NewPool(), typed: map[string]string{}, typedGen: map[string]int{}, sections: map[string]*bool{}, temps: map[string]assets.Host{}, pct: map[int]*float32{}, fwds: map[string]*fwdRun{}, fwdOpen: map[string]bool{}, paneBounds: map[int]ui.Rect{}, metrics: map[string]*session.Collector{}, aiRecent: map[string]int{}, stackPct: map[string]*float32{}}
 	a.logo = appicon.Bitmap()
 	a.settings = settings.Default()
 	a.kdf = vault.DefaultParams

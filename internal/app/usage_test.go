@@ -43,8 +43,8 @@ func TestUsagePanel(t *testing.T) {
 	connected(t, a, tt, srv)
 	mustClick(t, tt, "Process Usage")
 	tt.Frame()
-	if a.inspector != inspectUsage {
-		t.Fatalf("inspector %q", a.inspector)
+	if !a.panelOpen(inspectUsage) {
+		t.Fatalf("panels %q", a.panels)
 	}
 	waitFor(t, tt, "the processes", func() bool { return tt.HasText("busyloop") && tt.HasText("2 processes") })
 	waitFor(t, tt, "the CPU", func() bool {
@@ -93,7 +93,7 @@ func TestUsagePanelNotLinux(t *testing.T) {
 	})
 	a, tt := newTestApp(t)
 	connected(t, a, tt, srv)
-	a.inspector = inspectUsage
+	a.panels = []inspectorKind{inspectUsage}
 	tt.Frame()
 	waitFor(t, tt, "the note", func() bool { return tt.HasText("only Linux servers") })
 	tt.Advance(3 * usageEvery)
