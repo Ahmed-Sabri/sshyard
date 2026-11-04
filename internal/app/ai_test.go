@@ -196,6 +196,51 @@ func paneHas(a *App, id int, s string) bool {
 	return false
 }
 
+func TestStartupLeavesSavedAILayoutClosed(t *testing.T) {
+	srv, err := sshtest.Start("127.0.0.1:0", "demo", "secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer srv.Close()
+	dir := t.TempDir()
+	system := keychain.NewMemory()
+	a, tt := appIn(t, dir, system)
+	term := connected(t, a, tt, srv)
+	tt.Key(aiMods, ui.KeyA)
+	tt.Frame()
+	if a.focused() == nil || a.focused().kind != layout.AI {
+		t.Fatal("AI pane missing before restart")
+	}
+	a.Close()
+	file := filepath.Join(dir, "layout.json")
+	before, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	logins := srv.Logins()
+	again, tt2 := appIn(t, dir, system)
+	tt2.Frame()
+	if len(again.ws.Tabs) != 0 || len(again.conns) != 0 || !tt2.HasText("Welcome to SSHYard") {
+		t.Fatalf("startup restored panes: tabs=%d conns=%d texts=%q", len(again.ws.Tabs), len(again.conns), tt2.Texts())
+	}
+	after, err := os.ReadFile(file)
+	if err != nil || string(after) != string(before) {
+		t.Fatalf("startup changed saved layout: %q %v", after, err)
+	}
+	id, err := again.OpenAI(term.host.ID, openAt{}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tt2.Frame()
+	ai := aiPaneOf(again, id)
+	if ai == nil || ai.ai.link != 0 || ai.s != nil || len(again.ws.Tabs) != 1 || !tt2.HasText("AI · box") {
+		t.Fatalf("manual AI open failed: pane=%+v texts=%q", ai, tt2.Texts())
+	}
+	if again.pool.Shared(again.poolKey(term.host)) != 0 || srv.Logins() != logins {
+		t.Fatal("startup or manual AI open dialed SSH")
+	}
+}
+
 func TestAILayoutRestoresEmptySession(t *testing.T) {
 	srv, err := sshtest.Start("127.0.0.1:0", "demo", "secret")
 	if err != nil {
@@ -228,6 +273,7 @@ func TestAILayoutRestoresEmptySession(t *testing.T) {
 	logins := srv.Logins()
 
 	again, tt2 := appIn(t, dir, system)
+	again.loadLayout()
 	tt2.Frame()
 	var got *conn
 	for _, c := range again.conns {
@@ -266,6 +312,7 @@ func TestAILayoutDropsSavedFullMode(t *testing.T) {
 	a.Close()
 
 	again, tt := appIn(t, dir, system)
+	again.loadLayout()
 	tt.Frame()
 	var dropped, ask *conn
 	for _, c := range again.conns {
@@ -340,6 +387,7 @@ func TestLayoutSkipsTempHosts(t *testing.T) {
 	a.Close()
 
 	again, tt2 := appIn(t, dir, system)
+	again.loadLayout()
 	tt2.Frame()
 	if len(again.ws.Tabs) != 3 {
 		t.Fatalf("tabs %d", len(again.ws.Tabs))
@@ -428,6 +476,7 @@ func TestLayoutRestoreDoesNotDial(t *testing.T) {
 	}
 
 	again, tt := appIn(t, dir, kc)
+	again.loadLayout()
 	tt.Frame()
 	if len(again.ws.Tabs) != 1 {
 		t.Fatalf("tabs %d, editor tab should be dropped", len(again.ws.Tabs))

@@ -179,7 +179,7 @@ func TestUnlockBusyAndCloseLateResult(t *testing.T) {
 	}
 }
 
-func TestUnlockBlocksAutomaticServicesAndRestoresOnce(t *testing.T) {
+func TestUnlockBlocksAutomaticServicesAndStartsOnce(t *testing.T) {
 	dir := t.TempDir()
 	s := settings.Default()
 	s.MCPEnabled = true
@@ -222,14 +222,14 @@ func TestUnlockBlocksAutomaticServicesAndRestoresOnce(t *testing.T) {
 	b.fail.Store(false)
 	a.retryUnlock()
 	waitFor(t, tt, "unlocked", a.unlocked)
-	if a.mcp.srv == nil || len(a.conns) != 2 || len(a.fwds) != 1 {
+	if a.mcp.srv == nil || len(a.conns) != 1 || len(a.fwds) != 1 || len(a.ws.Tabs) != 0 {
 		t.Fatalf("services not restored: %v %d", a.mcp.srv, len(a.conns))
 	}
 	srv := a.mcp.srv
 	a.retryUnlock()
 	a.Start()
 	tt.Frame()
-	if a.mcp.srv != srv || len(a.conns) != 2 {
+	if a.mcp.srv != srv || len(a.conns) != 1 || len(a.ws.Tabs) != 0 {
 		t.Fatal("duplicate startup")
 	}
 }

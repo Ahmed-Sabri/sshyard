@@ -551,7 +551,7 @@ func (a *App) startUnlocked() {
 	}
 	a.autoStartForwards()
 	a.syncMCP()
-	a.loadLayout()
+	// Start with an empty workspace; saved AI layouts contain no session content.
 	if root, err := a.cacheDir(); err == nil {
 		go cleanCache(root)
 	}
