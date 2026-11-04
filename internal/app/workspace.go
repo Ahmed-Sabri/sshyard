@@ -155,43 +155,13 @@ func tempBadge(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	})
 }
 
-func (a *App) shortcuts(c *ui.Context) {
-	if c.Shortcut(appMods, ui.KeyK) {
-		a.OpenQuickConnect()
-	}
-	if c.Shortcut(appMods, ui.KeyF) && a.page == pageWorkspace {
-		if cn := a.focused(); cn != nil && cn.kind == layout.Terminal {
-			a.finding = true
-		}
-	}
-	if c.Shortcut(appMods, ui.KeyT) {
-		if cn := a.focused(); cn != nil {
-			a.Connect(cn.host.ID, openAt{})
-		} else if id := a.selectedHost(); id != "" {
-			a.Connect(id, openAt{})
-		}
-	}
-	if c.Shortcut(appMods, ui.KeyW) {
-		a.CloseFocused()
-	}
-	if c.Shortcut(appMods, ui.KeyD) {
-		a.SplitFocused(layout.Right)
-	}
-	if c.Shortcut(appMods, ui.KeyE) {
-		a.SplitFocused(layout.Bottom)
-	}
-	if c.Shortcut(appMods, ui.KeyO) {
-		a.ToggleFiles()
-	}
-	if c.Shortcut(aiMods, ui.KeyA) && a.page == pageWorkspace {
-		a.ToggleAI()
-	}
-	if c.Shortcut(stopMods, ui.KeyPeriod) {
-		a.stopShortcut()
-	}
-	if c.Shortcut(stopAllMods, ui.KeyPeriod) {
-		a.StopAllAI()
-	}
+// scpBadge marks a files pane on a server without SFTP, whose files move
+// with scp and its shell.
+func scpBadge(c *ui.Context, m locales.Messages, tok theme.Tokens) {
+	ui.Box(c.Key("scp")).Shrink(0).Padding(1, 6).Radius(theme.Capsule).Background(tok.Warning.Alpha(0.14)).
+		Label(m.ScpFallbackNote()).Tooltip(m.ScpFallbackNote()).Children(func() {
+		ui.Text(c, "SCP").FontSize(theme.Caption).FontWeight(500).TextColor(tok.Warning).SingleLine()
+	})
 }
 
 // toolbarTrail is the toolbar's right padding: a small gap before the
@@ -321,7 +291,7 @@ func (a *App) paneView(c *ui.Context, t *layout.Tab, n *layout.Node, tok theme.T
 	}
 	multi := len(t.Panes()) > 1
 	focused := t.Focus == n.ID
-	pal := tok.Terminal
+	pal := a.termPalette(tok)
 	bg := pal.Background
 	if cn.kind != layout.Terminal {
 		bg = tok.Inset
@@ -383,6 +353,9 @@ func (a *App) paneView(c *ui.Context, t *layout.Tab, n *layout.Node, tok theme.T
 				}
 				if isTemp(cn.host.ID) {
 					tempBadge(c, m, tok)
+				}
+				if cn.fs != nil && cn.fs.remote.client != nil && cn.fs.remote.client.SCP() {
+					scpBadge(c, m, tok)
 				}
 				if cn.kind == layout.Terminal {
 					a.paneForwards(c, m, tok, cn.host.ID)
@@ -532,6 +505,7 @@ func (a *App) termElement(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn
 				a.focusReq = cn.id
 			}
 		}
+		tv.shortcuts = a.settings.Shortcuts
 		// A program reading the mouse takes the right click too.
 		return tv.input(ev, svc) || a.contextPress(tb, ev, entries)
 	})
@@ -556,21 +530,21 @@ func (a *App) termEntries(t *layout.Tab, n *layout.Node, cn *conn, tv *termView,
 	return []menuEntry{
 		{Icon: icons.Copy, Label: m.Copy(), Disabled: sel == "", Do: func() { svc.WriteClipboard(sel) }},
 		{Icon: icons.Paste, Label: m.Paste(), Do: func() { tv.Paste(svc.ReadClipboard()) }},
-		{Icon: icons.Search, Label: m.Find(), Mods: appMods, Key: ui.KeyF, Do: focus(func() { a.finding = true })},
+		a.bound(actFind, menuEntry{Icon: icons.Search, Label: m.Find(), Do: focus(func() { a.finding = true })}),
 		{Icon: icons.Clear, Label: m.ClearScreen(), Do: func() { tv.send([]byte{0x0c}) }},
 		menuSep,
-		{Icon: icons.SplitRight, Label: m.SplitRight(), Mods: appMods, Key: ui.KeyD, Do: focus(func() { a.SplitFocused(layout.Right) })},
-		{Icon: icons.SplitDown, Label: m.SplitDown(), Mods: appMods, Key: ui.KeyE, Do: focus(func() { a.SplitFocused(layout.Bottom) })},
-		{Icon: icons.Folder, Label: m.OpenFilesBeside(), Mods: appMods, Key: ui.KeyO, Disabled: noAI, Do: focus(a.OpenFilesBeside)},
-		{Icon: icons.Robot, Label: m.OpenAIRight(), Mods: aiMods, Key: ui.KeyA, Disabled: noAI, Do: focus(func() {
+		a.bound(actSplitRight, menuEntry{Icon: icons.SplitRight, Label: m.SplitRight(), Do: focus(func() { a.SplitFocused(layout.Right) })}),
+		a.bound(actSplitDown, menuEntry{Icon: icons.SplitDown, Label: m.SplitDown(), Do: focus(func() { a.SplitFocused(layout.Bottom) })}),
+		a.bound(actOpenFiles, menuEntry{Icon: icons.Folder, Label: m.OpenFilesBeside(), Disabled: noAI, Do: focus(a.OpenFilesBeside)}),
+		a.bound(actOpenAI, menuEntry{Icon: icons.Robot, Label: m.OpenAIRight(), Disabled: noAI, Do: focus(func() {
 			a.OpenAI(cn.host.ID, openAt{pane: n.ID, edge: layout.Right}, cn.id)
-		})},
+		})}),
 		{Label: m.OpenAIBelow(), Disabled: noAI, Do: focus(func() {
 			a.OpenAI(cn.host.ID, openAt{pane: n.ID, edge: layout.Bottom}, cn.id)
 		})},
 		{Icon: icons.Robot, Label: m.AskAI(), Disabled: sel == "" || noAI, Do: func() { a.AskAI(cn, sel) }},
 		menuSep,
-		{Icon: icons.Close, Label: m.ClosePane(), Mods: appMods, Key: ui.KeyW, Do: func() { a.closeSoon(cn.id) }},
+		a.bound(actClosePane, menuEntry{Icon: icons.Close, Label: m.ClosePane(), Do: func() { a.closeSoon(cn.id) }}),
 	}
 }
 

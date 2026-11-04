@@ -631,7 +631,7 @@ func TestFilesClickName(t *testing.T) {
 	mustClick(t, tt, "inner.txt")
 	mustClick(t, tt, "inner.txt")
 	waitFor(t, tt, "editor", func() bool { return len(wins.list()) == 1 })
-	if ec := editorConn(a); ec == nil || ec.ed.name != "inner.txt" || len(fc.fs.transfers.List()) != 0 {
+	if ec := editorConn(a); ec == nil || shown(ec) == nil || shown(ec).name != "inner.txt" || len(fc.fs.transfers.List()) != 0 {
 		t.Fatalf("double click did not open the editor alone: %+v", fc.fs.transfers.List())
 	}
 }

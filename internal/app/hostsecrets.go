@@ -30,6 +30,7 @@ func (a *App) hostSecretFields(c *ui.Context, m locales.Messages, tok theme.Toke
 		})
 	case m.CredKindKey():
 		ui.Field(c, m.FieldPrivateKey(), func() { a.keyPicker(c, m, tok, s) })
+		ui.Field(c, m.FieldCertificate(), func() { a.certPicker(c, m, tok, s) })
 		if s.encrypted() || s.genKey != nil {
 			ui.Field(c, m.FieldPassphrase(), func() { ui.TextInput(c.Key("hf:pass"), &s.passphrase).Password().Placeholder(m.PasswordUnchanged()) })
 			ui.Field(c, "", func() { ui.Checkbox(c.Key("hf:ask"), &s.askPass, m.AskPassphraseEachTime()) })
@@ -111,6 +112,9 @@ func (a *App) hostSecretChanges(m locales.Messages, f *hostForm, h assets.Host) 
 		}
 		if err != nil {
 			return fail(keyError(m, err))
+		}
+		if s.cert != "" && !s.certInfo.Matches(k.Fingerprint()) {
+			return fail(m.ErrCertMismatch())
 		}
 		if !keep[keychain.PrivateKey] {
 			values[keychain.PrivateKey] = k.PEM
@@ -211,6 +215,7 @@ func (a *App) hostCredentials(h assets.Host, typed func(string) string) (session
 		return out, err
 	}
 	var err error
+	out.Certificate = []byte(h.Certificate)
 	out.PrivateKey, err = a.kc.Get(keychain.Host(h.ID, keychain.PrivateKey))
 	if errors.Is(err, keychain.ErrNotFound) {
 		err = session.ErrNoCredentials

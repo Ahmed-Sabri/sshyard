@@ -55,7 +55,7 @@ func sideBase(remote bool, p string) string {
 
 // openEntry opens an entry of a side, as a double click or Enter does: a
 // folder lists, an image shows, a file made for another app asks how to
-// open it, and another file opens in the editor, in a window of its own.
+// open it, and another file opens in a tab of the editor window of its host.
 func (a *App) openEntry(cn *conn, remote bool, e sftpsvc.Entry) {
 	sd := cn.fs.side(remote)
 	p := sidePath(remote, sd.dir, e.Name)
@@ -85,12 +85,12 @@ const openTimeout = 30 * time.Second
 // editorHardReadLimit is the most the editor reads, confirmed or not.
 const editorHardReadLimit int64 = 256 << 20
 
-// editFile opens a file of a side in the editor: the window already
-// showing it, else after asking about a large one. A file that is not
+// editFile opens a file of a side in the editor: the tab already showing
+// it, else after asking about a large one. A file that is not
 // text asks how to open it instead, unless asText.
 func (a *App) editFile(cn *conn, remote bool, p string, size int64, asText bool) {
-	if ed := a.editorOn(cn.host.ID, remote, p); ed != nil {
-		a.focusEditor(ed)
+	if ecn, ed := a.editorTab(cn.host.ID, remote, p); ed != nil {
+		a.showTab(ecn, ed)
 		return
 	}
 	if remote && cn.fs.remote.client == nil {
@@ -128,7 +128,7 @@ func (a *App) readForEditor(cn *conn, remote bool, p string, sizeConfirmed, asTe
 		a.post(func() {
 			switch {
 			case err != nil:
-				a.openFailed(sideBase(remote, p), err)
+				a.openFailed(cn, sideBase(remote, p), err)
 			case !asText && !sftpsvc.IsText(data):
 				a.askOpenWith(cn, &withAsk{remote: remote, path: p, size: ver.Size, data: data, ver: ver})
 			default:
@@ -138,8 +138,9 @@ func (a *App) readForEditor(cn *conn, remote bool, p string, sizeConfirmed, asTe
 	}()
 }
 
-func (a *App) openFailed(name string, err error) {
-	a.toast(func(m locales.Messages) ui.Toast {
+// openFailed says, in the window of cn, that the file name did not open.
+func (a *App) openFailed(cn *conn, name string, err error) {
+	a.toastIn(cn, func(m locales.Messages) ui.Toast {
 		return ui.Toast{Title: m.OpenFailed(shownName(name), securityErrorText(m, err)), Type: "error"}
 	})
 }
@@ -264,28 +265,28 @@ func (a *App) openOutside(cn *conn, w *withAsk, choose bool, m locales.Messages)
 	name := sideBase(w.remote, w.path)
 	title := m.ChooseAppTitle(shownName(name))
 	if !w.remote {
-		a.openLocalApp(w.path, choose, title, "")
+		a.openLocalApp(cn, w.path, choose, title, "")
 		return
 	}
 	// Before anything is written: the name comes from the server, and
 	// must be safe as a local name and stay in the copy's folder.
 	if err := sftpsvc.SafeName(name); err != nil {
-		a.openFailed(name, err)
+		a.openFailed(cn, name, err)
 		return
 	}
 	local, err := a.copyPath(&cn.fs.copies, name)
 	if err != nil {
-		a.openFailed(name, err)
+		a.openFailed(cn, name, err)
 		return
 	}
 	if w.data != nil {
 		if err := writeLocalCopy(local, w.data, 0o600); err != nil {
 			os.RemoveAll(filepath.Dir(local))
-			a.openFailed(name, err)
+			a.openFailed(cn, name, err)
 			return
 		}
 		os.Chmod(local, 0o600) // whatever the umask
-		a.openLocalApp(local, choose, title, name)
+		a.openLocalApp(cn, local, choose, title, name)
 		return
 	}
 	id := cn.fs.transfers.Add(sftpsvc.Download, w.path, local, name)
@@ -320,14 +321,14 @@ func (a *App) pendingOpens(cn *conn) {
 			os.RemoveAll(filepath.Dir(o.local))
 		case t.State == sftpsvc.Failed:
 			os.RemoveAll(filepath.Dir(o.local))
-			a.openFailed(o.name, t.Err)
+			a.openFailed(cn, o.name, t.Err)
 		case t.State == sftpsvc.Done:
 			local := o.local
 			if t.Destination != "" {
 				local = t.Destination
 			}
 			os.Chmod(local, 0o600)
-			a.openLocalApp(local, o.choose, o.title, o.name)
+			a.openLocalApp(cn, local, o.choose, o.title, o.name)
 		default:
 			left = append(left, o)
 		}
@@ -337,8 +338,9 @@ func (a *App) pendingOpens(cn *conn) {
 
 // openLocalApp opens the local file p in its default app, or in one the user
 // chooses (title asks for it), off the UI thread. copied, when set, is
-// the name of the remote file p is a copy of, which a toast says.
-func (a *App) openLocalApp(p string, choose bool, title, copied string) {
+// the name of the remote file p is a copy of, which a toast in the window
+// of cn says.
+func (a *App) openLocalApp(cn *conn, p string, choose bool, title, copied string) {
 	open := a.p.OpenPath
 	if choose && a.p.OpenWith != nil {
 		open = func(p string) error { return a.p.OpenWith(p, title) }
@@ -346,18 +348,18 @@ func (a *App) openLocalApp(p string, choose bool, title, copied string) {
 		open = nil
 	}
 	if open == nil {
-		a.openFailed(filepath.Base(p), errors.New("no app to open files with"))
+		a.openFailed(cn, filepath.Base(p), errors.New("no app to open files with"))
 		return
 	}
 	go func() {
 		err := open(p)
 		a.post(func() {
 			if err != nil {
-				a.openFailed(filepath.Base(p), err)
+				a.openFailed(cn, filepath.Base(p), err)
 				return
 			}
 			if copied != "" {
-				a.toast(func(m locales.Messages) ui.Toast { return ui.Toast{Title: m.OpenedLocally(shownName(copied))} })
+				a.toastIn(cn, func(m locales.Messages) ui.Toast { return ui.Toast{Title: m.OpenedLocally(shownName(copied))} })
 			}
 		})
 	}()

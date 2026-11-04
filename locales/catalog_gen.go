@@ -2037,6 +2037,166 @@ func (msgs Messages) ErrKeyCorrupt() string {
 	return Catalog.Format(msgs.locale, "errKeyCorrupt", nil)
 }
 
+// FieldCertificate says "Certificate"
+// in the language the app shows.
+func FieldCertificate() string { return In(i18n.Locale()).FieldCertificate() }
+
+// FieldCertificate says "Certificate"
+// in the language of msgs.
+func (msgs Messages) FieldCertificate() string {
+	return Catalog.Format(msgs.locale, "fieldCertificate", nil)
+}
+
+// CertHint says "Optional: an OpenSSH certificate (key-cert.pub) signed for this key. One beside the key file is loaded with it."
+// in the language the app shows.
+func CertHint() string { return In(i18n.Locale()).CertHint() }
+
+// CertHint says "Optional: an OpenSSH certificate (key-cert.pub) signed for this key. One beside the key file is loaded with it."
+// in the language of msgs.
+func (msgs Messages) CertHint() string {
+	return Catalog.Format(msgs.locale, "certHint", nil)
+}
+
+// CertChooseFile says "Choose certificate file…"
+// in the language the app shows.
+func CertChooseFile() string { return In(i18n.Locale()).CertChooseFile() }
+
+// CertChooseFile says "Choose certificate file…"
+// in the language of msgs.
+func (msgs Messages) CertChooseFile() string {
+	return Catalog.Format(msgs.locale, "certChooseFile", nil)
+}
+
+// CertPaste says "Paste certificate"
+// in the language the app shows.
+func CertPaste() string { return In(i18n.Locale()).CertPaste() }
+
+// CertPaste says "Paste certificate"
+// in the language of msgs.
+func (msgs Messages) CertPaste() string {
+	return Catalog.Format(msgs.locale, "certPaste", nil)
+}
+
+// CertRemove says "Remove certificate"
+// in the language the app shows.
+func CertRemove() string { return In(i18n.Locale()).CertRemove() }
+
+// CertRemove says "Remove certificate"
+// in the language of msgs.
+func (msgs Messages) CertRemove() string {
+	return Catalog.Format(msgs.locale, "certRemove", nil)
+}
+
+// CertInfo says "{type} certificate · {id}"
+// in the language the app shows.
+func CertInfo(type_ string, id string) string { return In(i18n.Locale()).CertInfo(type_, id) }
+
+// CertInfo says "{type} certificate · {id}"
+// in the language of msgs.
+func (msgs Messages) CertInfo(type_ string, id string) string {
+	return Catalog.Format(msgs.locale, "certInfo", map[string]any{"type": type_, "id": id})
+}
+
+// CertPrincipals says "Users: {names}"
+// in the language the app shows.
+func CertPrincipals(names string) string { return In(i18n.Locale()).CertPrincipals(names) }
+
+// CertPrincipals says "Users: {names}"
+// in the language of msgs.
+func (msgs Messages) CertPrincipals(names string) string {
+	return Catalog.Format(msgs.locale, "certPrincipals", map[string]any{"names": names})
+}
+
+// CertAnyPrincipal says "any"
+// in the language the app shows.
+func CertAnyPrincipal() string { return In(i18n.Locale()).CertAnyPrincipal() }
+
+// CertAnyPrincipal says "any"
+// in the language of msgs.
+func (msgs Messages) CertAnyPrincipal() string {
+	return Catalog.Format(msgs.locale, "certAnyPrincipal", nil)
+}
+
+// CertValidUntil says "valid until {date}"
+// in the language the app shows.
+func CertValidUntil(date string) string { return In(i18n.Locale()).CertValidUntil(date) }
+
+// CertValidUntil says "valid until {date}"
+// in the language of msgs.
+func (msgs Messages) CertValidUntil(date string) string {
+	return Catalog.Format(msgs.locale, "certValidUntil", map[string]any{"date": date})
+}
+
+// CertForever says "valid forever"
+// in the language the app shows.
+func CertForever() string { return In(i18n.Locale()).CertForever() }
+
+// CertForever says "valid forever"
+// in the language of msgs.
+func (msgs Messages) CertForever() string {
+	return Catalog.Format(msgs.locale, "certForever", nil)
+}
+
+// CertExpired says "expired on {date}"
+// in the language the app shows.
+func CertExpired(date string) string { return In(i18n.Locale()).CertExpired(date) }
+
+// CertExpired says "expired on {date}"
+// in the language of msgs.
+func (msgs Messages) CertExpired(date string) string {
+	return Catalog.Format(msgs.locale, "certExpired", map[string]any{"date": date})
+}
+
+// CertNotYet says "valid from {date}"
+// in the language the app shows.
+func CertNotYet(date string) string { return In(i18n.Locale()).CertNotYet(date) }
+
+// CertNotYet says "valid from {date}"
+// in the language of msgs.
+func (msgs Messages) CertNotYet(date string) string {
+	return Catalog.Format(msgs.locale, "certNotYet", map[string]any{"date": date})
+}
+
+// ErrNotACert says "This is not an OpenSSH certificate."
+// in the language the app shows.
+func ErrNotACert() string { return In(i18n.Locale()).ErrNotACert() }
+
+// ErrNotACert says "This is not an OpenSSH certificate."
+// in the language of msgs.
+func (msgs Messages) ErrNotACert() string {
+	return Catalog.Format(msgs.locale, "errNotACert", nil)
+}
+
+// ErrHostCert says "This is a host certificate: load the user certificate instead."
+// in the language the app shows.
+func ErrHostCert() string { return In(i18n.Locale()).ErrHostCert() }
+
+// ErrHostCert says "This is a host certificate: load the user certificate instead."
+// in the language of msgs.
+func (msgs Messages) ErrHostCert() string {
+	return Catalog.Format(msgs.locale, "errHostCert", nil)
+}
+
+// ErrCertMismatch says "The certificate is not for this private key."
+// in the language the app shows.
+func ErrCertMismatch() string { return In(i18n.Locale()).ErrCertMismatch() }
+
+// ErrCertMismatch says "The certificate is not for this private key."
+// in the language of msgs.
+func (msgs Messages) ErrCertMismatch() string {
+	return Catalog.Format(msgs.locale, "errCertMismatch", nil)
+}
+
+// ErrCertificate says "The certificate of {host} does not fit its private key: change the key or remove the certificate."
+// in the language the app shows.
+func ErrCertificate(host string) string { return In(i18n.Locale()).ErrCertificate(host) }
+
+// ErrCertificate says "The certificate of {host} does not fit its private key: change the key or remove the certificate."
+// in the language of msgs.
+func (msgs Messages) ErrCertificate(host string) string {
+	return Catalog.Format(msgs.locale, "errCertificate", map[string]any{"host": host})
+}
+
 // ErrKeyUnsupported says "Unsupported key: {detail}"
 // in the language the app shows.
 func ErrKeyUnsupported(detail string) string { return In(i18n.Locale()).ErrKeyUnsupported(detail) }
@@ -4225,6 +4385,86 @@ func (msgs Messages) EditorWindowTitle(name string, place string) string {
 	return Catalog.Format(msgs.locale, "editorWindowTitle", map[string]any{"name": name, "place": place})
 }
 
+// EditorFolders says "Folders"
+// in the language the app shows.
+func EditorFolders() string { return In(i18n.Locale()).EditorFolders() }
+
+// EditorFolders says "Folders"
+// in the language of msgs.
+func (msgs Messages) EditorFolders() string {
+	return Catalog.Format(msgs.locale, "editorFolders", nil)
+}
+
+// EditorShowFolders says "Show Folders"
+// in the language the app shows.
+func EditorShowFolders() string { return In(i18n.Locale()).EditorShowFolders() }
+
+// EditorShowFolders says "Show Folders"
+// in the language of msgs.
+func (msgs Messages) EditorShowFolders() string {
+	return Catalog.Format(msgs.locale, "editorShowFolders", nil)
+}
+
+// EditorUpFolder says "Up One Folder"
+// in the language the app shows.
+func EditorUpFolder() string { return In(i18n.Locale()).EditorUpFolder() }
+
+// EditorUpFolder says "Up One Folder"
+// in the language of msgs.
+func (msgs Messages) EditorUpFolder() string {
+	return Catalog.Format(msgs.locale, "editorUpFolder", nil)
+}
+
+// EditorOpenFile says "Open"
+// in the language the app shows.
+func EditorOpenFile() string { return In(i18n.Locale()).EditorOpenFile() }
+
+// EditorOpenFile says "Open"
+// in the language of msgs.
+func (msgs Messages) EditorOpenFile() string {
+	return Catalog.Format(msgs.locale, "editorOpenFile", nil)
+}
+
+// EditorCloseTab says "Close “{name}”"
+// in the language the app shows.
+func EditorCloseTab(name string) string { return In(i18n.Locale()).EditorCloseTab(name) }
+
+// EditorCloseTab says "Close “{name}”"
+// in the language of msgs.
+func (msgs Messages) EditorCloseTab(name string) string {
+	return Catalog.Format(msgs.locale, "editorCloseTab", map[string]any{"name": name})
+}
+
+// EditorUnsavedManyTitle says "Save changes to {count, plural, one {# file} other {# files}}?"
+// in the language the app shows.
+func EditorUnsavedManyTitle(count int) string { return In(i18n.Locale()).EditorUnsavedManyTitle(count) }
+
+// EditorUnsavedManyTitle says "Save changes to {count, plural, one {# file} other {# files}}?"
+// in the language of msgs.
+func (msgs Messages) EditorUnsavedManyTitle(count int) string {
+	return Catalog.Format(msgs.locale, "editorUnsavedManyTitle", map[string]any{"count": count})
+}
+
+// SaveAll says "Save All"
+// in the language the app shows.
+func SaveAll() string { return In(i18n.Locale()).SaveAll() }
+
+// SaveAll says "Save All"
+// in the language of msgs.
+func (msgs Messages) SaveAll() string {
+	return Catalog.Format(msgs.locale, "saveAll", nil)
+}
+
+// EditorNoFile says "Double-click a file in the folders to open it."
+// in the language the app shows.
+func EditorNoFile() string { return In(i18n.Locale()).EditorNoFile() }
+
+// EditorNoFile says "Double-click a file in the folders to open it."
+// in the language of msgs.
+func (msgs Messages) EditorNoFile() string {
+	return Catalog.Format(msgs.locale, "editorNoFile", nil)
+}
+
 // FollowTerminal says "Follow terminal"
 // in the language the app shows.
 func FollowTerminal() string { return In(i18n.Locale()).FollowTerminal() }
@@ -6203,11 +6443,11 @@ func (msgs Messages) ProxiesDesc() string {
 	return Catalog.Format(msgs.locale, "proxiesDesc", nil)
 }
 
-// ShortcutsDesc says "SSHYard's own shortcuts. Every other key goes to the shell."
+// ShortcutsDesc says "SSHYard's own shortcuts: record a new one for any action. Every other key goes to the shell."
 // in the language the app shows.
 func ShortcutsDesc() string { return In(i18n.Locale()).ShortcutsDesc() }
 
-// ShortcutsDesc says "SSHYard's own shortcuts. Every other key goes to the shell."
+// ShortcutsDesc says "SSHYard's own shortcuts: record a new one for any action. Every other key goes to the shell."
 // in the language of msgs.
 func (msgs Messages) ShortcutsDesc() string {
 	return Catalog.Format(msgs.locale, "shortcutsDesc", nil)
@@ -11977,6 +12217,248 @@ func AiDeleteChatBody() string { return In(i18n.Locale()).AiDeleteChatBody() }
 // in the language of msgs.
 func (msgs Messages) AiDeleteChatBody() string {
 	return Catalog.Format(msgs.locale, "aiDeleteChatBody", nil)
+}
+
+// ScpFallbackNote says "This server has no SFTP: files move with scp and shell commands. An upload is sent once it is complete."
+// in the language the app shows.
+func ScpFallbackNote() string { return In(i18n.Locale()).ScpFallbackNote() }
+
+// ScpFallbackNote says "This server has no SFTP: files move with scp and shell commands. An upload is sent once it is complete."
+// in the language of msgs.
+func (msgs Messages) ScpFallbackNote() string {
+	return Catalog.Format(msgs.locale, "scpFallbackNote", nil)
+}
+
+// ColorScheme says "Color Scheme"
+// in the language the app shows.
+func ColorScheme() string { return In(i18n.Locale()).ColorScheme() }
+
+// ColorScheme says "Color Scheme"
+// in the language of msgs.
+func (msgs Messages) ColorScheme() string {
+	return Catalog.Format(msgs.locale, "colorScheme", nil)
+}
+
+// SchemeFollowAppearance says "Follow Appearance"
+// in the language the app shows.
+func SchemeFollowAppearance() string { return In(i18n.Locale()).SchemeFollowAppearance() }
+
+// SchemeFollowAppearance says "Follow Appearance"
+// in the language of msgs.
+func (msgs Messages) SchemeFollowAppearance() string {
+	return Catalog.Format(msgs.locale, "schemeFollowAppearance", nil)
+}
+
+// SchemeImport says "Import a Color Scheme"
+// in the language the app shows.
+func SchemeImport() string { return In(i18n.Locale()).SchemeImport() }
+
+// SchemeImport says "Import a Color Scheme"
+// in the language of msgs.
+func (msgs Messages) SchemeImport() string {
+	return Catalog.Format(msgs.locale, "schemeImport", nil)
+}
+
+// SchemeImportNote says "An .itermcolors file, as the iTerm2-Color-Schemes collection publishes them. You can also drop it on the schemes above."
+// in the language the app shows.
+func SchemeImportNote() string { return In(i18n.Locale()).SchemeImportNote() }
+
+// SchemeImportNote says "An .itermcolors file, as the iTerm2-Color-Schemes collection publishes them. You can also drop it on the schemes above."
+// in the language of msgs.
+func (msgs Messages) SchemeImportNote() string {
+	return Catalog.Format(msgs.locale, "schemeImportNote", nil)
+}
+
+// SchemeImportButton says "Import…"
+// in the language the app shows.
+func SchemeImportButton() string { return In(i18n.Locale()).SchemeImportButton() }
+
+// SchemeImportButton says "Import…"
+// in the language of msgs.
+func (msgs Messages) SchemeImportButton() string {
+	return Catalog.Format(msgs.locale, "schemeImportButton", nil)
+}
+
+// SchemeChooseFile says "Choose an .itermcolors File"
+// in the language the app shows.
+func SchemeChooseFile() string { return In(i18n.Locale()).SchemeChooseFile() }
+
+// SchemeChooseFile says "Choose an .itermcolors File"
+// in the language of msgs.
+func (msgs Messages) SchemeChooseFile() string {
+	return Catalog.Format(msgs.locale, "schemeChooseFile", nil)
+}
+
+// SchemeImported says "Imported"
+// in the language the app shows.
+func SchemeImported() string { return In(i18n.Locale()).SchemeImported() }
+
+// SchemeImported says "Imported"
+// in the language of msgs.
+func (msgs Messages) SchemeImported() string {
+	return Catalog.Format(msgs.locale, "schemeImported", nil)
+}
+
+// SchemeDelete says "Delete Color Scheme"
+// in the language the app shows.
+func SchemeDelete() string { return In(i18n.Locale()).SchemeDelete() }
+
+// SchemeDelete says "Delete Color Scheme"
+// in the language of msgs.
+func (msgs Messages) SchemeDelete() string {
+	return Catalog.Format(msgs.locale, "schemeDelete", nil)
+}
+
+// ErrSchemeImport says "{name} is not an .itermcolors color scheme."
+// in the language the app shows.
+func ErrSchemeImport(name string) string { return In(i18n.Locale()).ErrSchemeImport(name) }
+
+// ErrSchemeImport says "{name} is not an .itermcolors color scheme."
+// in the language of msgs.
+func (msgs Messages) ErrSchemeImport(name string) string {
+	return Catalog.Format(msgs.locale, "errSchemeImport", map[string]any{"name": name})
+}
+
+// CommandPalette says "Command Palette"
+// in the language the app shows.
+func CommandPalette() string { return In(i18n.Locale()).CommandPalette() }
+
+// CommandPalette says "Command Palette"
+// in the language of msgs.
+func (msgs Messages) CommandPalette() string {
+	return Catalog.Format(msgs.locale, "commandPalette", nil)
+}
+
+// PalettePlaceholder says "Search commands, settings, hosts and snippets…"
+// in the language the app shows.
+func PalettePlaceholder() string { return In(i18n.Locale()).PalettePlaceholder() }
+
+// PalettePlaceholder says "Search commands, settings, hosts and snippets…"
+// in the language of msgs.
+func (msgs Messages) PalettePlaceholder() string {
+	return Catalog.Format(msgs.locale, "palettePlaceholder", nil)
+}
+
+// PaletteNoResults says "No matches"
+// in the language the app shows.
+func PaletteNoResults() string { return In(i18n.Locale()).PaletteNoResults() }
+
+// PaletteNoResults says "No matches"
+// in the language of msgs.
+func (msgs Messages) PaletteNoResults() string {
+	return Catalog.Format(msgs.locale, "paletteNoResults", nil)
+}
+
+// PaletteCommand says "Command"
+// in the language the app shows.
+func PaletteCommand() string { return In(i18n.Locale()).PaletteCommand() }
+
+// PaletteCommand says "Command"
+// in the language of msgs.
+func (msgs Messages) PaletteCommand() string {
+	return Catalog.Format(msgs.locale, "paletteCommand", nil)
+}
+
+// PaletteInSettings says "Settings › {page}"
+// in the language the app shows.
+func PaletteInSettings(page string) string { return In(i18n.Locale()).PaletteInSettings(page) }
+
+// PaletteInSettings says "Settings › {page}"
+// in the language of msgs.
+func (msgs Messages) PaletteInSettings(page string) string {
+	return Catalog.Format(msgs.locale, "paletteInSettings", map[string]any{"page": page})
+}
+
+// ShortcutRecord says "Record a shortcut for “{action}”"
+// in the language the app shows.
+func ShortcutRecord(action string) string { return In(i18n.Locale()).ShortcutRecord(action) }
+
+// ShortcutRecord says "Record a shortcut for “{action}”"
+// in the language of msgs.
+func (msgs Messages) ShortcutRecord(action string) string {
+	return Catalog.Format(msgs.locale, "shortcutRecord", map[string]any{"action": action})
+}
+
+// ShortcutReset says "Restore the default shortcut of “{action}”"
+// in the language the app shows.
+func ShortcutReset(action string) string { return In(i18n.Locale()).ShortcutReset(action) }
+
+// ShortcutReset says "Restore the default shortcut of “{action}”"
+// in the language of msgs.
+func (msgs Messages) ShortcutReset(action string) string {
+	return Catalog.Format(msgs.locale, "shortcutReset", map[string]any{"action": action})
+}
+
+// ShortcutRecordHint says "Press the new shortcut. Esc cancels."
+// in the language the app shows.
+func ShortcutRecordHint() string { return In(i18n.Locale()).ShortcutRecordHint() }
+
+// ShortcutRecordHint says "Press the new shortcut. Esc cancels."
+// in the language of msgs.
+func (msgs Messages) ShortcutRecordHint() string {
+	return Catalog.Format(msgs.locale, "shortcutRecordHint", nil)
+}
+
+// ShortcutPressKeys says "Press keys…"
+// in the language the app shows.
+func ShortcutPressKeys() string { return In(i18n.Locale()).ShortcutPressKeys() }
+
+// ShortcutPressKeys says "Press keys…"
+// in the language of msgs.
+func (msgs Messages) ShortcutPressKeys() string {
+	return Catalog.Format(msgs.locale, "shortcutPressKeys", nil)
+}
+
+// ShortcutsResetAll says "Restore All Defaults"
+// in the language the app shows.
+func ShortcutsResetAll() string { return In(i18n.Locale()).ShortcutsResetAll() }
+
+// ShortcutsResetAll says "Restore All Defaults"
+// in the language of msgs.
+func (msgs Messages) ShortcutsResetAll() string {
+	return Catalog.Format(msgs.locale, "shortcutsResetAll", nil)
+}
+
+// ShortcutKeyInvalid says "Use a letter, digit, punctuation or function key."
+// in the language the app shows.
+func ShortcutKeyInvalid() string { return In(i18n.Locale()).ShortcutKeyInvalid() }
+
+// ShortcutKeyInvalid says "Use a letter, digit, punctuation or function key."
+// in the language of msgs.
+func (msgs Messages) ShortcutKeyInvalid() string {
+	return Catalog.Format(msgs.locale, "shortcutKeyInvalid", nil)
+}
+
+// ShortcutNeedsMods says "The shortcut must hold {mods}, so other keys reach the shell."
+// in the language the app shows.
+func ShortcutNeedsMods(mods string) string { return In(i18n.Locale()).ShortcutNeedsMods(mods) }
+
+// ShortcutNeedsMods says "The shortcut must hold {mods}, so other keys reach the shell."
+// in the language of msgs.
+func (msgs Messages) ShortcutNeedsMods(mods string) string {
+	return Catalog.Format(msgs.locale, "shortcutNeedsMods", map[string]any{"mods": mods})
+}
+
+// ShortcutReserved says "{keys} belongs to the system or to editing text."
+// in the language the app shows.
+func ShortcutReserved(keys string) string { return In(i18n.Locale()).ShortcutReserved(keys) }
+
+// ShortcutReserved says "{keys} belongs to the system or to editing text."
+// in the language of msgs.
+func (msgs Messages) ShortcutReserved(keys string) string {
+	return Catalog.Format(msgs.locale, "shortcutReserved", map[string]any{"keys": keys})
+}
+
+// ShortcutTaken says "{keys} is already the shortcut of “{action}”."
+// in the language the app shows.
+func ShortcutTaken(keys string, action string) string {
+	return In(i18n.Locale()).ShortcutTaken(keys, action)
+}
+
+// ShortcutTaken says "{keys} is already the shortcut of “{action}”."
+// in the language of msgs.
+func (msgs Messages) ShortcutTaken(keys string, action string) string {
+	return Catalog.Format(msgs.locale, "shortcutTaken", map[string]any{"keys": keys, "action": action})
 }
 
 // Migration says "Migration"

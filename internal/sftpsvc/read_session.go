@@ -3,10 +3,12 @@ package sftpsvc
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 
 	"golang.org/x/crypto/ssh"
 
+	"github.com/Licoy/sshyard/internal/scpfs"
 	"github.com/pkg/sftp"
 )
 
@@ -79,6 +81,9 @@ func (c *Client) negotiateOperation(ctx context.Context) (*Client, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
+	if withoutSFTP(c.conn) {
+		return c.scpOperation()
+	}
 	session, err := c.conn.NewSession()
 	if err != nil {
 		return nil, err
@@ -100,7 +105,13 @@ func (c *Client) negotiateOperation(ctx context.Context) (*Client, error) {
 		return nil, err
 	}
 	if err := session.RequestSubsystem("sftp"); err != nil {
-		return nil, err
+		if err.Error() != errSubsystem {
+			return nil, err
+		}
+		// The server has no SFTP: its shell and scp stand in.
+		session.Close()
+		markWithoutSFTP(c.conn)
+		return c.scpOperation()
 	}
 	sc, err := sftp.NewClientPipe(rd, wr)
 	if err != nil {
@@ -108,4 +119,44 @@ func (c *Client) negotiateOperation(ctx context.Context) (*Client, error) {
 	}
 	complete = true
 	return &Client{c: sc, conn: c.conn, operation: session, operations: c.operations}, nil
+}
+
+// errSubsystem is what x/crypto/ssh says when the server refuses a
+// subsystem.
+const errSubsystem = "ssh: subsystem request failed"
+
+// noSFTP are the connections whose server refused the sftp subsystem.
+var noSFTP = struct {
+	sync.Mutex
+	m map[*ssh.Client]bool
+}{m: map[*ssh.Client]bool{}}
+
+func withoutSFTP(conn *ssh.Client) bool {
+	noSFTP.Lock()
+	defer noSFTP.Unlock()
+	return noSFTP.m[conn]
+}
+
+func markWithoutSFTP(conn *ssh.Client) {
+	noSFTP.Lock()
+	defer noSFTP.Unlock()
+	if noSFTP.m[conn] {
+		return
+	}
+	noSFTP.m[conn] = true
+	go func() {
+		conn.Wait()
+		noSFTP.Lock()
+		delete(noSFTP.m, conn)
+		noSFTP.Unlock()
+	}()
+}
+
+// scpOperation is an SFTP client of a server without SFTP (scpfs).
+func (c *Client) scpOperation() (*Client, error) {
+	sc, err := scpfs.NewClient(c.conn)
+	if err != nil {
+		return nil, fmt.Errorf("sftp: no SFTP, and %w", err)
+	}
+	return &Client{c: sc, conn: c.conn, operations: c.operations, scp: true}, nil
 }

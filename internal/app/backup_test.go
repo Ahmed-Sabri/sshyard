@@ -267,16 +267,19 @@ func TestRestoreBrokenEntriesPutsSecretsBack(t *testing.T) {
 func TestMergeSettings(t *testing.T) {
 	cur := settings.Default()
 	cur.SidebarWidth, cur.UIFont = 260, "Local Font"
+	cur.FilesDual, cur.FilesSplit, cur.EditorTreeWidth = true, 30, 300
 	cur.AIProviders = []settings.AIProvider{{ID: "a", Name: "A"}, {ID: "b", Name: "B"}}
 	cur.AIConsentHosts = []string{"h1"}
 	in := settings.Default()
 	in.SidebarWidth, in.UIFont, in.KeepAliveSeconds = 400, "Other Font", 99
+	in.FilesSplit, in.EditorTreeWidth, in.EditorTreeHidden = 70, 500, true
 	in.AIProviders = []settings.AIProvider{{ID: "b", Name: "B2"}, {ID: "c", Name: "C"}}
 	in.AIConsentHosts = []string{"h1", "h2"}
 	cur.BackupTargets = []settings.BackupTarget{{ID: "here", Name: "NAS", Kind: settings.BackupWebDAV}}
 	in.BackupTargets = []settings.BackupTarget{{ID: "there", Name: "Other", Kind: settings.BackupS3}}
 	out := mergeSettings(cur, in)
-	if out.SidebarWidth != 260 || out.UIFont != "Local Font" || out.KeepAliveSeconds != 99 {
+	if out.SidebarWidth != 260 || out.UIFont != "Local Font" || out.KeepAliveSeconds != 99 ||
+		!out.FilesDual || out.FilesSplit != 30 || out.EditorTreeWidth != 300 || out.EditorTreeHidden {
 		t.Fatalf("merged %+v", out)
 	}
 	if len(out.BackupTargets) != 1 || out.BackupTargets[0].ID != "here" {

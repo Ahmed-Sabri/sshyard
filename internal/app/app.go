@@ -131,7 +131,7 @@ type conn struct {
 	s              *session.Session
 	tv             *termView   // terminal panes
 	fs             *filesState // files and editor panes (its SFTP client)
-	ed             *editState  // editor panes
+	ed             *edWin      // editor windows
 	// handled is the failure a prompt was already shown for
 	handled error
 	// tried is, by a.typed key, the generation of the secret the last
@@ -346,9 +346,14 @@ type App struct {
 	migration     *migrationForm
 	migrationOpen bool
 	migrationHold focusHold
-	imp           *importForm
-	importing     bool
-	impHold       focusHold
+	// palette is the command palette, open while palette.open
+	palette paletteState
+	// recording is the action whose shortcut is being recorded, and
+	// recordErr why the last key pressed for it could not be its shortcut
+	recording, recordErr string
+	imp                  *importForm
+	importing            bool
+	impHold              focusHold
 	// fwds are the port forwards running, by forward ID
 	fwds       map[string]*fwdRun
 	fwdForm    *fwdForm
@@ -1041,7 +1046,7 @@ func (a *App) credentials(c *conn, h assets.Host) (session.Credentials, error) {
 				}
 				return out, err
 			}
-			out.PrivateKey = key
+			out.PrivateKey, out.Certificate = key, []byte(cr.Certificate)
 			pk := keychain.Cred(cr.ID, keychain.Passphrase)
 			if p := typed(pk); p != "" {
 				out.Passphrase = []byte(p)

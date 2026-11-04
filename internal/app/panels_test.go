@@ -69,6 +69,10 @@ func TestKeyCaps(t *testing.T) {
 		{"darwin", ui.Super | ui.Shift, ui.KeyA, []string{"⇧", "⌘", "A"}},
 		{"linux", ui.Ctrl | ui.Shift, ui.KeyT, []string{"Ctrl", "Shift", "T"}},
 		{"windows", ui.Ctrl, ui.KeyPeriod, []string{"Ctrl", "."}},
+		{"darwin", ui.Super | ui.Alt, ui.Key7, []string{"⌥", "⌘", "7"}},
+		{"linux", ui.Ctrl | ui.Shift, ui.KeyF11, []string{"Ctrl", "Shift", "F11"}},
+		{"darwin", ui.Super, ui.KeyBracketLeft, []string{"⌘", "["}},
+		{"windows", ui.Ctrl | ui.Shift, ui.KeySlash, []string{"Ctrl", "Shift", "/"}},
 	} {
 		if got := keyCaps(tc.goos, tc.mods, tc.key); !reflect.DeepEqual(got, tc.want) {
 			t.Errorf("%s %v %v: %q, want %q", tc.goos, tc.mods, tc.key, got, tc.want)
@@ -85,13 +89,13 @@ func TestShortcutsPage(t *testing.T) {
 		t.Fatalf("page %v %q", a.page, a.prefNow())
 	}
 	m := locales.In("en")
-	for _, sc := range appShortcuts(m) {
-		if !hasExact(tt, sc.label) {
-			t.Errorf("no row %q", sc.label)
+	for _, ac := range actions {
+		if !hasExact(tt, ac.label(m)) {
+			t.Errorf("no row %q", ac.label(m))
 		}
-		for _, k := range keyCaps(runtime.GOOS, sc.mods, sc.key) {
+		for _, k := range keyCaps(runtime.GOOS, ac.def.Mods, ac.def.Key) {
 			if !hasExact(tt, k) {
-				t.Errorf("no key %q of %q", k, sc.label)
+				t.Errorf("no key %q of %q", k, ac.label(m))
 			}
 		}
 	}

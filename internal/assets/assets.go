@@ -76,6 +76,9 @@ type Host struct {
 	// CredentialID is the credential of AuthCredential.
 	CredentialID  string `json:"credentialId,omitempty"`
 	AskPassphrase bool   `json:"askPassphrase,omitempty"`
+	// Certificate is the OpenSSH user certificate of an AuthKey host's
+	// key, one key-cert.pub line; public, so it is kept here.
+	Certificate string `json:"certificate,omitempty"`
 	// JumpChain are the hosts connected through, in order, before this
 	// one (ProxyJump); each with its own credential and host key check.
 	JumpChain []string `json:"jumpChain,omitempty"`
@@ -164,7 +167,7 @@ func (h *Host) Normalize() {
 		h.Auth = AuthAsk
 	}
 	if h.Auth != AuthKey {
-		h.AskPassphrase = false
+		h.AskPassphrase, h.Certificate = false, ""
 	}
 	if h.Auth != AuthCredential {
 		h.CredentialID = ""

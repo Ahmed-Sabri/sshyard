@@ -125,7 +125,7 @@ func (a *App) uiFontPreview(c *ui.Context, m locales.Messages, tok theme.Tokens)
 }
 
 func (a *App) termFontPreview(c *ui.Context, tok theme.Tokens) {
-	pal := tok.Terminal
+	pal := a.termPalette(tok)
 	fam := a.termFamily()
 	size := float32(a.settings.TerminalFontSize)
 	line := func(parts ...ui.Span) {

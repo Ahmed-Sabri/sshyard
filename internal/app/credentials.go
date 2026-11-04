@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/Licoy/sshyard/internal/assets"
 	"github.com/Licoy/sshyard/internal/icons"
@@ -40,7 +41,13 @@ type credForm struct {
 	previewErr error
 	passphrase string
 	askPass    bool
-	err        string
+	// cert is the key's OpenSSH certificate to save, one key-cert.pub
+	// line ("" none), read as certInfo; certErr is why the last one
+	// loaded is none
+	cert     string
+	certInfo keys.Cert
+	certErr  error
+	err      string
 	// back is the host editor that opened the sheet ("New credential…"),
 	// shown again with the new credential chosen
 	back *hostForm
@@ -51,13 +58,50 @@ func (f *credForm) isKey() bool { return f.kind == 1 }
 // loaded is whether the sheet has a new key to save.
 func (f *credForm) loaded() bool { return f.genKey != nil || f.keyData != nil }
 
-// setKey takes a key read from a file, the clipboard or a drop.
+// setKey takes a key read from a file, the clipboard or a drop; a
+// certificate goes to the certificate field.
 func (f *credForm) setKey(data []byte, from string) {
+	if keys.IsCert(data) {
+		f.setCert(data)
+		return
+	}
 	f.keyData, f.keyFrom, f.genKey, f.err = data, from, nil, ""
 	f.preview, f.previewErr = keys.Import(data, nil)
 	if errors.Is(f.previewErr, keys.ErrPassphraseNeeded) {
 		f.previewErr = nil
 	}
+}
+
+// setCert takes the key's certificate, read from a file, the clipboard
+// or a drop; nil removes it.
+func (f *credForm) setCert(data []byte) {
+	f.cert, f.certInfo, f.certErr, f.err = "", keys.Cert{}, nil, ""
+	if data == nil {
+		return
+	}
+	c, err := keys.ParseCert(data)
+	if err != nil {
+		f.certErr = err
+		return
+	}
+	f.cert, f.certInfo = c.Line, c
+}
+
+// certProblem is why the certificate cannot be saved with the key: it is
+// for another key. A key whose public half is unknown (a legacy
+// encrypted PEM) is not checked here; the connection checks it.
+func (f *credForm) certProblem() error {
+	if f.cert == "" {
+		return nil
+	}
+	fp := f.orig.Fingerprint
+	if f.loaded() {
+		fp = f.preview.Fingerprint()
+	}
+	if !f.certInfo.Matches(fp) {
+		return keys.ErrCertMismatch
+	}
+	return nil
 }
 
 // generate makes a new ed25519 key for the sheet.
@@ -96,12 +140,20 @@ func (a *App) openCredForm(cr *assets.Credential, back *hostForm) {
 		f.name, f.user, f.note, f.askPass = cr.Name, cr.User, cr.Note, cr.AskPassphrase
 		if cr.Kind == assets.CredKey {
 			f.kind = 1
+			f.loadCert(cr.Certificate)
 		}
 	}
 	a.credForm, a.credEditing = f, true
 }
 
 // closeCredForm closes the sheet, back to the host editor that opened it.
+// loadCert shows the certificate already saved with the key.
+func (f *credForm) loadCert(line string) {
+	if line != "" {
+		f.setCert([]byte(line))
+	}
+}
+
 func (a *App) closeCredForm() {
 	f := a.credForm
 	a.credForm, a.credEditing = nil, false
@@ -124,6 +176,12 @@ func keyError(m locales.Messages, err error) string {
 		return m.ErrNotAKey()
 	case errors.Is(err, keys.ErrCorrupt):
 		return m.ErrKeyCorrupt()
+	case errors.Is(err, keys.ErrNotACert):
+		return m.ErrNotACert()
+	case errors.Is(err, keys.ErrHostCert):
+		return m.ErrHostCert()
+	case errors.Is(err, keys.ErrCertMismatch):
+		return m.ErrCertMismatch()
 	case errors.As(err, &ue):
 		return m.ErrKeyUnsupported(ue.What)
 	}
@@ -178,7 +236,7 @@ func (a *App) SaveCredForm(m locales.Messages) bool {
 			set[keychain.Password] = []byte(f.password)
 		}
 		drop = []keychain.Kind{keychain.PrivateKey, keychain.Passphrase}
-		cr.KeyType, cr.Fingerprint, cr.Encrypted, cr.AskPassphrase = "", "", false, false
+		cr.KeyType, cr.Fingerprint, cr.Encrypted, cr.AskPassphrase, cr.Certificate = "", "", false, false, ""
 	} else {
 		drop = []keychain.Kind{keychain.Password}
 		pass := []byte(f.passphrase)
@@ -220,6 +278,11 @@ func (a *App) SaveCredForm(m locales.Messages) bool {
 			set[keychain.PrivateKey] = k.PEM
 			cr.KeyType, cr.Fingerprint, cr.Encrypted = k.Type(), k.Fingerprint(), k.Encrypted
 		}
+		if f.cert != "" && !f.certInfo.Matches(cr.Fingerprint) {
+			f.err = m.ErrCertMismatch()
+			return false
+		}
+		cr.Certificate = f.cert
 		cr.AskPassphrase = cr.Encrypted && f.askPass
 		switch {
 		case !cr.Encrypted || cr.AskPassphrase:
@@ -384,15 +447,18 @@ func (a *App) pickKeyFile(m locales.Messages, f *credForm) {
 		if path == "" && err == nil {
 			return
 		}
-		var data []byte
+		var data, cert []byte
 		if err == nil {
 			data, err = os.ReadFile(path)
+			cert = certBeside(path)
 		}
-		a.post(func() { a.loadKeyFile(m, f, path, data, err) })
+		a.post(func() { a.loadKeyFile(m, f, path, data, cert, err) })
 	}()
 }
 
-func (a *App) loadKeyFile(m locales.Messages, f *credForm, path string, data []byte, err error) {
+// loadKeyFile takes a key file, or a certificate file, read from path;
+// cert is the certificate found beside the key, nil none.
+func (a *App) loadKeyFile(m locales.Messages, f *credForm, path string, data, cert []byte, err error) {
 	if a.credForm != f && (a.form == nil || &a.form.secret != f) {
 		return
 	}
@@ -401,6 +467,48 @@ func (a *App) loadKeyFile(m locales.Messages, f *credForm, path string, data []b
 		return
 	}
 	f.setKey(data, filepath.Base(path))
+	if cert != nil && !keys.IsCert(data) {
+		f.setCert(cert)
+	}
+}
+
+// certBeside is the certificate OpenSSH looks for beside a key file,
+// path-cert.pub, nil when there is none.
+func certBeside(path string) []byte {
+	data, err := readKeyFile(path + "-cert.pub")
+	if err != nil || !keys.IsCert(data) {
+		return nil
+	}
+	return data
+}
+
+// pickCertFile reads a certificate through the system's open dialog, off
+// the UI thread.
+func (a *App) pickCertFile(m locales.Messages, f *credForm) {
+	if a.p.PickFile == nil {
+		return
+	}
+	title := m.CertChooseFile()
+	go func() {
+		path, err := a.p.PickFile(title)
+		if path == "" && err == nil {
+			return
+		}
+		var data []byte
+		if err == nil {
+			data, err = readKeyFile(path)
+		}
+		a.post(func() {
+			if a.credForm != f && (a.form == nil || &a.form.secret != f) {
+				return
+			}
+			if err != nil {
+				f.err = m.ErrReadFile(filepath.Base(path), err.Error())
+				return
+			}
+			f.setCert(data)
+		})
+	}()
 }
 
 // maxKeyFile bounds what a drop reads: no key is near a megabyte.
@@ -458,6 +566,7 @@ func (a *App) credView(c *ui.Context, m locales.Messages) {
 					})
 					if f.isKey() {
 						ui.Field(c, m.FieldPrivateKey(), func() { a.keyPicker(c, m, tok, f) })
+						ui.Field(c, m.FieldCertificate(), func() { a.certPicker(c, m, tok, f) })
 						if f.encrypted() || f.genKey != nil {
 							ui.Field(c, m.FieldPassphrase(), func() {
 								ph := ""
@@ -522,9 +631,14 @@ func (a *App) keyPicker(c *ui.Context, m locales.Messages, tok theme.Tokens, f *
 		if zone.FileDragOver() {
 			zone.Border(1, tok.Accent)
 		}
-		if paths := zone.DroppedFiles(); len(paths) > 0 {
-			data, err := readKeyFile(paths[0])
-			a.loadKeyFile(m, f, paths[0], data, err)
+		// A key and its certificate may be dropped together.
+		for _, p := range zone.DroppedFiles() {
+			data, err := readKeyFile(p)
+			var cert []byte
+			if err == nil && !keys.IsCert(data) {
+				cert = certBeside(p)
+			}
+			a.loadKeyFile(m, f, p, data, cert, err)
 		}
 		zone.Children(func() {
 			switch {
@@ -559,6 +673,63 @@ func (a *App) keyPicker(c *ui.Context, m locales.Messages, tok theme.Tokens, f *
 			}
 		})
 	})
+}
+
+// certPicker is the certificate field: what the key's certificate
+// certifies, and buttons to choose a file, paste or remove it.
+func (a *App) certPicker(c *ui.Context, m locales.Messages, tok theme.Tokens, f *credForm) {
+	ui.Row(c).Gap(8).FillWidth().AlignItems(ui.Center).Children(func() {
+		ui.Column(c).Gap(2).Grow(1).Shrink(1).Children(func() {
+			switch {
+			case f.certErr != nil:
+				ui.Text(c, keyError(m, f.certErr)).FontSize(theme.Footnote).TextColor(tok.Danger)
+			case f.cert == "":
+				ui.Text(c, m.CertHint()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
+			default:
+				ci := f.certInfo
+				ui.Text(c, m.CertInfo(ci.Key.Type(), ci.KeyId)).FontSize(theme.Footnote).SingleLine()
+				users := m.CertAnyPrincipal()
+				if len(ci.ValidPrincipals) > 0 {
+					users = strings.Join(ci.ValidPrincipals, ", ")
+				}
+				valid, color := certValidity(m, ci, time.Now()), tok.TextMuted
+				if ci.Expired(time.Now()) {
+					color = tok.Danger
+				}
+				ui.Text(c, m.CertPrincipals(users)+" · "+valid).FontSize(theme.Caption).TextColor(color)
+				if f.certProblem() != nil {
+					ui.Text(c, m.ErrCertMismatch()).FontSize(theme.Caption).TextColor(tok.Danger)
+				}
+			}
+		})
+		ui.Row(c).Gap(4).Shrink(0).Children(func() {
+			if iconButton(c, "cf:certfile", icons.Certificate, m.CertChooseFile()) {
+				a.pickCertFile(m, f)
+			}
+			if iconButton(c, "cf:certpaste", icons.Paste, m.CertPaste()) {
+				if s := c.Services().ReadClipboard(); strings.TrimSpace(s) != "" {
+					f.setCert([]byte(s))
+				}
+			}
+			if f.cert != "" && (IconButton{Icon: icons.Delete, Label: m.CertRemove(), Danger: true}).Clicked(c, "cf:certdel") {
+				f.setCert(nil)
+			}
+		})
+	})
+}
+
+// certValidity says until when a certificate is valid.
+func certValidity(m locales.Messages, ci keys.Cert, now time.Time) string {
+	const layout = "2006-01-02 15:04"
+	switch {
+	case ci.Expired(now):
+		return m.CertExpired(ci.Before().Local().Format(layout))
+	case ci.Early(now):
+		return m.CertNotYet(ci.After().Local().Format(layout))
+	case ci.Forever():
+		return m.CertForever()
+	}
+	return m.CertValidUntil(ci.Before().Local().Format(layout))
 }
 
 func (a *App) keyNotes(c *ui.Context, m locales.Messages, tok theme.Tokens, f *credForm) {

@@ -124,6 +124,7 @@ func (a *App) View(c *ui.Context) {
 	a.fwdDeleteView(c, m)
 	a.installView(c, m)
 	a.quickView(c, m)
+	a.paletteView(c, m)
 	a.importView(c, m)
 	a.migrationView(c, m)
 	a.promptsView(c, m)

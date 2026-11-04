@@ -519,7 +519,16 @@ type planRun struct {
 
 // filesErr shows err on the side a step was on. A nil err clears that
 // side. The error is not a listing error, so a refresh leaves it.
+// In an editor window, which shows no sides, a failure shows as a toast.
 func (a *App) filesErr(cn *conn, remote bool, err error) {
+	if cn.ed != nil {
+		if err != nil {
+			a.editorToast(cn, func(m locales.Messages) ui.Toast {
+				return ui.Toast{Title: m.ErrGeneric(securityErrorText(m, err)), Type: "error"}
+			})
+		}
+		return
+	}
 	msg := ""
 	if err != nil {
 		msg = err.Error()
@@ -599,8 +608,12 @@ func (a *App) enqueue(cn *conn, ask *conflictAsk) {
 }
 
 // refreshSides lists both sides of a files pane again: the local side
-// once it has shown.
+// once it has shown. An editor window lists its folders again.
 func (a *App) refreshSides(cn *conn) {
+	if cn.ed != nil {
+		a.treeReload(cn)
+		return
+	}
 	fs := cn.fs
 	if fs.local.loaded {
 		a.listLocal(&fs.local, fs.local.dir)
@@ -1087,10 +1100,10 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 			}
 			if !dual {
 				if (IconButton{Icon: icons.Upload, Label: m.UploadFiles(), Disabled: off || a.p.PickFiles == nil}).Clicked(c, "rupfiles") {
-					a.pickUpload(cn, false, m)
+					a.pickUpload(cn, s.dir, false, m)
 				}
 				if (IconButton{Icon: icons.UploadFolder, Label: m.UploadFolder(), Disabled: off || a.p.PickFolder == nil}).Clicked(c, "rupfolder") {
-					a.pickUpload(cn, true, m)
+					a.pickUpload(cn, s.dir, true, m)
 				}
 			}
 			label := m.DownloadSelected()
@@ -1218,9 +1231,9 @@ func (a *App) toggleDual() {
 }
 
 // pickUpload asks for files, or a folder, to upload into the remote
-// folder of a files pane.
-func (a *App) pickUpload(cn *conn, folder bool, m locales.Messages) {
-	id, dir := cn.id, cn.fs.remote.dir
+// folder dir of a files pane or an editor window.
+func (a *App) pickUpload(cn *conn, dir string, folder bool, m locales.Messages) {
+	id := cn.id
 	title := m.ChooseUploadFiles()
 	if folder {
 		title = m.ChooseUploadFolder()

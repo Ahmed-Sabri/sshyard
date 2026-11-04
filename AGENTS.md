@@ -50,6 +50,7 @@ Global rules for anyone (human or agent) changing SSHYard. Read this before you 
 
 - App-wide shortcuts use `appMods` (⌘ on macOS, Ctrl+Shift elsewhere) so plain Ctrl+letter always reaches the shell. A new app shortcut must go through `isAppShortcut` so the terminal yields it.
 - Do not take a platform's standard editing shortcuts (⌘A, ⌘C, ⌘V and their equivalents).
+- Users can record their own shortcuts (`settings.Shortcuts`). A new app shortcut is an entry in `actions` (`internal/app/keymap.go`), which the dispatcher, `isAppShortcut`, the menus, the Shortcuts page and the command palette all read; never claim its key with a hard-coded `c.Shortcut`.
 
 ## Tests and checks
 

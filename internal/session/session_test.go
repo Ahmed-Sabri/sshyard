@@ -446,3 +446,51 @@ func TestNoShellKeepsAConnection(t *testing.T) {
 		t.Errorf("state %v", s.Status().State)
 	}
 }
+
+// userCert signs pub for principal with a new CA; it returns the
+// certificate line and the CA's public key.
+func userCert(t *testing.T, pub ssh.PublicKey, principal string) ([]byte, ssh.PublicKey) {
+	t.Helper()
+	_, caPriv, _ := ed25519.GenerateKey(rand.Reader)
+	ca, err := ssh.NewSignerFromKey(caPriv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cert := &ssh.Certificate{Key: pub, CertType: ssh.UserCert, KeyId: "test", ValidPrincipals: []string{principal},
+		ValidAfter: uint64(time.Now().Add(-time.Minute).Unix()), ValidBefore: uint64(time.Now().Add(time.Hour).Unix())}
+	if err := cert.SignCert(rand.Reader, ca); err != nil {
+		t.Fatal(err)
+	}
+	return ssh.MarshalAuthorizedKey(cert), ca.PublicKey()
+}
+
+func TestCertAuth(t *testing.T) {
+	srv := server(t)
+	kh := trusted(t, srv)
+	key, pub := keyPEM(t, "")
+	cert, ca := userCert(t, pub, "demo")
+	srv.TrustedCA = ca
+	cr := Credentials{PrivateKey: key, Certificate: cert}
+	cfg := Config{Addr: srv.Addr, User: "demo", HostKey: kh.Callback(),
+		Credentials: func(context.Context) (Credentials, error) { return cr, nil }}
+	c, err := Dial(context.Background(), cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Close()
+
+	// The bare key is not authorized: only its certificate is.
+	cr = Credentials{PrivateKey: key}
+	if _, err := Dial(context.Background(), cfg); Classify(err) != KindAuth {
+		t.Errorf("bare key: %v", err)
+	}
+	other, _ := keyPEM(t, "")
+	cr = Credentials{PrivateKey: other, Certificate: cert}
+	if _, err := Dial(context.Background(), cfg); !errors.Is(err, ErrCertificate) || Classify(err) != KindCertificate || Classify(err).Retryable() {
+		t.Errorf("another key's certificate: %v", err)
+	}
+	cr = Credentials{PrivateKey: key, Certificate: []byte("ssh-ed25519 AAAA")}
+	if _, err := Dial(context.Background(), cfg); Classify(err) != KindCertificate {
+		t.Errorf("no certificate: %v", err)
+	}
+}

@@ -68,9 +68,12 @@ const ctxMenuKey = "\x00context"
 
 // ctxMenu is the context menu open (contextMenu): where it opened, in the
 // window's DIPs, and its entries, which run while it shows. n counts the
-// menus opened, so that one opened over another is a new popover.
+// menus opened, so that one opened over another is a new popover. win is
+// the window it shows in: 0 the main one, else the pane of an editor
+// window.
 type ctxMenu struct {
 	x, y    float32
+	win     int
 	n       int
 	entries func() []menuEntry
 	// fresh is set until the menu has shown once: the press that opened
@@ -102,17 +105,27 @@ func (a *App) contextPress(b ui.Rect, ev ui.InputEvent, entries func() []menuEnt
 	return true
 }
 
-// openContext opens the context menu of entries at (x, y), closing any
-// other menu.
+// openContext opens the context menu of entries at (x, y) in the main
+// window, closing any other menu.
 func (a *App) openContext(x, y float32, entries func() []menuEntry) {
-	a.ctx = ctxMenu{x: x, y: y, n: a.ctx.n + 1, entries: entries, fresh: true}
+	a.openContextIn(0, x, y, entries)
+}
+
+// openContextIn opens the context menu of entries at (x, y) in the window
+// win (see ctxMenu), closing any other menu.
+func (a *App) openContextIn(win int, x, y float32, entries func() []menuEntry) {
+	a.ctx = ctxMenu{x: x, y: y, win: win, n: a.ctx.n + 1, entries: entries, fresh: true}
 	a.menu = dropMenu{key: ctxMenuKey, sub: -1, focus: 0}
 }
 
-// contextMenuView shows the context menu open, above everything else. A
-// press outside it or Escape closes it, as a choice does.
-func (a *App) contextMenuView(c *ui.Context) {
-	if a.menu.key != ctxMenuKey || a.ctx.entries == nil {
+// contextMenuView shows the context menu open in the main window.
+func (a *App) contextMenuView(c *ui.Context) { a.contextMenuIn(c, 0) }
+
+// contextMenuIn shows the context menu open in the window win (see
+// ctxMenu), above everything else. A press outside it or Escape closes
+// it, as a choice does.
+func (a *App) contextMenuIn(c *ui.Context, win int) {
+	if a.menu.key != ctxMenuKey || a.ctx.entries == nil || a.ctx.win != win {
 		return
 	}
 	entries := a.ctx.entries()

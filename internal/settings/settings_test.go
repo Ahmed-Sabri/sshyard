@@ -28,12 +28,12 @@ func TestRoundTrip(t *testing.T) {
 
 func TestNormalize(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "s.json")
-	os.WriteFile(p, []byte(`{"theme":"sepia","language":"fr","terminalFontSize":99,"transferConcurrency":0,"openConfirmMB":5000,"filesSplit":95}`), 0o600)
+	os.WriteFile(p, []byte(`{"theme":"sepia","language":"fr","terminalFontSize":99,"transferConcurrency":0,"openConfirmMB":5000,"filesSplit":95,"editorTreeWidth":20}`), 0o600)
 	s, err := Load(p)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s.Theme != theme.Auto || s.Language != "" || s.TerminalFontSize != 13 || s.TransferConcurrency != 3 || s.OpenConfirmMB != 10 || s.FilesSplit != 50 || s.FilesDual {
+	if s.Theme != theme.Auto || s.Language != "" || s.TerminalFontSize != 13 || s.TransferConcurrency != 3 || s.OpenConfirmMB != 10 || s.FilesSplit != 50 || s.FilesDual || s.EditorTreeWidth != 240 {
 		t.Errorf("not normalized: %+v", s)
 	}
 }
@@ -246,5 +246,63 @@ func TestLanguagesRoundTrip(t *testing.T) {
 				t.Errorf("language = %q, want %q", got.Language, lang)
 			}
 		})
+	}
+}
+
+func TestTerminalSchemes(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "s.json")
+	s := Default()
+	s.TerminalScheme = "nord"
+	sc := theme.Schemes[0]
+	sc.ID, sc.Name = theme.CustomPrefix+"Mine", "Mine"
+	s.AddTerminalScheme(sc)
+	if s.TerminalScheme != sc.ID || len(s.TerminalSchemes) != 1 {
+		t.Fatalf("import not chosen: %+v", s.TerminalSchemes)
+	}
+	// Again, under the same name: replaced, not added.
+	sc.Background = "#000000"
+	s.AddTerminalScheme(sc)
+	if len(s.TerminalSchemes) != 1 || s.TerminalSchemes[0].Background != "#000000" {
+		t.Fatalf("reimport %+v", s.TerminalSchemes)
+	}
+	if err := Save(p, s); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := Load(p); err != nil || !reflect.DeepEqual(got, s) {
+		t.Fatalf("round trip %+v %v", got.TerminalSchemes, err)
+	}
+	s.RemoveTerminalScheme(sc.ID)
+	if s.TerminalScheme != "" || len(s.TerminalSchemes) != 0 {
+		t.Errorf("removed scheme still chosen: %q", s.TerminalScheme)
+	}
+	// A broken or built-in looking entry is dropped, an unknown choice
+	// cleared.
+	os.WriteFile(p, []byte(`{"terminalScheme":"gone","terminalSchemes":[{"id":"dracula","name":"x"},{"id":"custom:bad","name":"bad","foreground":"red"}]}`), 0o600)
+	if got, _ := Load(p); got.TerminalScheme != "" || got.TerminalSchemes != nil {
+		t.Errorf("not normalized: %q %+v", got.TerminalScheme, got.TerminalSchemes)
+	}
+	s = Default()
+	for i := range MaxTerminalSchemes + 1 {
+		sc.ID = theme.CustomPrefix + strings.Repeat("x", i+1)
+		s.AddTerminalScheme(sc)
+	}
+	if len(s.TerminalSchemes) != MaxTerminalSchemes || s.TerminalScheme != sc.ID || s.TerminalSchemes[0].ID != theme.CustomPrefix+"xx" {
+		t.Errorf("%d schemes, chosen %q", len(s.TerminalSchemes), s.TerminalScheme)
+	}
+}
+
+func TestShortcutsNormalize(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "s.json")
+	os.WriteFile(p, []byte(`{"shortcuts":{"newTab":"super+j","find":"super+enter","":"super+k","x":"nonsense"}}`), 0o600)
+	s, err := Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(s.Shortcuts) != 1 || s.Shortcuts["newTab"] != "super+j" {
+		t.Errorf("shortcuts %v", s.Shortcuts)
+	}
+	os.WriteFile(p, []byte(`{"shortcuts":{"find":"bad"}}`), 0o600)
+	if s, _ := Load(p); s.Shortcuts != nil {
+		t.Errorf("shortcuts %v", s.Shortcuts)
 	}
 }

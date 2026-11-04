@@ -7,6 +7,7 @@ import (
 
 	"github.com/Licoy/sshyard/internal/fonts"
 	"github.com/Licoy/sshyard/internal/icons"
+	"github.com/Licoy/sshyard/internal/keymap"
 	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/locales"
@@ -256,7 +257,7 @@ func (a *App) settingsPage(c *ui.Context, m locales.Messages, tok theme.Tokens) 
 			case prefBackup:
 				a.backupSection(c, m, tok)
 			case prefShortcuts:
-				shortcutsPage(c, m, tok)
+				a.shortcutsPage(c, m, tok)
 			case prefAbout:
 				a.aboutPage(c, m, tok, &s, &changed)
 			}
@@ -375,6 +376,7 @@ func (a *App) materialSection(c *ui.Context, m locales.Messages, tok theme.Token
 }
 
 func (a *App) prefTerminal(c *ui.Context, m locales.Messages, tok theme.Tokens, s *settings.Settings, changed *bool) {
+	a.schemeSection(c, m, tok, s, changed)
 	settingsSection(c, tok, icons.Edit, tok.TintAt(4), m.FontsSection(), func(g *settingsGroup) {
 		g.row(m.TerminalFont(), "", func() {
 			if f, ok := a.fontPicker(c, "termfont", m.TerminalFont(), m.SystemDefault(), &a.fonts.termSel, s.TerminalFont, fonts.ForTerminal(a.fonts.list, s.MonospacedOnly)); ok {
@@ -484,30 +486,6 @@ func (a *App) prefFiles(c *ui.Context, m locales.Messages, tok theme.Tokens, s *
 	})
 }
 
-// shortcut is one of the app's keyboard shortcuts, as the shortcuts page
-// lists it.
-type shortcut struct {
-	label string
-	mods  ui.Modifiers
-	key   ui.Key
-}
-
-func appShortcuts(m locales.Messages) []shortcut {
-	return []shortcut{
-		{m.QuickConnect(), appMods, ui.KeyK},
-		{m.NewTab(), appMods, ui.KeyT},
-		{m.ClosePane(), appMods, ui.KeyW},
-		{m.SplitRight(), appMods, ui.KeyD},
-		{m.SplitDown(), appMods, ui.KeyE},
-		{m.OpenFilesBeside(), appMods, ui.KeyO},
-		{m.Find(), appMods, ui.KeyF},
-		{m.OpenAIRight(), aiMods, ui.KeyA},
-		{m.ShortcutStopAI(), stopMods, ui.KeyPeriod},
-		{m.StopAllAI(), stopAllMods, ui.KeyPeriod},
-		{m.ShortcutSaveFile(), saveMods, ui.KeyS},
-	}
-}
-
 // keyCaps are the caps of a shortcut: the modifiers as macOS draws them
 // there, by name elsewhere, then the key.
 func keyCaps(goos string, mods ui.Modifiers, key ui.Key) []string {
@@ -529,12 +507,14 @@ func keyCaps(goos string, mods ui.Modifiers, key ui.Key) []string {
 	switch {
 	case key >= ui.KeyA && key <= ui.KeyZ:
 		out = append(out, string(rune('A'+key-ui.KeyA)))
-	case key == ui.KeyPeriod:
-		out = append(out, ".")
+	case key >= ui.Key0 && key <= ui.Key9:
+		out = append(out, string(rune('0'+key-ui.Key0)))
+	case key >= ui.KeyF1 && key <= ui.KeyF12:
+		out = append(out, "F"+strconv.Itoa(int(key-ui.KeyF1)+1))
 	case key == ui.KeySpace:
 		out = append(out, "Space")
-	case key == ui.KeyF2:
-		out = append(out, "F2")
+	case printable[key][0] != 0:
+		out = append(out, string(printable[key][0]))
 	case key == ui.KeyDelete && mac:
 		out = append(out, "⌦")
 	case key == ui.KeyDelete:
@@ -547,16 +527,98 @@ func keyCaps(goos string, mods ui.Modifiers, key ui.Key) []string {
 	return out
 }
 
-func shortcutsPage(c *ui.Context, m locales.Messages, tok theme.Tokens) {
+// shortcutsPage lists the actions with their shortcuts: each records a
+// new one, or goes back to its own.
+func (a *App) shortcutsPage(c *ui.Context, m locales.Messages, tok theme.Tokens) {
+	custom := false
 	settingsSection(c, tok, nil, ui.Color{}, "", func(g *settingsGroup) {
-		for _, sc := range appShortcuts(m) {
-			g.row(sc.label, "", func() {
-				for _, cap := range keyCaps(runtime.GOOS, sc.mods, sc.key) {
+		for _, ac := range actions {
+			k := a.keyOf(ac.id)
+			label := ac.label(m)
+			recording := a.recording == ac.id
+			note := ""
+			if recording {
+				note = m.ShortcutRecordHint()
+			}
+			custom = custom || k != ac.def
+			g.row(label, note, func() {
+				if recording {
+					a.shortcutRecorder(c, m, tok, label)
+					return
+				}
+				for _, cap := range keyCaps(runtime.GOOS, k.Mods, k.Key) {
 					keyCap(c, tok, cap)
+				}
+				if (IconButton{Icon: icons.Record, Label: m.ShortcutRecord(label), Size: Small}).Clicked(c, "sc:rec:"+ac.id) {
+					a.recording, a.recordErr = ac.id, ""
+				}
+				if k != ac.def && (IconButton{Icon: icons.Reset, Label: m.ShortcutReset(label), Size: Small}).Clicked(c, "sc:reset:"+ac.id) {
+					if err := a.setShortcut(ac.id, ac.def); err != nil {
+						a.toastError(m.ErrGeneric(err.Error()))
+					}
 				}
 			})
 		}
 	})
+	if custom {
+		ui.Row(c).FillWidth().Children(func() {
+			ui.Spacer(c)
+			if pill(c, m.ShortcutsResetAll(), false, false, false) {
+				s := a.settings
+				s.Shortcuts = nil
+				a.recording, a.recordErr = "", ""
+				if err := a.ApplySettings(s); err != nil {
+					a.toastError(m.ErrGeneric(err.Error()))
+				}
+			}
+		})
+	}
+}
+
+// shortcutRecorder takes the keys while a shortcut is recorded: the next
+// one pressed with its modifiers becomes it, Esc gives up.
+func (a *App) shortcutRecorder(c *ui.Context, m locales.Messages, tok theme.Tokens, label string) {
+	if a.recordErr != "" {
+		ui.Text(c, a.recordErr).FontSize(theme.Caption).TextColor(tok.Danger).MaxWidth(260)
+	}
+	box := ui.Box(c.Key("sc:recorder")).Focusable().Label(m.ShortcutRecord(label)).MinWidth(120).Height(24).Padding(0, 10).
+		Radius(theme.RadiusSmall).Background(tok.Accent.Alpha(0.12)).Border(1, tok.Accent).Center()
+	box.Focus()
+	box.HandleInput(func(ev ui.InputEvent) bool {
+		if ev.Kind != ui.InputKeyDown {
+			return false
+		}
+		a.recordKey(m, ev)
+		return true
+	})
+	box.Children(func() {
+		ui.Text(c, m.ShortcutPressKeys()).FontSize(theme.Footnote).FontWeight(500).TextColor(tok.Accent).SingleLine()
+	})
+	if (IconButton{Icon: icons.Close, Label: m.Cancel(), Size: Small}).Clicked(c, "sc:cancel") {
+		a.recording, a.recordErr = "", ""
+	}
+}
+
+// recordKey takes a key pressed while a shortcut is recorded.
+func (a *App) recordKey(m locales.Messages, ev ui.InputEvent) {
+	key := ev.Key
+	if key == ui.KeyUnknown {
+		key = ev.PhysicalKey
+	}
+	if key == ui.KeyEscape && ev.Mods == 0 {
+		a.recording, a.recordErr = "", ""
+		return
+	}
+	k := keymap.Combo{Mods: ev.Mods, Key: key}
+	if p := a.shortcutProblem(m, a.recording, k); p != "" {
+		a.recordErr = p
+		return
+	}
+	if err := a.setShortcut(a.recording, k); err != nil {
+		a.recordErr = m.ErrGeneric(err.Error())
+		return
+	}
+	a.recording, a.recordErr = "", ""
 }
 
 // keyCap is one key of a shortcut, drawn as a key.

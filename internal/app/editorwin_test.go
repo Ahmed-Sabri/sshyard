@@ -111,3 +111,11 @@ func openedWindow(t *testing.T, a *App, tt *ui.Tester, ws *testWindows, n int) (
 	})
 	return w, w.tester(), ec
 }
+
+// shown is the tab an editor window shows.
+func shown(ec *conn) *editState {
+	if ew := ec.ed; ew != nil && ew.at >= 0 && ew.at < len(ew.tabs) {
+		return ew.tabs[ew.at]
+	}
+	return nil
+}

@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Licoy/sshyard/internal/keymap"
 	"github.com/Licoy/sshyard/internal/session"
 	"github.com/Licoy/sshyard/internal/theme"
 )
@@ -43,6 +44,15 @@ type Settings struct {
 	// TerminalFont is the terminal's font family, "" for the system's
 	// monospaced font.
 	TerminalFont string `json:"terminalFont,omitempty"`
+	// TerminalScheme is the terminal's color scheme, the ID of a
+	// built-in (theme.Schemes) or imported one; "" the app's own colors
+	// for the appearance.
+	TerminalScheme string `json:"terminalScheme,omitempty"`
+	// TerminalSchemes are the color schemes the user imported.
+	TerminalSchemes []theme.Scheme `json:"terminalSchemes,omitempty"`
+	// Shortcuts are the shortcuts the user recorded, by the ID of the
+	// app's action, as keymap writes them; the others keep their default.
+	Shortcuts map[string]string `json:"shortcuts,omitempty"`
 	// MonospacedOnly limits the terminal font choice to monospaced
 	// families.
 	MonospacedOnly bool `json:"monospacedOnly"`
@@ -59,6 +69,10 @@ type Settings struct {
 	// FilesSplit is the share, in percent, of the first side of a files
 	// pane showing both, 10 to 90.
 	FilesSplit float32 `json:"filesSplit,omitempty"`
+	// EditorTreeWidth is the width, in DIPs, of the folders beside the
+	// text in an editor window, 140 to 600; EditorTreeHidden hides them.
+	EditorTreeWidth  float32 `json:"editorTreeWidth,omitempty"`
+	EditorTreeHidden bool    `json:"editorTreeHidden,omitempty"`
 	// OSC52Write is whether a remote program may copy to the local
 	// clipboard: allow (the default), ask or deny.
 	OSC52Write string `json:"osc52Write"`
@@ -350,7 +364,7 @@ var Languages = []string{"en", "zh-Hans", "zh-Hant", "ko", "ja"}
 
 // Default returns the defaults.
 func Default() Settings {
-	return Settings{Theme: theme.Auto, CheckUpdates: true, UpdateIntervalHours: 1, TerminalFontSize: 13, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, FilesSplit: 50, OSC52Write: OSC52Ask, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
+	return Settings{Theme: theme.Auto, CheckUpdates: true, UpdateIntervalHours: 1, TerminalFontSize: 13, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, FilesSplit: 50, EditorTreeWidth: 240, OSC52Write: OSC52Ask, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
 		AIDefaultAgent: "builtin", AIDefaultMode: "ask", AIReviewStrictness: AIReviewStandard, AIContextLines: 200, AIAuditRetentionDays: 90, AIRedact: true, MCPPort: MCPPortDefault}
 }
 
@@ -410,6 +424,9 @@ func (s *Settings) Normalize() {
 	if s.FilesSplit < 10 || s.FilesSplit > 90 {
 		s.FilesSplit = d.FilesSplit
 	}
+	if s.EditorTreeWidth < 140 || s.EditorTreeWidth > 600 {
+		s.EditorTreeWidth = d.EditorTreeWidth
+	}
 	switch s.OSC52Write {
 	case OSC52Allow, OSC52Ask, OSC52Deny:
 	default:
@@ -422,8 +439,59 @@ func (s *Settings) Normalize() {
 	if !session.MetricsMountOK(s.MetricsMount) {
 		s.MetricsMount = ""
 	}
+	s.normalizeSchemes()
+	// A new map: the one held may be shared with the settings in force.
+	var keys map[string]string
+	for id, k := range s.Shortcuts {
+		if _, ok := keymap.Parse(k); ok && id != "" {
+			if keys == nil {
+				keys = map[string]string{}
+			}
+			keys[id] = k
+		}
+	}
+	s.Shortcuts = keys
 	s.normalizeAI(d)
 	s.normalizeBackups()
+}
+
+// MaxTerminalSchemes bounds the imported color schemes.
+const MaxTerminalSchemes = 100
+
+// normalizeSchemes keeps the valid imported schemes, one of each ID, and
+// a chosen scheme that exists.
+func (s *Settings) normalizeSchemes() {
+	seen := map[string]bool{}
+	var keep []theme.Scheme
+	for _, sc := range s.TerminalSchemes {
+		if sc.Custom() && sc.Valid() && !seen[sc.ID] && len(keep) < MaxTerminalSchemes {
+			seen[sc.ID] = true
+			keep = append(keep, sc)
+		}
+	}
+	s.TerminalSchemes = keep
+	if _, ok := theme.FindScheme(s.TerminalScheme, keep); !ok {
+		s.TerminalScheme = ""
+	}
+}
+
+// AddTerminalScheme keeps an imported scheme, in place of one of the same
+// name (or of the oldest, when there are too many), and chooses it.
+func (s *Settings) AddTerminalScheme(sc theme.Scheme) {
+	s.TerminalSchemes = slices.DeleteFunc(slices.Clone(s.TerminalSchemes), func(o theme.Scheme) bool { return o.ID == sc.ID })
+	if n := len(s.TerminalSchemes) - MaxTerminalSchemes + 1; n > 0 {
+		s.TerminalSchemes = s.TerminalSchemes[n:]
+	}
+	s.TerminalSchemes = append(s.TerminalSchemes, sc)
+	s.TerminalScheme = sc.ID
+	s.normalizeSchemes()
+}
+
+// RemoveTerminalScheme forgets an imported scheme; the terminal goes back
+// to the app's colors when it was chosen.
+func (s *Settings) RemoveTerminalScheme(id string) {
+	s.TerminalSchemes = slices.DeleteFunc(slices.Clone(s.TerminalSchemes), func(o theme.Scheme) bool { return o.ID == id })
+	s.normalizeSchemes()
 }
 
 // aiModes are the permission modes a settings file may name.

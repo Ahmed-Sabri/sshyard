@@ -390,6 +390,10 @@ func (a *App) importCredential(m locales.Messages, k *impKey) (string, error) {
 		AskPassphrase: key.Encrypted && k.pass == "",
 		Note:          m.ImportedFrom(k.path),
 	}
+	// As OpenSSH, the certificate beside the key goes with it.
+	if c, err := keys.ParseCert(certBeside(k.path)); err == nil && c.Matches(key.Fingerprint()) {
+		cr.Certificate = c.Line
+	}
 	tx := &secretTx{kc: a.kc}
 	fail := func(msg string) (string, error) {
 		if rerr := tx.rollback(); rerr != nil {

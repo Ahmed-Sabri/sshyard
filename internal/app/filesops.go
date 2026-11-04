@@ -37,7 +37,10 @@ type nameAsk struct {
 	kind   askKind
 	remote bool
 	// path is the entry renamed or whose permissions change
-	path  string
+	path string
+	// dir is the folder a new entry goes in, in an editor window's
+	// folders
+	dir   string
 	value string
 	err   string
 }
@@ -173,6 +176,9 @@ func (a *App) askDelete(cn *conn, remote bool, es []sftpsvc.Entry) {
 
 // doAsk does what the name dialog asks, on its side.
 func (a *App) doAsk(cn *conn, ask *nameAsk) error {
+	if cn.ed != nil {
+		return a.doTreeAsk(cn, ask)
+	}
 	fs := cn.fs
 	if ask.kind == askMkdir {
 		return a.Mkdir(cn, ask.remote, ask.value)
@@ -289,6 +295,7 @@ func (a *App) deleteView(c *ui.Context, cn *conn, m locales.Messages) {
 		client := fs.remote.client
 		go func() {
 			var err error
+			var gone []string
 			for _, p := range del.paths {
 				var perr error
 				switch {
@@ -299,9 +306,15 @@ func (a *App) deleteView(c *ui.Context, cn *conn, m locales.Messages) {
 				default:
 					perr = client.Remove(p)
 				}
+				if perr == nil {
+					gone = append(gone, p)
+				}
 				err = cmp.Or(err, perr) // the first failure; the others go on
 			}
 			a.post(func() {
+				if cn.ed != nil {
+					a.treeDeleted(cn, gone)
+				}
 				// Success clears a previous failure; a failure stays
 				// through the refresh below.
 				a.filesErr(cn, del.remote, err)

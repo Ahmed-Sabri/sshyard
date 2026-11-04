@@ -168,6 +168,12 @@ func migrationAuth(m locales.Messages, h assets.Host, r *migrationRow) (assets.H
 		if err != nil {
 			return h, nil, errors.New(m.MigrationKeyError())
 		}
+		if h.Certificate != "" {
+			cert, err := keys.ParseCert([]byte(h.Certificate))
+			if err != nil || k.Fingerprint() == "" || !cert.Matches(k.Fingerprint()) {
+				h.Certificate = ""
+			}
+		}
 		h.Auth, h.CredentialID, h.AskPassphrase = assets.AuthKey, "", k.Encrypted && len(pass) == 0
 		changes = hostSecretDeletes(h.ID)
 		changes = append(changes, keychain.Change{Key: keychain.Host(h.ID, keychain.PrivateKey), Value: k.PEM})

@@ -14,7 +14,8 @@ const statusBarHeight = 30
 // statusBar is the band along the bottom of the content: on the left the
 // focused session (its state, time connected, directory) and
 // what runs (sessions, forwards, an update); on the right IconButtons to
-// a local terminal, the theme, privacy and the shortcuts. The settings
+// a local terminal, the theme, privacy, the command palette and the
+// shortcuts. The settings
 // are in the title bar.
 func (a *App) statusBar(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	ui.Box(c).Height(1).Shrink(0).FillWidth().Background(tok.GlassEdge)
@@ -147,6 +148,9 @@ func (a *App) statusActions(c *ui.Context, m locales.Messages, tok theme.Tokens)
 			if err := a.TogglePrivacy(); err != nil {
 				c.AddToast(ui.Toast{Title: m.ErrGeneric(err.Error()), Type: "error"})
 			}
+		}
+		if (IconButton{Icon: icons.Command, Label: m.CommandPalette(), Size: Small}).Clicked(c, "palette") {
+			a.openPalette()
 		}
 		short := a.page == pageSettings && a.prefNow() == prefShortcuts
 		if (IconButton{Icon: icons.Shortcuts, Label: m.ShortcutsSection(), Size: Small, Active: short}).Clicked(c, "shortcuts") {

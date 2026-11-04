@@ -38,6 +38,9 @@ type termView struct {
 	target         ptyTarget
 	snippetSending bool // UI-thread state, cleared when the captured write returns
 	inputError     func(error)
+	// shortcuts are the shortcuts recorded (settings.Shortcuts), whose
+	// keys the terminal leaves to the app
+	shortcuts map[string]string
 	// clear leaves the background to the pane's translucent fill, for a
 	// content area on the window's material (settings.ContentMaterial)
 	clear bool
@@ -523,7 +526,7 @@ func (v *termView) input(ev ui.InputEvent, cb clipboard) bool {
 	case ui.InputKeyDown:
 		v.swallow = false
 		mods := ev.Mods
-		if isAppShortcut(ev.Key, mods) {
+		if isAppShortcut(v.shortcuts, ev.Key, mods) {
 			return false
 		}
 		// Ctrl+Shift+C and V copy and paste on Linux and Windows, where

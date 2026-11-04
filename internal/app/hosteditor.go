@@ -122,6 +122,7 @@ func (a *App) openEditor(h *assets.Host) {
 		f.secret.isNew = h.Auth != assets.AuthPassword && h.Auth != assets.AuthKey
 		f.secret.askPass = h.AskPassphrase
 		if h.Auth == assets.AuthKey {
+			f.secret.loadCert(h.Certificate)
 			if data, err := a.kc.Get(keychain.Host(h.ID, keychain.PrivateKey)); err == nil {
 				k, kerr := keys.Import(data, nil)
 				if kerr != nil && !errors.Is(kerr, keys.ErrPassphraseNeeded) {
@@ -229,6 +230,11 @@ func (a *App) SaveForm(m locales.Messages) bool {
 	h.AIPolicy.Mode = mode
 	h.AIPolicy.WritableRoots = linesOf(f.roots)
 	h.AIPolicy.Sensitive = linesOf(f.sens)
+	h.Certificate = f.secret.cert
+	if h.Auth == assets.AuthKey && f.secret.certProblem() != nil {
+		f.err = m.ErrCertMismatch()
+		return false
+	}
 	h.Normalize()
 	if err := h.Validate(); err != nil {
 		f.err = fieldError(m, err)

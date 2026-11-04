@@ -164,6 +164,8 @@ func errText(m locales.Messages, h assets.Host, err error) string {
 		}
 	case session.KindPassphrase:
 		return m.ErrPassphrase(name)
+	case session.KindCertificate:
+		return m.ErrCertificate(name)
 	case session.KindNoCredentials:
 		if h.Auth == assets.AuthAsk {
 			return m.ErrAskPassword(name)

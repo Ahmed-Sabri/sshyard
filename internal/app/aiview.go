@@ -820,10 +820,10 @@ func aiErrLine(m locales.Messages, s string) string {
 // shortcut is not delivered while a dialog is up, and Stop has to close
 // that dialog.
 func (a *App) aiSheetStop(c *ui.Context) {
-	if c.Shortcut(stopMods, ui.KeyPeriod) {
+	if k := a.keyOf(actStopAI); c.Shortcut(k.Mods, k.Key) {
 		a.stopShortcut()
 	}
-	if c.Shortcut(stopAllMods, ui.KeyPeriod) {
+	if k := a.keyOf(actStopAllAI); c.Shortcut(k.Mods, k.Key) {
 		a.StopAllAI()
 	}
 }

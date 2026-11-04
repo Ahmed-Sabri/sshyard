@@ -81,12 +81,12 @@ func TestIconButton(t *testing.T) {
 // Every icon an IconButton uses is a Remix Icon "-line" icon, or the
 // "-fill" one for an active state.
 func TestIconNames(t *testing.T) {
-	for _, ic := range []*icons.Icon{icons.Add, icons.Close, icons.SplitRight, icons.SplitDown, icons.Folder, icons.Terminal, icons.Settings, icons.Star, icons.Edit, icons.Delete, icons.Upload, icons.Download, icons.GoUp, icons.Refresh, icons.NewFolder, icons.Reconnect, icons.Clear, icons.Search, icons.Forward, icons.Run, icons.Robot, icons.Stop, icons.Back, icons.Info, icons.Monitor, icons.Shortcuts, icons.Quick, icons.Import, icons.Light, icons.Dark, icons.LocalDisk, icons.Privacy, icons.LocalShell, icons.Transfers, icons.UploadFolder, icons.OpenWithApp} {
+	for _, ic := range []*icons.Icon{icons.Add, icons.Close, icons.SplitRight, icons.SplitDown, icons.Folder, icons.Terminal, icons.Settings, icons.Star, icons.Edit, icons.Delete, icons.Upload, icons.Download, icons.GoUp, icons.Refresh, icons.NewFolder, icons.Reconnect, icons.Clear, icons.Search, icons.Forward, icons.Run, icons.Robot, icons.Stop, icons.Back, icons.Info, icons.Monitor, icons.Shortcuts, icons.Quick, icons.Import, icons.Light, icons.Dark, icons.LocalDisk, icons.Privacy, icons.LocalShell, icons.Transfers, icons.UploadFolder, icons.OpenWithApp, icons.Folders} {
 		if n := ic.Name; len(n) < 5 || n[len(n)-5:] != "-line" {
 			t.Errorf("%s is not a -line icon", n)
 		}
 	}
-	for _, ic := range []*icons.Icon{icons.SettingsOn, icons.StarOn, icons.FolderOn, icons.TerminalOn, icons.RunOn, icons.RobotOn, icons.InfoOn, icons.MonitorOn, icons.PrivacyOn, icons.LocalDiskOn} {
+	for _, ic := range []*icons.Icon{icons.SettingsOn, icons.StarOn, icons.FolderOn, icons.TerminalOn, icons.RunOn, icons.RobotOn, icons.InfoOn, icons.MonitorOn, icons.PrivacyOn, icons.LocalDiskOn, icons.FoldersOn} {
 		if n := ic.Name; n[len(n)-5:] != "-fill" {
 			t.Errorf("%s is not a -fill icon", n)
 		}

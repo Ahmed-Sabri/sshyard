@@ -35,10 +35,13 @@ type Credential struct {
 	KeyType string `json:"keyType,omitempty"`
 	// Encrypted records that the key has a passphrase; AskPassphrase
 	// that it is not saved but asked once per run.
-	Encrypted     bool      `json:"encrypted,omitempty"`
-	AskPassphrase bool      `json:"askPassphrase,omitempty"`
-	Created       time.Time `json:"created"`
-	Updated       time.Time `json:"updated"`
+	Encrypted     bool `json:"encrypted,omitempty"`
+	AskPassphrase bool `json:"askPassphrase,omitempty"`
+	// Certificate is the OpenSSH user certificate of a key, one
+	// key-cert.pub line; public, so it is kept here.
+	Certificate string    `json:"certificate,omitempty"`
+	Created     time.Time `json:"created"`
+	Updated     time.Time `json:"updated"`
 }
 
 // ProxyKind is the protocol of a proxy.
