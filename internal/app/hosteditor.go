@@ -8,14 +8,15 @@ import (
 
 	"github.com/Licoy/sshyard/internal/assets"
 	"github.com/Licoy/sshyard/internal/icons"
+	"github.com/Licoy/sshyard/internal/keychain"
+	"github.com/Licoy/sshyard/internal/keys"
 	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/locales"
 	"github.com/egoist/mygo/ui"
 )
 
-// hostForm is the host editor's fields. A host holds no secret: it logs
-// in with a credential, the SSH agent, or a password asked each time.
+// hostForm keeps the editor fields and unsaved host-owned secrets in memory.
 type hostForm struct {
 	isNew               bool
 	orig                assets.Host
@@ -27,6 +28,7 @@ type hostForm struct {
 	icon, color, emoji string
 	// auth is the label chosen in the auth select (see authChoices),
 	// "" until the editor first shows
+	secret    credForm
 	auth      string
 	favorite  bool
 	cwdFollow bool
@@ -78,7 +80,7 @@ func (a *App) authChoices(m locales.Messages) []authChoice {
 }
 
 func (a *App) authLabel(m locales.Messages, h assets.Host) string {
-	for _, ch := range a.authChoices(m) {
+	for _, ch := range a.hostAuthChoices(m) {
 		if ch.method == h.Auth && ch.cred == h.CredentialID {
 			return ch.label
 		}
@@ -109,6 +111,22 @@ func (a *App) openEditor(h *assets.Host) {
 		f.roots = strings.Join(h.AIPolicy.WritableRoots, "\n")
 		f.sens = strings.Join(h.AIPolicy.Sensitive, "\n")
 		f.aiOpen = h.AIPolicy.Mode != "" || f.roots != "" || f.sens != ""
+	}
+	f.secret.isNew = true
+	if h != nil {
+		f.secret.isNew = h.Auth != assets.AuthPassword && h.Auth != assets.AuthKey
+		f.secret.askPass = h.AskPassphrase
+		if h.Auth == assets.AuthKey {
+			if data, err := a.kc.Get(keychain.Host(h.ID, keychain.PrivateKey)); err == nil {
+				k, kerr := keys.Import(data, nil)
+				if kerr != nil && !errors.Is(kerr, keys.ErrPassphraseNeeded) {
+					f.err = keyError(locales.In(a.settings.Language), kerr)
+				}
+				f.secret.orig = assets.Credential{Kind: assets.CredKey, KeyType: k.Type(), Fingerprint: k.Fingerprint(), Encrypted: k.Encrypted}
+			} else if !errors.Is(err, keychain.ErrNotFound) {
+				f.err = secretStoreErrorText(locales.In(a.settings.Language), err)
+			}
+		}
 	}
 	a.form, a.editing = f, true
 }
@@ -149,7 +167,7 @@ func osc52CodeFrom(m locales.Messages, f *hostForm) string {
 func fieldError(m locales.Messages, err error) string {
 	var fe *assets.FieldError
 	if !errors.As(err, &fe) {
-		return m.ErrGeneric(err.Error())
+		return m.ErrGeneric(secretStoreErrorText(m, err))
 	}
 	label := map[string]string{"name": m.FieldName(), "address": m.FieldHost(), "port": m.FieldPort(),
 		"user": m.FieldUser(), "auth": m.FieldAuth(), "credential": m.FieldAuth()}[fe.Field]
@@ -177,8 +195,11 @@ func (a *App) SaveForm(m locales.Messages) bool {
 	h.Name, h.Address, h.Port, h.User, h.Group = f.name, f.address, port, f.user, f.group
 	h.Favorite, h.CwdFollow, h.Metrics = f.favorite, f.cwdFollow, metricsMode(f.metricsIdx)
 	h.Icon, h.Color = f.icon, f.color
+	if f.auth == "" {
+		f.auth = a.authLabel(m, f.orig)
+	}
 	h.Auth, h.CredentialID = assets.AuthAsk, ""
-	for _, ch := range a.authChoices(m) {
+	for _, ch := range a.hostAuthChoices(m) {
 		if ch.label == f.auth {
 			h.Auth, h.CredentialID = ch.method, ch.cred
 		}
@@ -208,11 +229,7 @@ func (a *App) SaveForm(m locales.Messages) bool {
 		f.err = fieldError(m, err)
 		return false
 	}
-	if f.isNew {
-		h, err = a.store.Add(h)
-	} else {
-		h, err = a.store.Update(h)
-	}
+	h, err = a.saveHostForm(m, f, h)
 	if errors.Is(err, assets.ErrJumpLoop) {
 		f.err, f.netOpen = m.ErrJumpLoop(), true
 		return false
@@ -238,7 +255,7 @@ func (a *App) SaveForm(m locales.Messages) bool {
 // DeleteHost removes a host, unless other hosts jump through it or
 // forwards use it (an *assets.InUseError naming them).
 func (a *App) DeleteHost(id string) error {
-	if err := a.store.Delete(id); err != nil {
+	if err := a.deleteHostSecrets(id); err != nil {
 		return err
 	}
 	a.mu.Lock()
@@ -320,7 +337,7 @@ func (a *App) editorView(c *ui.Context, m locales.Messages) {
 								f.auth = a.authLabel(m, f.orig)
 							}
 							var labels []string
-							for _, ch := range a.authChoices(m) {
+							for _, ch := range a.hostAuthChoices(m) {
 								labels = append(labels, ch.label)
 							}
 							labels = append(labels, m.NewCredentialChoice())
@@ -333,6 +350,7 @@ func (a *App) editorView(c *ui.Context, m locales.Messages) {
 								a.editing = false
 							}
 						})
+						a.hostSecretFields(c, m, tok, f)
 						ui.Field(c, "", func() {
 							ui.Collapsible(c.Key("f:net"), m.Network(), &f.netOpen, func() {
 								a.networkFields(c, m, tok, f)

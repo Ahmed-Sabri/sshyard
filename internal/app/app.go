@@ -799,6 +799,14 @@ func (a *App) hopKey(h assets.Host) string {
 	if cr, ok := a.store.Credential(h.CredentialID); ok && h.Auth == assets.AuthCredential {
 		key += ":" + cr.User + ":" + string(cr.Kind)
 	}
+	if h.Auth == assets.AuthPassword || h.Auth == assets.AuthKey {
+		key += "|" + h.Updated.String()
+		a.mu.Lock()
+		for _, kind := range keychain.Kinds {
+			key += ":" + strconv.Itoa(a.typedGen[keychain.Host(h.ID, kind)])
+		}
+		a.mu.Unlock()
+	}
 	key += "|" + h.ProxyID
 	if p, ok := a.store.Proxy(h.ProxyID); ok {
 		key += ":" + string(p.Kind) + ":" + p.User + "@" + net.JoinHostPort(p.Address, strconv.Itoa(p.Port))
@@ -811,6 +819,12 @@ func (a *App) hopKey(h assets.Host) string {
 // agent, a key that was refused or is missing).
 func (a *App) promptKey(h assets.Host, kind session.Kind) (key string, passphrase bool) {
 	switch h.Auth {
+	case assets.AuthPassword:
+		return keychain.Host(h.ID, keychain.Password), false
+	case assets.AuthKey:
+		if kind == session.KindPassphrase {
+			return keychain.Host(h.ID, keychain.Passphrase), true
+		}
 	case assets.AuthAsk:
 		return "ask/" + h.ID, false
 	case assets.AuthCredential:
@@ -843,6 +857,8 @@ func (a *App) credentials(c *conn, h assets.Host) (session.Credentials, error) {
 	}
 	var out session.Credentials
 	switch h.Auth {
+	case assets.AuthPassword, assets.AuthKey:
+		return a.hostCredentials(h, typed)
 	case assets.AuthAgent:
 		out.Agent = true
 	case assets.AuthCredential:

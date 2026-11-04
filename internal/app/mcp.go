@@ -372,6 +372,13 @@ func (a *App) mcpLogin(h assets.Host) error {
 	for _, hop := range append(path, h) {
 		switch hop.Auth {
 		case assets.AuthAgent:
+		case assets.AuthPassword, assets.AuthKey:
+			if _, err := a.hostCredentials(hop, nil); err != nil {
+				if errors.Is(err, session.ErrNoCredentials) || errors.Is(err, errMCPNeedsInput) {
+					return errMCPNeedsInput
+				}
+				return err
+			}
 		case assets.AuthCredential:
 			cr, ok := a.store.Credential(hop.CredentialID)
 			if !ok || cr.AskPassphrase {
@@ -388,6 +395,9 @@ func (a *App) mcpLogin(h assets.Host) error {
 // they go to the SSH handshake and nowhere else.
 func (a *App) mcpCredentials(h assets.Host) (session.Credentials, error) {
 	var out session.Credentials
+	if h.Auth == assets.AuthPassword || h.Auth == assets.AuthKey {
+		return a.hostCredentials(h, nil)
+	}
 	if h.Auth == assets.AuthAgent {
 		out.Agent = true
 		return out, nil

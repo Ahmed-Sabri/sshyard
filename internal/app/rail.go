@@ -474,6 +474,10 @@ func gpuCard(c *ui.Context, m locales.Messages, tok theme.Tokens, fam string, rd
 // authText says how h logs in.
 func (a *App) authText(m locales.Messages, h assets.Host) string {
 	switch h.Auth {
+	case assets.AuthPassword:
+		return m.CredKindPassword()
+	case assets.AuthKey:
+		return m.CredKindKey()
 	case assets.AuthAgent:
 		return m.AuthAgent()
 	case assets.AuthAsk:

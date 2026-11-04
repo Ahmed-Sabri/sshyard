@@ -188,7 +188,7 @@ func (a *App) SwitchToKey(hostID, credID, user string) error {
 	if a.loginUser(h) != user {
 		return errSwitchUser
 	}
-	_, err := a.store.Update(h)
+	_, err := a.saveHostSecrets(h, false, hostSecretDeletes(h.ID))
 	return err
 }
 

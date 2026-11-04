@@ -43,6 +43,9 @@ const (
 type AuthMethod string
 
 const (
+	// AuthPassword and AuthKey use secrets owned by this host.
+	AuthPassword AuthMethod = "password"
+	AuthKey      AuthMethod = "key"
 	// AuthCredential uses the credential of the host's CredentialID.
 	AuthCredential AuthMethod = "credential"
 	// AuthAgent signs with the keys of the system's SSH agent.
@@ -53,8 +56,7 @@ const (
 )
 
 // Host is a saved SSH host: where it is and how to reach it. It holds no
-// secret; those belong to credentials, proxies and forwards, and live in
-// the keychain.
+// secret; host-owned and reusable secrets live in the encrypted store.
 type Host struct {
 	ID       string     `json:"id"`
 	Name     string     `json:"name"`
@@ -72,7 +74,8 @@ type Host struct {
 	// Empty picks one from the address.
 	Color string `json:"color,omitempty"`
 	// CredentialID is the credential of AuthCredential.
-	CredentialID string `json:"credentialId,omitempty"`
+	CredentialID  string `json:"credentialId,omitempty"`
+	AskPassphrase bool   `json:"askPassphrase,omitempty"`
 	// JumpChain are the hosts connected through, in order, before this
 	// one (ProxyJump); each with its own credential and host key check.
 	JumpChain []string `json:"jumpChain,omitempty"`
@@ -160,6 +163,9 @@ func (h *Host) Normalize() {
 	if h.Auth == "" {
 		h.Auth = AuthAsk
 	}
+	if h.Auth != AuthKey {
+		h.AskPassphrase = false
+	}
 	if h.Auth != AuthCredential {
 		h.CredentialID = ""
 	}
@@ -232,7 +238,7 @@ func (h Host) Validate() error {
 		return &FieldError{"port", "out of range"}
 	case h.User == "":
 		return &FieldError{"user", "required"}
-	case h.Auth != AuthCredential && h.Auth != AuthAgent && h.Auth != AuthAsk:
+	case h.Auth != AuthPassword && h.Auth != AuthKey && h.Auth != AuthCredential && h.Auth != AuthAgent && h.Auth != AuthAsk:
 		return &FieldError{"auth", "unknown method"}
 	case h.Auth == AuthCredential && h.CredentialID == "":
 		return &FieldError{"credential", "required"}
@@ -510,13 +516,24 @@ func (s *Store) JumpPath(id string) ([]Host, error) {
 
 // Add validates and adds a host, giving it an ID.
 func (s *Store) Add(h Host) (Host, error) {
+	h.ID = NewID()
+	return s.AddHost(h)
+}
+
+// AddHost adds a host with a preallocated ID for its encrypted secrets.
+func (s *Store) AddHost(h Host) (Host, error) {
+	if !ValidID(h.ID) {
+		return Host{}, errors.New("assets: AddHost needs a valid ID")
+	}
 	h.Normalize()
 	if err := h.Validate(); err != nil {
 		return Host{}, err
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	h.ID = newID()
+	if s.index(h.ID) >= 0 {
+		return Host{}, ErrExists
+	}
 	if err := s.checkRefs(h); err != nil {
 		return Host{}, err
 	}

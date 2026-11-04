@@ -266,7 +266,7 @@ func (a *App) Import(m locales.Messages) (importResult, bool) {
 		h.JumpChain = nil
 		var err error
 		if h.ID != "" {
-			h, err = a.store.Update(h)
+			h, err = a.saveHostSecrets(h, false, hostSecretDeletes(h.ID))
 			res.overwritten++
 		} else {
 			h, err = a.store.Add(h)

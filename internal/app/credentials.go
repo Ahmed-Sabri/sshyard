@@ -360,7 +360,7 @@ func (a *App) pickKeyFile(m locales.Messages, f *credForm) {
 }
 
 func (a *App) loadKeyFile(m locales.Messages, f *credForm, path string, data []byte, err error) {
-	if a.credForm != f {
+	if a.credForm != f && (a.form == nil || &a.form.secret != f) {
 		return
 	}
 	if err != nil {

@@ -24,6 +24,9 @@ var Kinds = []Kind{Password, PrivateKey, Passphrase}
 // snippet/<id>/content, ai/<profileID>/apikey, ai/<agentID>/env/<NAME> and mcp/token.
 
 // Cred is the entry of a credential's secret: cred/<id>/<kind>.
+// Host is a host-owned secret entry.
+func Host(id string, kind Kind) string { return "host/" + id + "/" + string(kind) }
+
 func Cred(id string, kind Kind) string { return "cred/" + id + "/" + string(kind) }
 
 // ProxyPassword is the entry of a proxy's password: proxy/<id>/password.

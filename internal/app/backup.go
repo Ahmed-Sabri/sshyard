@@ -65,6 +65,14 @@ type backupForm struct {
 // the AI providers.
 func backupSecretKeys(snap assets.Snapshot, provs []settings.AIProvider) []string {
 	var out []string
+	for _, h := range snap.Hosts {
+		if h.Auth == assets.AuthPassword {
+			out = append(out, keychain.Host(h.ID, keychain.Password))
+		}
+		if h.Auth == assets.AuthKey {
+			out = append(out, keychain.Host(h.ID, keychain.PrivateKey), keychain.Host(h.ID, keychain.Passphrase))
+		}
+	}
 	for _, c := range snap.Credentials {
 		for _, k := range keychain.Kinds {
 			out = append(out, keychain.Cred(c.ID, k))
@@ -140,6 +148,16 @@ func (a *App) restoreBackup(m locales.Messages, p backupPayload) error {
 			changes = append(changes, keychain.Change{Key: key, Value: v})
 		}
 	}
+	// Host secrets are replaced, including omitted secrets and obsolete auth kinds.
+	for _, h := range snap.Hosts {
+		allowed := backupSecretKeys(assets.Snapshot{Hosts: []assets.Host{h}}, nil)
+		for _, kind := range keychain.Kinds {
+			key := keychain.Host(h.ID, kind)
+			if !slices.Contains(allowed, key) || len(p.Secrets[key]) == 0 {
+				changes = append(changes, keychain.Change{Key: key, Delete: true})
+			}
+		}
+	}
 	// Restoring metadata without its body clears any existing same-ID body;
 	// the entry remains unavailable until the user supplies its command.
 	for _, n := range snap.Snippets {
@@ -165,6 +183,9 @@ func (a *App) restoreBackup(m locales.Messages, p backupPayload) error {
 		}
 		return err
 	}
+	for _, h := range snap.Hosts {
+		a.forgetHostSecrets(h.ID)
+	}
 	if p.KnownHosts != "" {
 		if _, err := a.known.Merge([]byte(p.KnownHosts)); err != nil {
 			a.toastError(m.ErrGeneric(err.Error()))
@@ -179,6 +200,9 @@ func (a *App) restoreBackup(m locales.Messages, p backupPayload) error {
 // backupIDs are the IDs the backup's secrets are stored under.
 func backupIDs(snap assets.Snapshot, provs []settings.AIProvider) []string {
 	var out []string
+	for _, h := range snap.Hosts {
+		out = append(out, h.ID)
+	}
 	for _, c := range snap.Credentials {
 		out = append(out, c.ID)
 	}
