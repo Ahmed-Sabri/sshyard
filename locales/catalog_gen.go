@@ -10589,3 +10589,143 @@ func AiTypeSafeNote() string { return In(i18n.Locale()).AiTypeSafeNote() }
 func (msgs Messages) AiTypeSafeNote() string {
 	return Catalog.Format(msgs.locale, "aiTypeSafeNote", nil)
 }
+
+// AiToolExpand says "Show action details"
+// in the language the app shows.
+func AiToolExpand() string { return In(i18n.Locale()).AiToolExpand() }
+
+// AiToolExpand says "Show action details"
+// in the language of msgs.
+func (msgs Messages) AiToolExpand() string {
+	return Catalog.Format(msgs.locale, "aiToolExpand", nil)
+}
+
+// AiToolCollapse says "Hide action details"
+// in the language the app shows.
+func AiToolCollapse() string { return In(i18n.Locale()).AiToolCollapse() }
+
+// AiToolCollapse says "Hide action details"
+// in the language of msgs.
+func (msgs Messages) AiToolCollapse() string {
+	return Catalog.Format(msgs.locale, "aiToolCollapse", nil)
+}
+
+// AiToolCommand says "Run command"
+// in the language the app shows.
+func AiToolCommand() string { return In(i18n.Locale()).AiToolCommand() }
+
+// AiToolCommand says "Run command"
+// in the language of msgs.
+func (msgs Messages) AiToolCommand() string {
+	return Catalog.Format(msgs.locale, "aiToolCommand", nil)
+}
+
+// AiToolHostInfo says "Read host information"
+// in the language the app shows.
+func AiToolHostInfo() string { return In(i18n.Locale()).AiToolHostInfo() }
+
+// AiToolHostInfo says "Read host information"
+// in the language of msgs.
+func (msgs Messages) AiToolHostInfo() string {
+	return Catalog.Format(msgs.locale, "aiToolHostInfo", nil)
+}
+
+// AiToolPaneOutput says "Read terminal output"
+// in the language the app shows.
+func AiToolPaneOutput() string { return In(i18n.Locale()).AiToolPaneOutput() }
+
+// AiToolPaneOutput says "Read terminal output"
+// in the language of msgs.
+func (msgs Messages) AiToolPaneOutput() string {
+	return Catalog.Format(msgs.locale, "aiToolPaneOutput", nil)
+}
+
+// AiToolListDir says "List directory"
+// in the language the app shows.
+func AiToolListDir() string { return In(i18n.Locale()).AiToolListDir() }
+
+// AiToolListDir says "List directory"
+// in the language of msgs.
+func (msgs Messages) AiToolListDir() string {
+	return Catalog.Format(msgs.locale, "aiToolListDir", nil)
+}
+
+// AiToolReadFile says "Read file"
+// in the language the app shows.
+func AiToolReadFile() string { return In(i18n.Locale()).AiToolReadFile() }
+
+// AiToolReadFile says "Read file"
+// in the language of msgs.
+func (msgs Messages) AiToolReadFile() string {
+	return Catalog.Format(msgs.locale, "aiToolReadFile", nil)
+}
+
+// AiToolSearchFiles says "Search files"
+// in the language the app shows.
+func AiToolSearchFiles() string { return In(i18n.Locale()).AiToolSearchFiles() }
+
+// AiToolSearchFiles says "Search files"
+// in the language of msgs.
+func (msgs Messages) AiToolSearchFiles() string {
+	return Catalog.Format(msgs.locale, "aiToolSearchFiles", nil)
+}
+
+// AiToolWriteFile says "Write file"
+// in the language the app shows.
+func AiToolWriteFile() string { return In(i18n.Locale()).AiToolWriteFile() }
+
+// AiToolWriteFile says "Write file"
+// in the language of msgs.
+func (msgs Messages) AiToolWriteFile() string {
+	return Catalog.Format(msgs.locale, "aiToolWriteFile", nil)
+}
+
+// AiToolAction says "Tool action"
+// in the language the app shows.
+func AiToolAction() string { return In(i18n.Locale()).AiToolAction() }
+
+// AiToolAction says "Tool action"
+// in the language of msgs.
+func (msgs Messages) AiToolAction() string {
+	return Catalog.Format(msgs.locale, "aiToolAction", nil)
+}
+
+// AiToolRunning says "Running"
+// in the language the app shows.
+func AiToolRunning() string { return In(i18n.Locale()).AiToolRunning() }
+
+// AiToolRunning says "Running"
+// in the language of msgs.
+func (msgs Messages) AiToolRunning() string {
+	return Catalog.Format(msgs.locale, "aiToolRunning", nil)
+}
+
+// AiToolSucceeded says "Succeeded"
+// in the language the app shows.
+func AiToolSucceeded() string { return In(i18n.Locale()).AiToolSucceeded() }
+
+// AiToolSucceeded says "Succeeded"
+// in the language of msgs.
+func (msgs Messages) AiToolSucceeded() string {
+	return Catalog.Format(msgs.locale, "aiToolSucceeded", nil)
+}
+
+// AiToolApproved says "Approved · {source}"
+// in the language the app shows.
+func AiToolApproved(source string) string { return In(i18n.Locale()).AiToolApproved(source) }
+
+// AiToolApproved says "Approved · {source}"
+// in the language of msgs.
+func (msgs Messages) AiToolApproved(source string) string {
+	return Catalog.Format(msgs.locale, "aiToolApproved", map[string]any{"source": source})
+}
+
+// AiToolFailed says "Failed"
+// in the language the app shows.
+func AiToolFailed() string { return In(i18n.Locale()).AiToolFailed() }
+
+// AiToolFailed says "Failed"
+// in the language of msgs.
+func (msgs Messages) AiToolFailed() string {
+	return Catalog.Format(msgs.locale, "aiToolFailed", nil)
+}

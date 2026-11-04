@@ -253,7 +253,12 @@ func TestCancelStopsTool(t *testing.T) {
 		<-started
 		cancel()
 	}()
-	err := s.Turn(ctx, "sleep", HostMeta{Name: "web"}, "", nil)
+	var events []Event
+	err := s.Turn(ctx, "sleep", HostMeta{Name: "web"}, "", collect(&events))
+	card := lastCard(t, events)
+	if card.Phase != "done" || card.Status != "cancel" || card.Exit != -1 || !card.Run {
+		t.Fatalf("cancelled command still running: %+v", card)
+	}
 	if !errors.Is(err, context.Canceled) {
 		t.Fatal(err)
 	}

@@ -1030,8 +1030,13 @@ func TestBuiltinAgentDiskQuestion(t *testing.T) {
 	if tt.HasText("Allow once") || tt.HasText("Allow every action?") {
 		t.Fatal("a sheet was shown")
 	}
-	if !tt.HasText("Auto") || !tt.HasText("df -h") {
-		t.Fatalf("texts %q", tt.Texts())
+	if !tt.HasText("Approved · Auto") || !tt.HasText("Succeeded") || tt.HasText("df -h") {
+		t.Fatalf("tool summary is not folded: %q", tt.Texts())
+	}
+	mustClick(t, tt, "Show action details")
+	tt.Frame()
+	if !tt.HasText("df -h") {
+		t.Fatalf("expanded tool lacks command: %q", tt.Texts())
 	}
 	if n.Load() < 2 || !sawKey.Load() {
 		t.Fatalf("requests %d auth %v", n.Load(), sawKey.Load())

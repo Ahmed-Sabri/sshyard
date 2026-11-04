@@ -1046,5 +1046,19 @@
   "aiReviewRiskScope": "超出请求范围",
   "aiReviewRiskUnclear": "影响不明确",
   "aiFormatTypeSafe": "TypeSafe",
-  "aiTypeSafeNote": "TypeSafe 服务商仅用于审核决策，不会出现在对话窗格中。"
+  "aiTypeSafeNote": "TypeSafe 服务商仅用于审核决策，不会出现在对话窗格中。",
+  "aiToolExpand": "展开操作详情",
+  "aiToolCollapse": "收起操作详情",
+  "aiToolCommand": "运行命令",
+  "aiToolHostInfo": "读取主机信息",
+  "aiToolPaneOutput": "读取终端输出",
+  "aiToolListDir": "列出目录",
+  "aiToolReadFile": "读取文件",
+  "aiToolSearchFiles": "搜索文件",
+  "aiToolWriteFile": "写入文件",
+  "aiToolAction": "工具操作",
+  "aiToolRunning": "执行中",
+  "aiToolSucceeded": "执行成功",
+  "aiToolApproved": "已批准 · {source}",
+  "aiToolFailed": "执行失败"
 }

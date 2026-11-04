@@ -1046,5 +1046,19 @@
   "aiReviewRiskScope": "beyond the request",
   "aiReviewRiskUnclear": "unclear effect",
   "aiFormatTypeSafe": "TypeSafe",
-  "aiTypeSafeNote": "TypeSafe providers make review decisions only and are not offered in panes."
+  "aiTypeSafeNote": "TypeSafe providers make review decisions only and are not offered in panes.",
+  "aiToolExpand": "Show action details",
+  "aiToolCollapse": "Hide action details",
+  "aiToolCommand": "Run command",
+  "aiToolHostInfo": "Read host information",
+  "aiToolPaneOutput": "Read terminal output",
+  "aiToolListDir": "List directory",
+  "aiToolReadFile": "Read file",
+  "aiToolSearchFiles": "Search files",
+  "aiToolWriteFile": "Write file",
+  "aiToolAction": "Tool action",
+  "aiToolRunning": "Running",
+  "aiToolSucceeded": "Succeeded",
+  "aiToolApproved": "Approved · {source}",
+  "aiToolFailed": "Failed"
 }

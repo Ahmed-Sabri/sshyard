@@ -63,9 +63,10 @@ type Event struct {
 }
 
 // ToolCard is one tool call on the timeline. Output is truncated to 1 MB.
-// Exit is -1 when the action did not run.
+// Exit is -1 when no exit code is available.
 type ToolCard struct {
 	Phase    string // "open" while it runs, "done" when it has a result
+	Status   string // "cancel" or "timeout" overrides execution status; Verdict retains the approval source
 	ID       string
 	Name     string
 	Category string
@@ -361,6 +362,12 @@ func (s *Session) execOne(ctx context.Context, call llm.ToolCall, emit func(Even
 	if callErr != nil && (ctx.Err() != nil || errors.Is(callErr, context.Canceled) || errors.Is(callErr, context.DeadlineExceeded)) {
 		// Stop, Stop all, and the runner timeout share this path; the command already started.
 		s.gate.Done(act, verdict, -1, dur, countedBytes(s.tools, out))
+		card.Phase, card.Status = "done", "cancel"
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) || errors.Is(callErr, context.DeadlineExceeded) {
+			card.Status = "timeout"
+		}
+		card.Output, card.DurMS = truncOut(out), dur
+		s.emitTool(emit, card)
 		s.dropCall(call.ID)
 		if ctx.Err() != nil {
 			return ctx.Err()

@@ -90,7 +90,7 @@ func TestSecurityErrorsNativeViewsBothLanguages(t *testing.T) {
 	a := &App{}
 	host := assets.Host{Name: "box"}
 	cn := &conn{host: host, ai: &aiState{items: []aiItem{
-		{kind: "tool", tool: agent.ToolCard{ID: "limit", Name: "run_command", Run: true, Phase: "done", Output: "ai.command_output_limit\nnormal output"}},
+		{kind: "tool", open: true, tool: agent.ToolCard{ID: "limit", Name: "run_command", Run: true, Phase: "done", Output: "ai.command_output_limit\nnormal output"}},
 		{kind: "err", text: "sftp: invalid path"},
 	}}}
 	proxyErr := &netproxy.Error{Addr: "proxy.test:8080", Err: netproxy.ErrHandshakeTooLarge}
