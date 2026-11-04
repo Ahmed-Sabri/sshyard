@@ -56,6 +56,33 @@
 <meta name="twitter:image" content="{{ og_image }}">
 <meta name="twitter:image:alt" content="{{ t.meta.og_alt }}">
 <script>(function(d){d.classList.add("js");try{var t=localStorage.getItem("sshyard-theme");if(t==="light"||t==="dark")d.setAttribute("data-theme",t)}catch(e){}})(document.documentElement)</script>
+{# Before the stylesheet, so a redirected visit paints nothing. #}
+<script>
+(function (d) {
+  function match(l) {
+    l = String(l).toLowerCase();
+    return /^zh-(tw|hk|mo|hant)/.test(l) ? "zh-Hant" : /^zh/.test(l) ? "zh-Hans"
+      : /^ja/.test(l) ? "ja" : /^ko/.test(l) ? "ko" : /^en/.test(l) ? "en" : "";
+  }
+  var list = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ""];
+  var pref = "en";
+  for (var i = 0; i < list.length; i++) { var m = match(list[i]); if (m) { pref = m; break; } }
+  d.setAttribute("data-pref-lang", pref);
+{% if not lang.prefix and alternates %}
+  // Arriving from outside the site on a default-language page: go to the
+  // language picked before, else the browser's. Links within the site and
+  // crawlers stay, so a pick always sticks even without localStorage.
+  var chosen = null;
+  try { chosen = localStorage.getItem("sshyard-lang"); } catch (e) {}
+  var want = chosen || pref;
+  var inSite = document.referrer.indexOf(location.origin + {{ file('') | tojson }}) === 0;
+  if (want === {{ lang.code | tojson }} || inSite || /bot|crawl|spider|slurp|yeti/i.test(navigator.userAgent)) return;
+  var alt = null;
+  try { alt = document.querySelector('link[rel="alternate"][hreflang="' + want + '"]'); } catch (e) {}
+  if (alt) location.replace(new URL(alt.href).pathname + location.search + location.hash);
+{% endif %}
+})(document.documentElement);
+</script>
 <link rel="stylesheet" href="{{ css }}">
 <script src="{{ js }}" defer></script>
 {% if jsonld %}

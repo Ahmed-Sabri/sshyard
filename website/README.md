@@ -6,7 +6,7 @@ deployed to GitHub Pages by `.github/workflows/website.yml`.
 Every page is rendered at build time from Jinja templates and the language
 catalogs, so the HTML that crawlers and link previews receive is complete.
 JavaScript only adds interaction (theme switch, the demo window, the
-download button for the visitor's platform).
+download button for the visitor's platform, the language redirect).
 
 ## Layout
 
@@ -47,6 +47,15 @@ SHA-256 and caches them in `website/.cache/fonts`.
 ## Languages
 
 `en` (served at `/`, also `x-default`), `zh-Hans`, `zh-Hant`, `ja` and `ko`.
+
+A visitor arriving from outside the site on an English page is sent, before
+anything paints, to the same page in the language they picked before
+(`localStorage` `sshyard-lang`), else in their browser's language. GitHub
+Pages can't answer with an HTTP 302, so this is `location.replace()` in the
+`<head>` of `base.html`, which leaves no history entry. Links within the
+site, crawlers and the other languages' URLs are never redirected; those
+show a banner suggesting the visitor's language instead.
+
 The build fails if any catalog misses a key, has a different list length or
 different `{placeholders}` from `en.json`. Use the app's own terminology
 from `locales/*.json`. In CJK headings, `​` marks where a line may wrap

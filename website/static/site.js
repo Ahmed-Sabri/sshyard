@@ -83,24 +83,13 @@
     a.addEventListener("click", function () { store("sshyard-lang", a.getAttribute("data-lang-pick")); });
   });
 
-  function preferredLang() {
-    var list = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ""];
-    for (var i = 0; i < list.length; i++) {
-      var l = String(list[i]).toLowerCase();
-      if (/^zh-(tw|hk|mo|hant)/.test(l)) return "zh-Hant";
-      if (/^zh/.test(l)) return "zh-Hans";
-      if (/^ja/.test(l)) return "ja";
-      if (/^ko/.test(l)) return "ko";
-      if (/^en/.test(l)) return "en";
-    }
-    return "en";
-  }
-
-  // Suggest, never redirect: crawlers and shared links keep their language.
+  // The <head> script of base.html matches the browser's language and, on a
+  // first visit to an English page, already redirected. Elsewhere (a shared
+  // link into another language) only suggest the visitor's own.
   (function langBanner() {
     var banner = document.querySelector(".langbanner");
     if (!banner || !data.banner || store("sshyard-lang")) return;
-    var want = preferredLang();
+    var want = doc.getAttribute("data-pref-lang") || "en";
     if (want === data.lang || !data.banner[want]) return;
     var alt = document.querySelector('link[rel="alternate"][hreflang="' + want + '"]');
     if (!alt) return;
