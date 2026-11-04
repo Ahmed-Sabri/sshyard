@@ -140,8 +140,8 @@ jobs:
           }
           shopt -s nullglob
           dir="build/${{ matrix.goos }}-${{ matrix.goarch }}"
-          files=("$dir"/*.tar.gz "$dir"/*.deb "$dir"/*.dmg "$dir"/*.zip "$dir"/*Setup*.exe "$dir"/install.sh "$dir"/*.delta)
-          # install.sh is a literal path when absent; only Linux produces it.
+          files=("$dir"/*.tar.gz "$dir"/*.deb "$dir"/*.dmg "$dir"/*.zip "$dir"/*-setup-*.exe "$dir"/install.sh "$dir"/*.delta)
+          # install.sh is a literal path when absent; Windows does not produce it.
           assets=()
           for file in "${files[@]}"; do
             if [ -f "$file" ]; then assets+=("$file"); fi
@@ -162,7 +162,7 @@ jobs:
             build/*/*.deb
             build/*/*.dmg
             build/*/*.zip
-            build/*/*Setup*.exe
+            build/*/*-setup-*.exe
             build/*/install.sh
             build/*/update-*.json
             build/*/*.delta

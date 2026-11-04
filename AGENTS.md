@@ -4,7 +4,7 @@ Global rules for anyone (human or agent) changing SSHYard. Read this before you 
 
 ## Hard constraints
 
-- **Pure native UI.** Everything is drawn with MyGo `ui` (v0.6.4). No webview, no HTML, no xterm.js, and no HTML fallback of any kind.
+- **Pure native UI.** Everything is drawn with MyGo `ui` (v0.7.4). No webview, no HTML, no xterm.js, and no HTML fallback of any kind.
 - **Brand colour #1984FC.** Take colours from the theme (`c.Theme()`, `internal/theme`), never hard-coded hex in views. Every view must work in light and dark.
 - **Every user-visible string in both `en` and `zh-Hans`**: labels, tooltips, accessible labels, errors and menu items. Add the key to `locales/en.json` and `locales/zh-Hans.json`, regenerate the catalog and use the generated accessor (`m.OpenFilesHere()`). No other languages.
 - **Secrets use a local encrypted store** (`internal/keychain`): the operating system keychain, through `mygo.Secrets`, contains only one random 32-byte master key (`master/v1`) per OS user and application environment (development and production use separate services); passwords, private keys, passphrases, proxy/forward passwords, AI keys and the device MCP token belong in `secrets.enc`, encrypted with that master key. Never write secret plaintext to JSON, settings, logs or disk test fixtures. One-run secrets remain in memory. Startup automatically unlocks the store; a failed or denied keychain request shows Retry/Cancel, and Cancel leaves the app locked. Production has no memory fallback. Deleting an owner deletes its encrypted secret entries. No migration or compatibility with the former per-secret keychain layout is provided.

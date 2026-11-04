@@ -133,6 +133,6 @@ jobs:
             build/*/*.deb
             build/*/*.dmg
             build/*/*.zip
-            build/*/*Setup*.exe
+            build/*/*-setup-*.exe
             build/*/install.sh
             build/*/update-*.json
