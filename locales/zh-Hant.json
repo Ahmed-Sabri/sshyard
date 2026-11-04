@@ -1192,6 +1192,7 @@
   "aiHistoryBusy": "請先停止正在進行的回覆",
   "aiDeleteChatTitle": "刪除此對話？",
   "aiDeleteChatBody": "它會從該主機的歷史對話中刪除，且無法還原。",
+  "scpFallbackNote": "此伺服器未提供 SFTP，檔案透過 scp 與 shell 指令傳輸；上傳在本機準備完成後一次送出。",
   "mygo.previousMonth": "上個月",
   "mygo.nextMonth": "下個月",
   "mygo.undo": "復原",

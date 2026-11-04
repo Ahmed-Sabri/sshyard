@@ -1192,6 +1192,7 @@
   "aiHistoryBusy": "Stop the running reply first",
   "aiDeleteChatTitle": "Delete this chat?",
   "aiDeleteChatBody": "It is removed from this host's chat history. This cannot be undone.",
+  "scpFallbackNote": "This server has no SFTP: files move with scp and shell commands. An upload is sent once it is complete.",
   "mygo.previousMonth": "Previous month",
   "@mygo.previousMonth": {
     "description": "Labels the button of a calendar that shows the previous month."

@@ -14,6 +14,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -62,6 +63,8 @@ type Server struct {
 	HostKey ssh.Signer
 	// SFTPRoot is the working directory of the sftp subsystem.
 	SFTPRoot string
+	// NoSFTP refuses the sftp subsystem, as a server without one.
+	NoSFTP bool
 	// SFTPHandlers, when set, serves the sftp subsystem instead, with
 	// handlers it makes for each session (a fake or hostile server).
 	SFTPHandlers func() sftp.Handlers
@@ -336,7 +339,7 @@ func (s *Server) serveSession(ch ssh.Channel, reqs <-chan *ssh.Request) {
 		case "subsystem":
 			var sub struct{ Name string }
 			ssh.Unmarshal(r.Payload, &sub)
-			if sub.Name != "sftp" {
+			if sub.Name != "sftp" || s.NoSFTP {
 				r.Reply(false, nil)
 				continue
 			}
@@ -591,5 +594,33 @@ func (f *forwards) closeAll() {
 	defer f.mu.Unlock()
 	for _, l := range f.ln {
 		l.Close()
+	}
+}
+
+// ShellExec is an Exec that runs each command with /bin/sh in dir, on
+// this computer: a server's shell, for code that runs commands remotely.
+func ShellExec(dir string) func(ch ssh.Channel, cmd string) int {
+	return func(ch ssh.Channel, cmd string) int {
+		c := exec.Command("/bin/sh", "-c", cmd)
+		c.Dir = dir
+		c.Stdout, c.Stderr = ch, ch.Stderr()
+		// Not Stdin: Run would wait for the client to close it, after the
+		// command is gone, and a server sends the exit status at once.
+		in, err := c.StdinPipe()
+		if err != nil {
+			return 127
+		}
+		go func() {
+			io.Copy(in, ch)
+			in.Close()
+		}()
+		err = c.Run()
+		if ee, ok := err.(*exec.ExitError); ok {
+			return ee.ExitCode()
+		}
+		if err != nil {
+			return 127
+		}
+		return 0
 	}
 }

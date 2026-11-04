@@ -12058,3 +12058,13 @@ func AiDeleteChatBody() string { return In(i18n.Locale()).AiDeleteChatBody() }
 func (msgs Messages) AiDeleteChatBody() string {
 	return Catalog.Format(msgs.locale, "aiDeleteChatBody", nil)
 }
+
+// ScpFallbackNote says "This server has no SFTP: files move with scp and shell commands. An upload is sent once it is complete."
+// in the language the app shows.
+func ScpFallbackNote() string { return In(i18n.Locale()).ScpFallbackNote() }
+
+// ScpFallbackNote says "This server has no SFTP: files move with scp and shell commands. An upload is sent once it is complete."
+// in the language of msgs.
+func (msgs Messages) ScpFallbackNote() string {
+	return Catalog.Format(msgs.locale, "scpFallbackNote", nil)
+}

@@ -1192,6 +1192,7 @@
   "aiHistoryBusy": "先に生成中の応答を停止してください",
   "aiDeleteChatTitle": "このチャットを削除しますか？",
   "aiDeleteChatBody": "このホストのチャット履歴から削除します。この操作は取り消せません。",
+  "scpFallbackNote": "このサーバーはSFTPを提供していないため、scpとシェルコマンドでファイルを転送します。アップロードは準備が整ってから一括で送信されます。",
   "mygo.previousMonth": "前の月",
   "mygo.nextMonth": "次の月",
   "mygo.undo": "取り消す",

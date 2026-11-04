@@ -155,6 +155,15 @@ func tempBadge(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	})
 }
 
+// scpBadge marks a files pane on a server without SFTP, whose files move
+// with scp and its shell.
+func scpBadge(c *ui.Context, m locales.Messages, tok theme.Tokens) {
+	ui.Box(c.Key("scp")).Shrink(0).Padding(1, 6).Radius(theme.Capsule).Background(tok.Warning.Alpha(0.14)).
+		Label(m.ScpFallbackNote()).Tooltip(m.ScpFallbackNote()).Children(func() {
+		ui.Text(c, "SCP").FontSize(theme.Caption).FontWeight(500).TextColor(tok.Warning).SingleLine()
+	})
+}
+
 func (a *App) shortcuts(c *ui.Context) {
 	if c.Shortcut(appMods, ui.KeyK) {
 		a.OpenQuickConnect()
@@ -383,6 +392,9 @@ func (a *App) paneView(c *ui.Context, t *layout.Tab, n *layout.Node, tok theme.T
 				}
 				if isTemp(cn.host.ID) {
 					tempBadge(c, m, tok)
+				}
+				if cn.fs != nil && cn.fs.remote.client != nil && cn.fs.remote.client.SCP() {
+					scpBadge(c, m, tok)
 				}
 				if cn.kind == layout.Terminal {
 					a.paneForwards(c, m, tok, cn.host.ID)

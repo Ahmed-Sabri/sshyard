@@ -62,7 +62,13 @@ type Client struct {
 	conn       *ssh.Client
 	operation  *ssh.Session
 	operations *operationPool
+	// scp is set when the server has no SFTP and its shell and scp
+	// stand in (scpfs).
+	scp bool
 }
+
+// SCP reports a server without SFTP, whose files move with scp.
+func (c *Client) SCP() bool { return c.scp }
 
 // New opens SFTP on an SSH connection; closing the Client does not close
 // the connection.

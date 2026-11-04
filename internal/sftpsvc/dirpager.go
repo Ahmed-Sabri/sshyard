@@ -94,7 +94,7 @@ func (p *dirPager) exchange(typ byte, payload []byte) (byte, []byte, error) {
 
 // openPager starts a pager on c's connection; it ends with ctx.
 func (c *Client) openPager(ctx context.Context) (*dirPager, error) {
-	if c.conn == nil || noPager {
+	if c.conn == nil || noPager || c.scp {
 		return nil, errNoPager
 	}
 	s, err := c.conn.NewSession()
