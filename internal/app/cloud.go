@@ -1,0 +1,1126 @@
+package app
+
+import (
+	"context"
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"log"
+	"net/url"
+	"os"
+	"path/filepath"
+	"slices"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/Licoy/sshyard/internal/assets"
+	"github.com/Licoy/sshyard/internal/backup"
+	"github.com/Licoy/sshyard/internal/backup/gist"
+	"github.com/Licoy/sshyard/internal/backup/s3"
+	"github.com/Licoy/sshyard/internal/backup/webdav"
+	"github.com/Licoy/sshyard/internal/icons"
+	"github.com/Licoy/sshyard/internal/keychain"
+	"github.com/Licoy/sshyard/internal/settings"
+	"github.com/Licoy/sshyard/internal/theme"
+	"github.com/Licoy/sshyard/internal/vault"
+	"github.com/Licoy/sshyard/locales"
+	"github.com/egoist/mygo/ui"
+)
+
+// Cloud backup: the places this device backs up to (settings.BackupTarget),
+// a folder on a WebDAV server, an S3 bucket or a GitHub gist. A backup goes
+// there as a backup file does to disk, sealed here first: by hand with a
+// password typed for it, or, once automatic backups are on, with the key
+// derived from their password, kept in the encrypted local store. Each
+// backup is a new file named for when and by which device it was made, so
+// devices never overwrite each other; after one, this device's oldest past
+// the place's Keep are deleted.
+
+// cloudFile is what this device knows of its places, in DataDir.
+const cloudFile = "backups.json"
+
+// cloudState is what this device knows of its places beyond their
+// settings: the name its backups carry and how each place's went. Nothing
+// in it is secret.
+type cloudState struct {
+	Device  string                  `json:"device"`
+	Targets map[string]*targetState `json:"targets,omitempty"`
+}
+
+// targetState is how one place's backups went.
+type targetState struct {
+	// Last is when the last backup was put there, Object its name.
+	Last   time.Time `json:"last,omitzero"`
+	Object string    `json:"object,omitempty"`
+	// Checked is when an automatic backup last found nothing changed.
+	Checked time.Time `json:"checked,omitzero"`
+	// Digest is an HMAC, under the automatic backups' key, of what the
+	// last backup sealed with it held, so that an unchanged one is skipped.
+	Digest string `json:"digest,omitempty"`
+	// busy is set while a backup goes there, err is why the last failed
+	// and retry when a failed automatic one is tried again; none is kept.
+	busy  bool
+	err   error
+	retry time.Time
+}
+
+// The automatic backups are checked cloudEvery once the store is
+// unlocked, the first time after cloudFirst; a failed one is tried again
+// after cloudRetry.
+const (
+	cloudFirst = time.Minute
+	cloudEvery = 10 * time.Minute
+	cloudRetry = 30 * time.Minute
+)
+
+var (
+	// errBackupKey reports automatic backups whose key is not in the store.
+	errBackupKey = errors.New("app: automatic backup key missing")
+	// errBackupProxy reports a place whose proxy was deleted: it is not
+	// reached directly instead.
+	errBackupProxy = errors.New("app: backup location proxy missing")
+)
+
+// cloudNow is what this device knows of its places, read once.
+func (a *App) cloudNow() *cloudState {
+	if a.cloud != nil {
+		return a.cloud
+	}
+	s := &cloudState{}
+	if a.p.DataDir != "" {
+		if b, err := os.ReadFile(filepath.Join(a.p.DataDir, cloudFile)); err == nil {
+			json.Unmarshal(b, s)
+		}
+	}
+	if s.Targets == nil {
+		s.Targets = map[string]*targetState{}
+	}
+	a.cloud = s
+	if !backup.ValidDevice(s.Device) {
+		s.Device = strings.ToLower(rand.Text()[:8])
+		a.saveCloud()
+	}
+	return s
+}
+
+// of is how the place id's backups went.
+func (s *cloudState) of(id string) *targetState {
+	st := s.Targets[id]
+	if st == nil {
+		st = &targetState{}
+		s.Targets[id] = st
+	}
+	return st
+}
+
+// deviceID is this device's name in its backups' file names.
+func (a *App) deviceID() string { return a.cloudNow().Device }
+
+// saveCloud keeps what this device knows of its places, forgetting places
+// since deleted. A failure is logged: it costs at most an early backup.
+func (a *App) saveCloud() {
+	if a.p.DataDir == "" || a.cloud == nil {
+		return
+	}
+	for id := range a.cloud.Targets {
+		if _, ok := a.settings.BackupTarget(id); !ok {
+			delete(a.cloud.Targets, id)
+		}
+	}
+	b, err := json.Marshal(a.cloud)
+	if err == nil {
+		err = settings.WriteFileAtomic(filepath.Join(a.p.DataDir, cloudFile), b, 0o600)
+	}
+	if err != nil {
+		log.Printf("sshyard: saving %s: %v", cloudFile, err)
+	}
+}
+
+// remote is the place t, reached with secret through its proxy. bound is
+// given, off the UI thread, the gist a Gist place finds or makes.
+func (a *App) remote(t settings.BackupTarget, secret string, bound func(id string)) (backup.Remote, error) {
+	dial := a.p.Dial
+	if t.ProxyID != "" {
+		px, ok := a.store.Proxy(t.ProxyID)
+		if !ok {
+			return nil, errBackupProxy
+		}
+		dial = a.proxyDialer(px).DialContext
+	}
+	hc := backup.Client(dial)
+	switch t.Kind {
+	case settings.BackupS3:
+		return &s3.Bucket{Endpoint: t.URL, Region: t.Region, Bucket: t.Bucket, Prefix: t.Dir, PathStyle: t.PathStyle, AccessKey: t.User, SecretKey: secret, HTTP: hc}, nil
+	case settings.BackupGist:
+		return &gist.Gist{Token: secret, ID: t.GistID, Bound: bound, API: a.gistAPI, HTTP: hc}, nil
+	}
+	return &webdav.Folder{URL: t.URL, Dir: t.Dir, User: t.User, Password: secret, HTTP: hc}, nil
+}
+
+// targetRemote is t, reached with its secret from the store. A gist it
+// finds or makes is kept in its settings.
+func (a *App) targetRemote(t settings.BackupTarget) (backup.Remote, error) {
+	secret, err := a.kc.Get(keychain.BackupSecret(t.ID))
+	if err != nil && !errors.Is(err, keychain.ErrNotFound) {
+		return nil, err
+	}
+	defer clear(secret)
+	return a.remote(t, string(secret), func(gid string) { a.post(func() { a.bindGist(t.ID, gid) }) })
+}
+
+// bindGist keeps gid as the gist of the place id, unless it has one.
+func (a *App) bindGist(id, gid string) {
+	s := a.settings
+	s.BackupTargets = slices.Clone(s.BackupTargets)
+	for i, t := range s.BackupTargets {
+		if t.ID == id && t.GistID == "" {
+			s.BackupTargets[i].GistID = gid
+			if err := a.ApplySettings(s); err != nil {
+				a.toastError(err.Error())
+			}
+			return
+		}
+	}
+}
+
+// backupKey is the key the place id's automatic backups are sealed with.
+func (a *App) backupKey(id string) (vault.Key, error) {
+	b, err := a.kc.Get(keychain.BackupKey(id))
+	defer clear(b)
+	switch {
+	case errors.Is(err, keychain.ErrNotFound):
+		return vault.Key{}, errBackupKey
+	case err != nil:
+		return vault.Key{}, err
+	}
+	var k vault.Key
+	if json.Unmarshal(b, &k) != nil || !k.Valid() {
+		k.Clear()
+		return vault.Key{}, errBackupKey
+	}
+	return k, nil
+}
+
+// putBackup puts sealed in r as name, then deletes this device's backups
+// there past keep. A clean-up that fails leaves older backups behind; it
+// does not fail the backup.
+func putBackup(ctx context.Context, r backup.Remote, name string, sealed []byte, device string, keep int) error {
+	if err := r.Put(ctx, name, sealed); err != nil {
+		return err
+	}
+	if keep == 0 {
+		return nil
+	}
+	objs, err := r.List(ctx)
+	if err != nil {
+		return nil
+	}
+	for _, o := range backup.Prune(objs, device, keep) {
+		if r.Delete(ctx, o.Name) != nil {
+			break
+		}
+	}
+	return nil
+}
+
+// backupDone records how the backup name to the place id went. digest is
+// what a backup sealed with the key held, "" for one sealed otherwise.
+func (a *App) backupDone(id, name, digest string, err error) {
+	st := a.cloudNow().of(id)
+	st.busy = false
+	if err != nil {
+		st.err, st.retry = err, time.Now().Add(cloudRetry)
+		return
+	}
+	st.err, st.retry = nil, time.Time{}
+	st.Last, st.Object, st.Digest = time.Now(), name, digest
+	a.saveCloud()
+}
+
+// cloudToast tells how a backup to the place name went.
+func (a *App) cloudToast(name string, err error) {
+	a.toasts = append(a.toasts, func(m locales.Messages) ui.Toast {
+		if err != nil {
+			return ui.Toast{Title: m.BackupUploadFailed(name, backupErrText(m, err)), Type: "error"}
+		}
+		return ui.Toast{Title: m.BackupUploaded(name), Type: "success"}
+	})
+}
+
+// BackupNow backs up to the place id: with its automatic backups' key
+// while they are on, otherwise from the backup sheet with a password.
+func (a *App) BackupNow(id string) {
+	t, ok := a.settings.BackupTarget(id)
+	if !ok || a.cloudNow().of(id).busy {
+		return
+	}
+	if !a.unlocked() {
+		a.withSecrets(func() { a.BackupNow(id) })
+		return
+	}
+	if t.AutoHours > 0 {
+		a.backupWithKey(t, false)
+		return
+	}
+	a.backup, a.backingUp = &backupForm{secrets: true, target: id}, true
+}
+
+// backupWithKey backs up to t with its automatic backups' key, off the UI
+// thread once gathered. An automatic one (auto) is skipped when nothing
+// changed since the last, and tells only through the settings.
+func (a *App) backupWithKey(t settings.BackupTarget, auto bool) {
+	st := a.cloudNow().of(t.ID)
+	fail := func(err error) {
+		a.backupDone(t.ID, "", "", err)
+		if !auto {
+			a.cloudToast(t.Name, err)
+		}
+	}
+	key, err := a.backupKey(t.ID)
+	if err != nil {
+		fail(err)
+		return
+	}
+	p, err := a.collectBackup(t.AutoSecrets)
+	var plain []byte
+	if err == nil {
+		plain, err = json.Marshal(p)
+	}
+	if err != nil {
+		key.Clear()
+		fail(err)
+		return
+	}
+	mac := hmac.New(sha256.New, key.KEK)
+	mac.Write(plain)
+	digest := hex.EncodeToString(mac.Sum(nil))
+	if auto && digest == st.Digest {
+		key.Clear()
+		st.Checked = time.Now()
+		a.saveCloud()
+		return
+	}
+	plain, err = a.packBackup(p)
+	var r backup.Remote
+	if err == nil {
+		r, err = a.targetRemote(t)
+	}
+	if err != nil {
+		key.Clear()
+		fail(err)
+		return
+	}
+	device := a.deviceID()
+	name, ctx := backup.Name(time.Now(), device), a.cloudCtx
+	st.busy, st.err = true, nil
+	go func() {
+		sealed, err := key.Seal(plain)
+		key.Clear()
+		if err == nil {
+			err = putBackup(ctx, r, name, sealed, device, t.Keep)
+		}
+		a.post(func() {
+			a.backupDone(t.ID, name, digest, err)
+			if !auto {
+				a.cloudToast(t.Name, err)
+			}
+		})
+	}()
+}
+
+// exportTo seals data with pw and puts it in the backup sheet's place,
+// off the UI thread.
+func (a *App) exportTo(m locales.Messages, f *backupForm, data, pw []byte) bool {
+	t, ok := a.settings.BackupTarget(f.target)
+	st := a.cloudNow().of(f.target)
+	if !ok || st.busy {
+		return false
+	}
+	r, err := a.targetRemote(t)
+	if err != nil {
+		f.err = m.BackupUploadFailed(t.Name, backupErrText(m, err))
+		return false
+	}
+	device := a.deviceID()
+	name, cost, ctx := backup.Name(time.Now(), device), a.kdf, a.cloudCtx
+	f.busy, st.busy, st.err = true, true, nil
+	go func() {
+		sealed, err := vault.Seal(data, pw, cost)
+		if err == nil {
+			err = putBackup(ctx, r, name, sealed, device, t.Keep)
+		}
+		a.post(func() {
+			a.backupDone(t.ID, name, "", err)
+			f.busy = false
+			switch {
+			case a.backup != f:
+				a.cloudToast(t.Name, err)
+			case err != nil:
+				f.err = m.BackupUploadFailed(t.Name, backupErrText(m, err))
+			default:
+				a.closeBackup()
+				a.cloudToast(t.Name, nil)
+			}
+		})
+	}()
+	return true
+}
+
+// startAutoBackup checks the automatic backups until the app closes.
+func (a *App) startAutoBackup() {
+	ctx := a.cloudCtx
+	go func() {
+		tm := time.NewTimer(cloudFirst)
+		defer tm.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-tm.C:
+				a.post(func() { a.autoBackup(time.Now()) })
+				tm.Reset(cloudEvery)
+			}
+		}
+	}()
+}
+
+// autoBackup starts the automatic backups due at now. They wait while the
+// store is locked.
+func (a *App) autoBackup(now time.Time) {
+	if !a.unlocked() {
+		return
+	}
+	for _, t := range a.settings.BackupTargets {
+		if t.AutoHours == 0 {
+			continue
+		}
+		st := a.cloudNow().of(t.ID)
+		last := st.Last
+		if st.Checked.After(last) {
+			last = st.Checked
+		}
+		if st.busy || now.Before(st.retry) || now.Before(last.Add(time.Duration(t.AutoHours)*time.Hour)) {
+			continue
+		}
+		a.backupWithKey(t, true)
+	}
+}
+
+// DeleteBackupTarget forgets the place id with its secret and key; the
+// backups in it stay.
+func (a *App) DeleteBackupTarget(id string) error {
+	if _, ok := a.settings.BackupTarget(id); !ok {
+		return nil
+	}
+	if err := a.kc.Apply([]keychain.Change{{Key: keychain.BackupSecret(id), Delete: true}, {Key: keychain.BackupKey(id), Delete: true}}); err != nil {
+		return &keychainDeleteError{err}
+	}
+	s := a.settings
+	s.BackupTargets = slices.DeleteFunc(slices.Clone(s.BackupTargets), func(t settings.BackupTarget) bool { return t.ID == id })
+	if err := a.ApplySettings(s); err != nil {
+		return err
+	}
+	a.saveCloud()
+	return nil
+}
+
+// targetKinds are the kinds of place, in the editor's order.
+var targetKinds = []string{settings.BackupWebDAV, settings.BackupS3, settings.BackupGist}
+
+// targetForm is the backup location editor's fields. The place's secret
+// and the automatic backups' password live here only while the sheet is
+// open: saving moves the secret, and the key derived from the password,
+// into the encrypted local store.
+type targetForm struct {
+	isNew bool
+	// orig is the place edited; a new one has its ID already
+	orig settings.BackupTarget
+	name string
+	// kind is the index in targetKinds
+	kind                                   int
+	url, dir, user, bucket, region, gistID string
+	pathStyle                              bool
+	secret                                 string
+	// proxy is the proxy select's label
+	proxy string
+	keep  float64
+	// auto, every (the index in settings.BackupAutoHours), password,
+	// confirm and autoSecrets are the automatic backups'
+	auto              bool
+	every             int
+	password, confirm string
+	autoSecrets       bool
+	// busy is set while the password is derived, testing while the
+	// connection is tested; tested says it was reached
+	busy, testing bool
+	tested        string
+	err           string
+}
+
+func (a *App) openTargetForm(t *settings.BackupTarget) {
+	f := &targetForm{isNew: t == nil, orig: settings.BackupTarget{ID: assets.NewID(), Kind: settings.BackupWebDAV}, keep: settings.BackupKeepDefault, every: 1, autoSecrets: true}
+	if t != nil {
+		f.orig = *t
+		f.name, f.url, f.dir, f.user, f.bucket, f.region, f.gistID, f.pathStyle = t.Name, t.URL, t.Dir, t.User, t.Bucket, t.Region, t.GistID, t.PathStyle
+		f.keep, f.auto = float64(t.Keep), t.AutoHours > 0
+		if f.auto {
+			f.autoSecrets = t.AutoSecrets
+		}
+		if px, ok := a.store.Proxy(t.ProxyID); ok {
+			f.proxy = px.Name
+		}
+	}
+	f.kind = max(slices.Index(targetKinds, f.orig.Kind), 0)
+	if i := slices.Index(settings.BackupAutoHours, f.orig.AutoHours); i >= 0 {
+		f.every = i
+	}
+	a.target, a.targetEditing = f, true
+}
+
+func (a *App) closeTargetForm() {
+	a.target, a.targetEditing = nil, false
+}
+
+// keepsSecret reports whether the place edited has a secret that stays
+// its own when none is typed: a kind's secret means nothing to another.
+func (f *targetForm) keepsSecret() bool {
+	return !f.isNew && f.orig.Kind == targetKinds[f.kind]
+}
+
+// targetDraft is the place the form describes, or why it can not be one.
+func (a *App) targetDraft(m locales.Messages, f *targetForm) (settings.BackupTarget, string) {
+	t := f.orig
+	t.Name, t.Kind = strings.TrimSpace(f.name), targetKinds[f.kind]
+	t.URL, t.Dir, t.User = strings.TrimSpace(f.url), strings.TrimSpace(f.dir), strings.TrimSpace(f.user)
+	t.Bucket, t.Region, t.GistID, t.PathStyle = strings.TrimSpace(f.bucket), strings.TrimSpace(f.region), strings.TrimSpace(f.gistID), f.pathStyle
+	t.Keep = min(max(int(f.keep), 0), settings.BackupKeepMax)
+	t.AutoHours, t.AutoSecrets = 0, false
+	if f.auto {
+		t.AutoHours, t.AutoSecrets = settings.BackupAutoHours[f.every], f.autoSecrets
+	}
+	labels, ids := a.proxyChoices(m)
+	t.ProxyID = ""
+	if i := slices.Index(labels, f.proxy); i > 0 {
+		t.ProxyID = ids[i]
+	}
+	// What only another kind uses goes.
+	switch t.Kind {
+	case settings.BackupWebDAV:
+		t.Bucket, t.Region, t.GistID, t.PathStyle = "", "", "", false
+	case settings.BackupS3:
+		t.GistID = ""
+	case settings.BackupGist:
+		t.URL, t.Dir, t.User, t.Bucket, t.Region, t.PathStyle = "", "", "", "", "", false
+	}
+	needSecret := f.secret == "" && !f.keepsSecret()
+	switch {
+	case t.Name == "":
+		return t, m.RequiredField(m.FieldName())
+	case t.Kind == settings.BackupWebDAV && !targetURLOK(t.URL):
+		return t, m.ErrTargetURL()
+	case t.Kind == settings.BackupS3 && t.URL != "" && !targetURLOK(t.URL):
+		return t, m.ErrTargetURL()
+	case t.Kind == settings.BackupS3 && t.Bucket == "":
+		return t, m.RequiredField(m.S3Bucket())
+	case t.Kind == settings.BackupS3 && t.User == "":
+		return t, m.RequiredField(m.S3AccessKey())
+	case t.Kind == settings.BackupS3 && needSecret:
+		return t, m.RequiredField(m.S3SecretKey())
+	case t.Kind == settings.BackupGist && needSecret:
+		return t, m.RequiredField(m.GistToken())
+	}
+	return t, ""
+}
+
+// targetURLOK reports whether raw can be a WebDAV server or an S3
+// endpoint: both are http or https with a host and nothing else.
+func targetURLOK(raw string) bool {
+	_, err := webdav.CheckURL(raw)
+	return err == nil
+}
+
+// plainHTTP reports whether raw is a URL sent unencrypted.
+func plainHTTP(raw string) bool {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	return err == nil && strings.EqualFold(u.Scheme, "http")
+}
+
+// SaveTargetForm checks the sheet, derives the automatic backups' key off
+// the UI thread when a password was typed for it, then saves the place.
+func (a *App) SaveTargetForm(m locales.Messages) bool {
+	f := a.target
+	if f == nil || f.busy {
+		return false
+	}
+	f.err, f.tested = "", ""
+	t, msg := a.targetDraft(m, f)
+	if msg != "" {
+		f.err = msg
+		return false
+	}
+	newKey := t.AutoHours > 0 && (f.password != "" || f.orig.AutoHours == 0)
+	if newKey {
+		switch {
+		case len([]rune(f.password)) < minBackupPassword:
+			f.err = m.BackupPasswordShort(strconv.Itoa(minBackupPassword))
+			return false
+		case f.password != f.confirm:
+			f.err = m.BackupPasswordMismatch()
+			return false
+		}
+	}
+	if !a.unlocked() {
+		draft := a.target
+		a.withSecrets(func() {
+			if a.target == draft {
+				a.SaveTargetForm(m)
+			}
+		})
+		return false
+	}
+	if !newKey {
+		return a.commitTarget(m, f, t, nil)
+	}
+	pw, cost := []byte(f.password), a.kdf
+	f.busy = true
+	go func() {
+		k, err := vault.Derive(pw, cost)
+		clear(pw)
+		a.post(func() {
+			defer k.Clear()
+			f.busy = false
+			switch {
+			case a.target != f:
+			case err != nil:
+				f.err = m.ErrGeneric(err.Error())
+			default:
+				a.commitTarget(m, f, t, &k)
+			}
+		})
+	}()
+	return true
+}
+
+// commitTarget saves t: its secret and the new key k, when there is one,
+// in one write to the store, then the settings, which failing puts the
+// store back.
+func (a *App) commitTarget(m locales.Messages, f *targetForm, t settings.BackupTarget, k *vault.Key) bool {
+	var changes []keychain.Change
+	switch {
+	case f.secret != "":
+		changes = append(changes, keychain.Change{Key: keychain.BackupSecret(t.ID), Value: []byte(f.secret)})
+	case !f.keepsSecret():
+		changes = append(changes, keychain.Change{Key: keychain.BackupSecret(t.ID), Delete: true})
+	}
+	switch {
+	case k != nil:
+		b, err := json.Marshal(k)
+		if err != nil {
+			f.err = m.ErrGeneric(err.Error())
+			return false
+		}
+		defer clear(b)
+		changes = append(changes, keychain.Change{Key: keychain.BackupKey(t.ID), Value: b})
+	case t.AutoHours == 0:
+		changes = append(changes, keychain.Change{Key: keychain.BackupKey(t.ID), Delete: true})
+	}
+	tx := &secretTx{kc: a.kc}
+	fail := func(msg string) bool {
+		if rerr := tx.rollback(); rerr != nil {
+			msg = m.ErrKeychainRestore(msg, secretStoreErrorText(m, rerr))
+		}
+		f.err = msg
+		return false
+	}
+	if err := tx.setBatch(changes); err != nil {
+		return fail(m.ErrKeychainSave(secretStoreErrorText(m, err)))
+	}
+	s := a.settings
+	s.BackupTargets = slices.Clone(s.BackupTargets)
+	if i := slices.IndexFunc(s.BackupTargets, func(o settings.BackupTarget) bool { return o.ID == t.ID }); i >= 0 {
+		s.BackupTargets[i] = t
+	} else {
+		s.BackupTargets = append(s.BackupTargets, t)
+	}
+	if err := a.ApplySettings(s); err != nil {
+		return fail(m.ErrGeneric(err.Error()))
+	}
+	// Another place starts over: its last backup is not there.
+	if !f.isNew && !samePlace(f.orig, t) {
+		delete(a.cloudNow().Targets, t.ID)
+		a.saveCloud()
+	}
+	a.closeTargetForm()
+	return true
+}
+
+// samePlace reports whether a and b keep their backups in the same place.
+func samePlace(a, b settings.BackupTarget) bool {
+	return a.Kind == b.Kind && a.URL == b.URL && a.Dir == b.Dir && a.User == b.User && a.Bucket == b.Bucket &&
+		a.Region == b.Region && a.PathStyle == b.PathStyle && (a.GistID == "" || a.GistID == b.GistID)
+}
+
+// TestTarget checks, off the UI thread, that the place the sheet
+// describes can be reached with its secret, typed or saved.
+func (a *App) TestTarget(m locales.Messages) bool {
+	f := a.target
+	if f == nil || f.testing {
+		return false
+	}
+	f.err, f.tested = "", ""
+	t, msg := a.targetDraft(m, f)
+	if msg != "" {
+		f.err = msg
+		return false
+	}
+	secret := f.secret
+	if secret == "" && f.keepsSecret() {
+		if !a.unlocked() {
+			draft := a.target
+			a.withSecrets(func() {
+				if a.target == draft {
+					a.TestTarget(m)
+				}
+			})
+			return false
+		}
+		b, err := a.kc.Get(keychain.BackupSecret(t.ID))
+		if err != nil && !errors.Is(err, keychain.ErrNotFound) {
+			f.err = m.ErrGeneric(secretStoreErrorText(m, err))
+			return false
+		}
+		secret = string(b)
+		clear(b)
+	}
+	// A gist found is shown, and kept once the place is saved.
+	var found string
+	r, err := a.remote(t, secret, func(id string) { found = id })
+	if err != nil {
+		f.err = backupErrText(m, err)
+		return false
+	}
+	f.testing = true
+	ctx := a.cloudCtx
+	go func() {
+		err := r.Check(ctx)
+		a.post(func() {
+			f.testing = false
+			switch {
+			case err != nil:
+				f.err = backupErrText(m, err)
+			case found != "":
+				f.tested = m.ConnectionGistFound()
+				if strings.TrimSpace(f.gistID) == "" {
+					f.gistID = found
+				}
+			default:
+				f.tested = m.ConnectionOK()
+			}
+		})
+	}()
+	return true
+}
+
+// remoteList is the sheet of the backups in a place, to restore one.
+type remoteList struct {
+	target  settings.BackupTarget
+	r       backup.Remote
+	loading bool
+	objs    []backup.Object
+	err     error
+	// fetching is the backup being downloaded, "" for none
+	fetching string
+}
+
+// OpenRemoteList shows the backups in the place id, listed off the UI
+// thread.
+func (a *App) OpenRemoteList(id string) {
+	t, ok := a.settings.BackupTarget(id)
+	if !ok {
+		return
+	}
+	if !a.unlocked() {
+		a.withSecrets(func() { a.OpenRemoteList(id) })
+		return
+	}
+	r, err := a.targetRemote(t)
+	l := &remoteList{target: t, r: r, loading: err == nil, err: err}
+	a.remotes, a.listingRemote = l, true
+	if err != nil {
+		return
+	}
+	ctx := a.cloudCtx
+	go func() {
+		objs, err := r.List(ctx)
+		backup.SortNewest(objs)
+		a.post(func() { l.loading, l.objs, l.err = false, objs, err })
+	}()
+}
+
+// fetchRemote downloads the backup name off the UI thread, then asks for
+// its password in the restore sheet.
+func (a *App) fetchRemote(m locales.Messages, l *remoteList, name string) {
+	if l.fetching != "" {
+		return
+	}
+	l.fetching, l.err = name, nil
+	r, ctx := l.r, a.cloudCtx
+	go func() {
+		data, err := r.Get(ctx, name)
+		a.post(func() {
+			if a.remotes != l {
+				return
+			}
+			l.fetching = ""
+			if err != nil {
+				l.err = err
+				return
+			}
+			a.remotes, a.listingRemote = nil, false
+			a.openRestore(m, name, data, nil)
+		})
+	}()
+}
+
+// targetIcon is the icon of a kind of place.
+func targetIcon(kind string) *icons.Icon {
+	switch kind {
+	case settings.BackupS3:
+		return icons.BackupS3
+	case settings.BackupGist:
+		return icons.BackupGist
+	}
+	return icons.BackupWebDAV
+}
+
+// targetKindText names a kind of place; the names are not translated.
+func targetKindText(kind string) string {
+	switch kind {
+	case settings.BackupS3:
+		return "S3"
+	case settings.BackupGist:
+		return "GitHub Gist"
+	}
+	return "WebDAV"
+}
+
+// autoText is how often automatic backups run every hours.
+func autoText(m locales.Messages, hours int) string {
+	switch hours {
+	case 6:
+		return m.BackupEvery6Hours()
+	case 168:
+		return m.BackupEveryWeek()
+	}
+	return m.BackupEveryDay()
+}
+
+// targetNote is a place's row note: its kind, where it is, how its last
+// backup went and how often it backs up by itself.
+func (a *App) targetNote(m locales.Messages, t settings.BackupTarget) string {
+	parts := []string{targetKindText(t.Kind)}
+	switch t.Kind {
+	case settings.BackupWebDAV:
+		if u, err := url.Parse(t.URL); err == nil && u.Host != "" {
+			parts = append(parts, a.pv(u.Host))
+		}
+	case settings.BackupS3:
+		parts = append(parts, a.pv(t.Bucket))
+	}
+	var st targetState
+	if p := a.cloudNow().Targets[t.ID]; p != nil {
+		st = *p
+	}
+	switch {
+	case st.busy:
+		parts = append(parts, m.TargetBackingUp())
+	case st.err != nil:
+		parts = append(parts, m.TargetBackupFailed(backupErrText(m, st.err)))
+	case st.Last.IsZero():
+		parts = append(parts, m.TargetNeverBackedUp())
+	default:
+		parts = append(parts, m.TargetLastBackup(st.Last.Local().Format("2006-01-02 15:04")))
+	}
+	if t.AutoHours > 0 {
+		parts = append(parts, m.TargetAuto(autoText(m, t.AutoHours)))
+	}
+	return strings.Join(parts, " · ")
+}
+
+// cloudSection is the backup page's places to back up to.
+func (a *App) cloudSection(c *ui.Context, m locales.Messages, tok theme.Tokens) {
+	settingsSection(c, tok, icons.Cloud, tok.TintAt(6), m.CloudBackupSection(), func(g *settingsGroup) {
+		ts := a.settings.BackupTargets
+		if len(ts) == 0 {
+			g.row(m.NoBackupTargets(), m.NoBackupTargetsNote(), func() {})
+		}
+		for _, t := range ts {
+			busy := false
+			if st := a.cloudNow().Targets[t.ID]; st != nil {
+				busy = st.busy
+			}
+			g.row(t.Name, a.targetNote(m, t), func() {
+				if (IconButton{Icon: icons.CloudUpload, Label: m.BackupNow(), Disabled: busy}).Clicked(c, "bt:up:"+t.ID) {
+					a.BackupNow(t.ID)
+				}
+				if iconButton(c, "bt:down:"+t.ID, icons.CloudDownload, m.RestoreFromTarget()) {
+					a.OpenRemoteList(t.ID)
+				}
+				if iconButton(c, "bt:edit:"+t.ID, icons.Edit, m.Edit()) {
+					a.openTargetForm(&t)
+				}
+				if (IconButton{Icon: icons.Delete, Label: m.DeleteBackupTarget(), Danger: true, Disabled: busy}).Clicked(c, "bt:del:"+t.ID) {
+					a.runSecretAction(func() error { return a.DeleteBackupTarget(t.ID) }, func(err error) { a.toastError(a.inUseText(m, err)) })
+				}
+			}, func() { softTile(c, targetIcon(t.Kind), tok.Tint(t.ID), 28) })
+		}
+		g.row("", "", func() {
+			if pill(c, m.AddBackupTarget(), false, false, false) {
+				a.openTargetForm(nil)
+			}
+		})
+	})
+	ui.Text(c, m.CloudBackupNote()).FontSize(theme.Footnote).TextColor(tok.TextMuted).Padding(0, 4)
+}
+
+// switchRow is a switch with its label and a muted note before it, as in
+// the backup sheets.
+func switchRow(c *ui.Context, tok theme.Tokens, key, label, note string, on *bool, disabled bool) {
+	ui.Row(c).Gap(16).AlignItems(ui.Center).FillWidth().Children(func() {
+		ui.Column(c).Grow(1).Shrink(1).Gap(2).Children(func() {
+			ui.Text(c, label).FontSize(theme.Body).FontWeight(500)
+			if note != "" {
+				ui.Text(c, note).FontSize(theme.Caption).TextColor(tok.TextMuted)
+			}
+		})
+		ui.Switch(c.Key(key), on).Label(label).Disabled(disabled)
+	})
+}
+
+// notice is a rounded banner tinted col with icon ic, for what to know
+// before saving.
+func notice(c *ui.Context, key string, ic *icons.Icon, col ui.Color, text string) {
+	ui.Row(c.Key(key)).Padding(8, 10).Gap(8).Radius(theme.RadiusControl).Background(col.Alpha(0.12)).
+		Border(1, col.Alpha(0.35)).FillWidth().Children(func() {
+		ui.Icon(c, ic.SVG).Size(14, 14).Shrink(0).TextColor(col)
+		ui.Text(c, text).FontSize(theme.Footnote).Shrink(1)
+	})
+}
+
+// targetView is the backup location editor.
+func (a *App) targetView(c *ui.Context, m locales.Messages) {
+	f := a.target
+	if f == nil {
+		return
+	}
+	tok := currentTokens(c)
+	kind := targetKinds[f.kind]
+	sheet(ui.Modal(c, &a.targetEditing, func() {
+		ui.Column(c).Gap(18).Width(480).Shrink(1).MinHeight(0).Children(func() {
+			title := m.EditBackupTarget()
+			if f.isNew {
+				title = m.NewBackupTarget()
+			}
+			ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
+				tile(c, targetIcon(kind), tok.Tint(f.orig.ID), 36)
+				ui.Column(c).Gap(1).Shrink(1).Children(func() {
+					sheetTitle(c, title)
+					if f.name != "" {
+						ui.Text(c, f.name).FontSize(theme.Footnote).TextColor(tok.TextMuted).SingleLine()
+					}
+				})
+			})
+			ui.Scroll(c.Key("bt:scroll")).Shrink(1).MinHeight(0).FillWidth().Children(func() {
+				ui.Column(c).Gap(14).FillWidth().Children(func() {
+					a.targetFields(c, m, tok, f, kind)
+				})
+			})
+			if f.tested != "" {
+				ui.Text(c, f.tested).FontSize(theme.Footnote).TextColor(tok.Success)
+			}
+			if f.err != "" {
+				ui.Text(c, f.err).FontSize(theme.Footnote).TextColor(tok.Danger)
+			}
+			ui.Box(c).Height(1).FillWidth().Background(tok.Line)
+			ui.Row(c).Gap(8).Children(func() {
+				if !f.isNew && pill(c, m.Delete(), false, true, f.busy) {
+					id := f.orig.ID
+					a.runSecretAction(func() error {
+						if a.target != f {
+							return nil
+						}
+						if err := a.DeleteBackupTarget(id); err != nil {
+							return err
+						}
+						a.targetEditing = false
+						return nil
+					}, func(err error) { f.err = a.inUseText(m, err) })
+				}
+				test := m.TestConnection()
+				if f.testing {
+					test = m.TestingConnection()
+				}
+				if pill(c, test, false, false, f.testing) {
+					a.TestTarget(m)
+				}
+				ui.Spacer(c)
+				if pill(c, m.Cancel(), false, false, false) {
+					a.targetEditing = false
+				}
+				if pill(c, m.Save(), true, false, f.busy) {
+					a.SaveTargetForm(m)
+				}
+			})
+		})
+	}), tok)
+	if !a.targetEditing && a.target == f {
+		a.closeTargetForm()
+	}
+}
+
+// targetFields are the editor's fields for kind, and what to know of them.
+func (a *App) targetFields(c *ui.Context, m locales.Messages, tok theme.Tokens, f *targetForm, kind string) {
+	unchanged := ""
+	if f.keepsSecret() {
+		unchanged = m.PasswordUnchanged()
+	}
+	ui.Form(c, func() {
+		ui.Field(c, m.FieldName(), func() {
+			in := ui.TextInput(c.Key("bt:name"), &f.name).Placeholder("NAS").AutoFocus()
+			a.targetHold.apply(c, f, in)
+		})
+		ui.Field(c, m.FieldType(), func() {
+			ui.Segmented(c.Key("bt:kind"), &f.kind, "WebDAV", "S3", "Gist").Label(m.FieldType())
+		})
+		switch kind {
+		case settings.BackupWebDAV:
+			ui.Field(c, m.FieldServerURL(), func() {
+				ui.TextInput(c.Key("bt:url"), &f.url).Placeholder("https://dav.example.com/remote.php/dav/files/me/")
+			})
+			ui.Field(c, m.WebdavFolder(), func() { ui.TextInput(c.Key("bt:dir"), &f.dir).Placeholder("SSHYard") })
+			ui.Field(c, m.FieldUser(), func() { ui.TextInput(c.Key("bt:user"), &f.user) })
+			ui.Field(c, m.FieldPassword(), func() { ui.TextInput(c.Key("bt:secret"), &f.secret).Password().Placeholder(unchanged) })
+		case settings.BackupS3:
+			ui.Field(c, m.S3Endpoint(), func() { ui.TextInput(c.Key("bt:url"), &f.url).Placeholder(m.S3EndpointPlaceholder()) })
+			ui.Field(c, m.S3Region(), func() { ui.TextInput(c.Key("bt:region"), &f.region).Placeholder("us-east-1") })
+			ui.Field(c, m.S3Bucket(), func() { ui.TextInput(c.Key("bt:bucket"), &f.bucket) })
+			ui.Field(c, m.S3Prefix(), func() { ui.TextInput(c.Key("bt:dir"), &f.dir).Placeholder("sshyard/") })
+			ui.Field(c, m.S3AccessKey(), func() { ui.TextInput(c.Key("bt:user"), &f.user) })
+			ui.Field(c, m.S3SecretKey(), func() { ui.TextInput(c.Key("bt:secret"), &f.secret).Password().Placeholder(unchanged) })
+		case settings.BackupGist:
+			ui.Field(c, m.GistToken(), func() { ui.TextInput(c.Key("bt:secret"), &f.secret).Password().Placeholder(unchanged) })
+			ui.Field(c, m.GistID(), func() { ui.TextInput(c.Key("bt:gist"), &f.gistID).Placeholder(m.GistIDPlaceholder()) })
+		}
+		labels, _ := a.proxyChoices(m)
+		if !slices.Contains(labels, f.proxy) {
+			f.proxy = labels[0]
+		}
+		ui.Field(c, m.FieldProxy(), func() { ui.Select(c.Key("bt:proxy"), &f.proxy, labels).Label(m.FieldProxy()) })
+		ui.Field(c, m.BackupKeep(), func() {
+			ui.NumberInput(c.Key("bt:keep"), &f.keep, 0, settings.BackupKeepMax, 1).Label(m.BackupKeep())
+		})
+	})
+	ui.Text(c, m.BackupKeepNote()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
+	switch kind {
+	case settings.BackupS3:
+		switchRow(c, tok, "bt:pathstyle", m.S3PathStyle(), m.S3PathStyleNote(), &f.pathStyle, false)
+	case settings.BackupGist:
+		ui.Text(c, m.GistTokenNote()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
+		notice(c, "bt:gistnote", icons.Info, tok.Accent, m.GistNotice())
+	}
+	if kind != settings.BackupGist && plainHTTP(f.url) {
+		notice(c, "bt:http", icons.Warning, tok.Warning, m.WarnPlainHTTP())
+	}
+	ui.Box(c).Height(1).FillWidth().Background(tok.Line)
+	switchRow(c, tok, "bt:auto", m.AutoBackup(), m.AutoBackupNote(), &f.auto, f.busy)
+	if !f.auto {
+		return
+	}
+	ph := ""
+	if f.orig.AutoHours > 0 {
+		ph = m.PasswordUnchanged()
+	}
+	ui.Form(c, func() {
+		ui.Field(c, m.AutoBackupInterval(), func() {
+			ui.Segmented(c.Key("bt:every"), &f.every, m.BackupEvery6Hours(), m.BackupEveryDay(), m.BackupEveryWeek()).Label(m.AutoBackupInterval())
+		})
+		ui.Field(c, m.BackupPassword(), func() {
+			ui.TextInput(c.Key("bt:pw"), &f.password).Password().Placeholder(ph).Disabled(f.busy)
+		})
+		ui.Field(c, m.ConfirmPassword(), func() {
+			ui.TextInput(c.Key("bt:confirm"), &f.confirm).Password().Placeholder(ph).Disabled(f.busy)
+		})
+	})
+	switchRow(c, tok, "bt:secrets", m.BackupIncludeSecrets(), m.AutoBackupSecretsNote(), &f.autoSecrets, f.busy)
+	ui.Text(c, m.AutoBackupNowNote()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
+}
+
+// remoteListView is the sheet of a place's backups.
+func (a *App) remoteListView(c *ui.Context, m locales.Messages) {
+	l := a.remotes
+	if l == nil {
+		return
+	}
+	tok := currentTokens(c)
+	sheet(ui.Modal(c, &a.listingRemote, func() {
+		ui.Column(c).Gap(18).Width(480).Shrink(1).MinHeight(0).Children(func() {
+			ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
+				tile(c, targetIcon(l.target.Kind), tok.Tint(l.target.ID), 36)
+				ui.Column(c).Gap(1).Shrink(1).Children(func() {
+					sheetTitle(c, m.RestoreFromTarget())
+					ui.Text(c, l.target.Name).FontSize(theme.Footnote).TextColor(tok.TextMuted).SingleLine()
+				})
+			})
+			switch {
+			case l.loading:
+				ui.Text(c, m.RemoteBackupsLoading()).FontSize(theme.Body).TextColor(tok.TextMuted)
+			case len(l.objs) == 0 && l.err == nil:
+				ui.Text(c, m.RemoteBackupsEmpty()).FontSize(theme.Body).TextColor(tok.TextMuted)
+			case len(l.objs) > 0:
+				device := a.deviceID()
+				ui.Scroll(c.Key("rl:scroll")).Shrink(1).MinHeight(0).MaxHeight(360).FillWidth().Children(func() {
+					card(c, tok).FillWidth().Children(func() {
+						g := &settingsGroup{c: c, tok: tok}
+						for _, o := range l.objs {
+							date := o.Time.Local().Format("2006-01-02 15:04")
+							label := m.RemoteBackupOtherDevice(date, o.Device)
+							if o.Device == device {
+								label = m.RemoteBackupThisDevice(date)
+							}
+							note := ""
+							if o.Size > 0 {
+								note = humanSize(o.Size)
+							}
+							g.row(label, note, func() {
+								if l.fetching == o.Name {
+									ui.Text(c, m.RemoteBackupDownloading()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
+									return
+								}
+								if (IconButton{Icon: icons.CloudDownload, Label: m.RestoreThisBackup(), Disabled: l.fetching != "", Size: Small}).Clicked(c, "rl:get:"+o.Name) {
+									a.fetchRemote(m, l, o.Name)
+								}
+							})
+						}
+					})
+				})
+			}
+			if l.err != nil {
+				ui.Text(c, backupErrText(m, l.err)).FontSize(theme.Footnote).TextColor(tok.Danger)
+			}
+			ui.Box(c).Height(1).FillWidth().Background(tok.Line)
+			ui.Row(c).Gap(8).Children(func() {
+				ui.Spacer(c)
+				if pill(c, m.Close(), false, false, false) {
+					a.listingRemote = false
+				}
+			})
+		})
+	}), tok)
+	if !a.listingRemote && a.remotes == l {
+		a.remotes = nil
+	}
+}

@@ -166,6 +166,17 @@ var (
 	ModeFull   = load("lock-unlock-line")
 )
 
+// Cloud backup: the section, backing up to a place, restoring from it,
+// and the kinds of place.
+var (
+	Cloud         = load("cloud-line")
+	CloudUpload   = load("upload-cloud-2-line")
+	CloudDownload = Update
+	BackupWebDAV  = Host
+	BackupS3      = load("database-2-line")
+	BackupGist    = GitHub
+)
+
 // HostIcon is an icon a host can be given, by the key it is saved under.
 type HostIcon struct {
 	Key  string

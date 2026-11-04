@@ -103,15 +103,52 @@ func derive(password []byte, salt []byte, p Params) []byte {
 
 // Seal encrypts data under password, deriving with p.
 func Seal(data, password []byte, p Params) ([]byte, error) {
+	k, err := Derive(password, p)
+	if err != nil {
+		return nil, err
+	}
+	defer k.Clear()
+	return k.Seal(data)
+}
+
+// Key is what a password derives to, with a salt of its own, and how: kept
+// in the local encrypted store, it seals files for automatic backups
+// without the password, and those files still open with the password.
+type Key struct {
+	Params Params `json:"params"`
+	Salt   []byte `json:"salt"`
+	KEK    []byte `json:"kek"`
+}
+
+// Derive derives a Key from password with p and a new salt.
+func Derive(password []byte, p Params) (Key, error) {
 	if len(password) == 0 {
-		return nil, errors.New("vault: empty password")
+		return Key{}, errors.New("vault: empty password")
 	}
 	if !p.ok() {
-		return nil, fmt.Errorf("vault: bad parameters %+v", p)
+		return Key{}, fmt.Errorf("vault: bad parameters %+v", p)
+	}
+	salt := random(saltSize)
+	return Key{Params: p, Salt: salt, KEK: derive(password, salt, p)}, nil
+}
+
+// Valid reports whether k can seal: a key of the right size and a salt
+// and parameters Open will take.
+func (k Key) Valid() bool {
+	return len(k.KEK) == chacha20poly1305.KeySize && len(k.Salt) >= saltSize && k.Params.ok()
+}
+
+// Clear zeroes the derived key.
+func (k Key) Clear() { clear(k.KEK) }
+
+// Seal encrypts data as Seal does with the password k came from.
+func (k Key) Seal(data []byte) ([]byte, error) {
+	if !k.Valid() {
+		return nil, errors.New("vault: invalid key")
 	}
 	key := random(chacha20poly1305.KeySize)
-	w := wrap{By: "password", KDF: "argon2id", Params: p, Salt: random(saltSize), Nonce: random(chacha20poly1305.NonceSizeX)}
-	kek, _ := chacha20poly1305.NewX(derive(password, w.Salt, p))
+	w := wrap{By: "password", KDF: "argon2id", Params: k.Params, Salt: k.Salt, Nonce: random(chacha20poly1305.NonceSizeX)}
+	kek, _ := chacha20poly1305.NewX(k.KEK)
 	w.Key = kek.Seal(nil, w.Nonce, key, wrapAAD)
 	h := header{Format: Format, Version: Version, Created: time.Now().UTC().Truncate(time.Second), Wraps: []wrap{w}, Nonce: random(chacha20poly1305.NonceSizeX)}
 	hb, err := json.Marshal(h)

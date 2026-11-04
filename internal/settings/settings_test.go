@@ -197,3 +197,34 @@ func TestUpdateInterval(t *testing.T) {
 		}
 	}
 }
+
+func TestBackupTargets(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "s.json")
+	os.WriteFile(p, []byte(`{"backupTargets":[
+		{"id":" nas ","name":" NAS ","kind":"webdav","url":" https://dav.example.com ","keep":5000,"autoHours":24,"autoSecrets":true},
+		{"id":"nas","name":"twice","kind":"s3"},
+		{"id":"ftp","name":"FTP","kind":"ftp"},
+		{"id":"a/b","name":"bad ID","kind":"gist"},
+		{"id":"s3","name":"S3","kind":"s3","bucket":"b","keep":-1,"autoHours":3,"autoSecrets":true}
+	]}`), 0o600)
+	s, err := Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts := s.BackupTargets
+	if len(ts) != 2 {
+		t.Fatalf("kept %+v", ts)
+	}
+	if n := ts[0]; n.ID != "nas" || n.Name != "NAS" || n.URL != "https://dav.example.com" || n.Keep != BackupKeepMax || n.AutoHours != 24 || !n.AutoSecrets {
+		t.Errorf("first %+v", n)
+	}
+	if b := ts[1]; b.ID != "s3" || b.Keep != 0 || b.AutoHours != 0 || b.AutoSecrets {
+		t.Errorf("second %+v", b)
+	}
+	if got, ok := s.BackupTarget("s3"); !ok || got.Bucket != "b" {
+		t.Errorf("BackupTarget(s3) = %+v, %v", got, ok)
+	}
+	if _, ok := s.BackupTarget("ftp"); ok {
+		t.Error("a target of no kind was kept")
+	}
+}
