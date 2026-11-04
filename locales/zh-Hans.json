@@ -603,6 +603,7 @@
   "secretsKeychain": "本地加密凭证库；主密钥保存在系统钥匙串",
   "aboutLinks": "链接",
   "sourceCode": "源代码",
+  "license": "开源协议",
   "reportIssue": "报告问题",
   "shortcutStopAI": "停止当前 AI 回合",
   "shortcutSaveFile": "保存编辑器中的文件",

@@ -656,6 +656,7 @@ func (a *App) aboutPage(c *ui.Context, m locales.Messages, tok theme.Tokens, s *
 			return func() { ui.Link(c.Key(key), url[len("https://"):], url).FontSize(theme.Body) }
 		}
 		g.row(m.SourceCode(), "", link("repo", repoURL))
+		g.row(m.License(), "", link("license", repoURL+"/blob/main/LICENSE"))
 		g.row(m.ReportIssue(), "", link("issues", repoURL+"/issues"))
 	})
 }

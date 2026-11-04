@@ -121,6 +121,29 @@ func TestAboutPage(t *testing.T) {
 	}
 }
 
+func TestAboutLicenseLink(t *testing.T) {
+	for _, tc := range []struct {
+		language string
+		dark     bool
+	}{{"en", false}, {"en", true}, {"zh-Hans", false}, {"zh-Hans", true}} {
+		t.Run(fmt.Sprintf("%s/dark=%v", tc.language, tc.dark), func(t *testing.T) {
+			a, tt := newTestApp(t)
+			tt.SetSize(1200, 1600)
+			tt.SetLocale(tc.language)
+			tt.SetDark(tc.dark)
+			a.openSettings(prefAbout)
+			tt.Frame()
+			if !tt.HasText(locales.In(tc.language).License()) {
+				t.Fatalf("about misses license label: %q", tt.Texts())
+			}
+			mustClick(t, tt, "github.com/Licoy/sshyard/blob/main/LICENSE")
+			if got := tt.OpenedURLs(); !slices.Equal(got, []string{"https://github.com/Licoy/sshyard/blob/main/LICENSE"}) {
+				t.Errorf("license opened %q", got)
+			}
+		})
+	}
+}
+
 // TestNumberInputsFit: a number's steppers stay inside its row, flush
 // with the other controls' right edge.
 func TestNumberInputsFit(t *testing.T) {

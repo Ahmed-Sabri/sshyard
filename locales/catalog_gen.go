@@ -6122,6 +6122,16 @@ func (msgs Messages) SourceCode() string {
 	return Catalog.Format(msgs.locale, "sourceCode", nil)
 }
 
+// License says "License"
+// in the language the app shows.
+func License() string { return In(i18n.Locale()).License() }
+
+// License says "License"
+// in the language of msgs.
+func (msgs Messages) License() string {
+	return Catalog.Format(msgs.locale, "license", nil)
+}
+
 // ReportIssue says "Report an issue"
 // in the language the app shows.
 func ReportIssue() string { return In(i18n.Locale()).ReportIssue() }

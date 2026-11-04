@@ -59,3 +59,11 @@ go tool mygo build -platform linux/amd64,windows/amd64,darwin/arm64,darwin/amd64
 连接 devsshd 测试时，新建主机 `127.0.0.1`，端口 `2222`，用户 `demo`，密码 `demo`。
 
 开发约定见 [AGENTS.md](AGENTS.md)。
+
+## 社区支持
+
+- [LinuxDO](https://linux.do)
+
+## 开源协议
+
+SSHYard 基于 [GNU Affero General Public License v3.0](LICENSE) 开源。

@@ -59,3 +59,11 @@ go tool mygo build -platform linux/amd64,windows/amd64,darwin/arm64,darwin/amd64
 To try it against devsshd, add a host `127.0.0.1`, port `2222`, user `demo`, password `demo`.
 
 Contributor rules are in [AGENTS.md](AGENTS.md).
+
+## Community Support
+
+- [LinuxDO](https://linux.do)
+
+## License
+
+SSHYard is licensed under the [GNU Affero General Public License v3.0](LICENSE).

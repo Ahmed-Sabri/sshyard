@@ -603,6 +603,7 @@
   "secretsKeychain": "Encrypted local store; master key in system keychain",
   "aboutLinks": "Links",
   "sourceCode": "Source code",
+  "license": "License",
   "reportIssue": "Report an issue",
   "shortcutStopAI": "Stop the AI turn",
   "shortcutSaveFile": "Save the file in the editor",
