@@ -2,7 +2,6 @@ package app
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"github.com/Licoy/sshyard/internal/assets"
 	"github.com/Licoy/sshyard/internal/keychain"
@@ -29,8 +28,8 @@ func TestSnippetBackupRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var payload backupPayload
-	if err := json.Unmarshal(plain, &payload); err != nil {
+	payload, err := unpackBackup(plain)
+	if err != nil {
 		t.Fatal(err)
 	}
 	dst, _, _ := backupApp(t)
