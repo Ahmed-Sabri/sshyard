@@ -586,3 +586,70 @@ func messageSize(msgs []llm.Message) int {
 	}
 	return n
 }
+
+// History is the conversation so far without its system messages, to be
+// kept and given back to Restore. Attached files keep only their names.
+func (s *Session) History() []llm.Message {
+	var out []llm.Message
+	for _, m := range s.msgs {
+		if m.Role == "system" {
+			continue
+		}
+		m.ToolCalls = append([]llm.ToolCall(nil), m.ToolCalls...)
+		out = append(out, omitParts(m))
+	}
+	return out
+}
+
+// Restore is a session that carries on msgs, as History gave them. A tool
+// call left without its result, as at a pause, is answered "cancelled";
+// a result without its call is dropped. The host context is sent again
+// with the next Turn.
+func Restore(cfg Config, msgs []llm.Message) *Session {
+	s := New(cfg)
+	for i := 0; i < len(msgs); i++ {
+		m := msgs[i]
+		if m.Role == "system" || m.Role == "tool" {
+			continue // a result is kept below, after its call
+		}
+		s.msgs = append(s.msgs, omitParts(m))
+		if len(m.ToolCalls) == 0 {
+			continue
+		}
+		called, answered := map[string]bool{}, map[string]bool{}
+		for _, c := range m.ToolCalls {
+			called[c.ID] = true
+		}
+		for i+1 < len(msgs) && msgs[i+1].Role == "tool" {
+			i++
+			r := msgs[i]
+			if called[r.ToolCallID] && !answered[r.ToolCallID] {
+				answered[r.ToolCallID] = true
+				s.msgs = append(s.msgs, r)
+			}
+		}
+		for _, c := range m.ToolCalls {
+			if !answered[c.ID] {
+				s.appendTool(c.ID, "cancelled")
+			}
+		}
+	}
+	return s
+}
+
+// omitParts turns m's attached files into a note naming them.
+func omitParts(m llm.Message) llm.Message {
+	if len(m.Parts) == 0 {
+		return m
+	}
+	names := make([]string, len(m.Parts))
+	for i, p := range m.Parts {
+		names[i] = p.Name
+	}
+	note := fmt.Sprintf("[attachments omitted: %s]", strings.Join(names, ", "))
+	if m.Content != "" {
+		note = m.Content + "\n\n" + note
+	}
+	m.Content, m.Parts = note, nil
+	return m
+}

@@ -258,6 +258,10 @@ func (a *App) DeleteHost(id string) error {
 	if err := a.deleteHostSecrets(id); err != nil {
 		return err
 	}
+	if st := a.chatHistory(); st != nil {
+		_ = st.DeleteHost(id)
+	}
+	delete(a.chatList, id)
 	a.mu.Lock()
 	delete(a.typed, "ask/"+id)
 	a.mu.Unlock()

@@ -102,6 +102,8 @@ var (
 	Rename     = load("pencil-line")
 	Robot      = load("robot-2-line")
 	RobotOn    = load("robot-2-fill")
+	NewChat    = load("chat-new-line")
+	History    = load("history-line")
 	Stop       = load("stop-circle-line")
 	Back       = load("arrow-left-line")
 	Info       = load("information-line")

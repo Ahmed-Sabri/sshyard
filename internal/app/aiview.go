@@ -58,14 +58,13 @@ func (a *App) aiPane(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, tok
 					a.SplitFocused(edge)
 				}
 			}
-			if w > 0 && w < aiHeadMenuWidth {
-				a.menuButton(c, "aimore:"+strconv.Itoa(cn.id), IconButton{Icon: icons.More, Label: m.MoreActions(), Size: Tiny}, func() []menuEntry {
-					return []menuEntry{
-						{Icon: icons.SplitRight, Label: m.SplitRight(), Do: split(layout.Right)},
-						{Icon: icons.SplitDown, Label: m.SplitDown(), Do: split(layout.Bottom)},
-					}
-				})
-			} else {
+			empty := len(cn.ai.items) == 0
+			if (IconButton{Icon: icons.NewChat, Label: m.AiNewChat(), Size: Tiny, Disabled: cn.ai.running || empty}).Clicked(c, "newchat") {
+				a.NewChat(cn.id)
+			}
+			a.historyButton(c, cn, tok, m)
+			narrow := w > 0 && w < aiHeadMenuWidth
+			if !narrow {
 				if (IconButton{Icon: icons.SplitRight, Label: m.SplitRight(), Size: Tiny}).Clicked(c, "splitright") {
 					split(layout.Right)()
 				}
@@ -73,6 +72,22 @@ func (a *App) aiPane(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, tok
 					split(layout.Bottom)()
 				}
 			}
+			a.menuButton(c, "aimore:"+strconv.Itoa(cn.id), IconButton{Icon: icons.More, Label: m.MoreActions(), Size: Tiny}, func() []menuEntry {
+				var es []menuEntry
+				if narrow {
+					es = append(es,
+						menuEntry{Icon: icons.SplitRight, Label: m.SplitRight(), Do: split(layout.Right)},
+						menuEntry{Icon: icons.SplitDown, Label: m.SplitDown(), Do: split(layout.Bottom)},
+						menuSep)
+				}
+				return append(es, menuEntry{Icon: icons.Clear, Label: m.AiClearChat(), Danger: true, Disabled: cn.ai.running || empty, Do: func() {
+					if cn.ai.conv == "" {
+						a.ClearChat(cn.id)
+						return
+					}
+					cn.ai.drop = cn.ai.conv
+				}})
+			})
 			if (IconButton{Icon: icons.Close, Label: m.ClosePane(), Size: Tiny, Danger: true}).Clicked(c, "close") {
 				a.closeSoon(cn.id)
 			}
@@ -84,6 +99,7 @@ func (a *App) aiPane(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, tok
 		}
 		ui.Box(c).Height(1).Shrink(0).FillWidth().Background(tok.Line)
 	})
+	a.chatConfirm(c, cn, m)
 	a.aiTimeline(c, cn, tok, m)
 	a.aiComposer(c, cn, tok, m, composerFit(w))
 }
@@ -102,12 +118,12 @@ const (
 // Widths of an AI pane: from aiFullWidth its composer's choices all show
 // their labels, from aiShortWidth the model's; under aiHeadWidth its
 // header shows the backend as an icon, under aiHeadMenuWidth its split
-// buttons go into a menu.
+// buttons go into its menu.
 const (
 	aiFullWidth     = 472
 	aiShortWidth    = 342
-	aiHeadWidth     = 360
-	aiHeadMenuWidth = 300
+	aiHeadWidth     = 420
+	aiHeadMenuWidth = 360
 )
 
 // composerFit is how much of the composer's controls show in a pane w
@@ -403,6 +419,7 @@ func (a *App) aiTimeline(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 			softTile(c, icons.Robot, tok.Accent, 44).Margin(0, 0, theme.Space(1), 0)
 			ui.Text(c, m.AiEmptyTitle(a.pv(cn.host.Label()))).FontSize(theme.Title3).FontWeight(600).TextAlign(ui.Center).MaxWidth(320)
 			ui.Text(c, m.AiEmpty()).FontSize(theme.Footnote).TextColor(tok.TextMuted).TextAlign(ui.Center).MaxWidth(300)
+			a.recentChats(c, cn, tok, m)
 		})
 		return
 	}
@@ -412,9 +429,17 @@ func (a *App) aiTimeline(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 	}
 	ui.Scroll(c.Key("aitime")).TrackScroll(st).Grow(1).FillWidth().Children(func() {
 		ui.Column(c).Padding(theme.Space(3), theme.Space(3), theme.Space(4), theme.Space(3)).Gap(theme.Space(3)).FillWidth().Children(func() {
+			// The agent does not remember what comes before forgot.
+			forgot := func(i int) {
+				if cn.ai.forgot > 0 && i == cn.ai.forgot {
+					aiBanner(c.Key("aiforgot"), tok.Accent, icons.Info, m.AiAgentForgot())
+				}
+			}
 			for i := range cn.ai.items {
+				forgot(i)
 				a.aiCard(c, cn, i, tok, m)
 			}
+			forgot(len(cn.ai.items))
 			n := len(cn.ai.items)
 			if cn.ai.running && (n == 0 || cn.ai.items[n-1].kind != "text") {
 				ui.Row(c.Key("aiworking")).Gap(theme.Space(2)).AlignItems(ui.Center).Children(func() {

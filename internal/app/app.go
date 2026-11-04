@@ -21,6 +21,7 @@ import (
 	appicon "github.com/Licoy/sshyard/icon"
 	"github.com/Licoy/sshyard/internal/ai/agent"
 	"github.com/Licoy/sshyard/internal/ai/audit"
+	"github.com/Licoy/sshyard/internal/ai/history"
 	"github.com/Licoy/sshyard/internal/ai/policy"
 	"github.com/Licoy/sshyard/internal/assets"
 	"github.com/Licoy/sshyard/internal/forward"
@@ -268,6 +269,8 @@ type App struct {
 	keepChoice   float64
 	// toasts are shown at the next frame, said from outside one
 	toasts []func(m locales.Messages) ui.Toast
+	// chatList are the saved AI conversations of each host, as last read.
+	chatList map[string][]history.Summary
 	// the transfers at once and the size to confirm opening, as edited
 	concChoice, openMBChoice float64
 	osc52Choice              int
@@ -607,6 +610,11 @@ func (a *App) Close() {
 		a.closing = true
 		a.saveLayout()
 	}
+	for _, c := range a.conns {
+		if c.kind == layout.AI {
+			a.saveChat(c)
+		}
+	}
 	for id, c := range a.conns {
 		a.clip.forget(id)
 		if c.kind == layout.AI {
@@ -937,6 +945,7 @@ func (a *App) CloseSession(id int) {
 	}
 	if c.kind == layout.AI {
 		a.StopAI(id)
+		a.saveChat(c)
 	}
 	a.ws.Close(id)
 	delete(a.conns, id)

@@ -10809,3 +10809,183 @@ func AiChipValue(name string, value string) string { return In(i18n.Locale()).Ai
 func (msgs Messages) AiChipValue(name string, value string) string {
 	return Catalog.Format(msgs.locale, "aiChipValue", map[string]any{"name": name, "value": value})
 }
+
+// AiNewChat says "New Chat"
+// in the language the app shows.
+func AiNewChat() string { return In(i18n.Locale()).AiNewChat() }
+
+// AiNewChat says "New Chat"
+// in the language of msgs.
+func (msgs Messages) AiNewChat() string {
+	return Catalog.Format(msgs.locale, "aiNewChat", nil)
+}
+
+// AiChatHistory says "Chat History"
+// in the language the app shows.
+func AiChatHistory() string { return In(i18n.Locale()).AiChatHistory() }
+
+// AiChatHistory says "Chat History"
+// in the language of msgs.
+func (msgs Messages) AiChatHistory() string {
+	return Catalog.Format(msgs.locale, "aiChatHistory", nil)
+}
+
+// AiClearChat says "Clear Chat"
+// in the language the app shows.
+func AiClearChat() string { return In(i18n.Locale()).AiClearChat() }
+
+// AiClearChat says "Clear Chat"
+// in the language of msgs.
+func (msgs Messages) AiClearChat() string {
+	return Catalog.Format(msgs.locale, "aiClearChat", nil)
+}
+
+// AiClearChatTitle says "Clear this chat?"
+// in the language the app shows.
+func AiClearChatTitle() string { return In(i18n.Locale()).AiClearChatTitle() }
+
+// AiClearChatTitle says "Clear this chat?"
+// in the language of msgs.
+func (msgs Messages) AiClearChatTitle() string {
+	return Catalog.Format(msgs.locale, "aiClearChatTitle", nil)
+}
+
+// AiClearChatBody says "Its messages are removed from this pane and from this host's chat history. This cannot be undone."
+// in the language the app shows.
+func AiClearChatBody() string { return In(i18n.Locale()).AiClearChatBody() }
+
+// AiClearChatBody says "Its messages are removed from this pane and from this host's chat history. This cannot be undone."
+// in the language of msgs.
+func (msgs Messages) AiClearChatBody() string {
+	return Catalog.Format(msgs.locale, "aiClearChatBody", nil)
+}
+
+// AiClear says "Clear"
+// in the language the app shows.
+func AiClear() string { return In(i18n.Locale()).AiClear() }
+
+// AiClear says "Clear"
+// in the language of msgs.
+func (msgs Messages) AiClear() string {
+	return Catalog.Format(msgs.locale, "aiClear", nil)
+}
+
+// AiHistoryEmpty says "No saved chats on this host yet"
+// in the language the app shows.
+func AiHistoryEmpty() string { return In(i18n.Locale()).AiHistoryEmpty() }
+
+// AiHistoryEmpty says "No saved chats on this host yet"
+// in the language of msgs.
+func (msgs Messages) AiHistoryEmpty() string {
+	return Catalog.Format(msgs.locale, "aiHistoryEmpty", nil)
+}
+
+// AiNoChats says "No matching chats"
+// in the language the app shows.
+func AiNoChats() string { return In(i18n.Locale()).AiNoChats() }
+
+// AiNoChats says "No matching chats"
+// in the language of msgs.
+func (msgs Messages) AiNoChats() string {
+	return Catalog.Format(msgs.locale, "aiNoChats", nil)
+}
+
+// AiSearchChats says "Search chats"
+// in the language the app shows.
+func AiSearchChats() string { return In(i18n.Locale()).AiSearchChats() }
+
+// AiSearchChats says "Search chats"
+// in the language of msgs.
+func (msgs Messages) AiSearchChats() string {
+	return Catalog.Format(msgs.locale, "aiSearchChats", nil)
+}
+
+// AiDeleteChat says "Delete Chat"
+// in the language the app shows.
+func AiDeleteChat() string { return In(i18n.Locale()).AiDeleteChat() }
+
+// AiDeleteChat says "Delete Chat"
+// in the language of msgs.
+func (msgs Messages) AiDeleteChat() string {
+	return Catalog.Format(msgs.locale, "aiDeleteChat", nil)
+}
+
+// AiUntitled says "Untitled chat"
+// in the language the app shows.
+func AiUntitled() string { return In(i18n.Locale()).AiUntitled() }
+
+// AiUntitled says "Untitled chat"
+// in the language of msgs.
+func (msgs Messages) AiUntitled() string {
+	return Catalog.Format(msgs.locale, "aiUntitled", nil)
+}
+
+// AiRecentChats says "Recent chats"
+// in the language the app shows.
+func AiRecentChats() string { return In(i18n.Locale()).AiRecentChats() }
+
+// AiRecentChats says "Recent chats"
+// in the language of msgs.
+func (msgs Messages) AiRecentChats() string {
+	return Catalog.Format(msgs.locale, "aiRecentChats", nil)
+}
+
+// AiAgentForgot says "The agent does not remember the chat above. Your next question starts a new session."
+// in the language the app shows.
+func AiAgentForgot() string { return In(i18n.Locale()).AiAgentForgot() }
+
+// AiAgentForgot says "The agent does not remember the chat above. Your next question starts a new session."
+// in the language of msgs.
+func (msgs Messages) AiAgentForgot() string {
+	return Catalog.Format(msgs.locale, "aiAgentForgot", nil)
+}
+
+// AiHistorySaveFailed says "Could not save this chat to the host's history"
+// in the language the app shows.
+func AiHistorySaveFailed() string { return In(i18n.Locale()).AiHistorySaveFailed() }
+
+// AiHistorySaveFailed says "Could not save this chat to the host's history"
+// in the language of msgs.
+func (msgs Messages) AiHistorySaveFailed() string {
+	return Catalog.Format(msgs.locale, "aiHistorySaveFailed", nil)
+}
+
+// AiHistoryLoadFailed says "Could not open this chat"
+// in the language the app shows.
+func AiHistoryLoadFailed() string { return In(i18n.Locale()).AiHistoryLoadFailed() }
+
+// AiHistoryLoadFailed says "Could not open this chat"
+// in the language of msgs.
+func (msgs Messages) AiHistoryLoadFailed() string {
+	return Catalog.Format(msgs.locale, "aiHistoryLoadFailed", nil)
+}
+
+// AiHistoryBusy says "Stop the running reply first"
+// in the language the app shows.
+func AiHistoryBusy() string { return In(i18n.Locale()).AiHistoryBusy() }
+
+// AiHistoryBusy says "Stop the running reply first"
+// in the language of msgs.
+func (msgs Messages) AiHistoryBusy() string {
+	return Catalog.Format(msgs.locale, "aiHistoryBusy", nil)
+}
+
+// AiDeleteChatTitle says "Delete this chat?"
+// in the language the app shows.
+func AiDeleteChatTitle() string { return In(i18n.Locale()).AiDeleteChatTitle() }
+
+// AiDeleteChatTitle says "Delete this chat?"
+// in the language of msgs.
+func (msgs Messages) AiDeleteChatTitle() string {
+	return Catalog.Format(msgs.locale, "aiDeleteChatTitle", nil)
+}
+
+// AiDeleteChatBody says "It is removed from this host's chat history. This cannot be undone."
+// in the language the app shows.
+func AiDeleteChatBody() string { return In(i18n.Locale()).AiDeleteChatBody() }
+
+// AiDeleteChatBody says "It is removed from this host's chat history. This cannot be undone."
+// in the language of msgs.
+func (msgs Messages) AiDeleteChatBody() string {
+	return Catalog.Format(msgs.locale, "aiDeleteChatBody", nil)
+}

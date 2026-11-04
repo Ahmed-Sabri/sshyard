@@ -56,6 +56,20 @@ type aiState struct {
 	tools    agent.Tools
 	acp      *acpRuntime
 
+	// conv is the conversation's ID in the host's history, from its first
+	// question, with its title and when it began; msgs are the built-in
+	// agent's messages as its last turn ended, which the history keeps
+	// and a new session carries on. The agent does not remember the items
+	// before forgot. hquery filters the history; drop is the conversation
+	// asked to be deleted.
+	conv    string
+	title   string
+	created time.Time
+	msgs    []llm.Message
+	forgot  int
+	hquery  string
+	drop    string
+
 	// md is how the pane shows Markdown, its code blocks with its own
 	// actions; scroll follows the end of the timeline unless the user
 	// scrolled up from it. copied is the code last copied, until when
@@ -339,7 +353,7 @@ func (a *App) ensureAI(c *conn) error {
 		tools = newHostTools(a, c)
 	}
 	c.ai.tools = tools
-	c.ai.sess = agent.New(agent.Config{Model: streamer, Gate: a.aiGate(c), Tools: tools, Redact: a.settings.AIRedact})
+	c.ai.sess = agent.Restore(agent.Config{Model: streamer, Gate: a.aiGate(c), Tools: tools, Redact: a.settings.AIRedact}, c.ai.msgs)
 	c.ai.dirty = false
 	return nil
 }
@@ -415,6 +429,7 @@ func (a *App) SendAI(id int, text string) {
 		return
 	}
 	files := c.ai.attach
+	a.noteQuestion(c, text, files)
 	if c.ai.agent == "acp" {
 		a.sendACP(c, text, files)
 		return
@@ -528,6 +543,10 @@ func (a *App) onAIDone(id int, err error) {
 	}
 	c.ai.running = false
 	c.ai.cancel = nil
+	if c.ai.agent == "builtin" && c.ai.sess != nil {
+		c.ai.msgs = c.ai.sess.History()
+	}
+	defer a.saveChat(c)
 	if err == nil {
 		c.ai.paused = c.ai.sess != nil && c.ai.sess.Paused()
 		return
