@@ -196,7 +196,7 @@ func TestCloudTargetForm(t *testing.T) {
 	if got, err := a.kc.Get(keychain.BackupSecret(id)); err != nil || string(got) != "dav-secret-1" {
 		t.Fatalf("secret %q, %v", got, err)
 	}
-	k, err := a.backupKey(id)
+	k, err := a.targetKey(ts[0])
 	if err != nil {
 		t.Fatal(err)
 	}

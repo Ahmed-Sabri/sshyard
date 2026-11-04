@@ -187,22 +187,13 @@ func (a *App) bindGist(id, gid string) {
 	}
 }
 
-// backupKey is the key the place id's backups are sealed with.
-func (a *App) backupKey(id string) (vault.Key, error) {
-	b, err := a.kc.Get(keychain.BackupKey(id))
-	defer clear(b)
-	switch {
-	case errors.Is(err, keychain.ErrNotFound):
-		return vault.Key{}, errBackupKey
-	case err != nil:
-		return vault.Key{}, err
+// targetKey is the key t's backups are sealed with: its own, or the
+// default backup password's.
+func (a *App) targetKey(t settings.BackupTarget) (vault.Key, error) {
+	if t.DefaultPassword {
+		return a.defaultBackupKey()
 	}
-	var k vault.Key
-	if json.Unmarshal(b, &k) != nil || !k.Valid() {
-		k.Clear()
-		return vault.Key{}, errBackupKey
-	}
-	return k, nil
+	return a.readBackupKey(keychain.BackupKey(t.ID), errBackupKey)
 }
 
 // putBackup puts sealed in r as name, then deletes this device's backups
@@ -275,7 +266,7 @@ func (a *App) backupWithKey(t settings.BackupTarget, auto bool) {
 			a.cloudToast(t.Name, err)
 		}
 	}
-	key, err := a.backupKey(t.ID)
+	key, err := a.targetKey(t)
 	if err != nil {
 		fail(err)
 		return
@@ -389,9 +380,9 @@ func (a *App) DeleteBackupTarget(id string) error {
 var targetKinds = []string{settings.BackupWebDAV, settings.BackupS3, settings.BackupGist}
 
 // targetForm is the backup location editor's fields. The place's secret
-// and backup password live here only while the sheet is open: saving moves
-// the secret, and the key derived from the password, into the encrypted
-// local store.
+// and own backup password live here only while the sheet is open: saving
+// moves the secret, and the key derived from the password, into the
+// encrypted local store.
 type targetForm struct {
 	isNew bool
 	// orig is the place edited; a new one has its ID already
@@ -405,8 +396,10 @@ type targetForm struct {
 	// proxy is the proxy select's label
 	proxy string
 	keep  float64
-	// password, typed twice, is the place's backup password; secrets puts
-	// the local store's secrets in its backups
+	// source says whether the place seals with the default backup
+	// password (pwDefault) or its own (pwCustom), password, typed twice;
+	// secrets puts the local store's secrets in its backups
+	source            int
 	password, confirm string
 	secrets           bool
 	// auto turns automatic backups on, every
@@ -421,11 +414,18 @@ type targetForm struct {
 }
 
 func (a *App) openTargetForm(t *settings.BackupTarget) {
-	f := &targetForm{isNew: t == nil, orig: settings.BackupTarget{ID: assets.NewID(), Kind: settings.BackupWebDAV}, keep: settings.BackupKeepDefault, secrets: true, every: 1}
+	f := &targetForm{isNew: t == nil, orig: settings.BackupTarget{ID: assets.NewID(), Kind: settings.BackupWebDAV}, keep: settings.BackupKeepDefault, secrets: true, every: 1, source: pwCustom}
+	if a.settings.DefaultBackupPassword {
+		f.source = pwDefault
+	}
 	if t != nil {
 		f.orig = *t
 		f.name, f.url, f.dir, f.user, f.bucket, f.region, f.gistID, f.pathStyle = t.Name, t.URL, t.Dir, t.User, t.Bucket, t.Region, t.GistID, t.PathStyle
 		f.keep, f.secrets, f.auto = float64(t.Keep), !t.OmitSecrets, t.AutoHours > 0
+		f.source = pwCustom
+		if t.DefaultPassword {
+			f.source = pwDefault
+		}
 		if px, ok := a.store.Proxy(t.ProxyID); ok {
 			f.proxy = px.Name
 		}
@@ -441,6 +441,18 @@ func (a *App) closeTargetForm() {
 	a.target, a.targetEditing = nil, false
 }
 
+// chooses reports whether the editor offers the default backup password:
+// while one is set, or the place seals with it.
+func (f *targetForm) chooses(a *App) bool {
+	return a.settings.DefaultBackupPassword || f.orig.DefaultPassword
+}
+
+// ownKey reports whether the place edited has a key of its own that stays
+// when no password is typed.
+func (f *targetForm) ownKey() bool {
+	return !f.isNew && !f.orig.DefaultPassword
+}
+
 // keepsSecret reports whether the place edited has a secret that stays
 // its own when none is typed: a kind's secret means nothing to another.
 func (f *targetForm) keepsSecret() bool {
@@ -454,7 +466,7 @@ func (a *App) targetDraft(m locales.Messages, f *targetForm) (settings.BackupTar
 	t.URL, t.Dir, t.User = strings.TrimSpace(f.url), strings.TrimSpace(f.dir), strings.TrimSpace(f.user)
 	t.Bucket, t.Region, t.GistID, t.PathStyle = strings.TrimSpace(f.bucket), strings.TrimSpace(f.region), strings.TrimSpace(f.gistID), f.pathStyle
 	t.Keep = min(max(int(f.keep), 0), settings.BackupKeepMax)
-	t.OmitSecrets, t.AutoHours = !f.secrets, 0
+	t.DefaultPassword, t.OmitSecrets, t.AutoHours = f.chooses(a) && f.source == pwDefault, !f.secrets, 0
 	if f.auto {
 		t.AutoHours = settings.BackupAutoHours[f.every]
 	}
@@ -506,9 +518,9 @@ func plainHTTP(raw string) bool {
 }
 
 // SaveTargetForm checks the sheet, derives the place's key off the UI
-// thread when a password was typed, then saves the place. A new place, or
-// one without a key, needs the password; a place edited otherwise keeps
-// its key.
+// thread when a password was typed, then saves the place. A place with a
+// password of its own needs it when new or without a key, and otherwise
+// keeps its key; one with the default backup password needs that set.
 func (a *App) SaveTargetForm(m locales.Messages) bool {
 	f := a.target
 	if f == nil || f.busy {
@@ -520,7 +532,11 @@ func (a *App) SaveTargetForm(m locales.Messages) bool {
 		f.err = msg
 		return false
 	}
-	newKey := f.isNew || f.password != ""
+	if t.DefaultPassword && !a.settings.DefaultBackupPassword {
+		f.err = m.ErrDefaultBackupKeyMissing()
+		return false
+	}
+	newKey := !t.DefaultPassword && (!f.ownKey() || f.password != "")
 	if newKey {
 		switch {
 		case f.password == "":
@@ -542,6 +558,9 @@ func (a *App) SaveTargetForm(m locales.Messages) bool {
 			}
 		})
 		return false
+	}
+	if t.DefaultPassword {
+		return a.commitTarget(m, f, t, nil)
 	}
 	if !newKey {
 		switch ok, err := a.kc.Exists(keychain.BackupKey(t.ID)); {
@@ -576,7 +595,8 @@ func (a *App) SaveTargetForm(m locales.Messages) bool {
 
 // commitTarget saves t: its secret and the new key k, when there is one,
 // in one write to the store, then the settings, which failing puts the
-// store back.
+// store back. A place sealing with the default backup password loses its
+// own key.
 func (a *App) commitTarget(m locales.Messages, f *targetForm, t settings.BackupTarget, k *vault.Key) bool {
 	var changes []keychain.Change
 	switch {
@@ -585,7 +605,8 @@ func (a *App) commitTarget(m locales.Messages, f *targetForm, t settings.BackupT
 	case !f.keepsSecret():
 		changes = append(changes, keychain.Change{Key: keychain.BackupSecret(t.ID), Delete: true})
 	}
-	if k != nil {
+	switch {
+	case k != nil:
 		b, err := json.Marshal(k)
 		if err != nil {
 			f.err = m.ErrGeneric(err.Error())
@@ -593,6 +614,8 @@ func (a *App) commitTarget(m locales.Messages, f *targetForm, t settings.BackupT
 		}
 		defer clear(b)
 		changes = append(changes, keychain.Change{Key: keychain.BackupKey(t.ID), Value: b})
+	case t.DefaultPassword && f.ownKey():
+		changes = append(changes, keychain.Change{Key: keychain.BackupKey(t.ID), Delete: true})
 	}
 	tx := &secretTx{kc: a.kc}
 	fail := func(msg string) bool {
@@ -1002,11 +1025,19 @@ func (a *App) targetFields(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 		notice(c, "bt:http", icons.Warning, tok.Warning, m.WarnPlainHTTP())
 	}
 	ui.Box(c).Height(1).FillWidth().Background(tok.Line)
+	choose := f.chooses(a)
+	typed := !choose || f.source == pwCustom
 	ph := ""
-	if !f.isNew {
+	if f.ownKey() {
 		ph = m.PasswordUnchanged()
 	}
 	ui.Form(c, func() {
+		if choose {
+			passwordSource(c, m, "bt:source", &f.source)
+		}
+		if !typed {
+			return
+		}
 		ui.Field(c, m.BackupPassword(), func() {
 			ui.TextInput(c.Key("bt:pw"), &f.password).Password().Placeholder(ph).Disabled(f.busy)
 		})
@@ -1014,7 +1045,14 @@ func (a *App) targetFields(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 			ui.TextInput(c.Key("bt:confirm"), &f.confirm).Password().Placeholder(ph).Disabled(f.busy)
 		})
 	})
-	ui.Text(c, m.BackupPasswordNote()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
+	switch {
+	case typed:
+		ui.Text(c, m.BackupPasswordNote()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
+	case !a.settings.DefaultBackupPassword:
+		notice(c, "bt:nodefault", icons.Warning, tok.Warning, m.ErrDefaultBackupKeyMissing())
+	default:
+		ui.Text(c, m.DefaultBackupPasswordUsed()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
+	}
 	switchRow(c, tok, "bt:secrets", m.BackupIncludeSecrets(), m.BackupIncludeSecretsNote(), &f.secrets, f.busy)
 	ui.Box(c).Height(1).FillWidth().Background(tok.Line)
 	switchRow(c, tok, "bt:auto", m.AutoBackup(), m.AutoBackupNote(), &f.auto, f.busy)

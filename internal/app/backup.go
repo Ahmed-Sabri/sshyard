@@ -105,11 +105,14 @@ const minBackupPassword = 8
 // maxBackupFile bounds what a restore reads.
 const maxBackupFile = backup.MaxSize
 
-// backupForm is the backup sheet: exporting, with a new password typed
-// twice, or restoring the file data with its password. The password lives
-// here only while the sheet is open.
+// backupForm is the backup sheet: exporting, with the default backup
+// password or a new one typed twice, or restoring the file data with its
+// password. The password lives here only while the sheet is open.
 type backupForm struct {
-	restore           bool
+	restore bool
+	// source is where an export's password comes from, pwDefault or
+	// pwCustom
+	source            int
 	password, confirm string
 	// secrets puts the local store's secrets in an export; on by default
 	secrets bool
@@ -160,7 +163,7 @@ func backupSecretKeys(snap assets.Snapshot, provs []settings.AIProvider) []strin
 // backup missing secrets it seems to have is worse than none.
 func (a *App) collectBackup(secrets bool) (backupPayload, error) {
 	p := backupPayload{Assets: a.store.Snapshot(), Settings: a.settings}
-	p.Settings.BackupTargets = nil
+	p.Settings.BackupTargets, p.Settings.DefaultBackupPassword = nil, false
 	if b, err := a.known.Contents(); err == nil {
 		p.KnownHosts = string(b)
 	}
@@ -292,8 +295,8 @@ func backupIDs(snap assets.Snapshot, provs []settings.AIProvider) []string {
 // mergeSettings are the preferences of a backup, in, over those of this
 // device, cur: what belongs to this device stays (the window's layout and
 // materials, the fonts installed here, the MCP endpoint, the places it
-// backs up to), AI providers are merged by ID and the hosts that confirmed
-// AI use are joined.
+// backs up to and its default backup password), AI providers are merged by
+// ID and the hosts that confirmed AI use are joined.
 func mergeSettings(cur, in settings.Settings) settings.Settings {
 	out := in
 	out.SidebarWidth, out.ChromeMaterial, out.ContentMaterial = cur.SidebarWidth, cur.ChromeMaterial, cur.ContentMaterial
@@ -301,7 +304,7 @@ func mergeSettings(cur, in settings.Settings) settings.Settings {
 	// A backup never turns the MCP endpoint on: that is asked here.
 	out.MCPEnabled, out.MCPPort = cur.MCPEnabled, cur.MCPPort
 	// Nor does it choose where this device backs up to.
-	out.BackupTargets = slices.Clone(cur.BackupTargets)
+	out.BackupTargets, out.DefaultBackupPassword = slices.Clone(cur.BackupTargets), cur.DefaultBackupPassword
 	out.AIProviders = slices.Clone(cur.AIProviders)
 	for _, p := range in.AIProviders {
 		if i := slices.IndexFunc(out.AIProviders, func(o settings.AIProvider) bool { return o.ID == p.ID }); i >= 0 {
@@ -339,6 +342,8 @@ func backupErrText(m locales.Messages, err error) string {
 		return m.ErrCloudNotFound()
 	case errors.Is(err, errBackupKey):
 		return m.ErrBackupKeyMissing()
+	case errors.Is(err, errDefaultBackupKey):
+		return m.ErrDefaultBackupKeyMissing()
 	case errors.Is(err, errBackupProxy):
 		return m.ErrBackupProxyMissing()
 	}
@@ -351,7 +356,11 @@ func (a *App) toastError(msg string) {
 }
 
 func (a *App) openExport() {
-	a.backup, a.backingUp = &backupForm{secrets: true}, true
+	f := &backupForm{secrets: true, source: pwCustom}
+	if a.settings.DefaultBackupPassword {
+		f.source = pwDefault
+	}
+	a.backup, a.backingUp = f, true
 }
 
 func (a *App) closeBackup() {
@@ -366,7 +375,9 @@ func (a *App) ExportBackup(m locales.Messages) bool {
 		return false
 	}
 	f.err = ""
+	withDefault := f.source == pwDefault && a.settings.DefaultBackupPassword
 	switch {
+	case withDefault:
 	case len([]rune(f.password)) < minBackupPassword:
 		f.err = m.BackupPasswordShort(strconv.Itoa(minBackupPassword))
 		return false
@@ -374,7 +385,8 @@ func (a *App) ExportBackup(m locales.Messages) bool {
 		f.err = m.BackupPasswordMismatch()
 		return false
 	}
-	if f.secrets && !a.unlocked() {
+	// The default backup password's key is in the store too.
+	if (f.secrets || withDefault) && !a.unlocked() {
 		draft := a.backup
 		a.withSecrets(func() {
 			if a.backup == draft {
@@ -392,10 +404,18 @@ func (a *App) ExportBackup(m locales.Messages) bool {
 		f.err = m.BackupExportFailed(secretStoreErrorText(m, err))
 		return false
 	}
+	var key vault.Key
+	if withDefault {
+		if key, err = a.defaultBackupKey(); err != nil {
+			f.err = backupErrText(m, err)
+			return false
+		}
+	}
 	pw, cost, title := []byte(f.password), a.kdf, m.ExportBackup()
 	def := filepath.Join(a.homeDir(), "SSHYard-"+time.Now().Format("2006-01-02")+backupExt)
 	f.busy = true
 	go func() {
+		defer key.Clear()
 		path, err := a.p.SaveFile(title, def)
 		if path == "" && err == nil {
 			a.post(func() { f.busy = false })
@@ -403,7 +423,12 @@ func (a *App) ExportBackup(m locales.Messages) bool {
 		}
 		if err == nil {
 			var sealed []byte
-			if sealed, err = vault.Seal(data, pw, cost); err == nil {
+			if withDefault {
+				sealed, err = key.Seal(data)
+			} else {
+				sealed, err = vault.Seal(data, pw, cost)
+			}
+			if err == nil {
 				err = settings.WriteFileAtomic(path, sealed, 0o600)
 			}
 		}
@@ -545,6 +570,7 @@ func (a *App) restoreDone(m locales.Messages, f *backupForm, p backupPayload, er
 
 // backupSection is the settings' backup page.
 func (a *App) backupSection(c *ui.Context, m locales.Messages, tok theme.Tokens) {
+	a.defaultPasswordSection(c, m, tok)
 	settingsSection(c, tok, nil, ui.Color{}, "", func(g *settingsGroup) {
 		g.row(m.ExportBackup(), m.ExportBackupNote(), func() {
 			if pill(c, m.ExportEllipsis(), false, false, a.p.SaveFile == nil) {
@@ -582,7 +608,15 @@ func (a *App) backupView(c *ui.Context, m locales.Messages) {
 					}
 				})
 			})
+			choose := !f.restore && a.settings.DefaultBackupPassword
+			typed := !choose || f.source == pwCustom
 			ui.Form(c, func() {
+				if choose {
+					passwordSource(c, m, "bk:source", &f.source)
+				}
+				if !typed {
+					return
+				}
 				ui.Field(c, m.BackupPassword(), func() {
 					in := ui.TextInput(c.Key("bk:pw"), &f.password).Password().AutoFocus().Disabled(f.busy)
 					a.backupHold.apply(c, f, in)
@@ -598,6 +632,9 @@ func (a *App) backupView(c *ui.Context, m locales.Messages) {
 					})
 				}
 			})
+			if !typed {
+				ui.Text(c, m.DefaultBackupPasswordUsed()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
+			}
 			if f.restore {
 				if !f.created.IsZero() {
 					ui.Text(c, m.BackupMadeOn(f.created.Local().Format("2006-01-02 15:04"))).FontSize(theme.Footnote).TextColor(tok.TextMuted)

@@ -387,6 +387,10 @@ type App struct {
 	backingUp  bool
 	backupHold focusHold
 	kdf        vault.Params
+	// defaultPw is the sheet setting the default backup password
+	defaultPw        *passwordForm
+	settingDefaultPw bool
+	defaultPwHold    focusHold
 	// cloud is what this device knows of the places it backs up to, read
 	// once; cloudCtx ends their requests when the app closes. target is
 	// the backup location sheet open, remotes the sheet of a place's

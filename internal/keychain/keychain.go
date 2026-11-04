@@ -48,6 +48,10 @@ func BackupSecret(id string) string { return "backup/" + id + "/secret" }
 // from its backup password: backup/<id>/key.
 func BackupKey(id string) string { return "backup/" + id + "/key" }
 
+// DefaultBackupKey is the key derived from the default backup password,
+// which exports and backup targets may seal with instead of their own.
+const DefaultBackupKey = "backup/default-key"
+
 // MCPToken is the bearer token of the MCP endpoint.
 const MCPToken = "mcp/token"
 

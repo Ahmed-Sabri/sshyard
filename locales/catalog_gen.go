@@ -7884,6 +7884,128 @@ func (msgs Messages) BackupPasswordMismatch() string {
 	return Catalog.Format(msgs.locale, "backupPasswordMismatch", nil)
 }
 
+// DefaultBackupPassword says "Default backup password"
+// in the language the app shows.
+func DefaultBackupPassword() string { return In(i18n.Locale()).DefaultBackupPassword() }
+
+// DefaultBackupPassword says "Default backup password"
+// in the language of msgs.
+func (msgs Messages) DefaultBackupPassword() string {
+	return Catalog.Format(msgs.locale, "defaultBackupPassword", nil)
+}
+
+// DefaultBackupPasswordNote says "Set it once, and exports and backup locations can use it without asking for a password each time. Only a key derived …"
+// in the language the app shows.
+func DefaultBackupPasswordNote() string { return In(i18n.Locale()).DefaultBackupPasswordNote() }
+
+// DefaultBackupPasswordNote says "Set it once, and exports and backup locations can use it without asking for a password each time. Only a key derived …"
+// in the language of msgs.
+func (msgs Messages) DefaultBackupPasswordNote() string {
+	return Catalog.Format(msgs.locale, "defaultBackupPasswordNote", nil)
+}
+
+// DefaultBackupPasswordSetNote says "Set. Restoring a backup sealed with it asks for it. A new password applies to later backups only."
+// in the language the app shows.
+func DefaultBackupPasswordSetNote() string { return In(i18n.Locale()).DefaultBackupPasswordSetNote() }
+
+// DefaultBackupPasswordSetNote says "Set. Restoring a backup sealed with it asks for it. A new password applies to later backups only."
+// in the language of msgs.
+func (msgs Messages) DefaultBackupPasswordSetNote() string {
+	return Catalog.Format(msgs.locale, "defaultBackupPasswordSetNote", nil)
+}
+
+// DefaultBackupPasswordSheetNote says "Only a key derived from it is kept in the encrypted local credential store. The password can’t be recovered: withou…"
+// in the language the app shows.
+func DefaultBackupPasswordSheetNote() string {
+	return In(i18n.Locale()).DefaultBackupPasswordSheetNote()
+}
+
+// DefaultBackupPasswordSheetNote says "Only a key derived from it is kept in the encrypted local credential store. The password can’t be recovered: withou…"
+// in the language of msgs.
+func (msgs Messages) DefaultBackupPasswordSheetNote() string {
+	return Catalog.Format(msgs.locale, "defaultBackupPasswordSheetNote", nil)
+}
+
+// DefaultBackupPasswordUsed says "Sealed with the default backup password; restoring asks for it."
+// in the language the app shows.
+func DefaultBackupPasswordUsed() string { return In(i18n.Locale()).DefaultBackupPasswordUsed() }
+
+// DefaultBackupPasswordUsed says "Sealed with the default backup password; restoring asks for it."
+// in the language of msgs.
+func (msgs Messages) DefaultBackupPasswordUsed() string {
+	return Catalog.Format(msgs.locale, "defaultBackupPasswordUsed", nil)
+}
+
+// BackupPasswordSource says "Encrypt with"
+// in the language the app shows.
+func BackupPasswordSource() string { return In(i18n.Locale()).BackupPasswordSource() }
+
+// BackupPasswordSource says "Encrypt with"
+// in the language of msgs.
+func (msgs Messages) BackupPasswordSource() string {
+	return Catalog.Format(msgs.locale, "backupPasswordSource", nil)
+}
+
+// CustomPassword says "Custom password"
+// in the language the app shows.
+func CustomPassword() string { return In(i18n.Locale()).CustomPassword() }
+
+// CustomPassword says "Custom password"
+// in the language of msgs.
+func (msgs Messages) CustomPassword() string {
+	return Catalog.Format(msgs.locale, "customPassword", nil)
+}
+
+// SetPasswordEllipsis says "Set…"
+// in the language the app shows.
+func SetPasswordEllipsis() string { return In(i18n.Locale()).SetPasswordEllipsis() }
+
+// SetPasswordEllipsis says "Set…"
+// in the language of msgs.
+func (msgs Messages) SetPasswordEllipsis() string {
+	return Catalog.Format(msgs.locale, "setPasswordEllipsis", nil)
+}
+
+// ChangePasswordEllipsis says "Change…"
+// in the language the app shows.
+func ChangePasswordEllipsis() string { return In(i18n.Locale()).ChangePasswordEllipsis() }
+
+// ChangePasswordEllipsis says "Change…"
+// in the language of msgs.
+func (msgs Messages) ChangePasswordEllipsis() string {
+	return Catalog.Format(msgs.locale, "changePasswordEllipsis", nil)
+}
+
+// Remove says "Remove"
+// in the language the app shows.
+func Remove() string { return In(i18n.Locale()).Remove() }
+
+// Remove says "Remove"
+// in the language of msgs.
+func (msgs Messages) Remove() string {
+	return Catalog.Format(msgs.locale, "remove", nil)
+}
+
+// ErrDefaultBackupKeyMissing says "The default backup password isn’t set. Set it at the top of the Backup page, or use a custom password."
+// in the language the app shows.
+func ErrDefaultBackupKeyMissing() string { return In(i18n.Locale()).ErrDefaultBackupKeyMissing() }
+
+// ErrDefaultBackupKeyMissing says "The default backup password isn’t set. Set it at the top of the Backup page, or use a custom password."
+// in the language of msgs.
+func (msgs Messages) ErrDefaultBackupKeyMissing() string {
+	return Catalog.Format(msgs.locale, "errDefaultBackupKeyMissing", nil)
+}
+
+// ErrDefaultBackupPasswordInUse says "Backup locations use the default backup password. Switch them to a custom password first."
+// in the language the app shows.
+func ErrDefaultBackupPasswordInUse() string { return In(i18n.Locale()).ErrDefaultBackupPasswordInUse() }
+
+// ErrDefaultBackupPasswordInUse says "Backup locations use the default backup password. Switch them to a custom password first."
+// in the language of msgs.
+func (msgs Messages) ErrDefaultBackupPasswordInUse() string {
+	return Catalog.Format(msgs.locale, "errDefaultBackupPasswordInUse", nil)
+}
+
 // BackupExporting says "Exporting…"
 // in the language the app shows.
 func BackupExporting() string { return In(i18n.Locale()).BackupExporting() }

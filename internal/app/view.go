@@ -114,6 +114,7 @@ func (a *App) View(c *ui.Context) {
 	a.targetView(c, m)
 	a.remoteListView(c, m)
 	a.backupView(c, m)
+	a.defaultPasswordView(c, m)
 	a.fwdView(c, m)
 	a.fwdDeleteView(c, m)
 	a.installView(c, m)
