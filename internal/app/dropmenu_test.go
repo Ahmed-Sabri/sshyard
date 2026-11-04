@@ -1,10 +1,13 @@
 package app
 
 import (
+	"fmt"
 	"runtime"
+	"slices"
 	"testing"
 
 	"github.com/Licoy/sshyard/internal/assets"
+	"github.com/Licoy/sshyard/locales"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -55,6 +58,58 @@ func TestDropMenu(t *testing.T) {
 	tt.Frame()
 	if a.group == nil || tt.HasText("Quick Connect…") || a.menu.key != "" {
 		t.Fatalf("Enter did not choose New group, or left the menu: %q", tt.Texts())
+	}
+}
+
+func TestHostGroupMenuSeparators(t *testing.T) {
+	for _, dark := range []bool{false, true} {
+		for _, grouped := range []bool{false, true} {
+			t.Run(fmt.Sprintf("dark=%v/grouped=%v", dark, grouped), func(t *testing.T) {
+				a, tt := newTestApp(t)
+				tt.SetDark(dark)
+				h, err := a.store.Add(assets.Host{Name: "web", Address: "web", User: "u"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if grouped {
+					if err := a.store.AddGroup("Prod"); err != nil {
+						t.Fatal(err)
+					}
+				}
+				tt.Frame()
+				if err := tt.RightClick("web"); err != nil {
+					t.Fatal(err)
+				}
+				move := mustFind(t, tt, "Move to group")
+				tt.Move(move.X+move.W/2, move.Y+move.H/2)
+				tt.Frame()
+				none := mustFind(t, tt, "No group")
+				create := mustFind(t, tt, "New group…")
+				saveBrandScreenshot(t, tt, fmt.Sprintf("host-group-menu-dark-%v-grouped-%v", dark, grouped))
+				if !grouped {
+					img, lines, previous := tt.Image(), 0, false
+					for y := int(none.Y+none.H) + 6; y < int(create.Y)-6; y++ {
+						line := img.RGBAAt(int(none.X+none.W/2), y) != img.RGBAAt(int(none.X)-32, y)
+						if line && !previous {
+							lines++
+						}
+						previous = line
+					}
+					if lines != 1 {
+						t.Errorf("rendered %d separators, want 1", lines)
+					}
+				}
+				entries := a.hostEntries(locales.In("en"), h)
+				i := slices.IndexFunc(entries, func(e menuEntry) bool { return e.Label == "Move to group" })
+				want := []string{"No group", "-", "New group…"}
+				if grouped {
+					want = []string{"No group", "-", "Prod", "-", "New group…"}
+				}
+				if got := menuLabels(entries[i].Sub); !slices.Equal(got, want) {
+					t.Fatalf("group menu %q, want %q", got, want)
+				}
+			})
+		}
 	}
 }
 

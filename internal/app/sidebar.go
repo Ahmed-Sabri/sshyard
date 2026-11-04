@@ -269,9 +269,12 @@ func (a *App) hostEntries(m locales.Messages, h assets.Host) []menuEntry {
 				a.store.SetGroup(h.ID, "")
 			}
 		}},
-		menuSep,
 	}
-	for _, g := range a.store.Groups() {
+	groupNames := a.store.Groups()
+	if len(groupNames) > 0 {
+		groups = append(groups, menuSep)
+	}
+	for _, g := range groupNames {
 		groups = append(groups, menuEntry{Icon: icons.Folder, Label: g, Checked: h.Group == g, Do: func() {
 			if h.Group != g {
 				a.store.SetGroup(h.ID, g)
