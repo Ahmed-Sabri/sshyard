@@ -271,7 +271,7 @@ func (a *App) OpenChat(paneID int, id string) {
 	}
 	a.resetChat(c)
 	if conv.Agent == "builtin" || conv.Agent == "acp" {
-		c.ai.agent = conv.Agent
+		c.ai.agent = aiAgentName(conv.Agent)
 	}
 	if a.providerByID(conv.Provider) != nil {
 		c.ai.provider, c.ai.model, c.ai.effort = conv.Provider, conv.Model, conv.Effort

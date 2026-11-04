@@ -5432,11 +5432,11 @@ func (msgs Messages) AiConsentTitle() string {
 	return Catalog.Format(msgs.locale, "aiConsentTitle", nil)
 }
 
-// AiConsentBody says "Terminal output and file contents will be sent to the selected model provider or external ACP program."
+// AiConsentBody says "Terminal output and file contents will be sent to the selected model provider."
 // in the language the app shows.
 func AiConsentBody() string { return In(i18n.Locale()).AiConsentBody() }
 
-// AiConsentBody says "Terminal output and file contents will be sent to the selected model provider or external ACP program."
+// AiConsentBody says "Terminal output and file contents will be sent to the selected model provider."
 // in the language of msgs.
 func (msgs Messages) AiConsentBody() string {
 	return Catalog.Format(msgs.locale, "aiConsentBody", nil)

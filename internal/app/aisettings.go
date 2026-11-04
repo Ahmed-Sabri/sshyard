@@ -94,32 +94,34 @@ func llmClient(p settings.AIProvider, key string) *llm.Client {
 
 func (a *App) aiSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, s *settings.Settings, changed *bool) {
 	settingsSection(c, tok, nil, ui.Color{}, "", func(g *settingsGroup) {
-		g.row(m.AiDefaultAgent(), "", func() {
-			opts := []string{m.AiBuiltin(), m.AiACP()}
-			cur := m.AiBuiltin()
-			if s.AIDefaultAgent == "acp" {
-				cur = m.AiACP()
-			}
-			if s.AIDefaultAgent != "" && s.AIDefaultAgent != "builtin" && s.AIDefaultAgent != "acp" {
-				opts = append(opts, s.AIDefaultAgent)
-				cur = s.AIDefaultAgent
-			}
-			if ui.Select(c.Key("aiagentdef"), &cur, opts).Label(m.AiDefaultAgent()).Width(180).Changed() {
-				if cur == m.AiBuiltin() {
-					s.AIDefaultAgent = "builtin"
-				} else if cur == m.AiACP() {
-					s.AIDefaultAgent = "acp"
-				} else {
-					s.AIDefaultAgent = cur
+		if acpEnabled {
+			g.row(m.AiDefaultAgent(), "", func() {
+				opts := []string{m.AiBuiltin(), m.AiACP()}
+				cur := m.AiBuiltin()
+				if s.AIDefaultAgent == "acp" {
+					cur = m.AiACP()
 				}
-				*changed = true
-			}
-		})
-		g.row(m.AiACP(), m.AiACPConfigNote(), func() {
-			if pill(c, m.AiACPConfigure(), false, false, false) {
-				a.openACP()
-			}
-		})
+				if s.AIDefaultAgent != "" && s.AIDefaultAgent != "builtin" && s.AIDefaultAgent != "acp" {
+					opts = append(opts, s.AIDefaultAgent)
+					cur = s.AIDefaultAgent
+				}
+				if ui.Select(c.Key("aiagentdef"), &cur, opts).Label(m.AiDefaultAgent()).Width(180).Changed() {
+					if cur == m.AiBuiltin() {
+						s.AIDefaultAgent = "builtin"
+					} else if cur == m.AiACP() {
+						s.AIDefaultAgent = "acp"
+					} else {
+						s.AIDefaultAgent = cur
+					}
+					*changed = true
+				}
+			})
+			g.row(m.AiACP(), m.AiACPConfigNote(), func() {
+				if pill(c, m.AiACPConfigure(), false, false, false) {
+					a.openACP()
+				}
+			})
+		}
 		g.row(m.AiContextLines(), "", func() {
 			if ui.NumberInput(c.Key("ailines"), &a.aiLines, 50, 2000, 10).Changed() {
 				s.AIContextLines = int(a.aiLines)

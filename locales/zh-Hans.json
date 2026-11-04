@@ -534,7 +534,7 @@
   "aiSensitive": "额外敏感路径",
   "aiSensitiveNote": "每行一个远程路径或通配，会加到内置敏感路径上。",
   "aiConsentTitle": "把这台主机的数据发给模型？",
-  "aiConsentBody": "终端输出和文件内容将发送到所选的模型服务或外部 ACP 程序。",
+  "aiConsentBody": "终端输出和文件内容将发送到所选的模型服务。",
   "aiConsentConfirm": "继续",
   "aiForgetConsent": "撤销该主机的 AI 授权确认",
   "aiConsentEmpty": "还没有主机确认过向模型发送数据。",

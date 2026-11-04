@@ -891,7 +891,7 @@ func TestFirstUseConsentBlocksSend(t *testing.T) {
 	tt.Frame()
 	a.SendAI(id, "hello")
 	tt.Frame()
-	if !tt.HasText("Terminal output and file contents will be sent to the selected model provider or external ACP program.") {
+	if !tt.HasText("Terminal output and file contents will be sent to the selected model provider.") {
 		t.Fatalf("texts %q", tt.Texts())
 	}
 	if n.Load() != 0 || len(a.conns[id].ai.items) != 0 {
@@ -943,7 +943,7 @@ func TestForgetAIConsent(t *testing.T) {
 	tt.Frame()
 	a.SendAI(id, "hello")
 	tt.Frame()
-	if !tt.HasText("Terminal output and file contents will be sent to the selected model provider or external ACP program.") {
+	if !tt.HasText("Terminal output and file contents will be sent to the selected model provider.") {
 		t.Fatalf("texts %q", tt.Texts())
 	}
 	if len(a.conns[id].ai.items) != 0 {

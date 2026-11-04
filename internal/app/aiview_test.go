@@ -17,6 +17,7 @@ import (
 // and the composer's text on top with, under it, permission on the left
 // and the model, thinking level and send button on the right.
 func TestAIPaneLayout(t *testing.T) {
+	enableACP(t)
 	a, tt := newTestApp(t)
 	h := savedHost(t, a, "web", "10.0.0.8")
 	s := a.Settings()
@@ -273,6 +274,7 @@ func TestAIDefaultProvider(t *testing.T) {
 // each naming what is chosen in its tooltip, and the split buttons go
 // into a menu; a wide one labels them.
 func TestAIPaneNarrow(t *testing.T) {
+	enableACP(t)
 	a, tt := newTestApp(t)
 	s := a.Settings()
 	s.AIProviders = []settings.AIProvider{{ID: "p", Name: "Lab", BaseURL: "http://127.0.0.1:1", Model: "lab-model"}}

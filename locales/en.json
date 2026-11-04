@@ -534,7 +534,7 @@
   "aiSensitive": "Extra sensitive paths",
   "aiSensitiveNote": "One remote path or glob per line, added to the built-in sensitive paths.",
   "aiConsentTitle": "Send this host’s data to the model?",
-  "aiConsentBody": "Terminal output and file contents will be sent to the selected model provider or external ACP program.",
+  "aiConsentBody": "Terminal output and file contents will be sent to the selected model provider.",
   "aiConsentConfirm": "Continue",
   "aiForgetConsent": "Forget AI consent for this host",
   "aiConsentEmpty": "No host has confirmed sending data to a model.",

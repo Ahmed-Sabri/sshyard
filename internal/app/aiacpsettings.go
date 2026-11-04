@@ -11,6 +11,17 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
+// acpEnabled exposes the external ACP backend; it stays hidden until the integration is ready
+var acpEnabled = false
+
+// aiAgentName maps a saved backend name to one this build offers
+func aiAgentName(name string) string {
+	if name == "acp" && !acpEnabled {
+		return "builtin"
+	}
+	return name
+}
+
 type acpForm struct {
 	command, args, err string
 	hold               focusHold
@@ -77,6 +88,9 @@ func (a *App) acpSheet(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 }
 
 func (a *App) agentChip(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages, fit aiFit) {
+	if !acpEnabled && cn.ai.agent == "builtin" {
+		return
+	}
 	label := m.AiBackendUnavailable()
 	tint := tok.Warning
 	if cn.ai.agent == "builtin" {
@@ -88,11 +102,16 @@ func (a *App) agentChip(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Mes
 		tint = ui.Color{}
 	}
 	a.menuChip(c, "aiagent:"+strconv.Itoa(cn.id), chip{Icon: icons.Robot, Label: label, Tip: m.AiBackend(), Tint: tint}.fit(m, fit, 0), func() []menuEntry {
-		return []menuEntry{
+		entries := []menuEntry{
 			{Icon: icons.Robot, Label: m.AiBuiltin(), Checked: cn.ai.agent == "builtin", Do: func() { a.setAIAgent(cn, "builtin") }},
-			{Icon: icons.Robot, Label: m.AiACP(), Checked: cn.ai.agent == "acp", Do: func() { a.setAIAgent(cn, "acp") }},
-			menuSep,
-			{Icon: icons.Settings, Label: m.AiACPConfigure(), Do: a.openACP},
 		}
+		if acpEnabled {
+			entries = append(entries,
+				menuEntry{Icon: icons.Robot, Label: m.AiACP(), Checked: cn.ai.agent == "acp", Do: func() { a.setAIAgent(cn, "acp") }},
+				menuSep,
+				menuEntry{Icon: icons.Settings, Label: m.AiACPConfigure(), Do: a.openACP},
+			)
+		}
+		return entries
 	})
 }

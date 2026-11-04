@@ -691,7 +691,7 @@ func (a *App) makeConn(hostID string, kind layout.Kind, link int) (*conn, error)
 		c.temp = h.ID
 	}
 	if kind == layout.AI {
-		agentName := a.settings.AIDefaultAgent
+		agentName := aiAgentName(a.settings.AIDefaultAgent)
 		if agentName == "" {
 			agentName = "builtin"
 		}
