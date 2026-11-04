@@ -16,6 +16,7 @@ require (
 	golang.org/x/net v0.60.0
 	golang.org/x/sys v0.49.0
 	golang.org/x/text v0.43.0
+	go.yaml.in/yaml/v3 v3.0.4
 	mvdan.cc/sh/v3 v3.14.1
 )
 

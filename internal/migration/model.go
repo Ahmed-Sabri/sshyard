@@ -1,0 +1,51 @@
+// Package migration reads third-party session exports without modifying them.
+package migration
+
+import "errors"
+
+type Source string
+
+const (
+	Xshell    Source = "Xshell"
+	MobaXterm Source = "MobaXterm"
+	PuTTY     Source = "PuTTY"
+	WindTerm  Source = "WindTerm"
+	Electerm  Source = "Electerm"
+	Tabby     Source = "Tabby"
+	Netcatty  Source = "Netcatty"
+	Remmina   Source = "Remmina"
+	MRemoteNG Source = "mRemoteNG"
+	WinSCP    Source = "WinSCP"
+)
+
+func Sources() []Source {
+	return []Source{Xshell, MobaXterm, PuTTY, WindTerm, Electerm, Tabby, Netcatty, Remmina, MRemoteNG, WinSCP}
+}
+
+type Result struct {
+	Entries []Entry
+	Issues  []Issue
+}
+
+// Secrets are transient bytes and must never be serialized to application metadata.
+type Entry struct {
+	ID, Name, Address, User, Group   string
+	Port                             int
+	Password, PrivateKey, Passphrase []byte `json:"-" yaml:"-"`
+	KeyPath                          string
+	Jumps                            []Hop
+	Issues                           []Issue
+}
+type Hop struct {
+	Ref, Name, Address, User string
+	Port                     int
+}
+type Issue struct{ Code, Name, Field string }
+
+var (
+	ErrFormat    = errors.New("unsupported or malformed migration format")
+	ErrTooLarge  = errors.New("migration input exceeds limit")
+	ErrNoEntries = errors.New("no SSH entries found")
+	ErrRead      = errors.New("cannot read migration input")
+	ErrEncrypted = errors.New("encrypted migration input is not supported")
+)

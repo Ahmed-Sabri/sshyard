@@ -1,0 +1,54 @@
+# Import format scope
+
+Parsers read exports locally without executing registry files, connecting to a host,
+following directory symlinks, or opening private-key paths; credential bytes remain
+in memory and are excluded from JSON/YAML serialization.
+
+`Read` limits selected input to 1,024 unique regular files, 32 MiB total and 10,000
+SSH entries and 10,000 diagnostics; a file error rejects the batch; non-SSH rows and unsupported options
+produce machine-readable diagnostics; unknown or damaged schemas fail explicitly.
+A directory contributes only its relative subdirectory path to group names.
+
+## Independently verified source formats
+
+- WindTerm: `user.sessions` JSON array, public `session.target`, `session.label`,
+  `session.folder` / `session.group`, `session.port`, `session.protocol` and
+  `session.uuid` fields; target userinfo and literal IPv6 are separated locally;
+  hidden/private credential payloads are diagnosed, never decoded or treated as
+  passwords; no claim is made to decrypt WindTerm profile data
+  - [Upstream format discussion](https://github.com/kingToolbox/WindTerm/issues/533)
+  - [Upstream credential-protection description](https://kingtoolbox.github.io/2021/03/11/protection-username-password/)
+- Electerm: bookmarks JSON array or `{bookmarks, bookmarkGroups}`, group ancestry
+  from `bookmarkGroupIds` and bookmark membership from `bookmarkIds`; readable
+  password/privateKey/passphrase fields and `privateKeyPath`; `passwordEncrypted`
+  is diagnosed without decoding; profile-based auth, connection scripts and
+  unsupported proxy configuration are reported
+  - [Bookmark schema, snapshot 3db5ec7](https://github.com/electerm/electerm/blob/3db5ec7d9a2d3833d89a7c24978e1c77526e145a/src/client/common/bookmark-schemas.js)
+  - [Group tree](https://github.com/electerm/electerm/blob/3db5ec7d9a2d3833d89a7c24978e1c77526e145a/src/client/common/bookmark-group-tree.js)
+  - [Password flag](https://github.com/electerm/electerm/blob/3db5ec7d9a2d3833d89a7c24978e1c77526e145a/src/client/common/pass-enc.js)
+- Tabby: YAML `profiles` of type `ssh`; global `profileDefaults.ssh`, then the
+  containing group's `defaults.ssh`, then profile options; group path uses
+  `parentGroupId`; current upstream applies only the containing group's defaults,
+  not each ancestor's options; `privateKeys` paths and `jumpHost` IDs are retained;
+  vault/keychain passwords are not decrypted; agent authentication, additional
+  keys, proxy commands and port forwarding require manual setup
+  - [Profile merge, snapshot 467ce8e](https://github.com/Eugeny/tabby/blob/467ce8ebfa467fb88cf6d154c9a5891e3d3647f0/tabby-core/src/services/profiles.service.ts)
+  - [SSH options](https://github.com/Eugeny/tabby/blob/467ce8ebfa467fb88cf6d154c9a5891e3d3647f0/tabby-ssh/src/api/interfaces.ts)
+  - [Credential storage](https://github.com/Eugeny/tabby/blob/467ce8ebfa467fb88cf6d154c9a5891e3d3647f0/tabby-ssh/src/services/passwordStorage.service.ts)
+- Netcatty: metadata JSON `{hosts, keys?, identities?}` and exported CSV with
+  `Groups,Label,Tags,Notes,Hostname/IP,Protocol,Port,Username,Password` plus optional
+  `KeyPath,Passphrase,Proxy,ProxyJump,LocalShell,SshInputCompatibility`; CSV marked
+  fields use URI decoding; JSON identity/key references and host-chain IDs are
+  resolved; device-encrypted credential placeholders are distinguished by their
+  actual platform headers and lengths; encrypted backup envelopes are rejected;
+  tags, notes, proxy configuration and group connection defaults are diagnosed
+  - [CSV export, snapshot 54c4db5](https://github.com/binaricat/Netcatty/blob/54c4db5030d421f665f2d98dcaae1fb8065b8256/domain/vaultImport/csvExport.ts)
+  - [CSV field markers](https://github.com/binaricat/Netcatty/blob/54c4db5030d421f665f2d98dcaae1fb8065b8256/domain/vaultImport/csvCredentialFields.ts)
+  - [Host/key/identity schema](https://github.com/binaricat/Netcatty/blob/54c4db5030d421f665f2d98dcaae1fb8065b8256/domain/models/connection.ts)
+  - [Credential placeholders](https://github.com/binaricat/Netcatty/blob/54c4db5030d421f665f2d98dcaae1fb8065b8256/domain/credentials.ts)
+  - [Authentication selection](https://github.com/binaricat/Netcatty/blob/54c4db5030d421f665f2d98dcaae1fb8065b8256/domain/sshAuth.ts)
+
+These snapshots establish format coverage, not end-to-end acceptance against every
+historical release or a user's actual encrypted profile; unsupported/versioned
+backup envelopes, third-party extensions and external key-file readability still
+need the user's source exports and explicit credential-saving choice.

@@ -1,10 +1,15 @@
 package assets
 
 import (
+	"errors"
 	"fmt"
+	"reflect"
 	"slices"
 	"strings"
 )
+
+// ErrSnapshotChanged means hosts no longer match the preview baseline.
+var ErrSnapshotChanged = errors.New("assets: snapshot hosts changed")
 
 // Snapshot is everything the store holds, for a backup. Like the store,
 // it holds no secret.
@@ -72,6 +77,21 @@ func freeName(name string, taken func(string) bool) string {
 func (s *Store) Restore(in Snapshot) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return s.restoreLocked(in)
+}
+
+// RestoreIfHostsUnchanged merges only while hosts still equal a prior List result.
+// The comparison and persistence share the store lock with other writers.
+func (s *Store) RestoreIfHostsUnchanged(in Snapshot, expected []Host) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !reflect.DeepEqual(sorted(s.hosts), expected) {
+		return ErrSnapshotChanged
+	}
+	return s.restoreLocked(in)
+}
+
+func (s *Store) restoreLocked(in Snapshot) error {
 	h, c, p, f, g := slices.Clone(s.hosts), slices.Clone(s.creds), slices.Clone(s.proxies), slices.Clone(s.forwards), slices.Clone(s.groups)
 	n := slices.Clone(s.snippets)
 	order := slices.Clone(s.groupOrder)

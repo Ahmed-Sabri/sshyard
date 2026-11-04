@@ -338,14 +338,17 @@ type App struct {
 	dropPreview *dropTarget
 	// temps are the temporary hosts of quick connect, by ID, kept while a
 	// pane uses them and never saved; nextTemp numbers them
-	temps     map[string]assets.Host
-	nextTemp  int
-	quick     *quickForm
-	quicking  bool
-	quickHold focusHold
-	imp       *importForm
-	importing bool
-	impHold   focusHold
+	temps         map[string]assets.Host
+	nextTemp      int
+	quick         *quickForm
+	quicking      bool
+	quickHold     focusHold
+	migration     *migrationForm
+	migrationOpen bool
+	migrationHold focusHold
+	imp           *importForm
+	importing     bool
+	impHold       focusHold
 	// fwds are the port forwards running, by forward ID
 	fwds       map[string]*fwdRun
 	fwdForm    *fwdForm

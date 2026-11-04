@@ -11978,3 +11978,397 @@ func AiDeleteChatBody() string { return In(i18n.Locale()).AiDeleteChatBody() }
 func (msgs Messages) AiDeleteChatBody() string {
 	return Catalog.Format(msgs.locale, "aiDeleteChatBody", nil)
 }
+
+// Migration says "Migration"
+// in the language the app shows.
+func Migration() string { return In(i18n.Locale()).Migration() }
+
+// Migration says "Migration"
+// in the language of msgs.
+func (msgs Messages) Migration() string {
+	return Catalog.Format(msgs.locale, "migration", nil)
+}
+
+// MigrationDesc says "Import SSH sessions from configuration files and client exports"
+// in the language the app shows.
+func MigrationDesc() string { return In(i18n.Locale()).MigrationDesc() }
+
+// MigrationDesc says "Import SSH sessions from configuration files and client exports"
+// in the language of msgs.
+func (msgs Messages) MigrationDesc() string {
+	return Catalog.Format(msgs.locale, "migrationDesc", nil)
+}
+
+// MigrationGeneral says "General configuration"
+// in the language the app shows.
+func MigrationGeneral() string { return In(i18n.Locale()).MigrationGeneral() }
+
+// MigrationGeneral says "General configuration"
+// in the language of msgs.
+func (msgs Messages) MigrationGeneral() string {
+	return Catalog.Format(msgs.locale, "migrationGeneral", nil)
+}
+
+// MigrationCommon says "Common clients"
+// in the language the app shows.
+func MigrationCommon() string { return In(i18n.Locale()).MigrationCommon() }
+
+// MigrationCommon says "Common clients"
+// in the language of msgs.
+func (msgs Messages) MigrationCommon() string {
+	return Catalog.Format(msgs.locale, "migrationCommon", nil)
+}
+
+// MigrationCrossPlatform says "Cross-platform clients"
+// in the language the app shows.
+func MigrationCrossPlatform() string { return In(i18n.Locale()).MigrationCrossPlatform() }
+
+// MigrationCrossPlatform says "Cross-platform clients"
+// in the language of msgs.
+func (msgs Messages) MigrationCrossPlatform() string {
+	return Catalog.Format(msgs.locale, "migrationCrossPlatform", nil)
+}
+
+// MigrationOther says "Other open-source clients"
+// in the language the app shows.
+func MigrationOther() string { return In(i18n.Locale()).MigrationOther() }
+
+// MigrationOther says "Other open-source clients"
+// in the language of msgs.
+func (msgs Messages) MigrationOther() string {
+	return Catalog.Format(msgs.locale, "migrationOther", nil)
+}
+
+// MigrationFormat says "Format: {format}"
+// in the language the app shows.
+func MigrationFormat(format string) string { return In(i18n.Locale()).MigrationFormat(format) }
+
+// MigrationFormat says "Format: {format}"
+// in the language of msgs.
+func (msgs Messages) MigrationFormat(format string) string {
+	return Catalog.Format(msgs.locale, "migrationFormat", map[string]any{"format": format})
+}
+
+// MigrationReadOnly says "Source files are read only; review selections and warnings before saving"
+// in the language the app shows.
+func MigrationReadOnly() string { return In(i18n.Locale()).MigrationReadOnly() }
+
+// MigrationReadOnly says "Source files are read only; review selections and warnings before saving"
+// in the language of msgs.
+func (msgs Messages) MigrationReadOnly() string {
+	return Catalog.Format(msgs.locale, "migrationReadOnly", nil)
+}
+
+// MigrationChooseFiles says "Choose export files"
+// in the language the app shows.
+func MigrationChooseFiles() string { return In(i18n.Locale()).MigrationChooseFiles() }
+
+// MigrationChooseFiles says "Choose export files"
+// in the language of msgs.
+func (msgs Messages) MigrationChooseFiles() string {
+	return Catalog.Format(msgs.locale, "migrationChooseFiles", nil)
+}
+
+// MigrationChooseFolder says "Choose configuration folder"
+// in the language the app shows.
+func MigrationChooseFolder() string { return In(i18n.Locale()).MigrationChooseFolder() }
+
+// MigrationChooseFolder says "Choose configuration folder"
+// in the language of msgs.
+func (msgs Messages) MigrationChooseFolder() string {
+	return Catalog.Format(msgs.locale, "migrationChooseFolder", nil)
+}
+
+// MigrationPreview says "Migration preview · {source}"
+// in the language the app shows.
+func MigrationPreview(source string) string { return In(i18n.Locale()).MigrationPreview(source) }
+
+// MigrationPreview says "Migration preview · {source}"
+// in the language of msgs.
+func (msgs Messages) MigrationPreview(source string) string {
+	return Catalog.Format(msgs.locale, "migrationPreview", map[string]any{"source": source})
+}
+
+// MigrationReading says "Reading source files…"
+// in the language the app shows.
+func MigrationReading() string { return In(i18n.Locale()).MigrationReading() }
+
+// MigrationReading says "Reading source files…"
+// in the language of msgs.
+func (msgs Messages) MigrationReading() string {
+	return Catalog.Format(msgs.locale, "migrationReading", nil)
+}
+
+// MigrationSaving says "Saving selected sessions…"
+// in the language the app shows.
+func MigrationSaving() string { return In(i18n.Locale()).MigrationSaving() }
+
+// MigrationSaving says "Saving selected sessions…"
+// in the language of msgs.
+func (msgs Messages) MigrationSaving() string {
+	return Catalog.Format(msgs.locale, "migrationSaving", nil)
+}
+
+// MigrationReadError says "Cannot read source files; check the paths and file permissions"
+// in the language the app shows.
+func MigrationReadError() string { return In(i18n.Locale()).MigrationReadError() }
+
+// MigrationReadError says "Cannot read source files; check the paths and file permissions"
+// in the language of msgs.
+func (msgs Messages) MigrationReadError() string {
+	return Catalog.Format(msgs.locale, "migrationReadError", nil)
+}
+
+// MigrationEmpty says "No SSH sessions found"
+// in the language the app shows.
+func MigrationEmpty() string { return In(i18n.Locale()).MigrationEmpty() }
+
+// MigrationEmpty says "No SSH sessions found"
+// in the language of msgs.
+func (msgs Messages) MigrationEmpty() string {
+	return Catalog.Format(msgs.locale, "migrationEmpty", nil)
+}
+
+// MigrationSelectAll says "Select visible"
+// in the language the app shows.
+func MigrationSelectAll() string { return In(i18n.Locale()).MigrationSelectAll() }
+
+// MigrationSelectAll says "Select visible"
+// in the language of msgs.
+func (msgs Messages) MigrationSelectAll() string {
+	return Catalog.Format(msgs.locale, "migrationSelectAll", nil)
+}
+
+// MigrationSelectNone says "Deselect visible"
+// in the language the app shows.
+func MigrationSelectNone() string { return In(i18n.Locale()).MigrationSelectNone() }
+
+// MigrationSelectNone says "Deselect visible"
+// in the language of msgs.
+func (msgs Messages) MigrationSelectNone() string {
+	return Catalog.Format(msgs.locale, "migrationSelectNone", nil)
+}
+
+// MigrationApplyGroup says "Apply to selected"
+// in the language the app shows.
+func MigrationApplyGroup() string { return In(i18n.Locale()).MigrationApplyGroup() }
+
+// MigrationApplyGroup says "Apply to selected"
+// in the language of msgs.
+func (msgs Messages) MigrationApplyGroup() string {
+	return Catalog.Format(msgs.locale, "migrationApplyGroup", nil)
+}
+
+// MigrationSaveSecrets says "Save available credentials in the encrypted local store"
+// in the language the app shows.
+func MigrationSaveSecrets() string { return In(i18n.Locale()).MigrationSaveSecrets() }
+
+// MigrationSaveSecrets says "Save available credentials in the encrypted local store"
+// in the language of msgs.
+func (msgs Messages) MigrationSaveSecrets() string {
+	return Catalog.Format(msgs.locale, "migrationSaveSecrets", nil)
+}
+
+// MigrationSecretsNote says "Off by default; encrypted or unavailable source credentials must be entered again"
+// in the language the app shows.
+func MigrationSecretsNote() string { return In(i18n.Locale()).MigrationSecretsNote() }
+
+// MigrationSecretsNote says "Off by default; encrypted or unavailable source credentials must be entered again"
+// in the language of msgs.
+func (msgs Messages) MigrationSecretsNote() string {
+	return Catalog.Format(msgs.locale, "migrationSecretsNote", nil)
+}
+
+// MigrationConflict says "Duplicate address, port and user; choose how to handle it"
+// in the language the app shows.
+func MigrationConflict() string { return In(i18n.Locale()).MigrationConflict() }
+
+// MigrationConflict says "Duplicate address, port and user; choose how to handle it"
+// in the language of msgs.
+func (msgs Messages) MigrationConflict() string {
+	return Catalog.Format(msgs.locale, "migrationConflict", nil)
+}
+
+// MigrationDependency says "An invalid session or unresolved jump dependency prevents saving; correct the selection"
+// in the language the app shows.
+func MigrationDependency() string { return In(i18n.Locale()).MigrationDependency() }
+
+// MigrationDependency says "An invalid session or unresolved jump dependency prevents saving; correct the selection"
+// in the language of msgs.
+func (msgs Messages) MigrationDependency() string {
+	return Catalog.Format(msgs.locale, "migrationDependency", nil)
+}
+
+// MigrationStale says "Saved hosts changed after preview; close this preview and read the source again"
+// in the language the app shows.
+func MigrationStale() string { return In(i18n.Locale()).MigrationStale() }
+
+// MigrationStale says "Saved hosts changed after preview; close this preview and read the source again"
+// in the language of msgs.
+func (msgs Messages) MigrationStale() string {
+	return Catalog.Format(msgs.locale, "migrationStale", nil)
+}
+
+// MigrationSaveError says "Could not save the migration; no successful import is reported"
+// in the language the app shows.
+func MigrationSaveError() string { return In(i18n.Locale()).MigrationSaveError() }
+
+// MigrationSaveError says "Could not save the migration; no successful import is reported"
+// in the language of msgs.
+func (msgs Messages) MigrationSaveError() string {
+	return Catalog.Format(msgs.locale, "migrationSaveError", nil)
+}
+
+// MigrationKeyError says "Cannot read this key or passphrase; choose a local key, correct its passphrase or disable credentials for this row"
+// in the language the app shows.
+func MigrationKeyError() string { return In(i18n.Locale()).MigrationKeyError() }
+
+// MigrationKeyError says "Cannot read this key or passphrase; choose a local key, correct its passphrase or disable credentials for this row"
+// in the language of msgs.
+func (msgs Messages) MigrationKeyError() string {
+	return Catalog.Format(msgs.locale, "migrationKeyError", nil)
+}
+
+// MigrationDone says "Saved {count} sessions"
+// in the language the app shows.
+func MigrationDone(count string) string { return In(i18n.Locale()).MigrationDone(count) }
+
+// MigrationDone says "Saved {count} sessions"
+// in the language of msgs.
+func (msgs Messages) MigrationDone(count string) string {
+	return Catalog.Format(msgs.locale, "migrationDone", map[string]any{"count": count})
+}
+
+// MigrationUnsupportedProtocol says "Non-SSH protocol was not imported"
+// in the language the app shows.
+func MigrationUnsupportedProtocol() string { return In(i18n.Locale()).MigrationUnsupportedProtocol() }
+
+// MigrationUnsupportedProtocol says "Non-SSH protocol was not imported"
+// in the language of msgs.
+func (msgs Messages) MigrationUnsupportedProtocol() string {
+	return Catalog.Format(msgs.locale, "migrationUnsupportedProtocol", nil)
+}
+
+// MigrationUnsupportedField says "Unsupported setting was not imported"
+// in the language the app shows.
+func MigrationUnsupportedField() string { return In(i18n.Locale()).MigrationUnsupportedField() }
+
+// MigrationUnsupportedField says "Unsupported setting was not imported"
+// in the language of msgs.
+func (msgs Messages) MigrationUnsupportedField() string {
+	return Catalog.Format(msgs.locale, "migrationUnsupportedField", nil)
+}
+
+// MigrationEncryptedSecret says "Encrypted credential cannot be transferred; enter it again after import"
+// in the language the app shows.
+func MigrationEncryptedSecret() string { return In(i18n.Locale()).MigrationEncryptedSecret() }
+
+// MigrationEncryptedSecret says "Encrypted credential cannot be transferred; enter it again after import"
+// in the language of msgs.
+func (msgs Messages) MigrationEncryptedSecret() string {
+	return Catalog.Format(msgs.locale, "migrationEncryptedSecret", nil)
+}
+
+// MigrationInvalidEntry says "Invalid SSH session; deselect it before saving"
+// in the language the app shows.
+func MigrationInvalidEntry() string { return In(i18n.Locale()).MigrationInvalidEntry() }
+
+// MigrationInvalidEntry says "Invalid SSH session; deselect it before saving"
+// in the language of msgs.
+func (msgs Messages) MigrationInvalidEntry() string {
+	return Catalog.Format(msgs.locale, "migrationInvalidEntry", nil)
+}
+
+// MigrationDuplicateID says "Duplicate source identifier; resolve the source before importing this session"
+// in the language the app shows.
+func MigrationDuplicateID() string { return In(i18n.Locale()).MigrationDuplicateID() }
+
+// MigrationDuplicateID says "Duplicate source identifier; resolve the source before importing this session"
+// in the language of msgs.
+func (msgs Messages) MigrationDuplicateID() string {
+	return Catalog.Format(msgs.locale, "migrationDuplicateID", nil)
+}
+
+// MigrationJumpCount says "Jump dependencies: {count}; all must resolve before saving"
+// in the language the app shows.
+func MigrationJumpCount(count string) string { return In(i18n.Locale()).MigrationJumpCount(count) }
+
+// MigrationJumpCount says "Jump dependencies: {count}; all must resolve before saving"
+// in the language of msgs.
+func (msgs Messages) MigrationJumpCount(count string) string {
+	return Catalog.Format(msgs.locale, "migrationJumpCount", map[string]any{"count": count})
+}
+
+// MigrationSaveRowSecrets says "Save credentials for this session"
+// in the language the app shows.
+func MigrationSaveRowSecrets() string { return In(i18n.Locale()).MigrationSaveRowSecrets() }
+
+// MigrationSaveRowSecrets says "Save credentials for this session"
+// in the language of msgs.
+func (msgs Messages) MigrationSaveRowSecrets() string {
+	return Catalog.Format(msgs.locale, "migrationSaveRowSecrets", nil)
+}
+
+// MigrationRelocateKey says "Choose local private key"
+// in the language the app shows.
+func MigrationRelocateKey() string { return In(i18n.Locale()).MigrationRelocateKey() }
+
+// MigrationRelocateKey says "Choose local private key"
+// in the language of msgs.
+func (msgs Messages) MigrationRelocateKey() string {
+	return Catalog.Format(msgs.locale, "migrationRelocateKey", nil)
+}
+
+// MigrationChooseSourceFiles says "Choose {source} export files"
+// in the language the app shows.
+func MigrationChooseSourceFiles(source string) string {
+	return In(i18n.Locale()).MigrationChooseSourceFiles(source)
+}
+
+// MigrationChooseSourceFiles says "Choose {source} export files"
+// in the language of msgs.
+func (msgs Messages) MigrationChooseSourceFiles(source string) string {
+	return Catalog.Format(msgs.locale, "migrationChooseSourceFiles", map[string]any{"source": source})
+}
+
+// MigrationChooseSourceFolder says "Choose {source} configuration folder"
+// in the language the app shows.
+func MigrationChooseSourceFolder(source string) string {
+	return In(i18n.Locale()).MigrationChooseSourceFolder(source)
+}
+
+// MigrationChooseSourceFolder says "Choose {source} configuration folder"
+// in the language of msgs.
+func (msgs Messages) MigrationChooseSourceFolder(source string) string {
+	return Catalog.Format(msgs.locale, "migrationChooseSourceFolder", map[string]any{"source": source})
+}
+
+// MigrationFormatError says "Unsupported or damaged export; choose the matching source and export format"
+// in the language the app shows.
+func MigrationFormatError() string { return In(i18n.Locale()).MigrationFormatError() }
+
+// MigrationFormatError says "Unsupported or damaged export; choose the matching source and export format"
+// in the language of msgs.
+func (msgs Messages) MigrationFormatError() string {
+	return Catalog.Format(msgs.locale, "migrationFormatError", nil)
+}
+
+// MigrationTooLarge says "Source exceeds the limit of 32 MiB or 1,024 files; select a smaller batch"
+// in the language the app shows.
+func MigrationTooLarge() string { return In(i18n.Locale()).MigrationTooLarge() }
+
+// MigrationTooLarge says "Source exceeds the limit of 32 MiB or 1,024 files; select a smaller batch"
+// in the language of msgs.
+func (msgs Messages) MigrationTooLarge() string {
+	return Catalog.Format(msgs.locale, "migrationTooLarge", nil)
+}
+
+// MigrationEncryptedSource says "This export is encrypted; export an unencrypted connection configuration and try again"
+// in the language the app shows.
+func MigrationEncryptedSource() string { return In(i18n.Locale()).MigrationEncryptedSource() }
+
+// MigrationEncryptedSource says "This export is encrypted; export an unencrypted connection configuration and try again"
+// in the language of msgs.
+func (msgs Messages) MigrationEncryptedSource() string {
+	return Catalog.Format(msgs.locale, "migrationEncryptedSource", nil)
+}

@@ -125,6 +125,7 @@ func (a *App) View(c *ui.Context) {
 	a.installView(c, m)
 	a.quickView(c, m)
 	a.importView(c, m)
+	a.migrationView(c, m)
 	a.promptsView(c, m)
 	a.oscAskView(c, m)
 	a.aiSheets(c, m)
