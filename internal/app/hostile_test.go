@@ -26,6 +26,7 @@ func hostilePane(t *testing.T, ffs *sshtest.FakeFS) (*App, *ui.Tester, *conn, st
 	h := addHost(t, a, srv, "box", "secret")
 	a.known.Add(srv.Addr, srv.HostKey.PublicKey())
 	a.selected = h.ID
+	showLocal(a)
 	tt.Frame()
 	mustClick(t, tt, "Open Files")
 	fc := a.focused()
@@ -155,7 +156,7 @@ func TestHostileNamesOpenWithDefaultApp(t *testing.T) {
 	}
 	// A program asks first; cancelling opens nothing.
 	open("run.exe")
-	if !tt.HasText("Open a program file?") {
+	if !tt.HasText("Open “run.exe”") || !tt.HasText("“run.exe” is a type of file that opening may run as a program on this computer, with your permissions. Only open it if you trust the server and the file. To read or change it safely, use Open as Text instead.") {
 		t.Fatalf("no question in %q", tt.Texts())
 	}
 	mustClick(t, tt, "Cancel")
@@ -171,11 +172,9 @@ func TestHostileNamesOpenWithDefaultApp(t *testing.T) {
 			t.Errorf("written outside the cache: %s", p)
 		}
 	}
-	// Confirmed, it opens (the binary question comes next).
+	// Confirmed, it opens.
 	open("run.exe")
-	mustClick(t, tt, "Open")
-	waitFor(t, tt, "binary question", func() bool { return tt.HasText("Open a binary file?") })
-	mustClick(t, tt, "Open")
+	mustClick(t, tt, "Open With Default App")
 	waitFor(t, tt, "opened", func() bool { mu.Lock(); defer mu.Unlock(); return len(opened) == 1 })
 	if filepath.Base(opened[0]) != "run.exe" || !strings.HasPrefix(opened[0], cache) {
 		t.Fatalf("opened %v", opened)

@@ -3,6 +3,8 @@ package app
 import (
 	"strings"
 	"testing"
+
+	"github.com/Licoy/sshyard/locales"
 )
 
 // The questions before opening a large file or a program show its name
@@ -19,11 +21,11 @@ func TestOpenQuestionsEscapeName(t *testing.T) {
 		{"program, newline", "/d/a\r\nb\x1b.bat", true, "“a\\r\\nb\\x1b.bat” is a type of file"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			fc.fs.open, fc.fs.openOpen = nil, false
+			fc.fs.open, fc.fs.openOpen, fc.fs.with, fc.fs.withOpen = nil, false, nil, false
 			if tc.local {
-				a.startOpen(fc, tc.path, 1, true)
+				a.openWith(fc, true, tc.path, 1, false, locales.In("en"))
 			} else {
-				a.checkSize(fc, tc.path, 2<<30, false)
+				a.editFile(fc, true, tc.path, 2<<30, false)
 			}
 			tt.Frame()
 			found := false

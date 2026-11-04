@@ -196,7 +196,7 @@ var appMods = func() ui.Modifiers {
 	return ui.Ctrl | ui.Shift
 }()
 
-// saveMods is the modifier of saving in an editor pane: Cmd on macOS,
+// saveMods is the modifier of saving in an editor window: Cmd on macOS,
 // Ctrl elsewhere.
 var saveMods = func() ui.Modifiers {
 	if runtime.GOOS == "darwin" {

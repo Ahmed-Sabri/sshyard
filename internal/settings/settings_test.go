@@ -28,12 +28,12 @@ func TestRoundTrip(t *testing.T) {
 
 func TestNormalize(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "s.json")
-	os.WriteFile(p, []byte(`{"theme":"sepia","language":"fr","terminalFontSize":99,"transferConcurrency":0,"openConfirmMB":5000}`), 0o600)
+	os.WriteFile(p, []byte(`{"theme":"sepia","language":"fr","terminalFontSize":99,"transferConcurrency":0,"openConfirmMB":5000,"filesSplit":95}`), 0o600)
 	s, err := Load(p)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s.Theme != theme.Auto || s.Language != "" || s.TerminalFontSize != 13 || s.TransferConcurrency != 3 || s.OpenConfirmMB != 10 {
+	if s.Theme != theme.Auto || s.Language != "" || s.TerminalFontSize != 13 || s.TransferConcurrency != 3 || s.OpenConfirmMB != 10 || s.FilesSplit != 50 || s.FilesDual {
 		t.Errorf("not normalized: %+v", s)
 	}
 }

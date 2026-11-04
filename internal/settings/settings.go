@@ -52,6 +52,13 @@ type Settings struct {
 	// OpenConfirmMB is the size, in MB, from which opening a remote file
 	// (in the editor or a local program) asks first, 1 to 1024.
 	OpenConfirmMB int `json:"openConfirmMB"`
+	// FilesDual shows this computer's files beside the server's in a
+	// files pane; off, the default, shows the server's alone. A new pane
+	// follows the last choice.
+	FilesDual bool `json:"filesDual,omitempty"`
+	// FilesSplit is the share, in percent, of the first side of a files
+	// pane showing both, 10 to 90.
+	FilesSplit float32 `json:"filesSplit,omitempty"`
 	// OSC52Write is whether a remote program may copy to the local
 	// clipboard: allow (the default), ask or deny.
 	OSC52Write string `json:"osc52Write"`
@@ -343,7 +350,7 @@ var Languages = []string{"en", "zh-Hans", "zh-Hant", "ko", "ja"}
 
 // Default returns the defaults.
 func Default() Settings {
-	return Settings{Theme: theme.Auto, CheckUpdates: true, UpdateIntervalHours: 1, TerminalFontSize: 13, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, OSC52Write: OSC52Ask, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
+	return Settings{Theme: theme.Auto, CheckUpdates: true, UpdateIntervalHours: 1, TerminalFontSize: 13, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, FilesSplit: 50, OSC52Write: OSC52Ask, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
 		AIDefaultAgent: "builtin", AIDefaultMode: "ask", AIReviewStrictness: AIReviewStandard, AIContextLines: 200, AIAuditRetentionDays: 90, AIRedact: true, MCPPort: MCPPortDefault}
 }
 
@@ -399,6 +406,9 @@ func (s *Settings) Normalize() {
 	}
 	if s.OpenConfirmMB < 1 || s.OpenConfirmMB > 1024 {
 		s.OpenConfirmMB = d.OpenConfirmMB
+	}
+	if s.FilesSplit < 10 || s.FilesSplit > 90 {
+		s.FilesSplit = d.FilesSplit
 	}
 	switch s.OSC52Write {
 	case OSC52Allow, OSC52Ask, OSC52Deny:

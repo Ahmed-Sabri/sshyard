@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -37,6 +38,28 @@ type sideList struct {
 	rows []rowMark
 	// refocus gives the rows the keys back as their menu closes.
 	refocus bool
+	// width is the table's width in the last frame, which the columns it
+	// shows follow.
+	width float32
+	// sizes are the sizes of folders here calculated on request, by name.
+	sizes map[string]*dirSize
+}
+
+// dirSize is the size of a folder, calculated on request.
+type dirSize struct {
+	size     int64
+	counting bool
+	cancel   context.CancelFunc
+}
+
+// dropSizes stops the folder sizes being calculated and forgets them all.
+func (sd *sideList) dropSizes() {
+	for _, d := range sd.sizes {
+		if d.cancel != nil {
+			d.cancel()
+		}
+	}
+	sd.sizes = nil
 }
 
 // rowMark is where a row of a side showed: its entry's name and the top
@@ -52,6 +75,7 @@ type rowMark struct {
 func (sd *sideList) show(dir string, es []sftpsvc.Entry) {
 	if dir != sd.dir {
 		sd.chosen.Clear()
+		sd.dropSizes()
 	} else {
 		there := make(map[string]bool, len(es))
 		for _, e := range es {
@@ -166,15 +190,18 @@ type filesState struct {
 	delOpen      bool
 	conflict     *conflictAsk
 	conflictOpen bool
-	// open confirms opening a large or binary file
+	// open confirms opening a large file in the editor
 	open     *openAsk
 	openOpen bool
-	// upConflict is a copy opened in another app whose upload was
-	// refused: the server's file changed.
-	upConflict     *localConflict
-	upConflictOpen bool
-	// edits are the files opened in other apps
-	edits localEdits
+	// with asks how to open a file the app does not show; opens are
+	// remote files downloading to open in another app, and copies the
+	// copies they open.
+	with     *withAsk
+	withOpen bool
+	opens    []pendingOpen
+	copies   localCopies
+	// names are the server's user and group names, by ID, once read.
+	names *idNames
 	// skipped is what the last download planned left out, shown until
 	// dismissed or the next download (planned, failing to be, or its
 	// question about files already there canceled).
@@ -190,8 +217,6 @@ type filesState struct {
 	// report its directory, snippetOpen is its sheet with the snippet.
 	noReportHidden bool
 	snippetOpen    bool
-	// split is the local side's share of the room, in percent.
-	split float32
 	// queueOpen is the transfers sheet, queue its list.
 	queueOpen bool
 	queue     ui.ListState
@@ -257,7 +282,9 @@ func (fs *filesState) close() {
 		fs.info.cancel()
 	}
 	fs.closePreview()
-	fs.edits.close()
+	fs.remote.dropSizes()
+	fs.local.dropSizes()
+	fs.copies.close()
 	fs.pub.Lock()
 	fs.pub.client = nil
 	fs.pub.Unlock()
@@ -353,6 +380,25 @@ func (a *App) ensureSFTP(cn *conn) {
 			s.client, s.connects, s.unfinished = c, connects, un
 			s.show(dir, es)
 			cn.fs.publish(c, connects)
+			if cn.kind == layout.Files {
+				a.readNames(cn, c)
+			}
+		})
+	}()
+}
+
+// idNames are a server's user and group names, by ID.
+type idNames struct{ users, groups map[uint32]string }
+
+// readNames reads the names of the users and groups of the server of c,
+// the pane's SFTP client, for the owners of its files.
+func (a *App) readNames(cn *conn, c *sftpsvc.Client) {
+	go func() {
+		users, groups := c.Names()
+		a.post(func() {
+			if cn.fs.remote.client == c {
+				cn.fs.names = &idNames{users, groups}
+			}
 		})
 	}()
 }
@@ -380,10 +426,7 @@ func (a *App) listRemote(s *remoteSide, dir string) {
 
 func (a *App) listLocal(l *localSide, dir string) {
 	if dir == "" {
-		dir = a.p.HomeDir
-		if dir == "" {
-			dir, _ = os.UserHomeDir()
-		}
+		dir = a.localHome()
 	}
 	es, err := sftpsvc.ListLocal(dir)
 	l.loaded = true
@@ -555,10 +598,13 @@ func (a *App) enqueue(cn *conn, ask *conflictAsk) {
 	}()
 }
 
-// refreshSides lists both sides of a files pane again.
+// refreshSides lists both sides of a files pane again: the local side
+// once it has shown.
 func (a *App) refreshSides(cn *conn) {
 	fs := cn.fs
-	a.listLocal(&fs.local, fs.local.dir)
+	if fs.local.loaded {
+		a.listLocal(&fs.local, fs.local.dir)
+	}
 	if fs.remote.client != nil {
 		a.listRemote(&fs.remote, fs.remote.dir)
 	}
@@ -637,16 +683,27 @@ var deleteMods, deleteKey = func() (ui.Modifiers, ui.Key) {
 // of a row chosen drags the entries chosen to the other side. A right
 // click opens the menu of the entries chosen (fileEntries), or of the
 // folder off the rows. opened reports a double click on a chosen row's
-// name, which opens the row as Submitted does.
-func (a *App) fileTable(c *ui.Context, cn *conn, remote bool, m locales.Messages, tok theme.Tokens, narrow bool) (tb ui.Element, opened bool) {
+// name, which opens the row as Submitted does. The table shows the
+// columns its width has room for (tableColumns).
+func (a *App) fileTable(c *ui.Context, cn *conn, remote bool, m locales.Messages, tok theme.Tokens) (tb ui.Element, opened bool) {
 	fs := cn.fs
 	sd := fs.side(remote)
 	es, list := sd.entries, &sd.list
 	list.Key = func(i int) any { return es[i].Name }
 	list.Label = func(i int) string { return es[i].Name }
-	cols := []ui.TableColumn{{Title: m.ColName()}, {Title: m.ColSize(), Width: 80, Align: ui.End}}
-	if !narrow {
-		cols = append(cols, ui.TableColumn{Title: m.ColModified(), Width: 130})
+	ids := tableColumns(sd.width, remote)
+	cols := make([]ui.TableColumn, len(ids))
+	for i, id := range ids {
+		switch id {
+		case colName:
+			cols[i] = ui.TableColumn{ID: id, Title: m.ColName()}
+		case colSize:
+			cols[i] = ui.TableColumn{ID: id, Title: m.ColSize(), Width: 80, Align: ui.End}
+		case colModified:
+			cols[i] = ui.TableColumn{ID: id, Title: m.ColModified(), Width: 130}
+		case colPerm:
+			cols[i] = ui.TableColumn{ID: id, Title: m.InfoPermissions(), Width: 150}
+		}
 	}
 	key, side := "ltable", 0
 	if remote {
@@ -679,8 +736,8 @@ func (a *App) fileTable(c *ui.Context, cn *conn, remote bool, m locales.Messages
 		if on {
 			muted = tok.AccentText // readable on the choice
 		}
-		switch col {
-		case 0:
+		switch ids[col] {
+		case colName:
 			ui.Row(c).Grow(1).MinWidth(0).AlignItems(ui.Center).Children(func() {
 				name := ui.Row(c).Gap(6).Shrink(1).MinWidth(0).AlignItems(ui.Center).Children(func() {
 					fileImage(c, entryIcon(e), 16)
@@ -727,20 +784,31 @@ func (a *App) fileTable(c *ui.Context, cn *conn, remote bool, m locales.Messages
 					list.Focus(c)
 				}
 			})
-		case 1:
-			ui.Row(c).Grow(1).Justify(ui.End).Children(func() {
+		case colSize:
+			ui.Row(c).Grow(1).Justify(ui.End).AlignItems(ui.Center).Children(func() {
 				if !e.IsDir {
 					ui.Text(c, humanSize(e.Size)).TextColor(muted).SingleLine()
+				} else {
+					a.dirSizeCell(c, cn, remote, e.Name, on, tok, m)
 				}
 			})
-		case 2:
+		case colModified:
 			ui.Text(c, e.ModTime.Format("2006-01-02 15:04")).TextColor(muted).SingleLine().Grow(1)
+		case colPerm:
+			text, detail := a.permText(fs, remote, e, m)
+			ui.Text(c, text).TextColor(muted).SingleLine().Shrink(1).Grow(1).Tooltip(detail)
 		}
 	}).Grow(1).FillWidth()
 	if extend >= 0 {
 		list.ExtendTo(extend)
 	}
 	b := tb.Bounds()
+	if b.W != sd.width {
+		sd.width = b.W
+		if len(tableColumns(b.W, remote)) != len(ids) {
+			c.Invalidate() // the columns for this width show next frame
+		}
+	}
 	tb.HandleInput(func(ev ui.InputEvent) bool {
 		if ev.Kind != ui.InputPointerDown || ev.Button != 1 {
 			return false
@@ -758,6 +826,128 @@ func (a *App) fileTable(c *ui.Context, cn *conn, remote bool, m locales.Messages
 	}
 	a.fileKeys(c, cn, remote, tb, entries)
 	return tb, opened
+}
+
+// The columns of a side's table, by ID.
+const (
+	colName     = "name"
+	colSize     = "size"
+	colModified = "modified"
+	colPerm     = "perm"
+)
+
+// tableColumns are the columns a side's table has room for at width w (0
+// before it has shown): the name, then its size, when it was modified and
+// its permissions as the table widens. Windows has no permissions to show
+// on the local side.
+func tableColumns(w float32, remote bool) []string {
+	ids := []string{colName}
+	if w == 0 || w >= 260 {
+		ids = append(ids, colSize)
+	}
+	if w >= 420 {
+		ids = append(ids, colModified)
+	}
+	if w >= 600 && (remote || runtime.GOOS != "windows") {
+		ids = append(ids, colPerm)
+	}
+	return ids
+}
+
+// permText is an entry's permissions as its table shows them, the
+// owner's and in octal, with the owner's name: "rwx (755/ubuntu)"; and
+// in full, with the owner and the group, for its tooltip.
+func (a *App) permText(fs *filesState, remote bool, e sftpsvc.Entry, m locales.Messages) (text, detail string) {
+	perm := e.Mode.Perm()
+	text = perm.String()[1:4] + " (" + fmt.Sprintf("%03o", uint32(perm))
+	if !e.IDs {
+		return text + ")", e.Mode.String()
+	}
+	user, group := strconv.FormatUint(uint64(e.UID), 10), strconv.FormatUint(uint64(e.GID), 10)
+	switch {
+	case !remote:
+		user, group = sftpsvc.LocalUser(e.UID), sftpsvc.LocalGroup(e.GID)
+	case fs.names != nil:
+		if n, ok := fs.names.users[e.UID]; ok {
+			user = n
+		}
+		if n, ok := fs.names.groups[e.GID]; ok {
+			group = n
+		}
+	}
+	// The server's names, shown so that they cannot break the line.
+	user, group = shownName(user), shownName(group)
+	return text + "/" + user + ")", m.PermDetail(e.Mode.String(), user, group)
+}
+
+// dirSizeCell is a folder's size in its row: a link that calculates it,
+// a spinner while it does, then the size.
+func (a *App) dirSizeCell(c *ui.Context, cn *conn, remote bool, name string, on bool, tok theme.Tokens, m locales.Messages) {
+	sd := cn.fs.side(remote)
+	fg := tok.Accent
+	if on {
+		fg = tok.AccentText
+	}
+	switch d := sd.sizes[name]; {
+	case d == nil:
+		label := m.CalculateSizeHint(shownName(name))
+		b := ui.ButtonBase(c.Key("calc:"+name)).Label(label).Tooltip(label).Padding(0, 4).Radius(theme.RadiusSmall).
+			Disabled(remote && cn.fs.remote.client == nil)
+		if b.Hovered() {
+			b.Background(fg.Alpha(0.12)).Cursor(ui.CursorPointer)
+		}
+		b.Children(func() {
+			ui.Text(c, m.CalculateSize()).FontSize(theme.Footnote).TextColor(fg).SingleLine()
+		})
+		if b.Clicked() {
+			a.calcSize(cn, remote, name)
+		}
+	case d.counting:
+		ui.Spinner(c).Label(m.CalculatingSize(shownName(name))).TextColor(fg)
+	default:
+		muted := tok.TextMuted
+		if on {
+			muted = tok.AccentText
+		}
+		ui.Text(c, humanSize(d.size)).TextColor(muted).SingleLine()
+	}
+}
+
+// calcSize calculates the size of the folder name, in a side's folder.
+func (a *App) calcSize(cn *conn, remote bool, name string) {
+	fs := cn.fs
+	sd := fs.side(remote)
+	sc := fs.remote.client
+	if remote && sc == nil {
+		return
+	}
+	p := sidePath(remote, sd.dir, name)
+	ctx, cancel := context.WithCancel(context.Background())
+	d := &dirSize{counting: true, cancel: cancel}
+	if sd.sizes == nil {
+		sd.sizes = map[string]*dirSize{}
+	}
+	sd.sizes[name] = d
+	go func() {
+		defer cancel()
+		var size int64
+		var err error
+		if remote {
+			size, _, err = sc.DirSize(ctx, p)
+		} else {
+			size, _, err = sftpsvc.LocalDirSize(ctx, p)
+		}
+		a.post(func() {
+			if sd.sizes[name] != d {
+				return // gone from the folder, or the folder left
+			}
+			if err != nil {
+				delete(sd.sizes, name)
+				return
+			}
+			d.size, d.counting = size, false
+		})
+	}()
 }
 
 // fileKeys are the keys of a side's table while it has the focus: Delete
@@ -799,18 +989,19 @@ func sideHeader(c *ui.Context, tok theme.Tokens, ic *icons.Icon, title string, a
 	})
 }
 
-// filesBody is a files pane below its header: local and remote side by
-// side (stacked when the pane is narrow), then the pane's transfers.
+// filesBody is a files pane below its header: the server's files, with
+// this computer's beside them (stacked when the pane is narrow) while the
+// pane shows both (Settings.FilesDual), then the pane's transfers.
 func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, width float32, tok theme.Tokens, m locales.Messages) {
 	fs := cn.fs
-	if !fs.local.loaded {
+	dual := a.settings.FilesDual
+	if dual && !fs.local.loaded {
 		a.listLocal(&fs.local, fs.local.dir)
 	}
 	a.ensureSFTP(cn)
 	a.refreshForTransfers(c, cn)
 	l, s := &fs.local, &fs.remote
 	stacked := width > 0 && width < 620
-	narrow := width > 0 && width < 900
 	body := ui.Column(c.Key("files")).Grow(1).FillWidth().Padding(10).Gap(10)
 	body.Children(func() {
 		a.unfinishedView(c, cn, tok, m)
@@ -818,12 +1009,11 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 		a.planningView(c, cn, tok, m)
 		a.workingView(c, cn, tok, m)
 		a.skippedView(c, cn, tok, m)
-		if fs.split <= 0 || fs.split >= 100 {
-			fs.split = 50
-		}
 		// Each side keeps clear of the line the sides are resized by.
 		gap := func(first bool) (top, right, bottom, left float32) {
 			switch {
+			case !dual:
+				return 0, 0, 0, 0
 			case stacked && first:
 				return 0, 0, 5, 0
 			case stacked:
@@ -858,7 +1048,7 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 						}
 					})
 					a.crumbsBar(c, cn, false, tok, m)
-					tb, opened := a.fileTable(c, cn, false, m, tok, narrow)
+					tb, opened := a.fileTable(c, cn, false, m, tok)
 					if e, ok := selected(l.sel, l.entries); (tb.Submitted() || opened) && ok {
 						a.openEntry(cn, false, e)
 					}
@@ -878,29 +1068,55 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 				}
 			})
 		}
+		// remoteActions are the remote side's buttons: in its header
+		// beside the local side, else in one row with its breadcrumbs.
+		remoteActions := func() {
+			if s.opening {
+				ui.Spinner(c)
+			}
+			picked := s.picked()
+			off := s.client == nil
+			if (IconButton{Icon: icons.GoUp, Label: m.RemoteUp(), Disabled: off}).Clicked(c, "rup") && s.dir != "" {
+				a.listRemote(s, sftpsvc.RemoteParent(s.dir))
+			}
+			if (IconButton{Icon: icons.Refresh, Label: m.RemoteRefresh(), Disabled: off}).Clicked(c, "rrefresh") {
+				a.listRemote(s, s.dir)
+			}
+			if (IconButton{Icon: icons.NewFolder, Label: m.RemoteNewFolder(), Disabled: off}).Clicked(c, "rmkdir") {
+				fs.ask, fs.askOpen = &nameAsk{kind: askMkdir, remote: true}, true
+			}
+			if !dual {
+				if (IconButton{Icon: icons.Upload, Label: m.UploadFiles(), Disabled: off || a.p.PickFiles == nil}).Clicked(c, "rupfiles") {
+					a.pickUpload(cn, false, m)
+				}
+				if (IconButton{Icon: icons.UploadFolder, Label: m.UploadFolder(), Disabled: off || a.p.PickFolder == nil}).Clicked(c, "rupfolder") {
+					a.pickUpload(cn, true, m)
+				}
+			}
+			label := m.DownloadSelected()
+			if !dual {
+				label = m.DownloadTo()
+			}
+			if (IconButton{Icon: icons.Download, Label: label, Disabled: off || len(picked) == 0}).Clicked(c, "download") {
+				a.downloadTo(cn, s.paths(true, picked), m)
+			}
+		}
 		remotePane := func() {
 			ui.Box(c.Key("rpad")).Fill().Padding(gap(false)).Children(func() {
 				remote := sideCard("remote")
 				remote.Children(func() {
-					picked := s.picked()
-					sideHeader(c, tok, icons.Host, m.Remote(), func() {
-						if s.opening {
-							ui.Spinner(c)
-						}
-						off := s.client == nil
-						if (IconButton{Icon: icons.GoUp, Label: m.RemoteUp(), Disabled: off}).Clicked(c, "rup") && s.dir != "" {
-							a.listRemote(s, sftpsvc.RemoteParent(s.dir))
-						}
-						if (IconButton{Icon: icons.Refresh, Label: m.RemoteRefresh(), Disabled: off}).Clicked(c, "rrefresh") {
-							a.listRemote(s, s.dir)
-						}
-						if (IconButton{Icon: icons.NewFolder, Label: m.RemoteNewFolder(), Disabled: off}).Clicked(c, "rmkdir") {
-							fs.ask, fs.askOpen = &nameAsk{kind: askMkdir, remote: true}, true
-						}
-						if (IconButton{Icon: icons.Download, Label: m.DownloadSelected(), Disabled: off || len(picked) == 0}).Clicked(c, "download") {
-							a.Download(cn, s.paths(true, picked), l.dir)
-						}
-					})
+					if dual {
+						sideHeader(c, tok, icons.Host, m.Remote(), remoteActions)
+					} else {
+						ui.Row(c.Key("rbar")).Gap(2).Height(32).Shrink(0).FillWidth().AlignItems(ui.Center).Children(func() {
+							ui.Row(c.Key("rcrumbsbox")).Grow(1).Shrink(1).MinWidth(0).AlignItems(ui.Center).Children(func() {
+								if s.client != nil {
+									a.crumbsBar(c, cn, true, tok, m)
+								}
+							})
+							remoteActions()
+						})
+					}
 					if s.client == nil {
 						ui.Column(c).Grow(1).Center().Children(func() {
 							if s.opening || cn.s.Status().State != session.Connected {
@@ -912,8 +1128,10 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 						})
 						return
 					}
-					a.crumbsBar(c, cn, true, tok, m)
-					tb, opened := a.fileTable(c, cn, true, m, tok, narrow)
+					if dual {
+						a.crumbsBar(c, cn, true, tok, m)
+					}
+					tb, opened := a.fileTable(c, cn, true, m, tok)
 					if a.focusReq == cn.id && a.page == pageWorkspace {
 						tb.Focus()
 						a.focusReq = 0
@@ -942,12 +1160,18 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 				}
 			})
 		}
-		if stacked {
-			ui.SplitVerticalPercent(c.Key("stacked"), &fs.split, localPane, remotePane).Grow(1).FillWidth()
-		} else {
-			ui.SplitPercent(c.Key("sides"), &fs.split, localPane, remotePane).Grow(1).FillWidth()
+		switch {
+		case !dual:
+			ui.Column(c.Key("single")).Grow(1).FillWidth().MinHeight(0).Children(remotePane)
+		case stacked:
+			ui.SplitVerticalPercent(c.Key("stacked"), &a.filesSplit, localPane, remotePane).Grow(1).FillWidth()
+		default:
+			ui.SplitPercent(c.Key("sides"), &a.filesSplit, localPane, remotePane).Grow(1).FillWidth()
 		}
 	})
+	if dual {
+		a.saveFilesSplit(c)
+	}
 	if body.FocusWithin() && t.Focus != n.ID {
 		t.Focus = n.ID
 	}
@@ -955,12 +1179,126 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 	a.deleteView(c, cn, m)
 	a.conflictView(c, cn, m)
 	a.openAskView(c, cn, m)
-	a.localConflictView(c, cn, m)
+	a.withView(c, cn, tok, m)
 	a.snippetView(c, cn, tok, m)
 	a.transfersSheet(c, cn, tok, m)
 	a.infoView(c, cn, tok, m)
 	a.compressView(c, cn, tok, m)
 	a.previewView(c, cn, tok, m)
+}
+
+// splitRest is how long the files panes' split rests before it is saved.
+const splitRest = 500 * time.Millisecond
+
+// saveFilesSplit saves the files panes' split once it rests where it was
+// dragged to, kept between 10 and 90 percent.
+func (a *App) saveFilesSplit(c *ui.Context) {
+	a.filesSplit = min(max(a.filesSplit, 10), 90)
+	if a.filesSplit == a.settings.FilesSplit {
+		return
+	}
+	if a.filesSplit != a.splitSeen {
+		a.splitSeen, a.splitAt = a.filesSplit, c.Now()
+	}
+	if wait := splitRest - c.Now().Sub(a.splitAt); wait > 0 {
+		c.After(wait)
+		return
+	}
+	st := a.settings
+	st.FilesSplit = a.filesSplit
+	a.ApplySettings(st)
+}
+
+// toggleDual shows this computer's files in the files panes beside the
+// server's, or no longer, for every pane and the next ones.
+func (a *App) toggleDual() {
+	st := a.settings
+	st.FilesDual = !st.FilesDual
+	a.ApplySettings(st)
+}
+
+// pickUpload asks for files, or a folder, to upload into the remote
+// folder of a files pane.
+func (a *App) pickUpload(cn *conn, folder bool, m locales.Messages) {
+	id, dir := cn.id, cn.fs.remote.dir
+	title := m.ChooseUploadFiles()
+	if folder {
+		title = m.ChooseUploadFolder()
+	}
+	go func() {
+		var paths []string
+		var err error
+		if folder {
+			var p string
+			if p, err = a.p.PickFolder(title, ""); p != "" {
+				paths = []string{p}
+			}
+		} else {
+			paths, err = a.p.PickFiles(title)
+		}
+		a.post(func() {
+			cn := a.conns[id]
+			if cn == nil || cn.fs == nil {
+				return
+			}
+			if err != nil {
+				a.filesErr(cn, true, err)
+				return
+			}
+			a.Upload(cn, paths, dir)
+		})
+	}()
+}
+
+// downloadTo downloads remote paths of a files pane: into the local
+// folder it shows beside them, else into a folder asked for.
+func (a *App) downloadTo(cn *conn, paths []string, m locales.Messages) {
+	if len(paths) == 0 {
+		return
+	}
+	if a.settings.FilesDual && cn.fs.local.dir != "" {
+		a.Download(cn, paths, cn.fs.local.dir)
+		return
+	}
+	if a.p.PickFolder == nil {
+		return
+	}
+	id, title, start := cn.id, m.ChooseDownloadFolder(), a.downloadsDir()
+	go func() {
+		dir, err := a.p.PickFolder(title, start)
+		a.post(func() {
+			cn := a.conns[id]
+			if cn == nil || cn.fs == nil {
+				return
+			}
+			if err != nil {
+				a.filesErr(cn, false, err)
+				return
+			}
+			a.Download(cn, paths, dir)
+		})
+	}()
+}
+
+// localHome is where the local side of a files pane starts.
+func (a *App) localHome() string {
+	if a.p.HomeDir != "" {
+		return a.p.HomeDir
+	}
+	dir, _ := os.UserHomeDir()
+	return dir
+}
+
+// downloadsDir is where a download is asked to go first: the user's
+// Downloads folder, when there is one.
+func (a *App) downloadsDir() string {
+	home := a.localHome()
+	if d := filepath.Join(home, "Downloads"); home != "" {
+		if fi, err := os.Stat(d); err == nil && fi.IsDir() {
+			return d
+		}
+	}
+	return home
 }
 
 // selected is the entry of row sel of es, if any.
@@ -969,24 +1307,6 @@ func selected(sel int, es []sftpsvc.Entry) (sftpsvc.Entry, bool) {
 		return sftpsvc.Entry{}, false
 	}
 	return es[sel], true
-}
-
-// openEntry opens an entry of a side, as a double click or Enter does: a
-// folder lists, an image shows, another remote file opens in the editor
-// and another local file uploads.
-func (a *App) openEntry(cn *conn, remote bool, e sftpsvc.Entry) {
-	sd := cn.fs.side(remote)
-	p := sidePath(remote, sd.dir, e.Name)
-	switch {
-	case e.IsDir:
-		a.goTo(cn, remote, p)
-	case isImage(e):
-		a.openPreview(cn, remote, e.Name)
-	case remote:
-		a.openRemote(cn, p, e.Size)
-	case cn.fs.remote.client != nil:
-		a.Upload(cn, []string{p}, cn.fs.remote.dir)
-	}
 }
 
 // refreshForTransfers lists the sides again as transfers finish: once

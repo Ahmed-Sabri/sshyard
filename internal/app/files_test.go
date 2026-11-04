@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Licoy/sshyard/internal/layout"
+	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/internal/sftpsvc"
 	"github.com/Licoy/sshyard/internal/sshtest"
 	"github.com/egoist/mygo/ui"
@@ -25,6 +26,13 @@ func filesPane(t *testing.T) (*App, *ui.Tester, *conn, string) {
 
 // filesPaneOn is filesPane with setup run on the server first.
 func filesPaneOn(t *testing.T, setup func(*sshtest.Server)) (*App, *ui.Tester, *conn, string) {
+	t.Helper()
+	return filesPaneAs(t, true, setup)
+}
+
+// filesPaneAs is filesPaneOn showing the local side beside the server's,
+// or the server's files alone as a pane starts.
+func filesPaneAs(t *testing.T, dual bool, setup func(*sshtest.Server)) (*App, *ui.Tester, *conn, string) {
 	t.Helper()
 	srv, err := sshtest.Start("127.0.0.1:0", "demo", "secret")
 	if err != nil {
@@ -43,11 +51,23 @@ func filesPaneOn(t *testing.T, setup func(*sshtest.Server)) (*App, *ui.Tester, *
 	h := addHost(t, a, srv, "box", "secret")
 	a.known.Add(srv.Addr, srv.HostKey.PublicKey())
 	a.selected = h.ID
+	if dual {
+		showLocal(a)
+	}
 	tt.Frame()
 	mustClick(t, tt, "Open Files")
 	fc := a.focused()
 	waitFor(t, tt, "files connected", func() bool { return fc.fs.remote.client != nil })
 	return a, tt, fc, root
+}
+
+// showLocal shows this computer's files beside the server's in the files
+// panes, as their header's toggle does. The tests of what the local side
+// does start with it.
+func showLocal(a *App) {
+	if !a.settings.FilesDual {
+		a.toggleDual()
+	}
 }
 
 // skipWindowsSFTP skips a test that moves files through the test server's
@@ -363,11 +383,12 @@ func TestFilesTransfersBadge(t *testing.T) {
 	}
 }
 
-// TestFilesSplit resizes the sides by dragging the line between them.
+// TestFilesSplit resizes the sides by dragging the line between them;
+// the files panes keep where it was left, and so do the next launches.
 func TestFilesSplit(t *testing.T) {
-	_, tt, fc, _ := filesPane(t)
-	if fc.fs.split != 50 {
-		t.Fatalf("split %v", fc.fs.split)
+	a, tt, _, _ := filesPane(t)
+	if a.filesSplit != 50 {
+		t.Fatalf("split %v", a.filesSplit)
 	}
 	lx, ly := center(t, tt, "Local")
 	rx, _ := center(t, tt, "Remote")
@@ -384,8 +405,57 @@ func TestFilesSplit(t *testing.T) {
 	tt.Move(x-120, ly+100)
 	tt.Release(x-120, ly+100)
 	tt.Frame()
-	if fc.fs.split >= 50 {
-		t.Errorf("split %v after dragging left", fc.fs.split)
+	got := a.filesSplit
+	if got >= 50 {
+		t.Errorf("split %v after dragging left", got)
+	}
+	if a.settings.FilesSplit != 50 {
+		t.Error("saved while it moves")
+	}
+	tt.Advance(time.Second)
+	tt.Frame()
+	if a.settings.FilesSplit != got {
+		t.Errorf("saved %v, want %v", a.settings.FilesSplit, got)
+	}
+	if saved, err := settings.Load(filepath.Join(a.p.DataDir, "settings.json")); err != nil || saved.FilesSplit != got || !saved.FilesDual {
+		t.Errorf("on disk %v %v %v", saved.FilesSplit, saved.FilesDual, err)
+	}
+	// A new pane shows both sides, split as the others are.
+	other, err := a.OpenFiles(a.focused().host.ID, openAt{}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	tt.Frame()
+	if oc := a.conns[other]; !oc.fs.local.loaded || !tt.HasText("Local") {
+		t.Errorf("new pane without the local side: %q", tt.Texts())
+	}
+}
+
+// A narrow pane stacks the local side over the server's, and the divider
+// between them drags up and down.
+func TestFilesSplitStacked(t *testing.T) {
+	a, tt, _, _ := filesPane(t)
+	tt.SetSize(760, 900)
+	tt.Frame()
+	tt.Frame()
+	lx, ly := center(t, tt, "Local")
+	_, ry := center(t, tt, "Remote")
+	r, ok := tt.Find("Divider")
+	if !ok {
+		t.Fatalf("no divider in %q", tt.Texts())
+	}
+	y := r.Y + r.H/2
+	if ry <= ly || y < ly || y > ry {
+		t.Fatalf("divider at %v, not between %v and %v", y, ly, ry)
+	}
+	tt.Press(lx, y)
+	tt.Move(lx, y+10)
+	tt.Move(lx, y+120)
+	tt.Release(lx, y+120)
+	tt.Frame()
+	if a.filesSplit <= 50 {
+		t.Errorf("split %v after dragging down", a.filesSplit)
 	}
 }
 
@@ -557,10 +627,11 @@ func TestFilesClickName(t *testing.T) {
 		t.Fatalf("a click after opening a folder chose %d of %v", s.sel, s.entries)
 	}
 	tt.Advance(time.Second) // not a double click with the one before
+	wins := fakeWindows(a)
 	mustClick(t, tt, "inner.txt")
 	mustClick(t, tt, "inner.txt")
-	waitFor(t, tt, "editor", func() bool {
-		ed := a.focused()
-		return ed != nil && ed.ed != nil
-	})
+	waitFor(t, tt, "editor", func() bool { return len(wins.list()) == 1 })
+	if ec := editorConn(a); ec == nil || ec.ed.name != "inner.txt" || len(fc.fs.transfers.List()) != 0 {
+		t.Fatalf("double click did not open the editor alone: %+v", fc.fs.transfers.List())
+	}
 }

@@ -104,10 +104,6 @@ func kindIcon(k layout.Kind, on bool) *icons.Icon {
 		return icons.FolderOn
 	case k == layout.Files:
 		return icons.Folder
-	case k == layout.Editor && on:
-		return icons.EditFileOn
-	case k == layout.Editor:
-		return icons.EditFile
 	case k == layout.AI && on:
 		return icons.RobotOn
 	case k == layout.AI:
@@ -162,11 +158,6 @@ func tempBadge(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 func (a *App) shortcuts(c *ui.Context) {
 	if c.Shortcut(appMods, ui.KeyK) {
 		a.OpenQuickConnect()
-	}
-	if c.Shortcut(saveMods, ui.KeyS) && a.page == pageWorkspace {
-		if cn := a.focused(); cn != nil && cn.kind == layout.Editor {
-			a.saveEditor(cn, false)
-		}
 	}
 	if c.Shortcut(appMods, ui.KeyF) && a.page == pageWorkspace {
 		if cn := a.focused(); cn != nil && cn.kind == layout.Terminal {
@@ -379,8 +370,6 @@ func (a *App) paneView(c *ui.Context, t *layout.Tab, n *layout.Node, tok theme.T
 				switch cn.kind {
 				case layout.Files:
 					title = m.FilesPane(a.pv(cn.host.Label()))
-				case layout.Editor:
-					title = cn.ed.name
 				}
 				tt := ui.Text(c, title).FontWeight(600).FontSize(theme.Footnote).SingleLine()
 				if !focused && multi {
@@ -415,9 +404,11 @@ func (a *App) paneView(c *ui.Context, t *layout.Tab, n *layout.Node, tok theme.T
 						t.Focus = n.ID
 						a.OpenFiles(cn.host.ID, openAt{pane: n.ID, edge: layout.Right}, cn)
 					}
-				} else if cn.kind == layout.Editor {
-					a.editorActions(c, t, n, cn, m)
 				} else {
+					if (IconButton{Icon: icons.LocalDisk, On: icons.LocalDiskOn, Label: m.ShowLocalFiles(), Toggle: true, Active: a.settings.FilesDual, Size: Tiny}).Clicked(c, "dual") {
+						t.Focus = n.ID
+						a.toggleDual()
+					}
 					a.transfersButton(c, cn, m)
 					a.followButton(c, t, n, cn, m)
 					if (IconButton{Icon: icons.Terminal, Label: m.OpenTerminalBeside(), Size: Tiny}).Clicked(c, "term") {
@@ -445,8 +436,6 @@ func (a *App) paneView(c *ui.Context, t *layout.Tab, n *layout.Node, tok theme.T
 			switch cn.kind {
 			case layout.Files:
 				a.filesBody(c, t, n, cn, pane.Bounds().W, tok, m)
-			case layout.Editor:
-				a.editorBody(c, t, n, cn, tok, m)
 			default:
 				a.termElement(c, t, n, cn, &pal, m)
 				if st.State == session.Connected {

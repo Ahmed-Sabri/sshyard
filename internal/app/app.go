@@ -67,6 +67,16 @@ type Platform struct {
 	// SaveFile shows the system's save dialog, at path to begin with; it
 	// may block. "" with no error is a cancel.
 	SaveFile func(title, path string) (string, error)
+	// PickFolder shows the system's open dialog for a folder, in start to
+	// begin with; it may block. "" with no error is a cancel.
+	PickFolder func(title, start string) (string, error)
+	// OpenWith lets the user choose the app that opens path, then opens
+	// it there; it may block. A cancel is no error. nil can't.
+	OpenWith func(path, title string) error
+	// OpenWindow opens a window of its own showing spec's view, for the
+	// file editor; it may block, and is never called on a frame. nil
+	// can't.
+	OpenWindow func(spec WindowSpec) Window
 	// Dial replaces net.Dialer, for tests.
 	Dial func(ctx context.Context, network, addr string) (net.Conn, error)
 	// HomeDir is where the local side of a files pane starts, and whose
@@ -75,6 +85,30 @@ type Platform struct {
 	// LocalUser is the login name a host without one defaults to, as ssh
 	// does; "" is the user running the app.
 	LocalUser string
+}
+
+// WindowSpec is a window the app opens beside the main one.
+type WindowSpec struct {
+	Title         string
+	Width, Height int
+	// StateKey remembers the window's size and place between launches.
+	StateKey string
+	View     func(*ui.Context)
+	// Closing is asked when the user closes the window; false keeps it
+	// open. It runs on no frame.
+	Closing func() bool
+	// Closed is told once the window is gone.
+	Closed func()
+}
+
+// Window is a window OpenWindow opened. Its methods may be called on no
+// frame only.
+type Window interface {
+	Focus()
+	Close()
+	SetTitle(string)
+	// SetEdited marks the window as holding unsaved changes.
+	SetEdited(bool)
 }
 
 type page int
@@ -280,6 +314,14 @@ type App struct {
 	clip                     clipGate
 	clipAsk                  *oscAsk
 	sbWidth                  float32
+	// filesSplit is the first side's share, in percent, of the files
+	// panes showing both sides; splitSeen and splitAt are its value last
+	// seen and since when, to save it once it rests.
+	filesSplit, splitSeen float32
+	splitAt               time.Time
+	// winSvc are the services of the editor windows, by their conn,
+	// which invalidate redraws too. Under mu.
+	winSvc map[int]ui.Services
 	// win is the window's buttons where the app draws them (see
 	// WindowControls), maximized whether the window is
 	win         *WindowControls
@@ -477,6 +519,7 @@ func (a *App) syncChoices() {
 	a.openMBChoice = float64(a.settings.OpenConfirmMB)
 	a.osc52KiB = float64(a.settings.OSC52MaxBytes >> 10)
 	a.sbWidth = float32(a.settings.SidebarWidth)
+	a.filesSplit = a.settings.FilesSplit
 	a.metOn = a.settings.MetricsEnabled
 	a.metEvery = intervalIndex(a.settings.MetricsInterval)
 	a.updEvery = max(slices.Index(settings.UpdateIntervals, a.settings.UpdateIntervalHours), 0)
@@ -609,9 +652,16 @@ func (a *App) post(fn func()) {
 func (a *App) invalidate() {
 	a.mu.Lock()
 	svc, live := a.svc, a.live
+	wins := make([]ui.Services, 0, len(a.winSvc))
+	for _, w := range a.winSvc {
+		wins = append(wins, w)
+	}
 	a.mu.Unlock()
 	if live {
 		svc.Invalidate()
+	}
+	for _, w := range wins {
+		w.Invalidate()
 	}
 }
 
@@ -733,9 +783,6 @@ func (a *App) makeConn(hostID string, kind layout.Kind, link int) (*conn, error)
 		c.fs = newFilesState(a.invalidate)
 		c.fs.transfers.Client = a.transferClient(c)
 		c.fs.transfers.SetConcurrency(a.settings.TransferConcurrency)
-		if kind == layout.Editor {
-			c.ed = newEditState("")
-		}
 	} else {
 		c.tv = newTermView(sessTarget{c.s}, float32(a.settings.TerminalFontSize))
 		c.tv.inputError = a.snippetSendResult
@@ -763,6 +810,14 @@ func (a *App) place(c *conn, at openAt) {
 func (a *App) shown(c *conn) {
 	a.focusReq = c.id
 	a.page = pageWorkspace
+	a.startConn(c)
+	if !a.restoring {
+		a.saveLayout()
+	}
+}
+
+// startConn starts c's session, once the secrets it needs are unlocked.
+func (a *App) startConn(c *conn) {
 	if c.temp == "" {
 		a.store.Touch(c.host.ID)
 	}
@@ -778,9 +833,6 @@ func (a *App) shown(c *conn) {
 		} else {
 			c.s.Start()
 		}
-	}
-	if !a.restoring {
-		a.saveLayout()
 	}
 }
 
@@ -1042,7 +1094,10 @@ func (a *App) finishCloseSession(c *conn) {
 	// Copies go here, not in the goroutine. RemoveAll unlinks the file
 	// before the folder, and c.close waits on the session.
 	if c.fs != nil {
-		c.fs.edits.close()
+		c.fs.copies.close()
+	}
+	if c.ed != nil {
+		a.closeEditorWindow(c)
 	}
 	go c.close()
 	a.dropTemp(c.temp)

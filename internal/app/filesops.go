@@ -100,13 +100,19 @@ func (a *App) fileEntries(cn *conn, remote bool, m locales.Messages) []menuEntry
 			out = append(out, menuEntry{Icon: icons.Image, Label: m.PreviewItem(), Key: ui.KeySpace, Disabled: remote && off,
 				Do: func() { a.openPreview(cn, remote, e.Name) }})
 		}
-		if one && remote && !e.IsDir {
+		if one && !e.IsDir {
+			roff := remote && off
 			out = append(out,
-				menuEntry{Icon: icons.EditFile, Label: m.EditInEditor(), Disabled: off, Do: func() { a.openRemote(cn, p, e.Size) }},
-				menuEntry{Icon: icons.OpenWith, Label: m.OpenWithDefault(), Disabled: off, Do: func() { a.openLocalProgram(cn, p, e.Size) }})
+				menuEntry{Icon: icons.EditFile, Label: m.EditInEditor(), Disabled: roff, Do: func() { a.editFile(cn, remote, p, e.Size, false) }},
+				menuEntry{Icon: icons.OpenWith, Label: m.OpenWithDefault(), Disabled: roff || a.p.OpenPath == nil, Do: func() { a.openWith(cn, remote, p, e.Size, false, m) }},
+				menuEntry{Icon: icons.OpenWithApp, Label: m.OpenWithApp(), Disabled: roff || a.p.OpenWith == nil, Do: func() { a.openWith(cn, remote, p, e.Size, true, m) }})
 		}
 		if remote {
-			out = append(out, menuEntry{Icon: icons.Download, Label: m.Download(), Disabled: off, Do: func() { a.Download(cn, paths, fs.local.dir) }})
+			label := m.Download()
+			if !a.settings.FilesDual {
+				label = m.DownloadTo()
+			}
+			out = append(out, menuEntry{Icon: icons.Download, Label: label, Disabled: off, Do: func() { a.downloadTo(cn, paths, m) }})
 		} else {
 			out = append(out, menuEntry{Icon: icons.Upload, Label: m.Upload(), Disabled: off, Do: func() { a.Upload(cn, paths, fs.remote.dir) }})
 		}

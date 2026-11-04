@@ -371,6 +371,7 @@ func TestFilesPaneInSplit(t *testing.T) {
 	srv.SFTPRoot = root
 	os.WriteFile(filepath.Join(root, "remote.txt"), []byte("from server"), 0o644)
 	a, tt := newTestApp(t)
+	showLocal(a)
 	os.WriteFile(filepath.Join(a.p.HomeDir, "local.txt"), []byte("from client"), 0o644)
 	term := connected(t, a, tt, srv)
 	tt.Frame()

@@ -3805,11 +3805,11 @@ func (msgs Messages) OpenConfirmMB() string {
 	return Catalog.Format(msgs.locale, "openConfirmMB", nil)
 }
 
-// OpenConfirmHint says "Files larger than this, or that aren't text, ask before they open in the editor or another app."
+// OpenConfirmHint says "Files larger than this ask before they open in the editor."
 // in the language the app shows.
 func OpenConfirmHint() string { return In(i18n.Locale()).OpenConfirmHint() }
 
-// OpenConfirmHint says "Files larger than this, or that aren't text, ask before they open in the editor or another app."
+// OpenConfirmHint says "Files larger than this ask before they open in the editor."
 // in the language of msgs.
 func (msgs Messages) OpenConfirmHint() string {
 	return Catalog.Format(msgs.locale, "openConfirmHint", nil)
@@ -3837,34 +3837,16 @@ func (msgs Messages) OpenLargeMessage(name string, size string) string {
 	return Catalog.Format(msgs.locale, "openLargeMessage", map[string]any{"name": name, "size": size})
 }
 
-// OpenBinaryTitle says "Open a binary file?"
+// OpenLargeLocalMessage says "“{name}” is {size}. A file this large can be slow to edit."
 // in the language the app shows.
-func OpenBinaryTitle() string { return In(i18n.Locale()).OpenBinaryTitle() }
-
-// OpenBinaryTitle says "Open a binary file?"
-// in the language of msgs.
-func (msgs Messages) OpenBinaryTitle() string {
-	return Catalog.Format(msgs.locale, "openBinaryTitle", nil)
+func OpenLargeLocalMessage(name string, size string) string {
+	return In(i18n.Locale()).OpenLargeLocalMessage(name, size)
 }
 
-// OpenBinaryMessage says "“{name}” doesn’t look like text. Saving it from an editor may damage it."
-// in the language the app shows.
-func OpenBinaryMessage(name string) string { return In(i18n.Locale()).OpenBinaryMessage(name) }
-
-// OpenBinaryMessage says "“{name}” doesn’t look like text. Saving it from an editor may damage it."
+// OpenLargeLocalMessage says "“{name}” is {size}. A file this large can be slow to edit."
 // in the language of msgs.
-func (msgs Messages) OpenBinaryMessage(name string) string {
-	return Catalog.Format(msgs.locale, "openBinaryMessage", map[string]any{"name": name})
-}
-
-// OpenExecTitle says "Open a program file?"
-// in the language the app shows.
-func OpenExecTitle() string { return In(i18n.Locale()).OpenExecTitle() }
-
-// OpenExecTitle says "Open a program file?"
-// in the language of msgs.
-func (msgs Messages) OpenExecTitle() string {
-	return Catalog.Format(msgs.locale, "openExecTitle", nil)
+func (msgs Messages) OpenLargeLocalMessage(name string, size string) string {
+	return Catalog.Format(msgs.locale, "openLargeLocalMessage", map[string]any{"name": name, "size": size})
 }
 
 // OpenExecMessage says "“{name}” is a type of file that opening may run as a program on this computer, with your permissions. Only open i…"
@@ -3947,24 +3929,14 @@ func (msgs Messages) EditorReload() string {
 	return Catalog.Format(msgs.locale, "editorReload", nil)
 }
 
-// OpenedLocally says "Opened {name}. Saving it there uploads it."
+// OpenedLocally says "Opened a copy of {name}. Changes made there aren’t uploaded."
 // in the language the app shows.
 func OpenedLocally(name string) string { return In(i18n.Locale()).OpenedLocally(name) }
 
-// OpenedLocally says "Opened {name}. Saving it there uploads it."
+// OpenedLocally says "Opened a copy of {name}. Changes made there aren’t uploaded."
 // in the language of msgs.
 func (msgs Messages) OpenedLocally(name string) string {
 	return Catalog.Format(msgs.locale, "openedLocally", map[string]any{"name": name})
-}
-
-// AutoUploaded says "Uploaded {name}"
-// in the language the app shows.
-func AutoUploaded(name string) string { return In(i18n.Locale()).AutoUploaded(name) }
-
-// AutoUploaded says "Uploaded {name}"
-// in the language of msgs.
-func (msgs Messages) AutoUploaded(name string) string {
-	return Catalog.Format(msgs.locale, "autoUploaded", map[string]any{"name": name})
 }
 
 // OpenFailed says "Couldn’t open {name}: {detail}"
@@ -3975,6 +3947,282 @@ func OpenFailed(name string, detail string) string { return In(i18n.Locale()).Op
 // in the language of msgs.
 func (msgs Messages) OpenFailed(name string, detail string) string {
 	return Catalog.Format(msgs.locale, "openFailed", map[string]any{"name": name, "detail": detail})
+}
+
+// ShowLocalFiles says "Show Local Files"
+// in the language the app shows.
+func ShowLocalFiles() string { return In(i18n.Locale()).ShowLocalFiles() }
+
+// ShowLocalFiles says "Show Local Files"
+// in the language of msgs.
+func (msgs Messages) ShowLocalFiles() string {
+	return Catalog.Format(msgs.locale, "showLocalFiles", nil)
+}
+
+// UploadFiles says "Upload Files…"
+// in the language the app shows.
+func UploadFiles() string { return In(i18n.Locale()).UploadFiles() }
+
+// UploadFiles says "Upload Files…"
+// in the language of msgs.
+func (msgs Messages) UploadFiles() string {
+	return Catalog.Format(msgs.locale, "uploadFiles", nil)
+}
+
+// UploadFolder says "Upload Folder…"
+// in the language the app shows.
+func UploadFolder() string { return In(i18n.Locale()).UploadFolder() }
+
+// UploadFolder says "Upload Folder…"
+// in the language of msgs.
+func (msgs Messages) UploadFolder() string {
+	return Catalog.Format(msgs.locale, "uploadFolder", nil)
+}
+
+// DownloadTo says "Download To…"
+// in the language the app shows.
+func DownloadTo() string { return In(i18n.Locale()).DownloadTo() }
+
+// DownloadTo says "Download To…"
+// in the language of msgs.
+func (msgs Messages) DownloadTo() string {
+	return Catalog.Format(msgs.locale, "downloadTo", nil)
+}
+
+// ChooseUploadFiles says "Choose Files to Upload"
+// in the language the app shows.
+func ChooseUploadFiles() string { return In(i18n.Locale()).ChooseUploadFiles() }
+
+// ChooseUploadFiles says "Choose Files to Upload"
+// in the language of msgs.
+func (msgs Messages) ChooseUploadFiles() string {
+	return Catalog.Format(msgs.locale, "chooseUploadFiles", nil)
+}
+
+// ChooseUploadFolder says "Choose a Folder to Upload"
+// in the language the app shows.
+func ChooseUploadFolder() string { return In(i18n.Locale()).ChooseUploadFolder() }
+
+// ChooseUploadFolder says "Choose a Folder to Upload"
+// in the language of msgs.
+func (msgs Messages) ChooseUploadFolder() string {
+	return Catalog.Format(msgs.locale, "chooseUploadFolder", nil)
+}
+
+// ChooseDownloadFolder says "Choose Where to Download"
+// in the language the app shows.
+func ChooseDownloadFolder() string { return In(i18n.Locale()).ChooseDownloadFolder() }
+
+// ChooseDownloadFolder says "Choose Where to Download"
+// in the language of msgs.
+func (msgs Messages) ChooseDownloadFolder() string {
+	return Catalog.Format(msgs.locale, "chooseDownloadFolder", nil)
+}
+
+// CalculateSize says "Calculate"
+// in the language the app shows.
+func CalculateSize() string { return In(i18n.Locale()).CalculateSize() }
+
+// CalculateSize says "Calculate"
+// in the language of msgs.
+func (msgs Messages) CalculateSize() string {
+	return Catalog.Format(msgs.locale, "calculateSize", nil)
+}
+
+// CalculateSizeHint says "Calculate the size of “{name}”"
+// in the language the app shows.
+func CalculateSizeHint(name string) string { return In(i18n.Locale()).CalculateSizeHint(name) }
+
+// CalculateSizeHint says "Calculate the size of “{name}”"
+// in the language of msgs.
+func (msgs Messages) CalculateSizeHint(name string) string {
+	return Catalog.Format(msgs.locale, "calculateSizeHint", map[string]any{"name": name})
+}
+
+// CalculatingSize says "Calculating the size of “{name}”"
+// in the language the app shows.
+func CalculatingSize(name string) string { return In(i18n.Locale()).CalculatingSize(name) }
+
+// CalculatingSize says "Calculating the size of “{name}”"
+// in the language of msgs.
+func (msgs Messages) CalculatingSize(name string) string {
+	return Catalog.Format(msgs.locale, "calculatingSize", map[string]any{"name": name})
+}
+
+// PermDetail says "{mode} · Owner: {owner} · Group: {group}"
+// in the language the app shows.
+func PermDetail(mode string, owner string, group string) string {
+	return In(i18n.Locale()).PermDetail(mode, owner, group)
+}
+
+// PermDetail says "{mode} · Owner: {owner} · Group: {group}"
+// in the language of msgs.
+func (msgs Messages) PermDetail(mode string, owner string, group string) string {
+	return Catalog.Format(msgs.locale, "permDetail", map[string]any{"mode": mode, "owner": owner, "group": group})
+}
+
+// OpenWithApp says "Open With…"
+// in the language the app shows.
+func OpenWithApp() string { return In(i18n.Locale()).OpenWithApp() }
+
+// OpenWithApp says "Open With…"
+// in the language of msgs.
+func (msgs Messages) OpenWithApp() string {
+	return Catalog.Format(msgs.locale, "openWithApp", nil)
+}
+
+// OpenWithTitle says "Open “{name}”"
+// in the language the app shows.
+func OpenWithTitle(name string) string { return In(i18n.Locale()).OpenWithTitle(name) }
+
+// OpenWithTitle says "Open “{name}”"
+// in the language of msgs.
+func (msgs Messages) OpenWithTitle(name string) string {
+	return Catalog.Format(msgs.locale, "openWithTitle", map[string]any{"name": name})
+}
+
+// OpenWithMessage says "SSHYard can’t show this kind of file. Open it in another app, or as text."
+// in the language the app shows.
+func OpenWithMessage() string { return In(i18n.Locale()).OpenWithMessage() }
+
+// OpenWithMessage says "SSHYard can’t show this kind of file. Open it in another app, or as text."
+// in the language of msgs.
+func (msgs Messages) OpenWithMessage() string {
+	return Catalog.Format(msgs.locale, "openWithMessage", nil)
+}
+
+// OpenWithCopyNote says "Another app opens a copy downloaded to a temporary folder. Changes made there aren’t uploaded."
+// in the language the app shows.
+func OpenWithCopyNote() string { return In(i18n.Locale()).OpenWithCopyNote() }
+
+// OpenWithCopyNote says "Another app opens a copy downloaded to a temporary folder. Changes made there aren’t uploaded."
+// in the language of msgs.
+func (msgs Messages) OpenWithCopyNote() string {
+	return Catalog.Format(msgs.locale, "openWithCopyNote", nil)
+}
+
+// OpenAsText says "Open as Text"
+// in the language the app shows.
+func OpenAsText() string { return In(i18n.Locale()).OpenAsText() }
+
+// OpenAsText says "Open as Text"
+// in the language of msgs.
+func (msgs Messages) OpenAsText() string {
+	return Catalog.Format(msgs.locale, "openAsText", nil)
+}
+
+// ChooseApp says "Choose App…"
+// in the language the app shows.
+func ChooseApp() string { return In(i18n.Locale()).ChooseApp() }
+
+// ChooseApp says "Choose App…"
+// in the language of msgs.
+func (msgs Messages) ChooseApp() string {
+	return Catalog.Format(msgs.locale, "chooseApp", nil)
+}
+
+// ChooseAppTitle says "Choose an App to Open “{name}”"
+// in the language the app shows.
+func ChooseAppTitle(name string) string { return In(i18n.Locale()).ChooseAppTitle(name) }
+
+// ChooseAppTitle says "Choose an App to Open “{name}”"
+// in the language of msgs.
+func (msgs Messages) ChooseAppTitle(name string) string {
+	return Catalog.Format(msgs.locale, "chooseAppTitle", map[string]any{"name": name})
+}
+
+// EditorUnsavedTitle says "Save changes to “{name}”?"
+// in the language the app shows.
+func EditorUnsavedTitle(name string) string { return In(i18n.Locale()).EditorUnsavedTitle(name) }
+
+// EditorUnsavedTitle says "Save changes to “{name}”?"
+// in the language of msgs.
+func (msgs Messages) EditorUnsavedTitle(name string) string {
+	return Catalog.Format(msgs.locale, "editorUnsavedTitle", map[string]any{"name": name})
+}
+
+// EditorUnsavedMessage says "Your changes are lost if you don’t save them."
+// in the language the app shows.
+func EditorUnsavedMessage() string { return In(i18n.Locale()).EditorUnsavedMessage() }
+
+// EditorUnsavedMessage says "Your changes are lost if you don’t save them."
+// in the language of msgs.
+func (msgs Messages) EditorUnsavedMessage() string {
+	return Catalog.Format(msgs.locale, "editorUnsavedMessage", nil)
+}
+
+// DontSave says "Don’t Save"
+// in the language the app shows.
+func DontSave() string { return In(i18n.Locale()).DontSave() }
+
+// DontSave says "Don’t Save"
+// in the language of msgs.
+func (msgs Messages) DontSave() string {
+	return Catalog.Format(msgs.locale, "dontSave", nil)
+}
+
+// EditorDiskConflictTitle says "Changed on disk"
+// in the language the app shows.
+func EditorDiskConflictTitle() string { return In(i18n.Locale()).EditorDiskConflictTitle() }
+
+// EditorDiskConflictTitle says "Changed on disk"
+// in the language of msgs.
+func (msgs Messages) EditorDiskConflictTitle() string {
+	return Catalog.Format(msgs.locale, "editorDiskConflictTitle", nil)
+}
+
+// EditorDiskConflictMessage says "“{name}” changed on disk after you opened it. Replace it with your version?"
+// in the language the app shows.
+func EditorDiskConflictMessage(name string) string {
+	return In(i18n.Locale()).EditorDiskConflictMessage(name)
+}
+
+// EditorDiskConflictMessage says "“{name}” changed on disk after you opened it. Replace it with your version?"
+// in the language of msgs.
+func (msgs Messages) EditorDiskConflictMessage(name string) string {
+	return Catalog.Format(msgs.locale, "editorDiskConflictMessage", map[string]any{"name": name})
+}
+
+// EditorReloadFromDisk says "Reload from Disk"
+// in the language the app shows.
+func EditorReloadFromDisk() string { return In(i18n.Locale()).EditorReloadFromDisk() }
+
+// EditorReloadFromDisk says "Reload from Disk"
+// in the language of msgs.
+func (msgs Messages) EditorReloadFromDisk() string {
+	return Catalog.Format(msgs.locale, "editorReloadFromDisk", nil)
+}
+
+// EditorSyntax says "Syntax"
+// in the language the app shows.
+func EditorSyntax() string { return In(i18n.Locale()).EditorSyntax() }
+
+// EditorSyntax says "Syntax"
+// in the language of msgs.
+func (msgs Messages) EditorSyntax() string {
+	return Catalog.Format(msgs.locale, "editorSyntax", nil)
+}
+
+// PlainText says "Plain Text"
+// in the language the app shows.
+func PlainText() string { return In(i18n.Locale()).PlainText() }
+
+// PlainText says "Plain Text"
+// in the language of msgs.
+func (msgs Messages) PlainText() string {
+	return Catalog.Format(msgs.locale, "plainText", nil)
+}
+
+// EditorWindowTitle says "{name} — {place}"
+// in the language the app shows.
+func EditorWindowTitle(name string, place string) string {
+	return In(i18n.Locale()).EditorWindowTitle(name, place)
+}
+
+// EditorWindowTitle says "{name} — {place}"
+// in the language of msgs.
+func (msgs Messages) EditorWindowTitle(name string, place string) string {
+	return Catalog.Format(msgs.locale, "editorWindowTitle", map[string]any{"name": name, "place": place})
 }
 
 // FollowTerminal says "Follow terminal"

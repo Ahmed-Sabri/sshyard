@@ -284,8 +284,6 @@ func (a *App) tabTip(c *ui.Context, m locales.Messages, tok theme.Tokens, chip u
 						switch cn.kind {
 						case layout.Files:
 							title = m.FilesPane(title)
-						case layout.Editor:
-							title = cn.ed.name
 						}
 						ui.Text(c, title).FontSize(theme.Footnote).FontWeight(600).SingleLine()
 						var parts []string

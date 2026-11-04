@@ -27,6 +27,10 @@ type Entry struct {
 	Mode    fs.FileMode
 	ModTime time.Time
 	IsDir   bool
+	// UID and GID are the owner and the group, when IDs says they are
+	// known (not on Windows).
+	UID, GID uint32
+	IDs      bool
 }
 
 func sortEntries(es []Entry) {
@@ -42,7 +46,13 @@ func sortEntries(es []Entry) {
 }
 
 func entry(fi fs.FileInfo) Entry {
-	return Entry{Name: fi.Name(), Size: fi.Size(), Mode: fi.Mode(), ModTime: fi.ModTime(), IsDir: fi.IsDir()}
+	e := Entry{Name: fi.Name(), Size: fi.Size(), Mode: fi.Mode(), ModTime: fi.ModTime(), IsDir: fi.IsDir()}
+	if st, ok := fi.Sys().(*sftp.FileStat); ok {
+		e.UID, e.GID, e.IDs = st.UID, st.GID, true
+	} else {
+		e.UID, e.GID, e.IDs = localIDs(fi)
+	}
+	return e
 }
 
 // Client is an SFTP session on an SSH connection.

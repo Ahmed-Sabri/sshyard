@@ -30,6 +30,11 @@ func (a *App) View(c *ui.Context) {
 	a.wakeUndo(c)
 	a.followCwd(c)
 	a.sendStartCmds()
+	for _, cn := range a.conns {
+		if cn.fs != nil {
+			a.pendingOpens(cn)
+		}
+	}
 
 	base := *c.Theme()
 	base.Font = a.fonts.ui
