@@ -14,6 +14,9 @@ import (
 	"github.com/Licoy/sshyard/internal/ai/agent"
 	"github.com/Licoy/sshyard/internal/ai/llm"
 	"github.com/Licoy/sshyard/internal/icons"
+	"github.com/Licoy/sshyard/internal/theme"
+	"github.com/Licoy/sshyard/locales"
+	"github.com/egoist/mygo/ui"
 )
 
 // partsModel answers at once, keeping the last question it was asked.
@@ -125,6 +128,28 @@ func TestAIPaneAttachments(t *testing.T) {
 	if len(cn.ai.attach) != 2 || tt.HasText("extra.md") {
 		t.Fatalf("not removed: %q", tt.Texts())
 	}
+	mustClick(t, tt, "Preview shot.png")
+	tt.Frame()
+	if a.attachmentPreview == nil || !tt.HasText("Close Preview") {
+		t.Fatal("composer image did not open the top-level preview")
+	}
+	mustClick(t, tt, "Close Preview")
+	tt.Frame()
+	if a.attachmentPreview != nil {
+		t.Fatal("composer image preview did not close")
+	}
+	rmImage := mustFind(t, tt, "Remove shot.png")
+	tt.ClickAt(rmImage.X+rmImage.W/2, rmImage.Y+rmImage.H/2)
+	tt.Frame()
+	if len(cn.ai.attach) != 1 || tt.HasText("Remove shot.png") {
+		t.Fatal("composer image was not removed by mouse")
+	}
+	imageAgain, err := readAttach(shot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a.addAttach(cn, imageAgain)
+	tt.Frame()
 	if _, ok := tt.Find("Send"); !ok {
 		t.Fatal("no send")
 	}
@@ -139,6 +164,17 @@ func TestAIPaneAttachments(t *testing.T) {
 	}
 	if len(cn.ai.attach) != 0 || tt.HasText("Remove shot.png") || !tt.HasText("notes.txt") {
 		t.Fatalf("after send: attach %d texts %q", len(cn.ai.attach), tt.Texts())
+	}
+
+	mustClick(t, tt, "Preview shot.png")
+	tt.Frame()
+	if a.attachmentPreview == nil || !tt.HasText("Close Preview") {
+		t.Fatal("sent image did not open the top-level preview")
+	}
+	mustClick(t, tt, "Close Preview")
+	tt.Frame()
+	if a.attachmentPreview != nil {
+		t.Fatal("sent image preview did not close")
 	}
 
 	in := mustFind(t, tt, "Ask about this host")
@@ -156,5 +192,28 @@ func TestAIPaneAttachments(t *testing.T) {
 	tt.Frame()
 	if len(cn.ai.attach) != 1 || !tt.HasText("“shot.png” can’t be attached: this agent reads text files only.") {
 		t.Fatalf("ACP took an image: %d %q", len(cn.ai.attach), tt.Texts())
+	}
+}
+
+func TestAIAttachmentImageRemoveBounds(t *testing.T) {
+	img, err := attachData("shot.png", pngBytes(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := &App{}
+	files := []*aiAttach{img}
+	tt := ui.NewTester(func(c *ui.Context) {
+		a.attachStrip(c, theme.For("light", false), locales.In("en"), files, func(i int) { files = append(files[:i], files[i+1:]...) })
+	}, 320, 160)
+	tt.Frame()
+	card := mustFind(t, tt, "shot.png")
+	rm := mustFind(t, tt, "Remove shot.png")
+	if rm.X < card.X || rm.X+rm.W > card.X+card.W || rm.Y < card.Y || rm.Y+rm.H > card.Y+card.H {
+		t.Fatalf("remove button %v outside image card %v", rm, card)
+	}
+	tt.ClickAt(rm.X+rm.W/2, rm.Y+rm.H/2)
+	tt.Frame()
+	if len(files) != 0 {
+		t.Fatal("image was not removed by mouse")
 	}
 }

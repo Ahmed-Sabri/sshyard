@@ -117,5 +117,6 @@ func (a *App) View(c *ui.Context) {
 	a.promptsView(c, m)
 	a.oscAskView(c, m)
 	a.aiSheets(c, m)
+	a.aiAttachmentPreviewView(c, m, tok)
 	a.contextMenuView(c)
 }

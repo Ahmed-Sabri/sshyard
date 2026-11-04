@@ -10234,6 +10234,16 @@ func (msgs Messages) AiAttach() string {
 	return Catalog.Format(msgs.locale, "aiAttach", nil)
 }
 
+// AiPreviewAttachment says "Preview {name}"
+// in the language the app shows.
+func AiPreviewAttachment(name string) string { return In(i18n.Locale()).AiPreviewAttachment(name) }
+
+// AiPreviewAttachment says "Preview {name}"
+// in the language of msgs.
+func (msgs Messages) AiPreviewAttachment(name string) string {
+	return Catalog.Format(msgs.locale, "aiPreviewAttachment", map[string]any{"name": name})
+}
+
 // AiRemoveAttachment says "Remove {name}"
 // in the language the app shows.
 func AiRemoveAttachment(name string) string { return In(i18n.Locale()).AiRemoveAttachment(name) }

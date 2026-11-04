@@ -199,6 +199,8 @@ type App struct {
 	svc   ui.Services
 	live  bool
 
+	attachmentPreview *aiAttachmentPreview
+
 	// interface state
 	page page
 	// pref is the settings page showing, inspector the panel open beside

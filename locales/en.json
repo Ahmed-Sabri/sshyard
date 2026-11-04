@@ -1012,6 +1012,7 @@
   "aiUseModel": "Use “{model}”",
   "aiNoModels": "No matching models",
   "aiAttach": "Attach Files",
+  "aiPreviewAttachment": "Preview {name}",
   "aiRemoveAttachment": "Remove {name}",
   "aiAttachUnsupported": "“{name}” can’t be attached: only images, PDFs and text files can.",
   "aiAttachTextOnly": "“{name}” can’t be attached: this agent reads text files only.",

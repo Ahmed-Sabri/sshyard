@@ -14,7 +14,6 @@ import (
 	"github.com/Licoy/sshyard/internal/ai/agent"
 	"github.com/Licoy/sshyard/internal/ai/llm"
 	"github.com/Licoy/sshyard/internal/icons"
-	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/locales"
 	"github.com/egoist/mygo/ui"
 )
@@ -22,11 +21,10 @@ import (
 // The files a question can carry: images and PDFs go to the model as they
 // are, text files go into the question.
 const (
-	maxAttachments  = 10
-	maxAttachFile   = 20 << 20
-	maxAttachText   = 512 << 10
-	maxAttachTotal  = agent.MaxPartBytes
-	attachThumbSize = 56
+	maxAttachments = 10
+	maxAttachFile  = 20 << 20
+	maxAttachText  = 512 << 10
+	maxAttachTotal = agent.MaxPartBytes
 )
 
 // aiAttach is a file attached to the question being written.
@@ -194,38 +192,4 @@ func attachTurn(text string, files []*aiAttach) (string, []llm.Part) {
 		parts = append(parts, llm.Part{Name: f.name, MIME: f.mime, Data: f.data})
 	}
 	return text, parts
-}
-
-// attachStrip shows the files attached to a question: an image as its
-// thumbnail, anything else as its type's icon and its name. With remove
-// set, each has a button that takes it off.
-func (a *App) attachStrip(c *ui.Context, tok theme.Tokens, m locales.Messages, files []*aiAttach, remove func(i int)) {
-	ui.Row(c.Key("attach")).FillWidth().Wrap().Gap(theme.Space(1)).Children(func() {
-		for i, f := range files {
-			tile := ui.Row(c.Key("at:"+strconv.Itoa(i))).Height(attachThumbSize).Gap(theme.Space(1)).AlignItems(ui.Center).
-				Radius(theme.RadiusControl).Background(tok.Inset).Border(1, tok.Line).Clip().Label(f.name)
-			if f.bmp != nil {
-				tile.Width(attachThumbSize)
-			} else {
-				tile.MaxWidth(200).Padding(0, theme.Space(1), 0, theme.Space(2))
-			}
-			tile.Children(func() {
-				if f.bmp != nil {
-					ui.Image(c, f.bmp).Size(attachThumbSize, attachThumbSize).Fit(ui.Cover).Label(f.name)
-				} else {
-					ui.Icon(c, f.icon().SVG).Size(18, 18).Shrink(0).TextColor(tok.TextMuted)
-					ui.Column(c).Shrink(1).MinWidth(0).Children(func() {
-						ui.Text(c, f.name).FontSize(theme.Footnote).SingleLine().Shrink(1)
-						ui.Text(c, humanSize(int64(len(f.data)))).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine()
-					})
-				}
-				if remove != nil {
-					i := i
-					if (IconButton{Icon: icons.Close, Label: m.AiRemoveAttachment(f.name), Size: Small}).Clicked(c, "rm") {
-						remove(i)
-					}
-				}
-			})
-		}
-	})
 }

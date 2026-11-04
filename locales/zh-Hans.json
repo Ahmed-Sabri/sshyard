@@ -1012,6 +1012,7 @@
   "aiUseModel": "使用“{model}”",
   "aiNoModels": "没有匹配的模型",
   "aiAttach": "添加附件",
+  "aiPreviewAttachment": "预览 {name}",
   "aiRemoveAttachment": "移除 {name}",
   "aiAttachUnsupported": "无法附加“{name}”：仅支持图片、PDF 和文本文件。",
   "aiAttachTextOnly": "无法附加“{name}”：该助理只能读取文本文件。",
