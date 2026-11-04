@@ -4225,6 +4225,86 @@ func (msgs Messages) EditorWindowTitle(name string, place string) string {
 	return Catalog.Format(msgs.locale, "editorWindowTitle", map[string]any{"name": name, "place": place})
 }
 
+// EditorFolders says "Folders"
+// in the language the app shows.
+func EditorFolders() string { return In(i18n.Locale()).EditorFolders() }
+
+// EditorFolders says "Folders"
+// in the language of msgs.
+func (msgs Messages) EditorFolders() string {
+	return Catalog.Format(msgs.locale, "editorFolders", nil)
+}
+
+// EditorShowFolders says "Show Folders"
+// in the language the app shows.
+func EditorShowFolders() string { return In(i18n.Locale()).EditorShowFolders() }
+
+// EditorShowFolders says "Show Folders"
+// in the language of msgs.
+func (msgs Messages) EditorShowFolders() string {
+	return Catalog.Format(msgs.locale, "editorShowFolders", nil)
+}
+
+// EditorUpFolder says "Up One Folder"
+// in the language the app shows.
+func EditorUpFolder() string { return In(i18n.Locale()).EditorUpFolder() }
+
+// EditorUpFolder says "Up One Folder"
+// in the language of msgs.
+func (msgs Messages) EditorUpFolder() string {
+	return Catalog.Format(msgs.locale, "editorUpFolder", nil)
+}
+
+// EditorOpenFile says "Open"
+// in the language the app shows.
+func EditorOpenFile() string { return In(i18n.Locale()).EditorOpenFile() }
+
+// EditorOpenFile says "Open"
+// in the language of msgs.
+func (msgs Messages) EditorOpenFile() string {
+	return Catalog.Format(msgs.locale, "editorOpenFile", nil)
+}
+
+// EditorCloseTab says "Close “{name}”"
+// in the language the app shows.
+func EditorCloseTab(name string) string { return In(i18n.Locale()).EditorCloseTab(name) }
+
+// EditorCloseTab says "Close “{name}”"
+// in the language of msgs.
+func (msgs Messages) EditorCloseTab(name string) string {
+	return Catalog.Format(msgs.locale, "editorCloseTab", map[string]any{"name": name})
+}
+
+// EditorUnsavedManyTitle says "Save changes to {count, plural, one {# file} other {# files}}?"
+// in the language the app shows.
+func EditorUnsavedManyTitle(count int) string { return In(i18n.Locale()).EditorUnsavedManyTitle(count) }
+
+// EditorUnsavedManyTitle says "Save changes to {count, plural, one {# file} other {# files}}?"
+// in the language of msgs.
+func (msgs Messages) EditorUnsavedManyTitle(count int) string {
+	return Catalog.Format(msgs.locale, "editorUnsavedManyTitle", map[string]any{"count": count})
+}
+
+// SaveAll says "Save All"
+// in the language the app shows.
+func SaveAll() string { return In(i18n.Locale()).SaveAll() }
+
+// SaveAll says "Save All"
+// in the language of msgs.
+func (msgs Messages) SaveAll() string {
+	return Catalog.Format(msgs.locale, "saveAll", nil)
+}
+
+// EditorNoFile says "Double-click a file in the folders to open it."
+// in the language the app shows.
+func EditorNoFile() string { return In(i18n.Locale()).EditorNoFile() }
+
+// EditorNoFile says "Double-click a file in the folders to open it."
+// in the language of msgs.
+func (msgs Messages) EditorNoFile() string {
+	return Catalog.Format(msgs.locale, "editorNoFile", nil)
+}
+
 // FollowTerminal says "Follow terminal"
 // in the language the app shows.
 func FollowTerminal() string { return In(i18n.Locale()).FollowTerminal() }

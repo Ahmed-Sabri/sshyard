@@ -46,38 +46,39 @@ func TestEditorWindow(t *testing.T) {
 	if len(a.ws.Tabs) != 1 || a.focused() != fc {
 		t.Fatalf("the editor took a pane: %v", a.ws.Items())
 	}
-	if ec.ed.st.Buffer.String() != "one\n" || !et.HasText("notes.txt") {
-		t.Fatalf("editor shows %q", ec.ed.st.Buffer.String())
+	ed := shown(ec)
+	if ed == nil || ed.st.Buffer.String() != "one\n" || !et.HasText("notes.txt") {
+		t.Fatalf("editor shows %+v", ed)
 	}
 	waitFor(t, et, "editor connected", func() bool { return ec.fs.remote.client != nil })
 	waitFor(t, et, "title", func() bool { title, _, _, _ := w.state(); return title == "notes.txt — box" })
 
 	// Edit and save: the file is what the editor holds.
-	ec.ed.st.Buffer.Set("two\nlines\n")
+	ed.st.Buffer.Set("two\nlines\n")
 	et.Frame()
 	if !et.HasText("Edited") {
 		t.Error("not marked edited")
 	}
 	waitFor(t, et, "window edited", func() bool { _, edited, _, _ := w.state(); return edited })
 	mustClick(t, et, "Save")
-	waitFor(t, et, "saved", func() bool { return read(file) == "two\nlines\n" && !ec.ed.saving })
+	waitFor(t, et, "saved", func() bool { return read(file) == "two\nlines\n" && !ed.saving })
 	et.Frame()
-	if ec.ed.st.Buffer.Modified() || et.HasText("Edited") {
+	if ed.st.Buffer.Modified() || et.HasText("Edited") {
 		t.Error("still edited after saving")
 	}
 
 	// Changed on the server meanwhile: asks; reload takes the server's.
 	write(t, file, "changed elsewhere\n")
-	ec.ed.st.Buffer.Set("mine\n")
+	ed.st.Buffer.Set("mine\n")
 	et.Frame()
-	a.saveEditor(ec, false)
+	a.saveTab(ec, ed, false)
 	waitFor(t, et, "conflict", func() bool { return et.HasText("Changed on the server") })
 	mustClick(t, et, "Reload")
-	waitFor(t, et, "reloaded", func() bool { return ec.ed.st.Buffer.String() == "changed elsewhere\n" && !ec.ed.loading })
+	waitFor(t, et, "reloaded", func() bool { return ed.st.Buffer.String() == "changed elsewhere\n" && !ed.loading })
 	// or replace it.
 	write(t, file, "changed again!\n")
-	ec.ed.st.Buffer.Set("mine\n")
-	a.saveEditor(ec, false)
+	ed.st.Buffer.Set("mine\n")
+	a.saveTab(ec, ed, false)
 	waitFor(t, et, "conflict", func() bool { return et.HasText("Changed on the server") })
 	mustClick(t, et, "Replace")
 	waitFor(t, et, "replaced", func() bool { return read(file) == "mine\n" })
@@ -90,13 +91,13 @@ func TestEditorWindow(t *testing.T) {
 	}
 
 	// The syntax can be chosen; plain text too.
-	if ec.ed.lang != "" && ec.ed.st.Buffer.Language() == nil {
-		t.Errorf("syntax %q without a language", ec.ed.lang)
+	if ed.lang != "" && ed.st.Buffer.Language() == nil {
+		t.Errorf("syntax %q without a language", ed.lang)
 	}
 
 	// Closing with unsaved changes asks; Cancel keeps it, Don't Save
 	// closes it and its connection.
-	ec.ed.st.Buffer.Set("unsaved\n")
+	ed.st.Buffer.Set("unsaved\n")
 	et.Frame()
 	if w.userClose() {
 		t.Fatal("closed with unsaved changes")
@@ -125,10 +126,11 @@ func TestEditorWindowSaveOnClose(t *testing.T) {
 	waitFor(t, tt, "listing", func() bool { return tt.HasText("main.go") })
 	editorOn(t, a, tt, "main.go")
 	w, et, ec := openedWindow(t, a, tt, wins, 1)
-	if ec.ed.lang != "Go" || !et.HasText("Go") {
-		t.Errorf("syntax %q", ec.ed.lang)
+	ed := shown(ec)
+	if ed.lang != "Go" || !et.HasText("Go") {
+		t.Errorf("syntax %q", ed.lang)
 	}
-	ec.ed.st.Buffer.Set("package other\n")
+	ed.st.Buffer.Set("package other\n")
 	et.Frame()
 	w.userClose()
 	waitFor(t, et, "close question", func() bool { return et.HasText("Save changes to “main.go”?") })
@@ -150,14 +152,15 @@ func TestEditorLocalFile(t *testing.T) {
 	mustClick(t, tt, "local.txt")
 	mustClick(t, tt, "local.txt")
 	w, et, ec := openedWindow(t, a, tt, wins, 1)
-	if !ec.ed.local || ec.s != nil || ec.ed.st.Buffer.String() != "local.txt" {
-		t.Fatalf("local editor %+v", ec.ed)
+	ed := shown(ec)
+	if !ec.ed.local || ec.s != nil || ed.st.Buffer.String() != "local.txt" {
+		t.Fatalf("local editor %+v", ed)
 	}
 	waitFor(t, et, "title", func() bool { title, _, _, _ := w.state(); return title == "local.txt — Local" })
-	ec.ed.st.Buffer.Set("edited\n")
+	ed.st.Buffer.Set("edited\n")
 	et.Frame()
 	mustClick(t, et, "Save")
-	waitFor(t, et, "saved", func() bool { return read(file) == "edited\n" && !ec.ed.saving })
+	waitFor(t, et, "saved", func() bool { return read(file) == "edited\n" && !ed.saving })
 	if n := len(fc.fs.transfers.List()); n != 0 {
 		t.Fatalf("%d transfers for a local edit", n)
 	}
@@ -165,11 +168,11 @@ func TestEditorLocalFile(t *testing.T) {
 	write(t, file, "theirs\n")
 	later := time.Now().Add(time.Minute)
 	os.Chtimes(file, later, later)
-	ec.ed.st.Buffer.Set("mine\n")
-	a.saveEditor(ec, false)
+	ed.st.Buffer.Set("mine\n")
+	a.saveTab(ec, ed, false)
 	waitFor(t, et, "conflict", func() bool { return et.HasText("Changed on disk") })
 	mustClick(t, et, "Reload")
-	waitFor(t, et, "reloaded", func() bool { return ec.ed.st.Buffer.String() == "theirs\n" && !ec.ed.loading })
+	waitFor(t, et, "reloaded", func() bool { return ed.st.Buffer.String() == "theirs\n" && !ed.loading })
 	w.userClose()
 	waitFor(t, tt, "closed", func() bool { return a.conns[ec.id] == nil })
 }
@@ -197,17 +200,23 @@ func TestOpenConfirmations(t *testing.T) {
 	editorOn(t, a, tt, "big.log")
 	mustClick(t, tt, "Open")
 	_, _, ec := openedWindow(t, a, tt, wins, 1)
-	if ec.ed.st.Buffer.Len() != 2<<20 {
-		t.Fatalf("read %d", ec.ed.st.Buffer.Len())
+	ed := shown(ec)
+	if ed.st.Buffer.Len() != 2<<20 {
+		t.Fatalf("read %d", ed.st.Buffer.Len())
 	}
 
-	// Not text: asks how to open it, as text too.
+	// Not text: asks how to open it, as text too, in a tab of the same
+	// window.
 	editorOn(t, a, tt, "blob.dat")
 	waitFor(t, tt, "open with", func() bool { return tt.HasText("Open “blob.dat”") })
 	mustClick(t, tt, "Open as Text")
-	_, _, bc := openedWindow(t, a, tt, wins, 2)
-	if bc.ed.name != "blob.dat" || bc.ed.st.Buffer.String() != "a\x00b" {
-		t.Fatalf("opened %q", bc.ed.st.Buffer.String())
+	waitFor(t, tt, "second tab", func() bool { return len(ec.ed.tabs) == 2 })
+	if n := len(wins.list()); n != 1 {
+		t.Fatalf("%d windows for one host", n)
+	}
+	bd := shown(ec)
+	if bd.name != "blob.dat" || bd.st.Buffer.String() != "a\x00b" {
+		t.Fatalf("opened %q", bd.st.Buffer.String())
 	}
 }
 
@@ -242,8 +251,9 @@ func TestOpenLargeBinaryRequiresBothConfirmations(t *testing.T) {
 	waitFor(t, tt, "binary question", func() bool { return tt.HasText("Open “big.dat”") })
 	mustClick(t, tt, "Open as Text")
 	_, _, ec := openedWindow(t, a, tt, wins, 1)
-	if ec.ed.name != "big.dat" || ec.ed.st.Buffer.Len() != 2<<20 {
-		t.Fatalf("opened %q, %d", ec.ed.name, ec.ed.st.Buffer.Len())
+	ed := shown(ec)
+	if ed.name != "big.dat" || ed.st.Buffer.Len() != 2<<20 {
+		t.Fatalf("opened %q, %d", ed.name, ed.st.Buffer.Len())
 	}
 }
 

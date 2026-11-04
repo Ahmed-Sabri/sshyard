@@ -72,6 +72,8 @@ var (
 	ClearText    = load("close-circle-line")
 	LocalDisk    = load("computer-line")
 	LocalDiskOn  = load("computer-fill")
+	Folders      = load("layout-left-line")
+	FoldersOn    = load("layout-left-fill")
 	Warning      = load("error-warning-line")
 	Appearance   = load("palette-line")
 	Key          = load("key-2-line")

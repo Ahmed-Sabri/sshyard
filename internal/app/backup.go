@@ -294,15 +294,16 @@ func backupIDs(snap assets.Snapshot, provs []settings.AIProvider) []string {
 
 // mergeSettings are the preferences of a backup, in, over those of this
 // device, cur: what belongs to this device stays (the window's layout and
-// materials, the layout of its files panes, the fonts installed here, the
-// MCP endpoint, the places it backs up to and its default backup
-// password), AI providers are merged by ID and the hosts that confirmed AI
-// use are joined.
+// materials, the layout of its files panes and editor windows, the fonts
+// installed here, the MCP endpoint, the places it backs up to and its
+// default backup password), AI providers are merged by ID and the hosts
+// that confirmed AI use are joined.
 func mergeSettings(cur, in settings.Settings) settings.Settings {
 	out := in
 	out.SidebarWidth, out.ChromeMaterial, out.ContentMaterial = cur.SidebarWidth, cur.ChromeMaterial, cur.ContentMaterial
 	out.UIFont, out.TerminalFont = cur.UIFont, cur.TerminalFont
 	out.FilesDual, out.FilesSplit = cur.FilesDual, cur.FilesSplit
+	out.EditorTreeWidth, out.EditorTreeHidden = cur.EditorTreeWidth, cur.EditorTreeHidden
 	// A backup never turns the MCP endpoint on: that is asked here.
 	out.MCPEnabled, out.MCPPort = cur.MCPEnabled, cur.MCPPort
 	// Nor does it choose where this device backs up to.

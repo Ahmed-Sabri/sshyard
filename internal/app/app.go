@@ -131,7 +131,7 @@ type conn struct {
 	s              *session.Session
 	tv             *termView   // terminal panes
 	fs             *filesState // files and editor panes (its SFTP client)
-	ed             *editState  // editor panes
+	ed             *edWin      // editor windows
 	// handled is the failure a prompt was already shown for
 	handled error
 	// tried is, by a.typed key, the generation of the secret the last
