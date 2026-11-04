@@ -11,7 +11,9 @@ require (
 	github.com/egoist/mygo v0.7.4
 	github.com/mattn/go-runewidth v0.0.31
 	github.com/pkg/sftp v1.13.12
+	github.com/studio-b12/gowebdav v0.13.0
 	golang.org/x/crypto v0.58.0
+	golang.org/x/net v0.60.0
 	golang.org/x/sys v0.49.0
 	golang.org/x/text v0.43.0
 	mvdan.cc/sh/v3 v3.14.1
@@ -22,5 +24,4 @@ require (
 	github.com/go-text/typesetting v0.3.5 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	golang.org/x/image v0.46.0 // indirect
-	golang.org/x/net v0.60.0 // indirect
 )
