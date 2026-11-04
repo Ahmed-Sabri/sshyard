@@ -7,8 +7,9 @@ License source: https://raw.githubusercontent.com/lobehub/lobe-icons/6e2e41d2968
 Archive: https://registry.npmjs.org/@lobehub/icons-static-png/-/icons-static-png-2.6.0.tgz
 Archive SHA-256: d24d8ab7c6aae72ffc7a494380c9b417d4cf76821ca1bcce77a3fe5769246ade
 
-The 27 selected brands are copied byte-for-byte from the archive's light/
-and dark/ directories into png/light/ and png/dark/, keeping upstream names.
+The 27 selected brands come from the archive's light/ and dark/ directories
+into png/light/ and png/dark/, keeping upstream names, scaled by gen.go from
+640px to the 64px the interface needs; the artwork is otherwise unchanged.
 Use the -color variant when the package provides it; never tint the artwork.
 OpenAI, Anthropic, Grok, Groq, Moonshot, Ollama and TypeSafe AI have no -color
 file in either directory's complete archive manifest; their official default
@@ -19,6 +20,8 @@ SiliconCloud, Together, Volcengine and Zhipu.
 
 To update, download an explicitly versioned archive from the npm registry,
 verify its registry integrity and SHA-256, copy only the selected light/dark
-PNG pairs unchanged, and update this notice and the upstream license.
+PNG pairs unchanged, run `go run internal/aibrands/gen.go <extracted>/package`
+from the repository root to scale them, and update this notice and the
+upstream license.
 Run go test ./internal/aibrands after changing resources or matching rules.
 Brand names and marks remain the property of their respective owners.

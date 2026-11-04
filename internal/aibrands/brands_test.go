@@ -4,11 +4,15 @@ import (
 	"bytes"
 	"image"
 	"image/png"
+	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/Licoy/sshyard/internal/settings"
 )
+
+// artSize is the side gen.go scales the artwork to.
+const artSize = 64
 
 func TestArtwork(t *testing.T) {
 	entries, err := files.ReadDir("png/light")
@@ -27,12 +31,15 @@ func TestArtwork(t *testing.T) {
 					t.Fatal(err)
 				}
 				name := strings.TrimSuffix(strings.TrimSuffix(entry.Name(), ".png"), "-color")
-				bitmap := brands[name].Light
+				if w, h := img.Bounds().Dx(), img.Bounds().Dy(); w != artSize || h != artSize {
+					t.Fatalf("artwork is %dx%d, want %dx%d from gen.go", w, h, artSize, artSize)
+				}
+				bitmap := brands[name].Light()
 				if theme == "dark" {
-					bitmap = brands[name].Dark
+					bitmap = brands[name].Dark()
 				}
 				w, h := bitmap.Size()
-				if w <= 0 || h <= 0 || w != img.Bounds().Dx() || h != img.Bounds().Dy() {
+				if w != artSize || h != artSize {
 					t.Fatalf("invalid decoded bitmap %dx%d", w, h)
 				}
 				if strings.Contains(entry.Name(), "-color") && !hasColor(img) {
@@ -45,6 +52,24 @@ func TestArtwork(t *testing.T) {
 	dark, _ := files.ReadFile("png/dark/openai.png")
 	if bytes.Equal(light, dark) {
 		t.Fatal("monochrome OpenAI must have separate theme artwork")
+	}
+}
+
+func TestBrandsDecodeOnUse(t *testing.T) {
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	all := loadBrands()
+	runtime.ReadMemStats(&after)
+	// Decoding the artwork of every brand would take megabytes.
+	if n := after.TotalAlloc - before.TotalAlloc; n > 256<<10 {
+		t.Fatalf("loading %d brands allocated %d bytes: it decoded artwork", len(all), n)
+	}
+	icon := all["openai"]
+	if icon.Light() != icon.Light() || icon.Dark() != icon.Dark() {
+		t.Fatal("artwork decoded again for each use")
+	}
+	if icon.Light() == icon.Dark() {
+		t.Fatal("light and dark share a bitmap")
 	}
 }
 

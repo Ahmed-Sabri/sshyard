@@ -6,19 +6,29 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/egoist/mygo/ui"
 )
 
+// files is the artwork gen.go scaled to the size the interface draws.
+//
 //go:embed png/light/*.png png/dark/*.png
 var files embed.FS
 
-// Icon contains the upstream artwork for each application theme.
+// Icon contains the upstream artwork for each application theme, each
+// decoded the first time it shows.
 type Icon struct {
 	Name        string
-	Light, Dark *ui.Bitmap
+	light, dark func() *ui.Bitmap
 }
+
+// Light is the artwork for the light theme.
+func (i *Icon) Light() *ui.Bitmap { return i.light() }
+
+// Dark is the artwork for the dark theme.
+func (i *Icon) Dark() *ui.Bitmap { return i.dark() }
 
 var brands = loadBrands()
 
@@ -30,9 +40,13 @@ func loadBrands() map[string]*Icon {
 	all := make(map[string]*Icon, len(entries))
 	for _, entry := range entries {
 		name := strings.TrimSuffix(strings.TrimSuffix(entry.Name(), ".png"), "-color")
-		all[name] = &Icon{Name: name, Light: decode("light", entry.Name()), Dark: decode("dark", entry.Name())}
+		all[name] = &Icon{Name: name, light: lazy("light", entry.Name()), dark: lazy("dark", entry.Name())}
 	}
 	return all
+}
+
+func lazy(theme, name string) func() *ui.Bitmap {
+	return sync.OnceValue(func() *ui.Bitmap { return decode(theme, name) })
 }
 
 func decode(theme, name string) *ui.Bitmap {

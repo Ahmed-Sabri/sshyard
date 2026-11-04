@@ -16,7 +16,7 @@ func brandImage(c *ui.Context, icon *aibrands.Icon, size float32) {
 	if currentTokens(c).Dark {
 		bitmap = icon.Dark
 	}
-	ui.Image(c, bitmap).Label(icon.Name).Size(size, size).Shrink(0)
+	ui.Image(c, bitmap()).Label(icon.Name).Size(size, size).Shrink(0)
 }
 
 func providerFormatControl(c *ui.Context, m locales.Messages, selected *int) ui.Element {
