@@ -2037,6 +2037,166 @@ func (msgs Messages) ErrKeyCorrupt() string {
 	return Catalog.Format(msgs.locale, "errKeyCorrupt", nil)
 }
 
+// FieldCertificate says "Certificate"
+// in the language the app shows.
+func FieldCertificate() string { return In(i18n.Locale()).FieldCertificate() }
+
+// FieldCertificate says "Certificate"
+// in the language of msgs.
+func (msgs Messages) FieldCertificate() string {
+	return Catalog.Format(msgs.locale, "fieldCertificate", nil)
+}
+
+// CertHint says "Optional: an OpenSSH certificate (key-cert.pub) signed for this key. One beside the key file is loaded with it."
+// in the language the app shows.
+func CertHint() string { return In(i18n.Locale()).CertHint() }
+
+// CertHint says "Optional: an OpenSSH certificate (key-cert.pub) signed for this key. One beside the key file is loaded with it."
+// in the language of msgs.
+func (msgs Messages) CertHint() string {
+	return Catalog.Format(msgs.locale, "certHint", nil)
+}
+
+// CertChooseFile says "Choose certificate file…"
+// in the language the app shows.
+func CertChooseFile() string { return In(i18n.Locale()).CertChooseFile() }
+
+// CertChooseFile says "Choose certificate file…"
+// in the language of msgs.
+func (msgs Messages) CertChooseFile() string {
+	return Catalog.Format(msgs.locale, "certChooseFile", nil)
+}
+
+// CertPaste says "Paste certificate"
+// in the language the app shows.
+func CertPaste() string { return In(i18n.Locale()).CertPaste() }
+
+// CertPaste says "Paste certificate"
+// in the language of msgs.
+func (msgs Messages) CertPaste() string {
+	return Catalog.Format(msgs.locale, "certPaste", nil)
+}
+
+// CertRemove says "Remove certificate"
+// in the language the app shows.
+func CertRemove() string { return In(i18n.Locale()).CertRemove() }
+
+// CertRemove says "Remove certificate"
+// in the language of msgs.
+func (msgs Messages) CertRemove() string {
+	return Catalog.Format(msgs.locale, "certRemove", nil)
+}
+
+// CertInfo says "{type} certificate · {id}"
+// in the language the app shows.
+func CertInfo(type_ string, id string) string { return In(i18n.Locale()).CertInfo(type_, id) }
+
+// CertInfo says "{type} certificate · {id}"
+// in the language of msgs.
+func (msgs Messages) CertInfo(type_ string, id string) string {
+	return Catalog.Format(msgs.locale, "certInfo", map[string]any{"type": type_, "id": id})
+}
+
+// CertPrincipals says "Users: {names}"
+// in the language the app shows.
+func CertPrincipals(names string) string { return In(i18n.Locale()).CertPrincipals(names) }
+
+// CertPrincipals says "Users: {names}"
+// in the language of msgs.
+func (msgs Messages) CertPrincipals(names string) string {
+	return Catalog.Format(msgs.locale, "certPrincipals", map[string]any{"names": names})
+}
+
+// CertAnyPrincipal says "any"
+// in the language the app shows.
+func CertAnyPrincipal() string { return In(i18n.Locale()).CertAnyPrincipal() }
+
+// CertAnyPrincipal says "any"
+// in the language of msgs.
+func (msgs Messages) CertAnyPrincipal() string {
+	return Catalog.Format(msgs.locale, "certAnyPrincipal", nil)
+}
+
+// CertValidUntil says "valid until {date}"
+// in the language the app shows.
+func CertValidUntil(date string) string { return In(i18n.Locale()).CertValidUntil(date) }
+
+// CertValidUntil says "valid until {date}"
+// in the language of msgs.
+func (msgs Messages) CertValidUntil(date string) string {
+	return Catalog.Format(msgs.locale, "certValidUntil", map[string]any{"date": date})
+}
+
+// CertForever says "valid forever"
+// in the language the app shows.
+func CertForever() string { return In(i18n.Locale()).CertForever() }
+
+// CertForever says "valid forever"
+// in the language of msgs.
+func (msgs Messages) CertForever() string {
+	return Catalog.Format(msgs.locale, "certForever", nil)
+}
+
+// CertExpired says "expired on {date}"
+// in the language the app shows.
+func CertExpired(date string) string { return In(i18n.Locale()).CertExpired(date) }
+
+// CertExpired says "expired on {date}"
+// in the language of msgs.
+func (msgs Messages) CertExpired(date string) string {
+	return Catalog.Format(msgs.locale, "certExpired", map[string]any{"date": date})
+}
+
+// CertNotYet says "valid from {date}"
+// in the language the app shows.
+func CertNotYet(date string) string { return In(i18n.Locale()).CertNotYet(date) }
+
+// CertNotYet says "valid from {date}"
+// in the language of msgs.
+func (msgs Messages) CertNotYet(date string) string {
+	return Catalog.Format(msgs.locale, "certNotYet", map[string]any{"date": date})
+}
+
+// ErrNotACert says "This is not an OpenSSH certificate."
+// in the language the app shows.
+func ErrNotACert() string { return In(i18n.Locale()).ErrNotACert() }
+
+// ErrNotACert says "This is not an OpenSSH certificate."
+// in the language of msgs.
+func (msgs Messages) ErrNotACert() string {
+	return Catalog.Format(msgs.locale, "errNotACert", nil)
+}
+
+// ErrHostCert says "This is a host certificate: load the user certificate instead."
+// in the language the app shows.
+func ErrHostCert() string { return In(i18n.Locale()).ErrHostCert() }
+
+// ErrHostCert says "This is a host certificate: load the user certificate instead."
+// in the language of msgs.
+func (msgs Messages) ErrHostCert() string {
+	return Catalog.Format(msgs.locale, "errHostCert", nil)
+}
+
+// ErrCertMismatch says "The certificate is not for this private key."
+// in the language the app shows.
+func ErrCertMismatch() string { return In(i18n.Locale()).ErrCertMismatch() }
+
+// ErrCertMismatch says "The certificate is not for this private key."
+// in the language of msgs.
+func (msgs Messages) ErrCertMismatch() string {
+	return Catalog.Format(msgs.locale, "errCertMismatch", nil)
+}
+
+// ErrCertificate says "The certificate of {host} does not fit its private key: change the key or remove the certificate."
+// in the language the app shows.
+func ErrCertificate(host string) string { return In(i18n.Locale()).ErrCertificate(host) }
+
+// ErrCertificate says "The certificate of {host} does not fit its private key: change the key or remove the certificate."
+// in the language of msgs.
+func (msgs Messages) ErrCertificate(host string) string {
+	return Catalog.Format(msgs.locale, "errCertificate", map[string]any{"host": host})
+}
+
 // ErrKeyUnsupported says "Unsupported key: {detail}"
 // in the language the app shows.
 func ErrKeyUnsupported(detail string) string { return In(i18n.Locale()).ErrKeyUnsupported(detail) }

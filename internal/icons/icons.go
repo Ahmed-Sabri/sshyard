@@ -165,6 +165,7 @@ var (
 	MCP         = load("plug-line")
 	API         = load("code-s-slash-line")
 	Skill       = load("tools-line")
+	Certificate = load("shield-keyhole-line")
 	// The AI permission modes: asks first, reviewed, full access.
 	ModeAsk    = InstallKey
 	ModeReview = load("eye-line")

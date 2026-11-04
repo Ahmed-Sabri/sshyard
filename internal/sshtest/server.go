@@ -48,6 +48,9 @@ type Server struct {
 	// any key in it may log in. As with OpenSSH's StrictModes, it is
 	// ignored when it or its directory is writable by group or others.
 	AuthorizedKeysFile string
+	// TrustedCA, when set, signs the user certificates that may log in,
+	// as OpenSSH's TrustedUserCAKeys: valid now, naming User.
+	TrustedCA ssh.PublicKey
 	// DirectTCPIP lets clients open direct-tcpip channels (ssh -L, -D,
 	// jump hosts); TCPIPForward lets them ask for remote listeners
 	// (ssh -R).
@@ -158,6 +161,14 @@ func (s *Server) config() *ssh.ServerConfig {
 		PublicKeyCallback: func(m ssh.ConnMetadata, k ssh.PublicKey) (*ssh.Permissions, error) {
 			if m.User() != s.User {
 				return nil, fmt.Errorf("unknown user")
+			}
+			if _, ok := k.(*ssh.Certificate); ok {
+				if s.TrustedCA == nil {
+					return nil, fmt.Errorf("no certificate authority")
+				}
+				ca := string(s.TrustedCA.Marshal())
+				checker := &ssh.CertChecker{IsUserAuthority: func(auth ssh.PublicKey) bool { return string(auth.Marshal()) == ca }}
+				return checker.Authenticate(m, k)
 			}
 			if s.AuthorizedKey != nil && string(k.Marshal()) == string(s.AuthorizedKey.Marshal()) {
 				return nil, nil

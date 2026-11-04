@@ -1038,7 +1038,7 @@ func (a *App) credentials(c *conn, h assets.Host) (session.Credentials, error) {
 				}
 				return out, err
 			}
-			out.PrivateKey = key
+			out.PrivateKey, out.Certificate = key, []byte(cr.Certificate)
 			pk := keychain.Cred(cr.ID, keychain.Passphrase)
 			if p := typed(pk); p != "" {
 				out.Passphrase = []byte(p)

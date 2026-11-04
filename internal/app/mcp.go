@@ -425,7 +425,7 @@ func (a *App) mcpCredentials(h assets.Host) (session.Credentials, error) {
 		if err != nil {
 			return out, errMCPNeedsInput
 		}
-		out.PrivateKey = key
+		out.PrivateKey, out.Certificate = key, []byte(cr.Certificate)
 		out.Passphrase, err = a.kc.Get(keychain.Cred(cr.ID, keychain.Passphrase))
 		if err != nil && cr.Encrypted {
 			return out, errMCPNeedsInput

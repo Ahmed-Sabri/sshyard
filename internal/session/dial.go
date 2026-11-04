@@ -25,6 +25,9 @@ type Credentials struct {
 	Password   string
 	PrivateKey []byte
 	Passphrase []byte
+	// Certificate, when set, is an OpenSSH user certificate of
+	// PrivateKey (a key-cert.pub line), offered before the bare key.
+	Certificate []byte
 	// Agent signs with the system SSH agent's keys.
 	Agent bool
 	// User, when set, logs in instead of Config.User (a credential's
@@ -38,6 +41,10 @@ var ErrPassphraseNeeded = errors.New("session: the private key needs a passphras
 
 // ErrPassphraseWrong reports a passphrase that does not decrypt the key.
 var ErrPassphraseWrong = errors.New("session: wrong passphrase for the private key")
+
+// ErrCertificate reports a certificate that cannot be read or is not for
+// the private key.
+var ErrCertificate = errors.New("session: the certificate does not fit the private key")
 
 // ErrNoCredentials reports a host with nothing to authenticate with.
 var ErrNoCredentials = errors.New("session: no password or key")
@@ -110,7 +117,20 @@ func authMethods(cr Credentials) ([]ssh.AuthMethod, io.Closer, error) {
 		if err != nil {
 			return nil, nil, fmt.Errorf("session: private key: %w", err)
 		}
-		ms = append(ms, ssh.PublicKeys(signer))
+		signers := []ssh.Signer{signer}
+		if len(cr.Certificate) > 0 {
+			pub, _, _, _, err := ssh.ParseAuthorizedKey(cr.Certificate)
+			cert, ok := pub.(*ssh.Certificate)
+			if err != nil || !ok {
+				return nil, nil, fmt.Errorf("%w: not a certificate", ErrCertificate)
+			}
+			cs, err := ssh.NewCertSigner(cert, signer)
+			if err != nil {
+				return nil, nil, fmt.Errorf("%w: %w", ErrCertificate, err)
+			}
+			signers = []ssh.Signer{cs, signer}
+		}
+		ms = append(ms, ssh.PublicKeys(signers...))
 	}
 	if cr.Password != "" {
 		pw := cr.Password
@@ -307,6 +327,8 @@ const (
 	KindHostChanged
 	KindPassphrase
 	KindNoCredentials
+	// KindCertificate: the certificate does not fit the private key.
+	KindCertificate
 	// KindAgent: the SSH agent is not running or has no keys.
 	KindAgent
 	// KindProxyAuth: the proxy refused its user name and password.
@@ -338,6 +360,8 @@ func Classify(err error) Kind {
 		return KindPassphrase
 	case errors.Is(err, ErrNoCredentials):
 		return KindNoCredentials
+	case errors.Is(err, ErrCertificate):
+		return KindCertificate
 	case strings.Contains(err.Error(), "unable to authenticate"):
 		return KindAuth
 	case errors.Is(err, ErrNoBanner):
