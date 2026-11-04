@@ -242,12 +242,10 @@
     "tagline": "內建 AI 助理的原生 SSH / SFTP 用戶端，支援 macOS、Windows 和 Linux。",
     "product": "產品",
     "project": "專案",
-    "community": "社群",
     "release_notes": "更新日誌",
     "source": "原始碼",
     "issues": "回報問題",
     "license": "授權條款（AGPL-3.0）",
-    "linuxdo": "LinuxDO",
     "copyright": "© {year} SSHYard，以 GNU AGPL-3.0 開放原始碼。"
   },
   "banner": {

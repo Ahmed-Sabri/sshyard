@@ -242,12 +242,10 @@
     "tagline": "AI 도우미를 내장한 macOS, Windows, Linux용 네이티브 SSH·SFTP 클라이언트.",
     "product": "제품",
     "project": "프로젝트",
-    "community": "커뮤니티",
     "release_notes": "릴리스 노트",
     "source": "소스 코드",
     "issues": "문제 신고",
     "license": "라이선스(AGPL-3.0)",
-    "linuxdo": "LinuxDO",
     "copyright": "© {year} SSHYard. GNU AGPL-3.0으로 공개합니다."
   },
   "banner": {

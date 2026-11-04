@@ -862,7 +862,7 @@ html[data-os="linux"] [data-platform="linux"] .dl-rec { display: inline-flex; }
 .foot-in { display: grid; gap: var(--s8); padding-block: var(--s12) var(--s8); grid-template-columns: repeat(2, 1fr); }
 .foot-brand { grid-column: 1 / -1; }
 .foot-brand p { margin-top: var(--s3); max-width: 320px; color: var(--muted); }
-@media (min-width: 860px) { .foot-in { grid-template-columns: 2fr repeat(4, 1fr); } .foot-brand { grid-column: auto; } }
+@media (min-width: 860px) { .foot-in { grid-template-columns: 2fr repeat(3, 1fr); } .foot-brand { grid-column: auto; } }
 .foot-col { display: grid; gap: var(--s2); align-content: start; }
 .foot-col h2 { font-size: 13px; font-weight: 600; letter-spacing: 0; color: var(--text); margin-bottom: var(--s1); }
 .foot-col a { color: var(--muted); }

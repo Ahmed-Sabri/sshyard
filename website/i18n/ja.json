@@ -242,12 +242,10 @@
     "tagline": "AI アシスタントを内蔵した macOS・Windows・Linux 向けネイティブ SSH / SFTP クライアント。",
     "product": "製品",
     "project": "プロジェクト",
-    "community": "コミュニティ",
     "release_notes": "リリースノート",
     "source": "ソースコード",
     "issues": "問題を報告",
     "license": "ライセンス（AGPL-3.0）",
-    "linuxdo": "LinuxDO",
     "copyright": "© {year} SSHYard. GNU AGPL-3.0 で公開しています。"
   },
   "banner": {

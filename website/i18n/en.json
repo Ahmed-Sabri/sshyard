@@ -242,12 +242,10 @@
     "tagline": "A native SSH and SFTP client with an AI assistant, for macOS, Windows and Linux.",
     "product": "Product",
     "project": "Project",
-    "community": "Community",
     "release_notes": "Release notes",
     "source": "Source code",
     "issues": "Report an issue",
     "license": "License (AGPL-3.0)",
-    "linuxdo": "LinuxDO",
     "copyright": "© {year} SSHYard. Released under the GNU AGPL-3.0."
   },
   "banner": {
