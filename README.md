@@ -8,6 +8,31 @@
 
 SSHYard is a cross-platform desktop SSH / SFTP client for macOS, Windows and Linux. It is built on [mygo](https://github.com/egoist/mygo) with a pure native UI: no webview and no HTML. The terminal is a VT/ANSI engine written in Go and drawn by the app itself.
 
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/terminal-ai-assistant.webp" alt="Terminal and AI assistant" width="100%"><br>
+      Terminal and AI assistant
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/sftp-file-manager.webp" alt="SFTP file manager" width="100%"><br>
+      SFTP file manager
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/system-monitor.webp" alt="System monitor" width="100%"><br>
+      System monitor
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/ai-assistant-settings.webp" alt="AI assistant settings" width="100%"><br>
+      AI assistant settings
+    </td>
+  </tr>
+</table>
+
 ## Features
 
 - **Terminal**: tabs and split panes, true colour, wide characters, input methods, mouse reporting (tmux, vim, htop), search.
