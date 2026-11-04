@@ -14,6 +14,7 @@ type Snapshot struct {
 	Proxies     []Proxy      `json:"proxies"`
 	Forwards    []Forward    `json:"forwards"`
 	Groups      []string     `json:"groups,omitempty"`
+	GroupOrder  []string     `json:"groupOrder,omitempty"`
 	Snippets    []Snippet    `json:"snippets,omitempty"`
 }
 
@@ -21,7 +22,11 @@ type Snapshot struct {
 func (s *Store) Snapshot() Snapshot {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return Snapshot{Hosts: slices.Clone(s.hosts), Credentials: slices.Clone(s.creds), Proxies: slices.Clone(s.proxies), Forwards: slices.Clone(s.forwards), Groups: slices.Clone(s.groups), Snippets: slices.Clone(s.snippets)}
+	var order []string
+	if len(s.groupOrder) > 0 {
+		order = s.groupNames()
+	}
+	return Snapshot{Hosts: slices.Clone(s.hosts), Credentials: slices.Clone(s.creds), Proxies: slices.Clone(s.proxies), Forwards: slices.Clone(s.forwards), Groups: slices.Clone(s.groups), GroupOrder: order, Snippets: slices.Clone(s.snippets)}
 }
 
 // ValidID reports whether id can name an entry: what NewID makes, and no
@@ -69,7 +74,11 @@ func (s *Store) Restore(in Snapshot) error {
 	defer s.mu.Unlock()
 	h, c, p, f, g := slices.Clone(s.hosts), slices.Clone(s.creds), slices.Clone(s.proxies), slices.Clone(s.forwards), slices.Clone(s.groups)
 	n := slices.Clone(s.snippets)
-	undo := func() { s.hosts, s.creds, s.proxies, s.forwards, s.groups, s.snippets = h, c, p, f, g, n }
+	order := slices.Clone(s.groupOrder)
+	undo := func() {
+		s.hosts, s.creds, s.proxies, s.forwards, s.groups, s.snippets = h, c, p, f, g, n
+		s.groupOrder = order
+	}
 	if err := s.merge(in); err != nil {
 		undo()
 		return err
@@ -157,5 +166,5 @@ func (s *Store) merge(in Snapshot) error {
 			s.groups = append(s.groups, name)
 		}
 	}
-	return nil
+	return s.restoreGroupOrder(in.GroupOrder)
 }

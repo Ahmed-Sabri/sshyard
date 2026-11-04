@@ -11,6 +11,8 @@
   "deleteForwardConfirm": "删除 {name}？转发会立即停止，为它保存的密码也会从本地加密凭证库中移除。",
   "deleteHostConfirm": "删除 {name}？它使用的凭据会保留给其他主机。",
   "searchHosts": "搜索主机",
+  "collapseAllGroups": "全部收起分组",
+  "expandAllGroups": "全部展开分组",
   "noHosts": "还没有主机",
   "noHostsHint": "添加一台主机以通过 SSH 连接。",
   "fieldName": "名称",

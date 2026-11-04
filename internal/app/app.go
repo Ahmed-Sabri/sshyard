@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -1085,20 +1084,13 @@ func hostsBy(st *assets.Store, query string) (favorites []assets.Host, groups []
 		if h.Favorite {
 			favorites = append(favorites, h)
 		}
-		if _, ok := byGroup[h.Group]; !ok && h.Group != "" {
-			groups = append(groups, h.Group)
-		}
 		byGroup[h.Group] = append(byGroup[h.Group], h)
 	}
 	// Groups made on their own show while empty, but not in a search.
-	if query == "" {
-		for _, g := range st.Groups() {
-			if _, ok := byGroup[g]; !ok {
-				groups = append(groups, g)
-				byGroup[g] = nil
-			}
+	for _, g := range st.Groups() {
+		if _, ok := byGroup[g]; ok || query == "" {
+			groups = append(groups, g)
 		}
 	}
-	sort.Slice(groups, func(i, j int) bool { return groups[i] < groups[j] })
 	return
 }

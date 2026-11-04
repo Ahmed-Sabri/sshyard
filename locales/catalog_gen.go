@@ -147,6 +147,26 @@ func (msgs Messages) SearchHosts() string {
 	return Catalog.Format(msgs.locale, "searchHosts", nil)
 }
 
+// CollapseAllGroups says "Collapse all groups"
+// in the language the app shows.
+func CollapseAllGroups() string { return In(i18n.Locale()).CollapseAllGroups() }
+
+// CollapseAllGroups says "Collapse all groups"
+// in the language of msgs.
+func (msgs Messages) CollapseAllGroups() string {
+	return Catalog.Format(msgs.locale, "collapseAllGroups", nil)
+}
+
+// ExpandAllGroups says "Expand all groups"
+// in the language the app shows.
+func ExpandAllGroups() string { return In(i18n.Locale()).ExpandAllGroups() }
+
+// ExpandAllGroups says "Expand all groups"
+// in the language of msgs.
+func (msgs Messages) ExpandAllGroups() string {
+	return Catalog.Format(msgs.locale, "expandAllGroups", nil)
+}
+
 // NoHosts says "No hosts yet"
 // in the language the app shows.
 func NoHosts() string { return In(i18n.Locale()).NoHosts() }

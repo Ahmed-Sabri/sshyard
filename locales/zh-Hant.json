@@ -11,6 +11,8 @@
   "deleteForwardConfirm": "刪除 {name}？轉發會立即停止，為它儲存的密碼也會從本地加密憑證庫中移除。",
   "deleteHostConfirm": "刪除 {name}？它使用的憑證會保留給其他主機。",
   "searchHosts": "搜尋主機",
+  "collapseAllGroups": "全部收起分組",
+  "expandAllGroups": "全部展開分組",
   "noHosts": "還沒有主機",
   "noHostsHint": "新增一臺主機以透過 SSH 連線。",
   "fieldName": "名稱",

@@ -11,6 +11,8 @@
   "deleteForwardConfirm": "{name}을(를) 삭제하시겠습니까? 즉시 중지되며 저장된 비밀번호가 암호화된 로컬 자격 증명 저장소에서 삭제됩니다.",
   "deleteHostConfirm": "{name}을(를) 삭제하시겠습니까? 다른 호스트에서 사용하는 자격 증명은 유지됩니다.",
   "searchHosts": "호스트 검색",
+  "collapseAllGroups": "모든 그룹 접기",
+  "expandAllGroups": "모든 그룹 펼치기",
   "noHosts": "아직 호스트가 없습니다",
   "noHostsHint": "SSH로 연결할 호스트를 추가하세요.",
   "fieldName": "이름",

@@ -11,6 +11,8 @@
   "deleteForwardConfirm": "Delete {name}? It stops now, and any password saved for it is removed from the encrypted local credential store.",
   "deleteHostConfirm": "Delete {name}? Its credential is kept for other hosts.",
   "searchHosts": "Search hosts",
+  "collapseAllGroups": "Collapse all groups",
+  "expandAllGroups": "Expand all groups",
   "noHosts": "No hosts yet",
   "noHostsHint": "Add a host to connect over SSH.",
   "fieldName": "Name",

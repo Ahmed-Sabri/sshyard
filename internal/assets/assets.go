@@ -286,7 +286,8 @@ type Store struct {
 	snippets []Snippet
 	// groups are the groups made on their own, kept while empty; the
 	// groups hosts name are groups too.
-	groups []string
+	groups     []string
+	groupOrder []string
 	// discarded are the host IDs of an older file Open threw away.
 	discarded []string
 }
@@ -298,6 +299,7 @@ type file struct {
 	Proxies     []Proxy      `json:"proxies"`
 	Forwards    []Forward    `json:"forwards"`
 	Groups      []string     `json:"groups,omitempty"`
+	GroupOrder  []string     `json:"groupOrder,omitempty"`
 	Snippets    []Snippet    `json:"snippets,omitempty"`
 }
 
@@ -342,6 +344,7 @@ func Open(path string) (*Store, error) {
 		return s, nil
 	}
 	s.hosts, s.creds, s.proxies, s.forwards, s.groups, s.snippets = f.Hosts, f.Credentials, f.Proxies, f.Forwards, f.Groups, f.Snippets
+	s.groupOrder = f.GroupOrder
 	return s, nil
 }
 
@@ -353,7 +356,7 @@ func (s *Store) save() error {
 	if s.path == "" {
 		return nil
 	}
-	f := file{Version: SchemaVersion, Hosts: s.hosts, Credentials: s.creds, Proxies: s.proxies, Forwards: s.forwards, Groups: s.groups, Snippets: s.snippets}
+	f := file{Version: SchemaVersion, Hosts: s.hosts, Credentials: s.creds, Proxies: s.proxies, Forwards: s.forwards, Groups: s.groups, GroupOrder: s.groupOrder, Snippets: s.snippets}
 	// Empty lists are written as [], not null.
 	if f.Hosts == nil {
 		f.Hosts = []Host{}
@@ -378,9 +381,14 @@ func (s *Store) save() error {
 func (s *Store) commit(fn func()) error {
 	h, c, p, f, g := slices.Clone(s.hosts), slices.Clone(s.creds), slices.Clone(s.proxies), slices.Clone(s.forwards), slices.Clone(s.groups)
 	n := slices.Clone(s.snippets)
+	order := slices.Clone(s.groupOrder)
 	fn()
+	if len(s.groupOrder) > 0 {
+		s.groupOrder = s.groupNames()
+	}
 	if err := s.save(); err != nil {
 		s.hosts, s.creds, s.proxies, s.forwards, s.groups, s.snippets = h, c, p, f, g, n
+		s.groupOrder = order
 		return err
 	}
 	return nil
@@ -628,7 +636,7 @@ func (s *Store) Favorites() []Host {
 	return out
 }
 
-// Groups returns the names of the groups, sorted: those of the hosts and
+// Groups returns the names of the groups in display order: those of the hosts and
 // those made with AddGroup, empty or not. Hosts without a group are in
 // none of them.
 func (s *Store) Groups() []string {
@@ -652,7 +660,23 @@ func (s *Store) groupNames() []string {
 	for _, h := range s.hosts {
 		add(h.Group)
 	}
-	slices.SortFunc(out, func(a, b string) int { return strings.Compare(strings.ToLower(a), strings.ToLower(b)) })
+	rank := make(map[string]int, len(s.groupOrder))
+	for i, g := range s.groupOrder {
+		rank[g] = i + 1
+	}
+	slices.SortFunc(out, func(a, b string) int {
+		i, j := rank[a], rank[b]
+		if i != j {
+			if i == 0 {
+				return 1
+			}
+			if j == 0 {
+				return -1
+			}
+			return i - j
+		}
+		return strings.Compare(strings.ToLower(a), strings.ToLower(b))
+	})
 	return out
 }
 
@@ -692,7 +716,10 @@ func (s *Store) RenameGroup(old, name string) error {
 	if err := s.checkGroup(name, old); err != nil {
 		return err
 	}
+	order := s.groupNames()
 	return s.commit(func() {
+		order[slices.Index(order, old)] = name
+		s.groupOrder = order
 		s.groups = slices.DeleteFunc(slices.Clone(s.groups), func(g string) bool { return g == old })
 		s.groups = append(s.groups, name)
 		for i := range s.hosts {
@@ -711,6 +738,7 @@ func (s *Store) DeleteGroup(name string) error {
 		return ErrNotFound
 	}
 	return s.commit(func() {
+		s.groupOrder = slices.DeleteFunc(slices.Clone(s.groupOrder), func(g string) bool { return g == name })
 		s.groups = slices.DeleteFunc(slices.Clone(s.groups), func(g string) bool { return g == name })
 		for i := range s.hosts {
 			if s.hosts[i].Group == name {

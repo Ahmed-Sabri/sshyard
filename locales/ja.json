@@ -11,6 +11,8 @@
   "deleteForwardConfirm": "{name}を削除しますか？直ちに停止し、保存されているパスワードは暗号化されたローカル認証情報ストアから削除されます。",
   "deleteHostConfirm": "{name}を削除しますか？認証情報は他のホストのために保持されます。",
   "searchHosts": "ホストを検索",
+  "collapseAllGroups": "すべてのグループを折りたたむ",
+  "expandAllGroups": "すべてのグループを展開",
   "noHosts": "ホストはまだありません",
   "noHostsHint": "ホストを追加してSSHで接続します。",
   "fieldName": "名前",

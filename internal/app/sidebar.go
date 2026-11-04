@@ -44,11 +44,12 @@ func (a *App) sidebarView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 		// typed on the spot, or the hosts of ~/.ssh/config.
 		ui.Row(c.Key("sbtools")).Padding(8, 8, 6, 12).Gap(4).AlignItems(ui.Center).Children(func() {
 			a.searchBox(c, m, tok)
+			a.sidebarSectionsButton(c, m)
 			a.menuButton(c, "newhost", IconButton{Icon: icons.Add, Label: m.AddMenu()}, func() []menuEntry {
 				return a.addEntries(m)
 			})
 		})
-		if a.store.Len() == 0 {
+		if a.store.Len() == 0 && len(a.store.Groups()) == 0 {
 			ui.Column(c).Padding(16).Gap(6).Children(func() {
 				ui.Text(c, m.NoHosts()).FontWeight(600)
 				ui.Text(c, m.NoHostsHint()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
@@ -137,7 +138,7 @@ func (a *App) groupSection(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 			{Icon: icons.Delete, Label: m.DeleteGroup(), Danger: true, Do: func() { a.groupDelete, a.groupDeleting = g, true }},
 		}
 	})
-	a.hostDrops(sec, tok, g)
+	a.groupDragDrop(c, m, tok, sec, g)
 }
 
 // hostDrops moves a host dropped from the sidebar on a section into the
@@ -165,7 +166,7 @@ func (a *App) searchBox(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 		Radius(theme.RadiusControl).Background(tok.Fill)
 	row.Children(func() {
 		ui.Icon(c, icons.Search.SVG).Size(14, 14).Shrink(0).TextColor(tok.TextMuted)
-		in := ui.TextInputBase(c.Key("q"), &a.search).Placeholder(m.SearchHosts()).Label(m.SearchHosts()).Grow(1).Shrink(1).MinWidth(40)
+		in := ui.TextInputBase(c.Key("q"), &a.search).Placeholder(m.SearchHosts()).Label(m.SearchHosts()).Grow(1).Shrink(1).MinWidth(0)
 		if a.searchFocus {
 			in.Focus()
 			a.searchFocus = false
