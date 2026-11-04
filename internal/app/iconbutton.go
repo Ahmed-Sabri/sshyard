@@ -29,6 +29,8 @@ type IconButton struct {
 	Disabled bool
 	// Danger tints the hover red, for a destructive action.
 	Danger bool
+	// Prominent keeps the accent (or danger tint) visible at rest.
+	Prominent bool
 	// Size is the icon's size; 0 is 16. Small is 14, for dense rows, Tiny
 	// 12, for pane headers.
 	Size float32
@@ -74,6 +76,9 @@ func (b IconButton) Show(c *ui.Context, key string) ui.Element {
 		hue = th.Danger
 	}
 	fg := th.TextMuted
+	if b.Prominent {
+		fg = hue
+	}
 	switch {
 	case b.Disabled:
 		el.Opacity(0.4)

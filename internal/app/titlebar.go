@@ -41,10 +41,39 @@ func (a *App) titleBar(c *ui.Context, m locales.Messages, tok theme.Tokens, clea
 	row.Children(func() {
 		// Level with the sidebar, and its separator, below, so that the
 		// tabs start where the content does.
-		ui.Box(c.Key("tblead")).Width(max(a.sbWidth+1, bar.Left)).Shrink(0).FillHeight()
+		ui.Row(c.Key("tblead")).Width(max(a.sbWidth+1, bar.Left)).Shrink(0).FillHeight().
+			Padding(0, theme.Space(2), 0, bar.Left+theme.Space(2)).AlignItems(ui.Center).Children(func() {
+			if a.page == pageSettings {
+				a.settingsBack(c, m, tok)
+			} else {
+				ui.Row(c.Key("titlebrand")).Shrink(0).Gap(theme.Space(1)).AlignItems(ui.Center).Children(func() {
+					ui.Image(c, a.logo).Size(16, 16).Shrink(0).Radius(theme.RadiusSmall)
+					ui.Text(c, m.AppName()).FontSize(theme.Footnote).TextColor(tok.TextMuted).SingleLine()
+				})
+			}
+		})
 		a.tabStrip(c, m, tok)
 		a.windowButtons(c, m, tok)
 	})
+}
+
+func (a *App) settingsBack(c *ui.Context, m locales.Messages, tok theme.Tokens) {
+	b := ui.ButtonBase(c.Key("settings:back")).Label(m.Back()).Shrink(0).
+		Height(theme.Space(6)).Padding(0, theme.Space(2)).Gap(theme.Space(1)).Radius(theme.RadiusControl).
+		Background(tok.Fill).Border(1, tok.Line).
+		AlignItems(ui.Center).Justify(ui.Start).Cursor(ui.CursorPointer)
+	if b.Pressed() {
+		b.Background(tok.Press)
+	} else if b.Hovered() {
+		b.Background(tok.Hover)
+	}
+	b.Children(func() {
+		ui.Icon(c, icons.Back.SVG).Size(Tiny, Tiny).TextColor(tok.TextMuted)
+		ui.Text(c, m.Back()).FontSize(theme.Footnote).SingleLine().Shrink(1)
+	})
+	if b.Clicked() {
+		a.closeSettings()
+	}
 }
 
 // appButtons are the app's own IconButtons in the title bar: updates, its
@@ -63,13 +92,12 @@ func (a *App) appButtons(c *ui.Context, m locales.Messages) {
 	if iconButton(c, "github", icons.GitHub, m.GitHubRepo()) {
 		c.OpenURL(repoURL)
 	}
-	on := a.page == pageSettings
-	if (IconButton{Icon: icons.Settings, On: icons.SettingsOn, Label: m.Settings(), Active: on, Toggle: true}).Clicked(c, "settings") {
-		if on {
+	if a.page == pageSettings {
+		if (IconButton{Icon: icons.Close, Label: m.CloseSettings(), Danger: true, Prominent: true}).Clicked(c, "settings") {
 			a.closeSettings()
-		} else {
-			a.openSettings(a.prefNow())
 		}
+	} else if iconButton(c, "settings", icons.Settings, m.Settings()) {
+		a.openSettings(a.prefNow())
 	}
 }
 

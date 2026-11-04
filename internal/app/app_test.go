@@ -264,7 +264,7 @@ func TestSettingsLanguageAndTheme(t *testing.T) {
 		t.Fatal(err)
 	}
 	tt.Frame()
-	if len(locs) == 0 || !tt.HasText(locales.In("zh-Hans").Settings()) {
+	if len(locs) == 0 || !tt.HasText(locales.In("zh-Hans").CloseSettings()) {
 		t.Errorf("Chinese UI missing: %v %q", locs, tt.Texts())
 	}
 }
@@ -287,7 +287,7 @@ func TestSettingsAllLanguagesAndThemes(t *testing.T) {
 					t.Fatalf("selected language = %q, want %q", a.Settings().Language, lang)
 				}
 				m := locales.In(lang)
-				for _, label := range []string{m.Settings(), m.Appearance(), m.Language(), m.Theme(), languageNames[lang]} {
+				for _, label := range []string{m.CloseSettings(), m.Appearance(), m.Language(), m.Theme(), languageNames[lang]} {
 					if !tt.HasText(label) {
 						t.Errorf("%s dark=%v missing %q", lang, dark, label)
 					}
@@ -482,7 +482,7 @@ func TestSettingsToggle(t *testing.T) {
 	if a.page != pageSettings || a.prefNow() != prefAppearance {
 		t.Fatal("settings did not open")
 	}
-	mustClick(t, tt, "Settings")
+	mustClick(t, tt, "Close Settings")
 	if a.page != pageWorkspace {
 		t.Fatal("settings did not close")
 	}

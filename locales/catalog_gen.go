@@ -1495,6 +1495,16 @@ func (msgs Messages) NoTransfers() string {
 	return Catalog.Format(msgs.locale, "noTransfers", nil)
 }
 
+// ConnectionCount says "{count, plural, one {# connection} other {# connections}}"
+// in the language the app shows.
+func ConnectionCount(count int) string { return In(i18n.Locale()).ConnectionCount(count) }
+
+// ConnectionCount says "{count, plural, one {# connection} other {# connections}}"
+// in the language of msgs.
+func (msgs Messages) ConnectionCount(count int) string {
+	return Catalog.Format(msgs.locale, "connectionCount", map[string]any{"count": count})
+}
+
 // HostCount says "{count, plural, one {# host} other {# hosts}}"
 // in the language the app shows.
 func HostCount(count int) string { return In(i18n.Locale()).HostCount(count) }
@@ -5773,6 +5783,16 @@ func AiRequestFailed(detail string) string { return In(i18n.Locale()).AiRequestF
 // in the language of msgs.
 func (msgs Messages) AiRequestFailed(detail string) string {
 	return Catalog.Format(msgs.locale, "aiRequestFailed", map[string]any{"detail": detail})
+}
+
+// Back says "Back"
+// in the language the app shows.
+func Back() string { return In(i18n.Locale()).Back() }
+
+// Back says "Back"
+// in the language of msgs.
+func (msgs Messages) Back() string {
+	return Catalog.Format(msgs.locale, "back", nil)
 }
 
 // CloseSettings says "Close Settings"

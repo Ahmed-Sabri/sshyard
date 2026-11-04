@@ -8,6 +8,7 @@ import (
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/locales"
 	"github.com/egoist/mygo/ui"
+	"golang.org/x/crypto/ssh"
 	"strings"
 )
 
@@ -91,12 +92,35 @@ func (a *App) sidebarView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 			_ = sb
 		}
 
-		// The foot of the sidebar: how many hosts there are.
+		// The foot of the sidebar: host count and live SSH connections.
 		ui.Box(c).Height(1).Shrink(0).FillWidth().Background(tok.Line)
 		ui.Row(c.Key("sbfoot")).Height(statusBarHeight).Shrink(0).Padding(0, 12).AlignItems(ui.Center).Children(func() {
-			ui.Text(c, m.HostCount(a.store.Len())).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine()
+			ui.Text(c, m.HostCount(a.store.Len())).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine().Shrink(1)
+			ui.Spacer(c)
+			n := a.connectedCount()
+			color := tok.TextMuted
+			if n > 0 {
+				color = tok.Success
+			}
+			ui.Row(c.Key("sbconnections")).Shrink(0).Gap(theme.Space(1)).AlignItems(ui.Center).Children(func() {
+				dot(c, color)
+				ui.Text(c, m.ConnectionCount(n)).FontSize(theme.Caption).TextColor(color).SingleLine()
+			})
 		})
 	})
+}
+
+// connectedCount counts shared SSH clients once, excluding local shells.
+func (a *App) connectedCount() int {
+	clients := make(map[*ssh.Client]struct{})
+	for _, cn := range a.conns {
+		if cn.s != nil {
+			if client := cn.s.Client(); client != nil {
+				clients[client] = struct{}{}
+			}
+		}
+	}
+	return len(clients)
 }
 
 // groupSection gives a group's section its menu, and takes the hosts

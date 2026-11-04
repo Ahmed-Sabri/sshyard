@@ -97,8 +97,7 @@ func (a *App) closeSettings() {
 }
 
 // settingsNav is the sidebar while the settings show: the pages in
-// groups, as System Settings lists them (the way back is in the title
-// bar).
+// groups, as System Settings lists them; the way back is in the title bar.
 func (a *App) settingsNav(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	cur := a.prefNow()
 	ui.Column(c).Fill().Children(func() {

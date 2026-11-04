@@ -14,7 +14,7 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
-// TestTitleBar runs one band across the window: no name over the
+// TestTitleBar runs one band across the window: the name over the
 // sidebar; at the end the app's buttons, updates, GitHub and the
 // settings, in that order; while the settings show, no tabs, and the
 // settings button closes them; the window's own buttons, last, where the
@@ -26,8 +26,8 @@ func TestTitleBar(t *testing.T) {
 		r, ok := tt.Find(s)
 		return ok && r.Y+r.H <= band
 	}
-	if in("SSHYard") {
-		t.Errorf("app name in the title bar")
+	if !in("SSHYard") {
+		t.Errorf("app name missing from the title bar")
 	}
 	prev := ui.Rect{X: 1200 - 160}
 	for _, s := range []string{"Check for Updates", "GitHub Repository", "Settings"} {
@@ -52,10 +52,10 @@ func TestTitleBar(t *testing.T) {
 	}
 	a.openSettings(prefAbout)
 	tt.Frame()
-	if !in("Settings") {
+	if !in("Close Settings") {
 		t.Error("no settings button in the settings")
 	}
-	mustClick(t, tt, "Settings")
+	mustClick(t, tt, "Close Settings")
 	if a.page == pageSettings {
 		t.Error("the settings button did not close them")
 	}
@@ -106,10 +106,10 @@ func TestTitleBar(t *testing.T) {
 		t.Errorf("tabs in the title bar over the settings: %q", tt.Texts())
 	}
 	// Just before the window's buttons.
-	if st, cl := mustFind(t, tt, "Settings"), mustFind(t, tt, "Minimize"); st.X > cl.X {
+	if st, cl := mustFind(t, tt, "Close Settings"), mustFind(t, tt, "Minimize"); st.X > cl.X {
 		t.Errorf("settings at %v, after the window's buttons at %v", st, cl)
 	}
-	mustClick(t, tt, "Settings")
+	mustClick(t, tt, "Close Settings")
 	if a.page == pageSettings {
 		t.Error("still in the settings")
 	}
