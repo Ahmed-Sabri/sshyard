@@ -1,6 +1,10 @@
-# SSHYard
+<p align="left"><a href="README.md">English</a> · <strong>中文</strong></p>
 
-[English](README.md) · 中文
+<p align="center">
+  <img src="resources/icon.png" alt="SSHYard 图标" width="128" height="128">
+</p>
+
+<h1 align="center">SSHYard</h1>
 
 SSHYard 是一款跨平台桌面 SSH / SFTP 客户端，支持 macOS、Windows 和 Linux。基于 [mygo](https://github.com/egoist/mygo) 纯原生 UI 构建，不使用 webview，也不嵌入 HTML；终端是用 Go 编写的 VT/ANSI 引擎，由应用自行绘制。
 

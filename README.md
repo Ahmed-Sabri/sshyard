@@ -1,6 +1,10 @@
-# SSHYard
+<p align="left"><strong>English</strong> · <a href="README_ZH.md">中文</a></p>
 
-English · [中文](README_ZH.md)
+<p align="center">
+  <img src="resources/icon.png" alt="SSHYard logo" width="128" height="128">
+</p>
+
+<h1 align="center">SSHYard</h1>
 
 SSHYard is a cross-platform desktop SSH / SFTP client for macOS, Windows and Linux. It is built on [mygo](https://github.com/egoist/mygo) with a pure native UI: no webview and no HTML. The terminal is a VT/ANSI engine written in Go and drawn by the app itself.
 
