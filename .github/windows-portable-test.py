@@ -3,6 +3,7 @@
 
 import importlib.util
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -69,6 +70,9 @@ class WindowsPortableTest(unittest.TestCase):
                 self.assertEqual(archive.namelist(), ["SSHYard.exe"])
 
     def test_download_link_requires_portable_asset(self):
+        # Resolve Git Bash from PATH instead of Windows' System32 WSL launcher.
+        bash = shutil.which("bash")
+        self.assertIsNotNone(bash, "Bash executable not found in PATH")
         with tempfile.TemporaryDirectory() as work:
             dist = Path(work)
             for name in (
@@ -77,11 +81,11 @@ class WindowsPortableTest(unittest.TestCase):
                 "sshyard-0.0.4-linux-amd64.tar.gz", "install.sh", "SHA256SUMS",
             ):
                 (dist / name).touch()
-            command = ["bash", (HERE / "release-download-notes.sh").as_posix(),
+            command = [bash, (HERE / "release-download-notes.sh").as_posix(),
                        dist.as_posix(), "v0.0.4", "Licoy/sshyard"]
             result = subprocess.run(command, capture_output=True, text=True)
             self.assertNotEqual(result.returncode, 0)
-            self.assertIn("expected one asset matching", result.stderr)
+            self.assertIn("expected one asset matching", result.stderr, repr(result))
             name = "sshyard-0.0.4-windows-amd64-portable.zip"
             (dist / name).touch()
             result = subprocess.run(command, capture_output=True, text=True, check=True)
