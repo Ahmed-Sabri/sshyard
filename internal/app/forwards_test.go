@@ -339,7 +339,7 @@ func TestForwardAutoStart(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.Close()
-	// The next launch starts it.
+	// The next launch waits for an explicit secrets action before auto-starting.
 	b, err := New(Platform{DataDir: dir, Secrets: kc, HomeDir: dir, CacheDir: filepath.Join(dir, "cache")})
 	if err != nil {
 		t.Fatal(err)
@@ -347,6 +347,11 @@ func TestForwardAutoStart(t *testing.T) {
 	defer b.Close()
 	b.Start()
 	tt := ui.NewTester(b.View, 1200, 760)
+	tt.Frame()
+	if _, on := b.ForwardStatus(fw.ID); on || b.unlocked() {
+		t.Fatal("auto-forward started before explicit unlock")
+	}
+	b.withSecrets(nil)
 	waitRunning(t, b, tt, fw.ID)
 	if got, err := httpGet(noKeep, "http://127.0.0.1:"+strconv.Itoa(listen)+"/auto"); err != nil || got != "hello from /auto" {
 		t.Errorf("%q %v", got, err)

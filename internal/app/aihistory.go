@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"log"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/Licoy/sshyard/internal/ai/history"
 	"github.com/Licoy/sshyard/internal/aibrands"
 	"github.com/Licoy/sshyard/internal/icons"
+	"github.com/Licoy/sshyard/internal/keychain"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/locales"
 	"github.com/egoist/mygo/ui"
@@ -29,21 +31,35 @@ func (a *App) chatHistory() *history.Store {
 	return history.New(filepath.Join(a.p.DataDir, "ai-history"), a.kc)
 }
 
-// chats are host's saved conversations, the latest first, as last read.
-func (a *App) chats(host string) []history.Summary {
+// deleteHostChats removes ciphertext files without reading or decrypting them.
+func (a *App) deleteHostChats(host string) error {
+	if a.p.DataDir == "" {
+		return keychain.ErrUnavailable
+	}
+	return history.New(filepath.Join(a.p.DataDir, "ai-history"), a.kc).DeleteHost(host)
+}
+
+// loadChats reads saved summaries without requesting system authorization.
+func (a *App) loadChats(host string) ([]history.Summary, error) {
+	if !a.unlocked() {
+		return nil, keychain.ErrLocked
+	}
 	if list, ok := a.chatList[host]; ok {
-		return list
+		return list, nil
 	}
 	st := a.chatHistory()
 	if st == nil {
-		return nil
+		return nil, keychain.ErrUnavailable
 	}
-	list, _ := st.List(host)
+	list, err := st.List(host)
+	if err != nil {
+		return nil, err
+	}
 	if a.chatList == nil {
 		a.chatList = map[string][]history.Summary{}
 	}
 	a.chatList[host] = list
-	return list
+	return list, nil
 }
 
 // keepsChats is whether the pane's conversations are saved: those on a
@@ -71,13 +87,22 @@ func (a *App) noteQuestion(c *conn, text string, files []*aiAttach) {
 }
 
 // saveChat keeps the pane's conversation, once it has one.
-func (a *App) saveChat(c *conn) {
+func (a *App) saveChat(c *conn) (err error) {
+	defer func() {
+		if err != nil {
+			if a.closing {
+				log.Print("sshyard: AI conversation save failed during close")
+			} else {
+				a.historyFailure(true)
+			}
+		}
+	}()
 	if !a.keepsChats(c) || c.ai.conv == "" || len(c.ai.items) == 0 {
-		return
+		return nil
 	}
 	st := a.chatHistory()
 	if st == nil {
-		return
+		return keychain.ErrLocked
 	}
 	conv := history.Conversation{ID: c.ai.conv, Host: c.host.ID, Title: c.ai.title, Agent: c.ai.agent, Provider: c.ai.provider,
 		Model: c.ai.model, Effort: c.ai.effort, Created: c.ai.created, Updated: time.Now(), Messages: c.ai.msgs}
@@ -98,11 +123,27 @@ func (a *App) saveChat(c *conn) {
 		conv.Items = append(conv.Items, item)
 	}
 	delete(a.chatList, c.host.ID)
-	if err := st.Save(conv); err != nil && !a.closing {
-		a.toasts = append(a.toasts, func(m locales.Messages) ui.Toast {
-			return ui.Toast{Title: m.AiHistorySaveFailed(), Type: "error"}
-		})
-	}
+	return st.Save(conv)
+}
+
+func (a *App) historyFailure(save bool) {
+	a.toasts = append(a.toasts, func(m locales.Messages) ui.Toast {
+		text := m.AiHistoryLoadFailed()
+		if save {
+			text = m.AiHistorySaveFailed()
+		}
+		return ui.Toast{Title: text, Type: "error"}
+	})
+}
+
+// withAISecrets resumes only if the pane still shows the intended conversation.
+func (a *App) withAISecrets(c *conn, after func()) {
+	state, gen := c.ai, c.ai.gen
+	a.withSecrets(func() {
+		if a.conns[c.id] == c && c.ai == state && state.gen == gen && !state.running {
+			after()
+		}
+	})
 }
 
 // resetChat empties the pane for a new conversation, the current one
@@ -129,7 +170,13 @@ func (a *App) NewChat(id int) {
 	if c == nil || c.ai == nil || c.ai.running {
 		return
 	}
-	a.saveChat(c)
+	if !a.unlocked() && a.keepsChats(c) && len(c.ai.items) > 0 {
+		a.withAISecrets(c, func() { a.NewChat(id) })
+		return
+	}
+	if err := a.saveChat(c); err != nil {
+		return
+	}
 	a.resetChat(c)
 }
 
@@ -140,32 +187,52 @@ func (a *App) ClearChat(id int) {
 	if c == nil || c.ai == nil || c.ai.running {
 		return
 	}
-	if c.ai.conv != "" {
-		a.forgetChat(c.host.ID, c.ai.conv)
+	if c.ai.conv != "" && a.keepsChats(c) {
+		if !a.unlocked() {
+			a.withAISecrets(c, func() { a.ClearChat(id) })
+			return
+		}
+		if err := a.forgetChat(c.host.ID, c.ai.conv); err != nil {
+			return
+		}
 	}
 	a.resetChat(c)
 }
 
 // forgetChat deletes host's conversation id from the history.
-func (a *App) forgetChat(host, id string) {
-	if st := a.chatHistory(); st != nil {
-		_ = st.Delete(host, id)
+func (a *App) forgetChat(host, id string) error {
+	st := a.chatHistory()
+	if st == nil {
+		a.historyFailure(false)
+		return keychain.ErrLocked
+	}
+	if err := st.Delete(host, id); err != nil {
+		a.historyFailure(false)
+		return err
 	}
 	delete(a.chatList, host)
+	return nil
 }
 
-// DeleteChat deletes host's conversation id; a pane showing it starts
-// another.
+// DeleteChat deletes host's conversation id; a pane showing it starts another.
 func (a *App) DeleteChat(host, id string) {
+	if !a.unlocked() {
+		a.withSecrets(func() { a.DeleteChat(host, id) })
+		return
+	}
+	for _, c := range a.conns {
+		if c.ai != nil && c.host.ID == host && c.ai.conv == id && c.ai.running {
+			return
+		}
+	}
+	if err := a.forgetChat(host, id); err != nil {
+		return
+	}
 	for _, c := range a.conns {
 		if c.ai != nil && c.host.ID == host && c.ai.conv == id {
-			if c.ai.running {
-				return
-			}
 			a.resetChat(c)
 		}
 	}
-	a.forgetChat(host, id)
 }
 
 // OpenChat shows the pane's host's conversation id in the pane, to carry
@@ -179,6 +246,10 @@ func (a *App) OpenChat(paneID int, id string) {
 	}
 	if c.ai.running {
 		a.toasts = append(a.toasts, func(m locales.Messages) ui.Toast { return ui.Toast{Title: m.AiHistoryBusy()} })
+		return
+	}
+	if !a.unlocked() {
+		a.withAISecrets(c, func() { a.OpenChat(paneID, id) })
 		return
 	}
 	st := a.chatHistory()
@@ -195,7 +266,9 @@ func (a *App) OpenChat(paneID int, id string) {
 		})
 		return
 	}
-	a.saveChat(c)
+	if err := a.saveChat(c); err != nil {
+		return
+	}
 	a.resetChat(c)
 	if conv.Agent == "builtin" || conv.Agent == "acp" {
 		c.ai.agent = conv.Agent
@@ -258,6 +331,9 @@ func chatTitle(m locales.Messages, s history.Summary) string {
 // field, then each with its model and when, the one shown checked, and a
 // button to delete it.
 func (a *App) historyButton(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages) {
+	if !a.keepsChats(cn) {
+		return
+	}
 	key := "aihist:" + strconv.Itoa(cn.id)
 	b := IconButton{Icon: icons.History, Label: m.AiChatHistory(), Size: Tiny, Disabled: cn.ai.running, Active: a.menu.key == key}
 	el := b.Show(c, key).Role(ui.RoleMenuButton).Expanded(a.menu.key == key)
@@ -265,6 +341,12 @@ func (a *App) historyButton(c *ui.Context, cn *conn, tok theme.Tokens, m locales
 	if el.Clicked() && !b.Disabled {
 		if open {
 			a.menu = dropMenu{}
+		} else if !a.unlocked() {
+			a.withAISecrets(cn, func() {
+				a.menu = dropMenu{key: key, sub: -1, focus: 0}
+				cn.ai.hquery = ""
+			})
+			return
 		} else {
 			a.menu = dropMenu{key: key, sub: -1, focus: 0}
 			cn.ai.hquery = ""
@@ -279,7 +361,11 @@ func (a *App) historyButton(c *ui.Context, cn *conn, tok theme.Tokens, m locales
 			Border(1, tok.GlassEdge).FocusGroup(ui.Vertical)
 		tok.Lift.On(panel)
 		panel.Children(func() {
-			all := a.chats(cn.host.ID)
+			all, err := a.loadChats(cn.host.ID)
+			if err != nil {
+				ui.Text(c, m.AiHistoryLoadFailed()).FontSize(theme.Footnote).TextColor(tok.Danger).Padding(6, 8)
+				return
+			}
 			if len(all) == 0 {
 				ui.Text(c, m.AiHistoryEmpty()).FontSize(theme.Footnote).TextColor(tok.TextMuted).Padding(6, 8)
 				return
@@ -357,7 +443,18 @@ func (a *App) chatConfirm(c *ui.Context, cn *conn, m locales.Messages) {
 // recentChats lists, on an empty pane, the host's latest conversations
 // to carry on.
 func (a *App) recentChats(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages) {
-	list := a.chats(cn.host.ID)
+	if !a.keepsChats(cn) {
+		return
+	}
+	list, err := a.loadChats(cn.host.ID)
+	if err != nil {
+		text := m.AiHistoryLoadFailed()
+		if errors.Is(err, keychain.ErrLocked) {
+			text = m.SecretsLockedTitle()
+		}
+		ui.Text(c, text).FontSize(theme.Footnote).TextColor(tok.TextMuted).Margin(theme.Space(4), 0, 0, 0)
+		return
+	}
 	if len(list) == 0 {
 		return
 	}

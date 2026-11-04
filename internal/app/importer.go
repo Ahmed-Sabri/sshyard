@@ -239,6 +239,23 @@ func (a *App) Import(m locales.Messages) (importResult, bool) {
 			return res, false
 		}
 	}
+	if !a.unlocked() && a.importNeedsSecrets(m, f) {
+		a.withSecrets(func() {
+			if a.imp != f {
+				return
+			}
+			if result, ok := a.Import(m); ok {
+				a.importing = false
+				a.toast(func(m locales.Messages) ui.Toast {
+					return ui.Toast{Title: m.ImportDone(strconv.Itoa(result.added+result.overwritten), strconv.Itoa(result.skipped)), Type: "success"}
+				})
+				if len(result.errs) > 0 {
+					a.toastError(strings.Join(result.errs, "\n"))
+				}
+			}
+		})
+		return res, false
+	}
 	ids := map[string]string{}   // alias → host ID
 	res.skipped = len(f.skipped) // as the preview counts them
 	for _, r := range f.rows {
@@ -266,7 +283,11 @@ func (a *App) Import(m locales.Messages) (importResult, bool) {
 		h.JumpChain = nil
 		var err error
 		if h.ID != "" {
-			h, err = a.saveHostSecrets(h, false, hostSecretDeletes(h.ID))
+			var changes []keychain.Change
+			if old, ok := a.store.Get(h.ID); ok && (old.Auth == assets.AuthPassword || old.Auth == assets.AuthKey) {
+				changes = hostSecretDeletes(h.ID)
+			}
+			h, err = a.saveHostSecrets(h, false, changes)
 			res.overwritten++
 		} else {
 			h, err = a.store.Add(h)
@@ -287,6 +308,22 @@ func (a *App) Import(m locales.Messages) (importResult, bool) {
 		a.importChain(m, f, id, r.e, ids, &res, 0)
 	}
 	return res, true
+}
+
+func (a *App) importNeedsSecrets(m locales.Messages, f *importForm) bool {
+	for _, k := range f.order {
+		if k.usable() && a.keyWanted(m, f, k) && k.cred == "" {
+			return true
+		}
+	}
+	for _, r := range f.rows {
+		if r.pick && r.conflict != "" && r.action == importActions(m)[1] {
+			if h, ok := a.store.Get(r.conflict); ok && (h.Auth == assets.AuthPassword || h.Auth == assets.AuthKey) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // keyWanted reports whether a chosen host (or a host made for a jump)

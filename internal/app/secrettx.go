@@ -36,6 +36,9 @@ func (t *secretTx) set(key string, v []byte) error {
 
 // setBatch captures the old values before one encrypted-store commit.
 func (t *secretTx) setBatch(changes []keychain.Change) error {
+	if len(changes) == 0 {
+		return nil
+	}
 	undo := make([]keychain.Change, 0, len(changes))
 	for _, change := range changes {
 		old, err := t.kc.Get(change.Key)
@@ -71,4 +74,16 @@ func (t *secretTx) rollback() error {
 	}
 	t.undo = nil
 	return errors.Join(errs...)
+}
+
+// runSecretAction retries only an explicit action stopped by the locked store.
+func (a *App) runSecretAction(action func() error, failed func(error)) {
+	err := action()
+	if errors.Is(err, keychain.ErrLocked) && !a.unlocked() {
+		a.withSecrets(func() { a.runSecretAction(action, failed) })
+		return
+	}
+	if err != nil {
+		failed(err)
+	}
 }

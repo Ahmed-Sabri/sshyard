@@ -84,9 +84,18 @@ func (a *App) SaveProxyForm(m locales.Messages) bool {
 		f.err = msg
 		return false
 	}
+	if !a.unlocked() && (f.password != "" || (!f.isNew && f.orig.User != "" && strings.TrimSpace(p.User) == "")) {
+		draft := a.proxyForm
+		a.withSecrets(func() {
+			if a.proxyForm == draft {
+				a.SaveProxyForm(m)
+			}
+		})
+		return false
+	}
 	key := keychain.ProxyPassword(p.ID)
 	switch {
-	case strings.TrimSpace(p.User) == "":
+	case !f.isNew && f.orig.User != "" && strings.TrimSpace(p.User) == "":
 		err = tx.delete(key)
 	case f.password != "":
 		err = tx.set(key, []byte(f.password))
@@ -195,11 +204,16 @@ func (a *App) proxyView(c *ui.Context, m locales.Messages) {
 			ui.Box(c).Height(1).FillWidth().Background(tok.Line)
 			ui.Row(c).Gap(8).Children(func() {
 				if !f.isNew && pill(c, m.Delete(), false, true, false) {
-					if err := a.DeleteProxy(f.orig.ID); err != nil {
-						f.err = a.inUseText(m, err)
-					} else {
+					a.runSecretAction(func() error {
+						if a.proxyForm != f {
+							return nil
+						}
+						if err := a.DeleteProxy(f.orig.ID); err != nil {
+							return err
+						}
 						a.proxyEditing = false
-					}
+						return nil
+					}, func(err error) { f.err = a.inUseText(m, err) })
 				}
 				ui.Spacer(c)
 				if pill(c, m.Cancel(), false, false, false) {
@@ -237,9 +251,7 @@ func (a *App) proxiesSection(c *ui.Context, m locales.Messages, tok theme.Tokens
 					a.openProxyForm(&p, nil)
 				}
 				if iconButton(c, "proxy:del:"+p.ID, icons.Delete, m.Delete()) {
-					if err := a.DeleteProxy(p.ID); err != nil {
-						c.AddToast(ui.Toast{Title: a.inUseText(m, err), Type: "error"})
-					}
+					a.runSecretAction(func() error { return a.DeleteProxy(p.ID) }, func(err error) { a.toastError(a.inUseText(m, err)) })
 				}
 			})
 		}

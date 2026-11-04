@@ -137,6 +137,27 @@ func (a *App) SaveCredForm(m locales.Messages) bool {
 	if f == nil {
 		return false
 	}
+	if strings.TrimSpace(f.name) == "" {
+		f.err = m.RequiredField(m.FieldName())
+		return false
+	}
+	fresh := f.isNew || (f.isKey() != (f.orig.Kind == assets.CredKey))
+	if fresh && !f.isKey() && f.password == "" {
+		f.err = m.CredPasswordRequired()
+		return false
+	}
+	if fresh && f.isKey() && !f.loaded() {
+		f.err = m.CredKeyRequired()
+		return false
+	}
+	if !a.unlocked() {
+		a.withSecrets(func() {
+			if a.credForm == f {
+				a.SaveCredForm(m)
+			}
+		})
+		return false
+	}
 	f.err = ""
 	cr := f.orig
 	cr.Name, cr.User, cr.Note = f.name, f.user, f.note
@@ -144,7 +165,7 @@ func (a *App) SaveCredForm(m locales.Messages) bool {
 	if f.isKey() {
 		kind = assets.CredKey
 	}
-	fresh := f.isNew || cr.Kind != kind // nothing of this kind saved yet
+	fresh = f.isNew || cr.Kind != kind // nothing of this kind saved yet
 	cr.Kind = kind
 	set := map[keychain.Kind][]byte{}
 	var drop []keychain.Kind
@@ -184,9 +205,11 @@ func (a *App) SaveCredForm(m locales.Messages) bool {
 			// The saved key stays; a passphrase typed now must open it.
 			if cr.Encrypted && len(pass) > 0 {
 				pem, gerr := a.kc.Get(keychain.Cred(cr.ID, keychain.PrivateKey))
-				if gerr == nil {
-					_, err = keys.Import(pem, pass)
+				if gerr != nil {
+					f.err = secretStoreErrorText(m, gerr)
+					return false
 				}
+				_, err = keys.Import(pem, pass)
 			}
 		}
 		if err != nil {
@@ -203,9 +226,16 @@ func (a *App) SaveCredForm(m locales.Messages) bool {
 			drop = append(drop, keychain.Passphrase)
 		case len(pass) > 0:
 			set[keychain.Passphrase] = pass
-		case !a.kc.Has(keychain.Cred(cr.ID, keychain.Passphrase)) || f.loaded():
-			f.err = m.ErrKeyPassphraseNeeded()
-			return false
+		default:
+			exists, err := a.kc.Exists(keychain.Cred(cr.ID, keychain.Passphrase))
+			if err != nil {
+				f.err = secretStoreErrorText(m, err)
+				return false
+			}
+			if !exists || f.loaded() {
+				f.err = m.ErrKeyPassphraseNeeded()
+				return false
+			}
 		}
 	}
 	// Secrets first, then the entry, so the two never disagree: when
@@ -327,14 +357,17 @@ func (a *App) DeleteCredential(id string, rebind *authChoice) error {
 // DeleteProxy removes a proxy no host uses, and its password; the
 // password goes first.
 func (a *App) DeleteProxy(id string) error {
-	if _, ok := a.store.Proxy(id); !ok {
+	p, ok := a.store.Proxy(id)
+	if !ok {
 		return assets.ErrNotFound
 	}
 	if us := a.store.ProxyUsers(id); len(us) > 0 {
 		return a.store.DeleteProxy(id) // the in-use error
 	}
-	if err := a.kc.Delete(keychain.ProxyPassword(id)); err != nil {
-		return &keychainDeleteError{err}
+	if p.User != "" {
+		if err := a.kc.Delete(keychain.ProxyPassword(id)); err != nil {
+			return &keychainDeleteError{err}
+		}
 	}
 	return a.store.DeleteProxy(id)
 }
@@ -578,9 +611,7 @@ func (a *App) credDeleteView(c *ui.Context, m locales.Messages) {
 	users := a.store.CredentialUsers(id)
 	if len(users) == 0 {
 		if ui.AlertDialog(c, &a.credDeleting, m.DeleteCredential(), m.DeleteCredentialConfirm(cr.Name), m.Cancel(), m.Delete()) == 1 {
-			if err := a.DeleteCredential(id, nil); err != nil {
-				c.AddToast(ui.Toast{Title: a.inUseText(m, err), Type: "error"})
-			}
+			a.runSecretAction(func() error { return a.DeleteCredential(id, nil) }, func(err error) { a.toastError(a.inUseText(m, err)) })
 		}
 		return
 	}
@@ -607,9 +638,7 @@ func (a *App) credDeleteView(c *ui.Context, m locales.Messages) {
 				if pill(c, m.RebindAndDelete(), false, true, false) {
 					for _, ch := range choices {
 						if ch.label == a.rebindChoice {
-							if err := a.DeleteCredential(id, &ch); err != nil {
-								c.AddToast(ui.Toast{Title: a.inUseText(m, err), Type: "error"})
-							}
+							a.runSecretAction(func() error { return a.DeleteCredential(id, &ch) }, func(err error) { a.toastError(a.inUseText(m, err)) })
 							break
 						}
 					}

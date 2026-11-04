@@ -270,6 +270,16 @@ func (a *App) checkFailures(m locales.Messages) {
 func (a *App) SubmitPrompt() { a.submitPrompt(locales.In(a.settings.Language)) }
 
 func (a *App) submitPrompt(m locales.Messages) {
+	if a.prompt != nil && a.prompt.savePassword && !a.unlocked() {
+		draft := a.prompt
+		a.withSecrets(func() {
+			if a.prompt == draft {
+				a.submitPrompt(m)
+			}
+		})
+		return
+	}
+
 	p := a.prompt
 	if p == nil {
 		return

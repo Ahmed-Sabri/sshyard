@@ -74,15 +74,17 @@ func (a *App) prefAgents(c *ui.Context, m locales.Messages, tok theme.Tokens, s 
 				c.AddToast(ui.Toast{Title: m.Copied(), Type: "success"})
 			}
 			if (IconButton{Icon: icons.Refresh, Label: m.McpNewToken(), Danger: true}).Clicked(c, "mcp:newtoken") {
-				if err := a.newMCPToken(); err != nil {
-					if a.mcp.err == nil && a.mcp.skillErr != nil {
-						c.AddToast(ui.Toast{Title: m.McpTokenRotatedSkillFailed(skillErrorText(m, a.mcp.skillErr)), Type: "error"})
+				a.withSecrets(func() {
+					if err := a.newMCPToken(); err != nil {
+						if a.mcp.err == nil && a.mcp.skillErr != nil {
+							a.toastError(m.McpTokenRotatedSkillFailed(skillErrorText(m, a.mcp.skillErr)))
+						} else {
+							a.toastError(m.ErrGeneric(secretStoreErrorText(m, err)))
+						}
 					} else {
-						c.AddToast(ui.Toast{Title: m.ErrGeneric(err.Error()), Type: "error"})
+						a.toast(func(m locales.Messages) ui.Toast { return ui.Toast{Title: m.McpNewTokenDone(), Type: "success"} })
 					}
-				} else {
-					c.AddToast(ui.Toast{Title: m.McpNewTokenDone(), Type: "success"})
-				}
+				})
 			}
 		})
 		g.divider()
@@ -233,7 +235,7 @@ func (a *App) homePath(p string) string {
 // counting down, so it cannot be clicked through unread.
 func (a *App) mcpSheet(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	ask := a.mcpAsk
-	if ask == nil {
+	if ask == nil || a.unlock.modal {
 		return
 	}
 	now := c.Now()
@@ -274,10 +276,17 @@ func (a *App) mcpSheet(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 					label = m.McpConfirmWait(strconv.Itoa(secs))
 				}
 				if pill(c, label, false, true, secs > 0) {
-					ask.open = false
-					if err := a.setMCP(true); err != nil {
-						c.AddToast(ui.Toast{Title: m.ErrGeneric(err.Error()), Type: "error"})
-					}
+					a.withSecrets(func() {
+						if a.mcpAsk != ask || !ask.open {
+							return
+						}
+						if err := a.setMCP(true); err != nil {
+							a.toastError(m.ErrGeneric(secretStoreErrorText(m, err)))
+							return
+						}
+						ask.open = false
+						a.mcpAsk = nil
+					})
 				}
 			})
 		})

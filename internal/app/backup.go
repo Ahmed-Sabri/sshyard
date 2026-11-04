@@ -150,6 +150,10 @@ func (a *App) restoreBackup(m locales.Messages, p backupPayload) error {
 	}
 	// Host secrets are replaced, including omitted secrets and obsolete auth kinds.
 	for _, h := range snap.Hosts {
+		previous, exists := a.store.Get(h.ID)
+		if !exists || (previous.Auth != assets.AuthPassword && previous.Auth != assets.AuthKey) {
+			continue
+		}
 		allowed := backupSecretKeys(assets.Snapshot{Hosts: []assets.Host{h}}, nil)
 		for _, kind := range keychain.Kinds {
 			key := keychain.Host(h.ID, kind)
@@ -162,7 +166,8 @@ func (a *App) restoreBackup(m locales.Messages, p backupPayload) error {
 	// the entry remains unavailable until the user supplies its command.
 	for _, n := range snap.Snippets {
 		key := keychain.SnippetContent(n.ID)
-		if _, ok := p.Secrets[key]; !ok {
+		_, exists := a.store.Snippet(n.ID)
+		if _, ok := p.Secrets[key]; !ok && exists {
 			changes = append(changes, keychain.Change{Key: key, Delete: true})
 		}
 	}
@@ -292,6 +297,15 @@ func (a *App) ExportBackup(m locales.Messages) bool {
 		f.err = m.BackupPasswordMismatch()
 		return false
 	}
+	if f.secrets && !a.unlocked() {
+		draft := a.backup
+		a.withSecrets(func() {
+			if a.backup == draft {
+				a.ExportBackup(m)
+			}
+		})
+		return false
+	}
 	p, err := a.collectBackup(f.secrets)
 	var data []byte
 	if err == nil {
@@ -409,12 +423,35 @@ func (a *App) RestoreBackup(m locales.Messages) bool {
 	return true
 }
 
+func (a *App) backupNeedsSecrets(p backupPayload) bool {
+	for _, key := range backupSecretKeys(p.Assets, p.Settings.AIProviders) {
+		if len(p.Secrets[key]) > 0 {
+			return true
+		}
+	}
+	for _, h := range p.Assets.Hosts {
+		if previous, ok := a.store.Get(h.ID); ok && (previous.Auth == assets.AuthPassword || previous.Auth == assets.AuthKey) {
+			return true
+		}
+	}
+	for _, n := range p.Assets.Snippets {
+		if _, ok := a.store.Snippet(n.ID); ok {
+			return true
+		}
+	}
+	return false
+}
+
 func (a *App) restoreDone(m locales.Messages, f *backupForm, p backupPayload, err error) {
 	// A sheet closed while the backup opened restores nothing.
 	if a.backup != f {
 		return
 	}
 	f.busy = false
+	if err == nil && !a.unlocked() && a.backupNeedsSecrets(p) {
+		a.withSecrets(func() { a.restoreDone(m, f, p, nil) })
+		return
+	}
 	if err == nil {
 		err = a.restoreBackup(m, p)
 	}

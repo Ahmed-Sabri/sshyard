@@ -79,7 +79,7 @@ func (a *App) InstallKey(ctx context.Context, h assets.Host, credID, password, p
 	}
 	pem, err := a.kc.Get(keychain.Cred(cr.ID, keychain.PrivateKey))
 	if err != nil {
-		res.err = session.ErrNoCredentials
+		res.err = err
 		return res
 	}
 	pass := []byte(passphrase)
@@ -90,7 +90,11 @@ func (a *App) InstallKey(ctx context.Context, h assets.Host, credID, password, p
 		a.mu.Unlock()
 	}
 	if len(pass) == 0 && !cr.AskPassphrase {
-		pass, _ = a.kc.Get(pk)
+		pass, err = a.kc.Get(pk)
+		if err != nil && !errors.Is(err, keychain.ErrNotFound) {
+			res.err = err
+			return res
+		}
 	}
 	k, err := keys.Import(pem, pass)
 	if err != nil {
@@ -193,6 +197,15 @@ func (a *App) SwitchToKey(hostID, credID, user string) error {
 }
 
 func (a *App) startInstall(m locales.Messages, f *installForm, h assets.Host) {
+	if !a.unlocked() {
+		a.withSecrets(func() {
+			if a.install == f {
+				a.startInstall(m, f, h)
+			}
+		})
+		return
+	}
+
 	var credID string
 	for _, ch := range a.keyCredentials(m) {
 		if ch.label == f.cred {

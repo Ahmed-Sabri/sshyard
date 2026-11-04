@@ -165,7 +165,13 @@ func (a *App) newMCPToken() error {
 func (a *App) setMCP(on bool) error {
 	s := a.settings
 	s.MCPEnabled = on
-	return a.ApplySettings(s)
+	if on && !a.unlocked() {
+		return keychain.ErrLocked
+	}
+	if err := a.ApplySettings(s); err != nil {
+		return err
+	}
+	return a.mcp.err
 }
 
 // mcpConfig is what an agent's MCP settings need to reach the endpoint.

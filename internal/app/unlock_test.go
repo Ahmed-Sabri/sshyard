@@ -57,6 +57,7 @@ func TestUnlockFailureCancelRetryAndShortcuts(t *testing.T) {
 	b := &authorizationBackend{Memory: keychain.NewMemory()}
 	b.fail.Store(true)
 	a, tt := lockedTestApp(t, b)
+	a.withSecrets(nil)
 	waitFor(t, tt, "authorization failure", func() bool { return a.unlock.modal })
 	m := locales.In("en")
 	if !tt.HasText(m.SecretsUnlockFailed()) || !tt.HasText(m.SecretsRetry()) || strings.Contains(strings.Join(tt.Texts(), " "), "private raw") {
@@ -74,24 +75,18 @@ func TestUnlockFailureCancelRetryAndShortcuts(t *testing.T) {
 	if b.calls.Load() != calls {
 		t.Fatal("cancel retried without a user action")
 	}
-	for _, key := range []ui.Key{ui.KeyK, ui.KeyT, ui.KeyO, ui.KeyD, ui.KeyE} {
-		tt.Key(appMods, key)
-		tt.Frame()
+	if err := a.ApplySettings(a.Settings()); err != nil {
+		t.Fatalf("ordinary settings while locked: %v", err)
 	}
-	if a.quicking || len(a.conns) > 0 || a.page != pageWorkspace {
-		t.Fatal("business shortcut escaped the lock")
+	tt.Key(appMods, ui.KeyK)
+	tt.Frame()
+	if !a.quicking {
+		t.Fatal("quick connect unavailable while locked")
 	}
-	if _, err := a.kc.Get("x"); !errors.Is(err, keychain.ErrLocked) {
-		t.Fatalf("read: %v", err)
-	}
+	a.quicking = false
+	tt.Frame()
 	if err := a.kc.Set("x", []byte("x")); !errors.Is(err, keychain.ErrLocked) {
 		t.Fatalf("write: %v", err)
-	}
-	if _, err := a.Connect("x", openAt{}); !errors.Is(err, keychain.ErrLocked) {
-		t.Fatalf("connect: %v", err)
-	}
-	if err := a.StartForward("x"); !errors.Is(err, keychain.ErrLocked) {
-		t.Fatalf("forward: %v", err)
 	}
 	b.fail.Store(false)
 	mustClick(t, tt, m.SecretsRetry())
@@ -112,6 +107,7 @@ func TestUnlockModalDismissalAndTranslations(t *testing.T) {
 				b.fail.Store(true)
 				a, tt := lockedTestApp(t, b)
 				a.settings.Theme = mode
+				a.withSecrets(nil)
 				tt.SetLocale(locale)
 				waitFor(t, tt, "modal", func() bool { return a.unlock.modal })
 				m := locales.In(locale)
@@ -140,6 +136,7 @@ func TestUnlockModalDismissalAndTranslations(t *testing.T) {
 func TestUnlockBusyAndCloseLateResult(t *testing.T) {
 	b := &authorizationBackend{Memory: keychain.NewMemory(), entered: make(chan struct{}), release: make(chan struct{})}
 	a, tt := lockedTestApp(t, b)
+	a.withSecrets(nil)
 	select {
 	case <-b.entered:
 	case <-time.After(5 * time.Second):
@@ -171,7 +168,7 @@ func TestUnlockBusyAndCloseLateResult(t *testing.T) {
 		return true
 	})
 	tt.Frame()
-	if a.unlocked() || len(a.fwds) > 0 || a.mcp.srv != nil {
+	if a.ready() || len(a.fwds) > 0 || a.mcp.srv != nil {
 		t.Fatal("late result started business after close")
 	}
 	if got, err := os.ReadFile(file); err != nil || string(got) != string(original) {
@@ -211,7 +208,10 @@ func TestUnlockBlocksAutomaticServicesAndStartsOnce(t *testing.T) {
 	defer a.Close()
 	a.Start()
 	tt := ui.NewTester(a.View, 1200, 760)
-	waitFor(t, tt, "failed", func() bool { return a.unlock.modal })
+	tt.Frame()
+	if b.calls.Load() != 0 || !a.ready() {
+		t.Fatal("startup requested authorization or did not load metadata")
+	}
 	if len(a.conns) > 0 || a.mcp.srv != nil || len(a.fwds) > 0 {
 		t.Fatal("locked startup ran business")
 	}
@@ -244,7 +244,8 @@ func TestUnlockStorageResolutionRecovers(t *testing.T) {
 		}
 		return StoragePaths{DataDir: dir, LockPath: filepath.Join(dir, "secrets.lock"), Scope: "test"}, nil
 	}
-	a, err := New(Platform{Secrets: keychain.NewMemory(), ResolveStorage: resolve})
+	system := &authorizationBackend{Memory: keychain.NewMemory()}
+	a, err := New(Platform{Secrets: system, ResolveStorage: resolve})
 	if err == nil {
 		t.Fatal("missing initial resolution error")
 	}
@@ -254,7 +255,13 @@ func TestUnlockStorageResolutionRecovers(t *testing.T) {
 	waitFor(t, tt, "path failure", func() bool { return a.unlock.modal })
 	fail.Store(false)
 	a.retryUnlock()
-	waitFor(t, tt, "recovered", a.unlocked)
+	waitFor(t, tt, "recovered", a.ready)
+	if system.calls.Load() != 0 || a.unlocked() {
+		t.Fatal("storage resolution recovery requested authorization")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "secrets.enc")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("storage recovery created secrets: %v", err)
+	}
 	if a.Store() == nil || a.known == nil || a.p.DataDir != dir {
 		t.Fatal("metadata was not reloaded")
 	}
@@ -270,5 +277,194 @@ func TestUnlockErrorWhitelist(t *testing.T) {
 				t.Fatalf("unsafe/missing diagnostic: %q", text)
 			}
 		}
+	}
+}
+
+func TestStartupDoesNotAuthorizeSecrets(t *testing.T) {
+	for _, locale := range []string{"en", "zh-Hans"} {
+		for _, mode := range []theme.Mode{theme.Light, theme.Dark} {
+			t.Run(locale+string(mode), func(t *testing.T) {
+				b := &authorizationBackend{Memory: keychain.NewMemory()}
+				a, tt := lockedTestApp(t, b)
+				a.settings.Theme = mode
+				tt.SetLocale(locale)
+				tt.Frame()
+				if !a.ready() || a.unlocked() || a.unlock.modal || b.calls.Load() != 0 {
+					t.Fatal("startup was not ready without authorization")
+				}
+				if _, err := os.Stat(filepath.Join(a.p.DataDir, "secrets.enc")); !errors.Is(err, os.ErrNotExist) {
+					t.Fatalf("startup persisted secrets: %v", err)
+				}
+				if err := a.ApplySettings(a.Settings()); err != nil {
+					t.Fatal(err)
+				}
+				id, err := a.OpenLocalTerminal()
+				if err != nil {
+					t.Fatal(err)
+				}
+				a.CloseSession(id)
+				tt.Frame()
+				if b.calls.Load() != 0 {
+					t.Fatal("local terminal or settings authorized secrets")
+				}
+				if tt.HasText(locales.In(locale).SecretsRetry()) {
+					t.Fatal("fresh startup requested unlock")
+				}
+				a.openSettings(prefAppearance)
+				tt.Frame()
+				if !tt.HasText(locales.In(locale).SecretsRetry()) {
+					t.Fatal("missing settings unlock action")
+				}
+			})
+		}
+	}
+}
+
+func TestUnlockContinuationRetryAndCancel(t *testing.T) {
+	b := &authorizationBackend{Memory: keychain.NewMemory()}
+	b.fail.Store(true)
+	a, tt := lockedTestApp(t, b)
+	ran := 0
+	a.withSecrets(func() { ran++ })
+	waitFor(t, tt, "failed", func() bool { return a.unlock.modal })
+	b.fail.Store(false)
+	mustClick(t, tt, locales.In("en").SecretsRetry())
+	waitFor(t, tt, "resumed action", func() bool { return ran == 1 })
+	if !a.unlocked() {
+		t.Fatal("resumed action without unlocked store")
+	}
+}
+
+func TestExistingSecretsStartupAndConnectionUnlock(t *testing.T) {
+	dir := t.TempDir()
+	b := &authorizationBackend{Memory: keychain.NewMemory()}
+	kc, err := keychain.Open(keychain.OpenOptions{Path: filepath.Join(dir, "secrets.enc"), LockPath: filepath.Join(dir, "secrets.lock"), Scope: "sshyard", System: b.Memory})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := kc.Set("saved", []byte("value")); err != nil {
+		t.Fatal(err)
+	}
+	if err := kc.Close(); err != nil {
+		t.Fatal(err)
+	}
+	a, err := New(Platform{DataDir: dir, Secrets: b, HomeDir: dir, CacheDir: filepath.Join(dir, "cache")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer a.Close()
+	a.Start()
+	tt := ui.NewTester(a.View, 1200, 760)
+	tt.SetLocale("en")
+	tt.Frame()
+	if b.calls.Load() != 0 || a.unlocked() || !a.ready() {
+		t.Fatal("existing store startup authorized")
+	}
+	if !tt.HasText(locales.In("en").SecretsRetry()) {
+		t.Fatal("existing store missing explicit unlock action")
+	}
+	h, err := a.store.Add(assets.Host{Name: "saved host", Address: "localhost", Port: 22, User: "test", Auth: assets.AuthPassword})
+	if err != nil {
+		t.Fatal(err)
+	}
+	b.fail.Store(true)
+	id, err := a.Connect(h.ID, openAt{})
+	if err != nil || id == 0 {
+		t.Fatalf("connect %d: %v", id, err)
+	}
+	waitFor(t, tt, "connection unlock failure", func() bool { return a.unlock.modal })
+	mustClick(t, tt, locales.In("en").Cancel())
+	tt.Frame()
+	if a.unlock.after != nil || a.unlocked() {
+		t.Fatal("cancel retained connection continuation")
+	}
+	calls := b.calls.Load()
+	for range 3 {
+		tt.Frame()
+	}
+	if b.calls.Load() != calls {
+		t.Fatal("cancelled connection retried authorization")
+	}
+	cr, err := a.store.SaveCredential(assets.Credential{Name: "typed credential", Kind: assets.CredPassword, User: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.Auth, h.CredentialID = assets.AuthCredential, cr.ID
+	a.typed[keychain.Cred(cr.ID, keychain.Password)] = "one run"
+	if a.connectionNeedsSecrets(h) {
+		t.Fatal("typed credential requested unlock")
+	}
+	px, err := a.store.SaveProxy(assets.Proxy{Name: "authenticated proxy", Kind: assets.ProxyHTTP, Address: "localhost", Port: 8080, User: "proxy-user"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.ProxyID = px.ID
+	if !a.connectionNeedsSecrets(h) {
+		t.Fatal("typed credential bypassed saved proxy unlock")
+	}
+}
+
+func TestCloseAfterUnlockBeforeUIAcceptsResult(t *testing.T) {
+	b := &authorizationBackend{Memory: keychain.NewMemory()}
+	a, _ := lockedTestApp(t, b)
+	ran := false
+	a.withSecrets(func() { ran = true })
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		a.unlock.mu.Lock()
+		completed := a.unlock.completed
+		a.unlock.mu.Unlock()
+		if completed {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("unlock worker did not finish")
+		}
+		time.Sleep(time.Millisecond)
+	}
+	a.Close()
+	a.drain()
+	if ran || a.unlocked() {
+		t.Fatal("closed app accepted queued unlock")
+	}
+	kc, err := keychain.OpenLocked(keychain.OpenOptions{Path: filepath.Join(a.p.DataDir, "secrets.enc"), LockPath: filepath.Join(a.p.DataDir, "secrets.lock"), Scope: "sshyard", System: b.Memory})
+	if err != nil {
+		t.Fatalf("closed app retained lifetime lock: %v", err)
+	}
+	if err := kc.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestLockedChatCloseAndReplacementPreserveContent(t *testing.T) {
+	b := &authorizationBackend{Memory: keychain.NewMemory()}
+	a, _ := lockedTestApp(t, b)
+	h := savedHost(t, a, "first", "first.example")
+	other := savedHost(t, a, "second", "second.example")
+	id, err := a.OpenAI(h.ID, openAt{}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := a.conns[id]
+	c.ai.conv = "unsaved-chat"
+	c.ai.items = []aiItem{{kind: "user", text: "unsaved content"}}
+	a.CloseSession(id)
+	if a.conns[id] != c || a.ws.TabOf(id) == nil {
+		t.Fatal("failed history save discarded pane")
+	}
+	if got, err := a.reuse(c, other.ID, 0); got != id || !errors.Is(err, keychain.ErrLocked) {
+		t.Fatalf("replace unsaved chat: %d %v", got, err)
+	}
+	if a.conns[id] != c || c.host.ID != h.ID || len(c.ai.items) != 1 {
+		t.Fatal("failed history save replaced content")
+	}
+	if b.calls.Load() != 0 {
+		t.Fatal("closing chat requested background authorization")
+	}
+	c.ai.conv = ""
+	c.ai.items = nil
+	a.CloseSession(id)
+	if a.conns[id] != nil {
+		t.Fatal("empty locked pane could not close")
 	}
 }

@@ -90,13 +90,14 @@ const (
 // the panes on the host share (see session.Pool). Each pane still lives,
 // reconnects and closes on its own.
 type conn struct {
-	id   int
-	kind layout.Kind
-	host assets.Host
-	s    *session.Session
-	tv   *termView   // terminal panes
-	fs   *filesState // files and editor panes (its SFTP client)
-	ed   *editState  // editor panes
+	waitingSecrets bool
+	id             int
+	kind           layout.Kind
+	host           assets.Host
+	s              *session.Session
+	tv             *termView   // terminal panes
+	fs             *filesState // files and editor panes (its SFTP client)
+	ed             *editState  // editor panes
 	// handled is the failure a prompt was already shown for
 	handled error
 	// tried is, by a.typed key, the generation of the secret the last
@@ -391,16 +392,9 @@ func New(p Platform) (*App, error) {
 	a.logo = appicon.Bitmap()
 	a.settings = settings.Default()
 	a.kdf = vault.DefaultParams
-	err := a.resolveStorage()
-	if err == nil {
-		var loadErr error
-		a.settings, loadErr = settings.Load(filepath.Join(a.p.DataDir, "settings.json"))
-		if loadErr != nil {
-			err = loadErr
-			a.settings = settings.Default()
-		}
-	}
 	a.kc = keychain.New(lockedSecrets{})
+	err := a.prepareStorage()
+	a.unlock.err = err
 	backend := p.Updates
 	if backend == nil {
 		backend = disabledUpdates{}
@@ -482,7 +476,7 @@ func (a *App) Keychain() (*keychain.Keychain, bool) { return a.kc, a.keychainOK 
 
 // ApplySettings applies and saves settings.
 func (a *App) ApplySettings(s settings.Settings) error {
-	if !a.unlocked() {
+	if !a.ready() {
 		return keychain.ErrLocked
 	}
 	s.Normalize()
@@ -551,16 +545,31 @@ func (a *App) Start() {
 	if a.p.SetLocale != nil && a.settings.Language != "" {
 		a.p.SetLocale(a.settings.Language)
 	}
-	a.retryUnlock()
+	if !a.ready() {
+		a.unlock.modal = true
+		return
+	}
+	a.startIndependent()
 }
 
-// startUnlocked starts background services only after the encrypted store opens.
-func (a *App) startUnlocked() {
+func (a *App) applyWindowSettings() {
+	if a.p.SetTheme != nil {
+		a.p.SetTheme(a.settings.Theme)
+	}
+	if a.p.SetLocale != nil && a.settings.Language != "" {
+		a.p.SetLocale(a.settings.Language)
+	}
+}
+
+// startIndependent starts work that does not access saved secrets.
+func (a *App) startIndependent() {
+	if a.unlock.started {
+		return
+	}
+	a.unlock.started = true
 	if a.settings.CheckUpdates && a.p.Updates != nil {
 		go a.upd.Check(context.Background())
 	}
-	a.autoStartForwards()
-	a.syncMCP()
 	// Start with an empty workspace; saved AI layouts contain no session content.
 	if root, err := a.cacheDir(); err == nil {
 		go cleanCache(root)
@@ -599,10 +608,7 @@ func (a *App) Close() {
 	a.unlock.mu.Lock()
 	defer a.unlock.mu.Unlock()
 	a.unlock.closed = true
-	if a.unlock.pending != nil {
-		a.closeSecrets(a.unlock.pending)
-		a.unlock.pending = nil
-	}
+	a.unlock.after = nil
 	a.stopCollectors()
 	a.stopMCP()
 	a.waitMCP()
@@ -625,7 +631,7 @@ func (a *App) Close() {
 	a.acpWG.Wait()
 	a.clipAsk = nil
 	a.fwds = map[string]*fwdRun{}
-	if a.kc != nil {
+	if a.kc != nil && (!a.unlock.busy || a.unlock.completed) {
 		a.closeSecrets(a.kc)
 	}
 	a.unlock.ready.Store(false)
@@ -664,7 +670,7 @@ func (a *App) open(hostID string, kind layout.Kind, at openAt, from *conn) (int,
 // makeConn builds a pane and registers it. It does not place or start it.
 // An AI pane gets no SSH session.
 func (a *App) makeConn(hostID string, kind layout.Kind, link int) (*conn, error) {
-	if !a.unlocked() {
+	if !a.ready() {
 		return nil, keychain.ErrLocked
 	}
 	h, ok := a.host(hostID)
@@ -738,11 +744,52 @@ func (a *App) shown(c *conn) {
 		a.store.Touch(c.host.ID)
 	}
 	if c.s != nil {
-		c.s.Start()
+		if a.connectionNeedsSecrets(c.host) {
+			c.waitingSecrets = true
+			a.withSecrets(func() {
+				if a.conns[c.id] == c {
+					c.waitingSecrets = false
+					c.s.Start()
+				}
+			})
+		} else {
+			c.s.Start()
+		}
 	}
 	if !a.restoring {
 		a.saveLayout()
 	}
+}
+
+// connectionNeedsSecrets checks metadata only; typed and agent credentials
+// remain usable without requesting the local master key.
+func (a *App) connectionNeedsSecrets(h assets.Host) bool {
+	if a.unlocked() || !a.unlock.stored || isLocal(h.ID) {
+		return false
+	}
+	path, _ := a.store.JumpPath(h.ID)
+	path = append(path, h)
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	for _, hop := range path {
+		switch hop.Auth {
+		case assets.AuthKey:
+			return true
+		case assets.AuthCredential:
+			cr, ok := a.store.Credential(hop.CredentialID)
+			if !ok || cr.Kind != assets.CredPassword || a.typed[keychain.Cred(cr.ID, keychain.Password)] == "" {
+				return true
+			}
+		case assets.AuthPassword:
+			if a.typed[keychain.Host(hop.ID, keychain.Password)] == "" {
+				return true
+			}
+		}
+		if px, ok := a.store.Proxy(hop.ProxyID); ok && px.User != "" {
+			return true
+		}
+	}
+	return false
 }
 
 // hostConfig is how to reach h, on its shared connection, logging in
@@ -901,21 +948,31 @@ func (a *App) credentials(c *conn, h assets.Host) (session.Credentials, error) {
 			if out.Password == "" {
 				b, err := a.kc.Get(key)
 				if err != nil {
-					return out, session.ErrNoCredentials
+					if errors.Is(err, keychain.ErrNotFound) {
+						return out, session.ErrNoCredentials
+					}
+					return out, err
 				}
 				out.Password = string(b)
 			}
 		case assets.CredKey:
 			key, err := a.kc.Get(keychain.Cred(cr.ID, keychain.PrivateKey))
 			if err != nil {
-				return out, session.ErrNoCredentials
+				if errors.Is(err, keychain.ErrNotFound) {
+					return out, session.ErrNoCredentials
+				}
+				return out, err
 			}
 			out.PrivateKey = key
 			pk := keychain.Cred(cr.ID, keychain.Passphrase)
 			if p := typed(pk); p != "" {
 				out.Passphrase = []byte(p)
 			} else if !cr.AskPassphrase {
-				out.Passphrase, _ = a.kc.Get(pk)
+				var err error
+				out.Passphrase, err = a.kc.Get(pk)
+				if err != nil && !errors.Is(err, keychain.ErrNotFound) {
+					return out, err
+				}
 			}
 		}
 	default:
@@ -939,13 +996,21 @@ func (a *App) CloseSession(id int) {
 	if c == nil {
 		return
 	}
+	if c.kind == layout.AI {
+		a.StopAI(id)
+		if err := a.saveChat(c); err != nil {
+			return
+		}
+	}
+	a.finishCloseSession(c)
+}
+
+// finishCloseSession removes a pane after its history has been saved.
+func (a *App) finishCloseSession(c *conn) {
+	id := c.id
 	a.clip.forget(id)
 	if a.clipAsk != nil && a.clipAsk.pane == id {
 		a.clipAsk = nil
-	}
-	if c.kind == layout.AI {
-		a.StopAI(id)
-		a.saveChat(c)
 	}
 	a.ws.Close(id)
 	delete(a.conns, id)

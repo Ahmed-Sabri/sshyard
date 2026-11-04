@@ -38,6 +38,7 @@ func appIn(t *testing.T, dir string, secrets keychain.Backend) (*App, *ui.Tester
 	}
 	t.Cleanup(a.Close)
 	a.Start()
+	a.withSecrets(nil)
 	tt := ui.NewTester(a.View, 1200, 760)
 	tt.SetLocale("en")
 	tt.Frame()

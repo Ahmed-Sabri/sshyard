@@ -40,8 +40,24 @@ func (a *App) hostSecretFields(c *ui.Context, m locales.Messages, tok theme.Toke
 	}
 }
 
+func hostFormNeedsSecrets(f *hostForm, h assets.Host) bool {
+	if h.Auth != f.orig.Auth {
+		return h.Auth == assets.AuthPassword || h.Auth == assets.AuthKey || f.orig.Auth == assets.AuthPassword || f.orig.Auth == assets.AuthKey
+	}
+	switch h.Auth {
+	case assets.AuthPassword:
+		return f.secret.password != ""
+	case assets.AuthKey:
+		return f.secret.loaded() || f.secret.passphrase != "" || f.secret.askPass != f.orig.AskPassphrase
+	}
+	return false
+}
+
 // hostSecretChanges validates new input and preserves existing, blank fields.
 func (a *App) hostSecretChanges(m locales.Messages, f *hostForm, h assets.Host) (assets.Host, []keychain.Change, error) {
+	if !hostFormNeedsSecrets(f, h) && (!a.unlocked() || (h.Auth != assets.AuthPassword && h.Auth != assets.AuthKey)) {
+		return h, nil, nil
+	}
 	s := &f.secret
 	values := map[keychain.Kind][]byte{}
 	keep := map[keychain.Kind]bool{}
@@ -154,6 +170,9 @@ func (a *App) saveHostSecrets(h assets.Host, fresh bool, changes []keychain.Chan
 }
 
 func (a *App) deleteHostSecrets(id string) error {
+	if h, ok := a.store.Get(id); !ok || (h.Auth != assets.AuthPassword && h.Auth != assets.AuthKey) {
+		return a.store.Delete(id)
+	}
 	tx := &secretTx{kc: a.kc}
 	changes := hostSecretDeletes(id)
 	if err := tx.setBatch(changes); err != nil {

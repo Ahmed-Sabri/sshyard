@@ -22,6 +22,11 @@ type snippetForm struct {
 }
 
 func (a *App) openSnippet(m locales.Messages, n assets.Snippet, duplicate bool) {
+	if n.ID != "" && !a.unlocked() {
+		a.withSecrets(func() { a.openSnippet(m, n, duplicate) })
+		return
+	}
+
 	f := &snippetForm{meta: n}
 	if n.ID != "" {
 		body, err := a.snippetContent(n.ID)
@@ -39,6 +44,16 @@ func (a *App) openSnippet(m locales.Messages, n assets.Snippet, duplicate bool) 
 	a.snippets.showing = true
 }
 func (a *App) saveSnippetForm(m locales.Messages) bool {
+	if a.snippets.form != nil && !a.unlocked() {
+		draft := a.snippets.form
+		a.withSecrets(func() {
+			if a.snippets.form == draft {
+				a.saveSnippetForm(m)
+			}
+		})
+		return false
+	}
+
 	f := a.snippets.form
 	if f == nil {
 		return false
@@ -59,6 +74,15 @@ func (a *App) saveSnippetForm(m locales.Messages) bool {
 }
 func (a *App) confirmSnippetDelete(m locales.Messages) {
 	if err := a.deleteSnippet(a.snippets.deleteID); err != nil {
+		if errors.Is(err, keychain.ErrLocked) && !a.unlocked() {
+			id := a.snippets.deleteID
+			a.withSecrets(func() {
+				if a.snippets.deleteID == id {
+					a.confirmSnippetDelete(m)
+				}
+			})
+			return
+		}
 		a.snippets.err = m.SnippetDeleteFailed(snippetErrorText(m, err))
 		return
 	}

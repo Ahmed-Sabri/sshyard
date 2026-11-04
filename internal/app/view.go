@@ -17,7 +17,7 @@ func (a *App) View(c *ui.Context) {
 	// The same clock as the toasts, so a snapshot and its Undo end together.
 	a.clip.now = func() time.Time { return c.Now() }
 	a.drain()
-	if !a.unlocked() {
+	if !a.ready() {
 		a.unlockView(c)
 		return
 	}
@@ -59,6 +59,9 @@ func (a *App) View(c *ui.Context) {
 	}
 	ui.Column(c).Fill().TextColor(tok.Text).Children(func() {
 		a.titleBar(c, m, tok, clear)
+		if a.showSecretsStatus() && a.page != pageSettings {
+			a.secretsBanner(c, m, tok)
+		}
 		ui.Row(c.Key("frame")).Grow(1).Shrink(1).MinHeight(0).FillWidth().Children(func() {
 			sb := ui.Box(c.Key("sidebar")).Width(a.sbWidth).FillHeight()
 			if !clear {
@@ -119,4 +122,5 @@ func (a *App) View(c *ui.Context) {
 	a.aiSheets(c, m)
 	a.aiAttachmentPreviewView(c, m, tok)
 	a.contextMenuView(c)
+	a.unlockModal(c, m, tok)
 }

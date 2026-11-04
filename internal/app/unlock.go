@@ -3,6 +3,7 @@ package app
 import (
 	"errors"
 	"log"
+	"os"
 	"path/filepath"
 	"strconv"
 	"sync"
@@ -11,18 +12,22 @@ import (
 	"github.com/Licoy/sshyard/internal/keychain"
 )
 
-// unlockState keeps a completed store owned until the UI accepts it, or Close
-// releases it; an OS authorization prompt itself cannot be cancelled.
+// Authorization runs off the UI thread; completed actions return through post.
 type unlockState struct {
-	mu       sync.Mutex
-	closed   bool
-	pending  *keychain.Keychain
-	ready    atomic.Bool
-	busy     bool
-	err      error
-	closeErr error
-	modal    bool
-	hold     focusHold
+	mu              sync.Mutex
+	closed          bool
+	ready           atomic.Bool
+	secretsReady    atomic.Bool
+	busy            bool
+	completed       bool
+	err             error
+	closeErr        error
+	modal           bool
+	hold            focusHold
+	after           func()
+	servicesStarted bool
+	started         bool
+	stored          bool
 }
 
 type lockedSecrets struct{}
@@ -31,7 +36,51 @@ func (lockedSecrets) Get(string) ([]byte, error) { return nil, keychain.ErrLocke
 func (lockedSecrets) Set(string, []byte) error   { return keychain.ErrLocked }
 func (lockedSecrets) Delete(string) error        { return keychain.ErrLocked }
 
-func (a *App) unlocked() bool { return a.unlock.ready.Load() }
+func (a *App) ready() bool    { return a.unlock.ready.Load() }
+func (a *App) unlocked() bool { return a.ready() && a.unlock.secretsReady.Load() }
+
+// withSecrets is only called by explicit user actions, never while rendering.
+func (a *App) withSecrets(after func()) {
+	if a.unlocked() {
+		if after != nil {
+			after()
+		}
+		return
+	}
+	if a.unlock.busy {
+		return
+	}
+	a.unlock.after = after
+	a.retryUnlock()
+}
+
+func (a *App) prepareStorage() error {
+	if err := a.resolveStorage(); err != nil {
+		return err
+	}
+	kc, err := a.openSecrets()
+	if err != nil {
+		return err
+	}
+	if err := a.loadData(); err != nil {
+		a.closeSecrets(kc)
+		return &keychain.OpError{Op: "file-read", Err: err}
+	}
+	_, statErr := os.Stat(filepath.Join(a.p.DataDir, "secrets.enc"))
+	if statErr != nil && !errors.Is(statErr, os.ErrNotExist) {
+		a.closeSecrets(kc)
+		return &keychain.OpError{Op: "file-read", Err: statErr}
+	}
+	a.unlock.stored = statErr == nil
+	a.kc = kc
+	a.keychainOK = true
+	a.unlock.ready.Store(true)
+	a.unlock.secretsReady.Store(kc.Unlocked())
+	a.syncChoices()
+	a.resolveFonts(false, false)
+	a.updateCheck = a.settings.CheckUpdates
+	return nil
+}
 
 func (a *App) retryUnlock() {
 	a.unlock.mu.Lock()
@@ -40,34 +89,43 @@ func (a *App) retryUnlock() {
 		return
 	}
 	a.unlock.busy = true
+	a.unlock.completed = false
 	a.unlock.err = nil
 	a.unlock.modal = false
 	a.unlock.mu.Unlock()
-	dataErr := a.resolveStorage()
-	go func() {
-		var kc *keychain.Keychain
-		err := dataErr
-		if err == nil {
-			kc, err = a.openSecrets()
+	if !a.ready() {
+		if err := a.prepareStorage(); err != nil {
+			a.acceptUnlock(err)
+			return
 		}
+		a.applyWindowSettings()
+		a.startIndependent()
+		a.unlock.mu.Lock()
+		after := a.unlock.after
+		a.unlock.after = nil
+		a.unlock.busy = false
+		a.unlock.mu.Unlock()
+		if after != nil {
+			a.withSecrets(after)
+		}
+		return
+	}
+	kc := a.kc
+	go func() {
+		err := kc.Unlock()
 		a.unlock.mu.Lock()
 		if a.unlock.closed {
-			if kc != nil {
-				a.closeSecrets(kc)
-			}
+			a.closeSecrets(kc)
 			a.unlock.mu.Unlock()
 			return
 		}
-		a.unlock.pending = kc
+		a.unlock.completed = true
 		a.post(func() { a.acceptUnlock(err) })
 		a.unlock.mu.Unlock()
 	}()
 }
 
 func (a *App) openSecrets() (*keychain.Keychain, error) {
-	if a.p.DataDir == "" {
-		return nil, &keychain.OpError{Op: "file-read", Err: errors.New("data directory unavailable")}
-	}
 	lock := a.p.SecretLockPath
 	if lock == "" {
 		lock = filepath.Join(a.p.DataDir, "secrets.lock")
@@ -76,41 +134,33 @@ func (a *App) openSecrets() (*keychain.Keychain, error) {
 	if scope == "" {
 		scope = "sshyard"
 	}
-	return keychain.Open(keychain.OpenOptions{Path: filepath.Join(a.p.DataDir, "secrets.enc"), LockPath: lock, Scope: scope, System: a.p.Secrets})
+	return keychain.OpenLocked(keychain.OpenOptions{Path: filepath.Join(a.p.DataDir, "secrets.enc"), LockPath: lock, Scope: scope, System: a.p.Secrets})
 }
 
 func (a *App) acceptUnlock(err error) {
 	a.unlock.mu.Lock()
-	defer a.unlock.mu.Unlock()
 	if a.unlock.closed {
+		a.unlock.mu.Unlock()
 		return
 	}
 	a.unlock.busy = false
 	if err != nil {
 		a.unlock.err, a.unlock.modal = err, true
+		a.unlock.mu.Unlock()
 		return
 	}
-	if err := a.loadData(); err != nil {
-		a.closeSecrets(a.unlock.pending)
-		a.unlock.pending = nil
-		a.unlock.err = &keychain.OpError{Op: "file-read", Err: err}
-		a.unlock.modal = true
-		return
+	a.unlock.secretsReady.Store(true)
+	after := a.unlock.after
+	a.unlock.after = nil
+	a.unlock.mu.Unlock()
+	if !a.unlock.servicesStarted {
+		a.unlock.servicesStarted = true
+		a.autoStartForwards()
+		a.syncMCP()
 	}
-	a.kc = a.unlock.pending
-	a.unlock.pending = nil
-	a.keychainOK = true
-	a.unlock.ready.Store(true)
-	a.syncChoices()
-	a.updateCheck = a.settings.CheckUpdates
-	a.resolveFonts(false, false)
-	if a.p.SetTheme != nil {
-		a.p.SetTheme(a.settings.Theme)
+	if after != nil {
+		after()
 	}
-	if a.p.SetLocale != nil && a.settings.Language != "" {
-		a.p.SetLocale(a.settings.Language)
-	}
-	a.startUnlocked()
 }
 
 // StoragePaths keeps the canonical lifetime lock separate from overridden data.
@@ -144,4 +194,20 @@ func (a *App) closeSecrets(kc *keychain.Keychain) {
 		}
 		log.Printf("sshyard: credential store cleanup failed (stage=close, code=%s)", code)
 	}
+}
+
+// A compact status appears only when saved data or pending services need it.
+func (a *App) showSecretsStatus() bool {
+	if a.unlocked() {
+		return false
+	}
+	if a.unlock.stored || a.unlock.busy || a.unlock.err != nil || a.settings.MCPEnabled {
+		return true
+	}
+	for _, f := range a.store.Forwards() {
+		if f.AutoStart {
+			return true
+		}
+	}
+	return false
 }

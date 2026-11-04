@@ -1,11 +1,13 @@
 package app
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 
 	"github.com/Licoy/sshyard/internal/assets"
 	"github.com/Licoy/sshyard/internal/icons"
+	"github.com/Licoy/sshyard/internal/keychain"
 	"github.com/Licoy/sshyard/internal/layout"
 	"github.com/Licoy/sshyard/internal/session"
 	"github.com/Licoy/sshyard/internal/theme"
@@ -279,7 +281,7 @@ func (a *App) snippetRow(c *ui.Context, m locales.Messages, tok theme.Tokens, n 
 		label, ic, mode = m.SnippetSendAction(n.Name), icons.Send, m.SnippetSendEnter()
 	}
 	target := a.snippetTarget()
-	disabled := err != nil || target == nil || target.tv.snippetSending
+	disabled := (err != nil && !errors.Is(err, keychain.ErrLocked)) || target == nil || target.tv.snippetSending
 	preview := strings.SplitN(body, "\n", 2)[0]
 	if err != nil {
 		body = snippetErrorText(m, err)
@@ -313,7 +315,7 @@ func (a *App) snippetRow(c *ui.Context, m locales.Messages, tok theme.Tokens, n 
 				})
 			})
 			if row.Clicked() {
-				a.snippets.selected = n.ID
+				a.withSecrets(func() { a.snippets.selected = n.ID })
 			}
 			if (IconButton{Icon: ic, Label: label, Disabled: disabled, Size: Small}).Clicked(c, "snippet:send:"+n.ID) {
 				a.startSnippet(m, n.ID, n.SendEnter)
@@ -349,6 +351,11 @@ func (a *App) snippetMenu(m locales.Messages, n assets.Snippet, disabled bool) [
 	return out
 }
 func (a *App) startSnippet(m locales.Messages, id string, enter bool) {
+	if !a.unlocked() {
+		a.withSecrets(func() { a.startSnippet(m, id, enter) })
+		return
+	}
+
 	a.snippets.err = ""
 	if err := a.sendSnippet(id, enter); err != nil {
 		a.snippets.err = snippetErrorText(m, err)

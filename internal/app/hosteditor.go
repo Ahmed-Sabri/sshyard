@@ -89,6 +89,11 @@ func (a *App) authLabel(m locales.Messages, h assets.Host) string {
 }
 
 func (a *App) openEditor(h *assets.Host) {
+	if h != nil && h.Auth == assets.AuthKey && !a.unlocked() {
+		a.withSecrets(func() { a.openEditor(h) })
+		return
+	}
+
 	f := &hostForm{isNew: h == nil, port: "22", cwdFollow: true}
 	if h != nil {
 		f.orig = *h
@@ -229,6 +234,15 @@ func (a *App) SaveForm(m locales.Messages) bool {
 		f.err = fieldError(m, err)
 		return false
 	}
+	if !a.unlocked() && hostFormNeedsSecrets(f, h) {
+		draft := a.form
+		a.withSecrets(func() {
+			if a.form == draft {
+				a.SaveForm(m)
+			}
+		})
+		return false
+	}
 	h, err = a.saveHostForm(m, f, h)
 	if errors.Is(err, assets.ErrJumpLoop) {
 		f.err, f.netOpen = m.ErrJumpLoop(), true
@@ -258,8 +272,8 @@ func (a *App) DeleteHost(id string) error {
 	if err := a.deleteHostSecrets(id); err != nil {
 		return err
 	}
-	if st := a.chatHistory(); st != nil {
-		_ = st.DeleteHost(id)
+	if err := a.deleteHostChats(id); err != nil {
+		return err
 	}
 	delete(a.chatList, id)
 	a.mu.Lock()
@@ -419,9 +433,8 @@ func (a *App) editorView(c *ui.Context, m locales.Messages) {
 		}
 		switch ui.AlertDialog(c, &a.deleting, m.DeleteHost(), m.DeleteHostConfirm(name), m.Cancel(), m.Delete()) {
 		case 1:
-			if err := a.DeleteHost(a.deleteID); err != nil {
-				c.AddToast(ui.Toast{Title: a.inUseText(m, err), Type: "error"})
-			}
+			id := a.deleteID
+			a.runSecretAction(func() error { return a.DeleteHost(id) }, func(err error) { a.toastError(a.inUseText(m, err)) })
 		}
 	}
 }

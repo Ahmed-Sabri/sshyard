@@ -298,6 +298,10 @@ func (a *App) providerClient(p *settings.AIProvider) (*llm.Client, error) {
 		return nil, errAIProvider
 	}
 	b, err := a.kc.Get(keychain.AIKey(p.ID))
+	defer clear(b)
+	if err != nil && !errors.Is(err, keychain.ErrNotFound) {
+		return nil, err
+	}
 	if err != nil || len(bytes.TrimSpace(b)) == 0 {
 		return nil, errAIKey
 	}
@@ -428,16 +432,21 @@ func (a *App) SendAI(id int, text string) {
 		a.consent = &consentAsk{host: c.host.ID, conn: id, text: text, open: true}
 		return
 	}
+	if !a.unlocked() && a.aiNeedsSecrets(c) {
+		a.unlockAISend(c, text)
+		return
+	}
 	files := c.ai.attach
-	a.noteQuestion(c, text, files)
 	if c.ai.agent == "acp" {
+		a.noteQuestion(c, text, files)
 		a.sendACP(c, text, files)
 		return
 	}
 	if err := a.ensureAI(c); err != nil {
-		c.ai.items = append(c.ai.items, aiItem{kind: "user", text: text, files: files}, aiItem{kind: "err", text: aiErrText(err)})
+		c.ai.items = append(c.ai.items, aiItem{kind: "err", text: aiErrText(err)})
 		return
 	}
+	a.noteQuestion(c, text, files)
 	a.aiRecent[c.host.ID] = c.id
 	c.ai.items = append(c.ai.items, aiItem{kind: "user", text: text, files: files})
 	c.ai.input = ""
@@ -451,6 +460,41 @@ func (a *App) SendAI(id int, text string) {
 	a.launch(c, func(ctx context.Context, emit func(agent.Event)) error {
 		return session.TurnWith(ctx, user, parts, meta, term, emit)
 	})
+}
+
+func (a *App) aiNeedsSecrets(c *conn) bool {
+	return a.keepsChats(c) ||
+		c.ai.agent == "builtin" && a.newModel == nil ||
+		c.ai.agent == "acp" && a.connectionNeedsSecrets(c.host) ||
+		a.settings.AIReviewProvider != "" && (a.newModel == nil || c.ai.agent == "acp")
+}
+
+func (a *App) unlockAISend(c *conn, text string) {
+	state, input, gen := c.ai, c.ai.input, c.ai.gen
+	agentID, provider, model, effort := state.agent, state.provider, state.model, state.effort
+	files := cloneAIAttach(state.attach)
+	a.withSecrets(func() {
+		if a.conns[c.id] != c || c.ai != state || state.gen != gen || state.input != input ||
+			state.agent != agentID || state.provider != provider || state.model != model || state.effort != effort ||
+			!reflect.DeepEqual(state.attach, files) {
+			return
+		}
+		a.SendAI(c.id, text)
+	})
+}
+
+// cloneAIAttach pins an authorization action to the draft's file contents.
+func cloneAIAttach(files []*aiAttach) []*aiAttach {
+	if files == nil {
+		return nil
+	}
+	out := make([]*aiAttach, len(files))
+	for i, file := range files {
+		copy := *file
+		copy.data = bytes.Clone(file.data)
+		out[i] = &copy
+	}
+	return out
 }
 
 // ContinueAI resumes a turn that paused after 25 tool calls.

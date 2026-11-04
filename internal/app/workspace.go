@@ -586,6 +586,7 @@ func (a *App) termEntries(t *layout.Tab, n *layout.Node, cn *conn, tv *termView,
 }
 
 func (a *App) banner(c *ui.Context, cn *conn, st session.Status, tok theme.Tokens, m locales.Messages) {
+	waiting := st.State == session.Idle && cn.waitingSecrets
 	col := tok.Warning
 	if st.State == session.Failed {
 		col = tok.Danger
@@ -593,12 +594,33 @@ func (a *App) banner(c *ui.Context, cn *conn, st session.Status, tok theme.Token
 	// A rounded notice floating inside the bottom of the pane card.
 	ui.Row(c.Key("banner")).Margin(0, 8, 8, 8).Padding(6, 8, 6, 12).MinHeight(36).Gap(8).AlignItems(ui.Center).
 		Radius(theme.RadiusControl).Background(col.Alpha(0.12)).Border(1, col.Alpha(0.22)).Children(func() {
-		if st.State == session.Connecting || st.State == session.Reconnecting || st.State == session.Idle {
+		if !waiting && (st.State == session.Connecting || st.State == session.Reconnecting || st.State == session.Idle) {
 			ui.Spinner(c)
 		} else {
 			ui.Icon(c, icons.Warning.SVG).Size(14, 14).Shrink(0).TextColor(col)
 		}
-		ui.Text(c, a.pv(a.statusText(m, cn.host, st, c.Now()))).FontSize(theme.Footnote).Grow(1).Shrink(1)
+		text := a.pv(a.statusText(m, cn.host, st, c.Now()))
+		if waiting {
+			text = m.SecretsLockedTitle()
+			if a.unlocked() {
+				text = m.Connect()
+			}
+		}
+		ui.Text(c, text).FontSize(theme.Footnote).Grow(1).Shrink(1)
+		if waiting {
+			label := m.SecretsRetry()
+			if a.unlocked() {
+				label = m.Connect()
+			}
+			if (IconButton{Icon: icons.Key, Label: label, Size: Small, Disabled: a.unlock.busy}).Clicked(c, "unlock-connection") {
+				a.withSecrets(func() {
+					if a.conns[cn.id] == cn {
+						cn.waitingSecrets = false
+						cn.s.Start()
+					}
+				})
+			}
+		}
 		switch st.State {
 		case session.Failed, session.Disconnected, session.Exited, session.Reconnecting:
 			if session.Classify(st.Err) == session.KindHostChanged {
@@ -606,7 +628,15 @@ func (a *App) banner(c *ui.Context, cn *conn, st session.Status, tok theme.Token
 			}
 			if (IconButton{Icon: icons.Reconnect, Label: m.Reconnect(), Size: Small}).Clicked(c, "reconnect") {
 				cn.handled = nil
-				cn.s.Reconnect()
+				if a.connectionNeedsSecrets(cn.host) {
+					a.withSecrets(func() {
+						if a.conns[cn.id] == cn {
+							cn.s.Reconnect()
+						}
+					})
+				} else {
+					cn.s.Reconnect()
+				}
 			}
 		}
 	})

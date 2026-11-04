@@ -8862,31 +8862,31 @@ func (msgs Messages) SkillRemoved(name string) string {
 	return Catalog.Format(msgs.locale, "skillRemoved", map[string]any{"name": name})
 }
 
-// SecretsLockedTitle says "Credentials are locked"
+// SecretsLockedTitle says "Saved secrets are locked"
 // in the language the app shows.
 func SecretsLockedTitle() string { return In(i18n.Locale()).SecretsLockedTitle() }
 
-// SecretsLockedTitle says "Credentials are locked"
+// SecretsLockedTitle says "Saved secrets are locked"
 // in the language of msgs.
 func (msgs Messages) SecretsLockedTitle() string {
 	return Catalog.Format(msgs.locale, "secretsLockedTitle", nil)
 }
 
-// SecretsLockedBody says "Authorize access to the system master key to unlock your encrypted local credentials and connections."
+// SecretsLockedBody says "Saved secrets stay encrypted until you choose an action that needs them. Hosts, settings and local terminals remain a…"
 // in the language the app shows.
 func SecretsLockedBody() string { return In(i18n.Locale()).SecretsLockedBody() }
 
-// SecretsLockedBody says "Authorize access to the system master key to unlock your encrypted local credentials and connections."
+// SecretsLockedBody says "Saved secrets stay encrypted until you choose an action that needs them. Hosts, settings and local terminals remain a…"
 // in the language of msgs.
 func (msgs Messages) SecretsLockedBody() string {
 	return Catalog.Format(msgs.locale, "secretsLockedBody", nil)
 }
 
-// SecretsRetry says "Authorize Again"
+// SecretsRetry says "Unlock Saved Secrets"
 // in the language the app shows.
 func SecretsRetry() string { return In(i18n.Locale()).SecretsRetry() }
 
-// SecretsRetry says "Authorize Again"
+// SecretsRetry says "Unlock Saved Secrets"
 // in the language of msgs.
 func (msgs Messages) SecretsRetry() string {
 	return Catalog.Format(msgs.locale, "secretsRetry", nil)
@@ -8912,11 +8912,11 @@ func (msgs Messages) SecretsUnlockFailed() string {
 	return Catalog.Format(msgs.locale, "secretsUnlockFailed", nil)
 }
 
-// SecretsUnlockSafety says "The master key protects your encrypted local credentials; SSHYard stays locked until it can safely open the store."
+// SecretsUnlockSafety says "Saved secrets remain encrypted; cancel to continue using the app without unlocking them."
 // in the language the app shows.
 func SecretsUnlockSafety() string { return In(i18n.Locale()).SecretsUnlockSafety() }
 
-// SecretsUnlockSafety says "The master key protects your encrypted local credentials; SSHYard stays locked until it can safely open the store."
+// SecretsUnlockSafety says "Saved secrets remain encrypted; cancel to continue using the app without unlocking them."
 // in the language of msgs.
 func (msgs Messages) SecretsUnlockSafety() string {
 	return Catalog.Format(msgs.locale, "secretsUnlockSafety", nil)

@@ -430,13 +430,22 @@ func (a *App) providerDelete(c *ui.Context, m locales.Messages) {
 	}
 	switch ui.AlertDialog(c, &a.provDeleting, m.Delete(), m.AiDeleteProviderConfirm(name), m.Cancel(), m.Delete()) {
 	case 1:
-		if err := a.deleteProvider(a.provDeleteID); err != nil {
-			c.AddToast(ui.Toast{Title: m.ErrGeneric(secretStoreErrorText(m, err)), Type: "error"})
-		}
+		id := a.provDeleteID
+		a.runSecretAction(func() error { return a.deleteProvider(id) }, func(err error) { a.toastError(m.ErrGeneric(secretStoreErrorText(m, err))) })
 	}
 }
 
 func (a *App) saveProvider(m locales.Messages) bool {
+	if a.prov != nil && strings.TrimSpace(a.prov.key) != "" && !a.unlocked() {
+		draft := a.prov
+		a.withSecrets(func() {
+			if a.prov == draft {
+				a.saveProvider(m)
+			}
+		})
+		return false
+	}
+
 	f := a.prov
 	if f == nil {
 		return false
@@ -552,24 +561,40 @@ func (a *App) deleteProvider(id string) error {
 }
 
 // formKey is the key the form's requests use: the one typed, else the saved one.
-func (a *App) formKey(f *providerForm) string {
+func (a *App) formKey(f *providerForm) (string, error) {
 	if key := strings.TrimSpace(f.key); key != "" {
-		return key
+		return key, nil
 	}
-	if f.id != "" {
-		if b, err := a.kc.Get(keychain.AIKey(f.id)); err == nil {
-			return strings.TrimSpace(string(b))
-		}
+	if f.id == "" {
+		return "", nil
 	}
-	return ""
+	b, err := a.kc.Get(keychain.AIKey(f.id))
+	if errors.Is(err, keychain.ErrNotFound) {
+		return "", nil
+	}
+	return strings.TrimSpace(string(b)), err
 }
 
 func (a *App) testProvider() {
+	if a.prov != nil && a.prov.id != "" && strings.TrimSpace(a.prov.key) == "" && !a.unlocked() {
+		draft := a.prov
+		a.withSecrets(func() {
+			if a.prov == draft {
+				a.testProvider()
+			}
+		})
+		return
+	}
+
 	f := a.prov
 	if f == nil || f.testing {
 		return
 	}
-	key := a.formKey(f)
+	key, err := a.formKey(f)
+	if err != nil {
+		f.err = secretStoreErrorText(locales.In(a.settings.Language), err)
+		return
+	}
 	if key == "" {
 		f.test = "key"
 		return
@@ -601,11 +626,25 @@ func (a *App) testProvider() {
 // fetchModels lists the endpoint's chat models for the model field and
 // the panes' model menu; they are kept when the profile is saved.
 func (a *App) fetchModels() {
+	if a.prov != nil && a.prov.id != "" && strings.TrimSpace(a.prov.key) == "" && !a.unlocked() {
+		draft := a.prov
+		a.withSecrets(func() {
+			if a.prov == draft {
+				a.fetchModels()
+			}
+		})
+		return
+	}
+
 	f := a.prov
 	if f == nil || f.fetching {
 		return
 	}
-	key := a.formKey(f)
+	key, err := a.formKey(f)
+	if err != nil {
+		f.err = secretStoreErrorText(locales.In(a.settings.Language), err)
+		return
+	}
 	if key == "" {
 		f.fetchErr = "key"
 		return

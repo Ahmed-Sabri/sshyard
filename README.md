@@ -20,7 +20,7 @@ SSHYard is a cross-platform desktop SSH / SFTP client for macOS, Windows and Lin
 - **Networking**: multi-hop jump hosts, HTTP / SOCKS5 proxies, local / remote / dynamic port forwards.
 - **Convenience**: import from `~/.ssh/config`, quick connect (`user@host:port`), a server metrics bar, light and dark themes, English and Simplified Chinese.
 
-At startup SSHYard automatically requests the master key and unlocks its local store. If access is denied or fails, Retry requests access again and Cancel leaves the app locked; credentials never fall back to memory-only storage. The former per-secret keychain layout is not migrated or read.
+At startup SSHYard loads hosts and settings without requesting access to the system master key. Saved secrets remain encrypted until an explicit action needs them or you choose Unlock Saved Secrets; local terminals and ordinary settings remain available. If access is denied or fails, Retry requests access again and Cancel preserves drafts and keeps the app usable with secrets locked. Automatic forwards and device MCP wait for an explicit unlock; credentials never fall back to memory-only storage. The former per-secret keychain layout is not migrated or read.
 
 ## Development
 

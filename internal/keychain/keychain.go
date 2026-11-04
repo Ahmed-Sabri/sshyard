@@ -58,14 +58,16 @@ type Backend interface {
 }
 
 // Keychain is the secret store facade. New is only for explicit test injection;
-// production must use Open, which never falls back to memory.
+// production must use OpenLocked or Open, which never fall back to memory.
 type Keychain struct {
-	mu     sync.Mutex
-	b      Backend
-	closed bool
+	mu       sync.Mutex
+	unlockMu sync.Mutex
+	b        Backend
+	closed   bool
 }
 
 func New(b Backend) *Keychain { return &Keychain{b: b} }
+
 func (k *Keychain) Backend() Backend {
 	if _, ok := k.b.(*encryptedStore); ok {
 		return k
@@ -176,11 +178,17 @@ func (k *Keychain) DeleteCred(id string) error {
 // Close clears the cached master key and releases the lifetime lock.
 func (k *Keychain) Close() error {
 	k.mu.Lock()
-	defer k.mu.Unlock()
 	if k.closed {
+		k.mu.Unlock()
 		return nil
 	}
 	k.closed = true
+	k.mu.Unlock()
+	// Keep the lifetime lock until any outstanding system request completes.
+	k.unlockMu.Lock()
+	defer k.unlockMu.Unlock()
+	k.mu.Lock()
+	defer k.mu.Unlock()
 	if b, ok := k.b.(*encryptedStore); ok {
 		return b.close()
 	}

@@ -14,6 +14,15 @@ import (
 	"github.com/Licoy/sshyard/internal/ai/llm"
 )
 
+func chatSummaries(t *testing.T, a *App, host string) []history.Summary {
+	t.Helper()
+	list, err := a.loadChats(host)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return list
+}
+
 // recModel echoes the last question and keeps what each request sent.
 type recModel struct {
 	mu   sync.Mutex
@@ -56,7 +65,7 @@ func TestChatHistory(t *testing.T) {
 	ask("why is the disk full")
 	ask("and now?")
 	first := c.ai.conv
-	if list := a.chats(h.ID); len(list) != 1 || list[0].ID != first || list[0].Title != "why is the disk full" {
+	if list := chatSummaries(t, a, h.ID); len(list) != 1 || list[0].ID != first || list[0].Title != "why is the disk full" {
 		t.Fatalf("history = %+v", list)
 	}
 
@@ -66,7 +75,7 @@ func TestChatHistory(t *testing.T) {
 	}
 	ask("other question")
 	second := c.ai.conv
-	if list := a.chats(h.ID); len(list) != 2 || list[0].ID != second || list[1].ID != first {
+	if list := chatSummaries(t, a, h.ID); len(list) != 2 || list[0].ID != second || list[1].ID != first {
 		t.Fatalf("history = %+v", list)
 	}
 	for _, m := range model.last() {
@@ -111,7 +120,7 @@ func TestChatHistory(t *testing.T) {
 	}
 	a.ClearChat(id)
 	c.ai.drop = ""
-	if list := a.chats(h.ID); len(list) != 1 || list[0].ID != first || len(c.ai.items) != 0 {
+	if list := chatSummaries(t, a, h.ID); len(list) != 1 || list[0].ID != first || len(c.ai.items) != 0 {
 		t.Fatalf("after clear: %+v, %d items", list, len(c.ai.items))
 	}
 
@@ -119,7 +128,7 @@ func TestChatHistory(t *testing.T) {
 	ask("before close")
 	last := c.ai.conv
 	a.CloseSession(id)
-	if list := a.chats(h.ID); len(list) != 2 || list[0].ID != last {
+	if list := chatSummaries(t, a, h.ID); len(list) != 2 || list[0].ID != last {
 		t.Fatalf("close did not save: %+v", list)
 	}
 	dir := filepath.Join(a.p.DataDir, "ai-history")

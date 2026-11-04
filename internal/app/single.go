@@ -82,12 +82,19 @@ func (a *App) reuse(ex *conn, hostID string, link int) (int, error) {
 		})
 		return ex.id, errPaneBusy
 	}
+	if ex.kind == layout.AI {
+		a.StopAI(ex.id)
+		if err := a.saveChat(ex); err != nil {
+			a.showPane(ex)
+			return ex.id, err
+		}
+	}
 	c, err := a.makeConn(hostID, ex.kind, link)
 	if err != nil {
 		return 0, err
 	}
 	a.ws.Replace(ex.id, c.item())
-	a.CloseSession(ex.id)
+	a.finishCloseSession(ex)
 	a.shown(c)
 	return c.id, nil
 }

@@ -35,6 +35,24 @@ func (a *App) unlockView(c *ui.Context) {
 			}
 		})
 	})
+	a.unlockModal(c, m, tok)
+}
+
+func (a *App) secretsBanner(c *ui.Context, m locales.Messages, tok theme.Tokens) {
+	ui.Row(c.Key("secrets-status")).FillWidth().Padding(theme.Space(2)).Gap(theme.Space(2)).AlignItems(ui.Center).Children(func() {
+		ui.Text(c, m.SecretsLockedTitle()).FontSize(theme.Caption).TextColor(tok.TextMuted)
+		ui.Spacer(c)
+		label := m.SecretsRetry()
+		if a.unlock.busy {
+			label = m.SecretsAuthorizing()
+		}
+		if !a.unlock.modal && pill(c, label, false, false, a.unlock.busy) {
+			a.withSecrets(nil)
+		}
+	})
+}
+
+func (a *App) unlockModal(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	if !a.unlock.modal {
 		return
 	}
@@ -47,6 +65,7 @@ func (a *App) unlockView(c *ui.Context) {
 				ui.Spacer(c)
 				if pill(c, m.Cancel(), false, false, false) {
 					a.unlock.modal = false
+					a.unlock.after = nil
 				}
 				b, clicked := pillEl(c, m.SecretsRetry(), true, false, false)
 				a.unlock.hold.apply(c, a.unlock.err, b)
@@ -56,6 +75,9 @@ func (a *App) unlockView(c *ui.Context) {
 			})
 		})
 	}), tok)
+	if !a.unlock.modal && !a.unlock.busy {
+		a.unlock.after = nil
+	}
 }
 
 // Only known reasons and operation names enter the interface, never raw errors.

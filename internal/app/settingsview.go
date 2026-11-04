@@ -233,6 +233,9 @@ func settingsSection(c *ui.Context, tok theme.Tokens, ic *icons.Icon, tint ui.Co
 }
 
 func (a *App) settingsPage(c *ui.Context, m locales.Messages, tok theme.Tokens) {
+	if !a.unlocked() {
+		a.secretsBanner(c, m, tok)
+	}
 	s := a.settings
 	changed := false
 	cur := a.prefNow()

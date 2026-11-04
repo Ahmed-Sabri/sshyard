@@ -31,11 +31,26 @@ type encryptedStore struct {
 	key    []byte
 	sealed []byte
 	lock   io.Closer
+	system Backend
+	exists bool
 }
 
-// Open acquires the lifetime lock before reading or creating the sole system key.
+// Open acquires the lifetime lock and immediately unlocks the store.
 // A failure never replaces existing ciphertext or regenerates a missing master.
-func Open(o OpenOptions) (_ *Keychain, err error) {
+func Open(o OpenOptions) (*Keychain, error) {
+	k, err := OpenLocked(o)
+	if err != nil {
+		return nil, err
+	}
+	if err := k.Unlock(); err != nil {
+		return nil, errors.Join(err, k.Close())
+	}
+	return k, nil
+}
+
+// OpenLocked acquires the lifetime lock and reads ciphertext without accessing
+// the system keychain or creating a master key or encrypted file.
+func OpenLocked(o OpenOptions) (_ *Keychain, err error) {
 	if o.Path == "" || o.LockPath == "" || o.Scope == "" {
 		return nil, &OpError{Op: "lock", Err: errors.New("missing persistent store options")}
 	}
@@ -43,7 +58,7 @@ func Open(o OpenOptions) (_ *Keychain, err error) {
 	if err != nil {
 		return nil, &OpError{Op: "lock", Err: err}
 	}
-	b := &encryptedStore{path: o.Path, lock: lock, aad: append([]byte(fileMagic), fileVersion)}
+	b := &encryptedStore{path: o.Path, lock: lock, system: o.System, aad: append([]byte(fileMagic), fileVersion)}
 	b.aad = append(b.aad, []byte(o.Scope)...)
 	defer func() {
 		if err != nil {
@@ -51,28 +66,31 @@ func Open(o OpenOptions) (_ *Keychain, err error) {
 		}
 	}()
 	sealed, rerr := readEncrypted(o.Path)
-	exists := !errors.Is(rerr, os.ErrNotExist)
-	if rerr != nil && exists {
+	b.exists = !errors.Is(rerr, os.ErrNotExist)
+	if rerr != nil && b.exists {
 		return nil, &OpError{Op: "file-read", Err: rerr}
 	}
-	if o.System == nil {
-		return nil, &OpError{Op: "master-read", Err: ErrUnavailable}
-	}
-	b.key, err = master(o.System, exists)
-	if err != nil {
-		return nil, err
-	}
-	if exists {
-		b.sealed = sealed
-		values, e := b.decrypt()
-		wipe(values)
-		if e != nil {
-			return nil, &OpError{Op: "file-decrypt", Err: e}
-		}
-	} else if err = b.commit(map[string][]byte{}); err != nil {
-		return nil, err
-	}
+	b.sealed = sealed
 	return New(b), nil
+}
+
+func (b *encryptedStore) unlock(key []byte) (err error) {
+	b.key = append([]byte(nil), key...)
+	defer func() {
+		if err != nil {
+			clear(b.key)
+			b.key = nil
+		}
+	}()
+	if !b.exists {
+		return b.commit(map[string][]byte{})
+	}
+	values, err := b.decrypt()
+	wipe(values)
+	if err != nil {
+		return &OpError{Op: "file-decrypt", Err: err}
+	}
+	return nil
 }
 
 func master(system Backend, exists bool) ([]byte, error) {
@@ -145,6 +163,9 @@ func wipe(values map[string][]byte) {
 	}
 }
 func (b *encryptedStore) Get(key string) ([]byte, error) {
+	if !b.exists {
+		return nil, ErrNotFound
+	}
 	values, err := b.decrypt()
 	if err != nil {
 		return nil, err
@@ -161,6 +182,17 @@ func (b *encryptedStore) Set(key string, value []byte) error {
 }
 func (b *encryptedStore) Delete(key string) error { return b.apply([]Change{{Key: key, Delete: true}}) }
 func (b *encryptedStore) apply(changes []Change) error {
+	if !b.exists {
+		for _, c := range changes {
+			if !c.Delete {
+				return ErrLocked
+			}
+			if c.Key == "" {
+				return errors.New("keychain: empty secret key")
+			}
+		}
+		return nil
+	}
 	values, err := b.decrypt()
 	if err != nil {
 		return err
@@ -205,6 +237,7 @@ func (b *encryptedStore) commit(values map[string][]byte) error {
 		return &OpError{Op: "file-write", Err: err}
 	}
 	b.sealed = sealed
+	b.exists = true
 	return nil
 }
 func (b *encryptedStore) close() error {

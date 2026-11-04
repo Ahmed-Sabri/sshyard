@@ -70,7 +70,7 @@ func (a *App) promptConns() []int {
 // opening one without a shell when no pane has it. A local port in use
 // is returned at once; the forward shows the error until stopped.
 func (a *App) StartForward(id string) error {
-	if !a.unlocked() {
+	if !a.ready() {
 		return keychain.ErrLocked
 	}
 	if a.fwds[id] != nil {
@@ -83,6 +83,9 @@ func (a *App) StartForward(id string) error {
 	h, ok := a.store.Get(f.HostID)
 	if !ok {
 		return assets.ErrNotFound
+	}
+	if !a.unlocked() && (a.connectionNeedsSecrets(h) || (f.Kind == assets.ForwardDynamic && f.User != "")) {
+		return keychain.ErrLocked
 	}
 	run := &fwdRun{f: f}
 	a.fwds[id] = run
@@ -289,7 +292,7 @@ func (a *App) forwardItem(c *ui.Context, m locales.Messages, tok theme.Tokens, f
 		}
 		if (IconButton{Icon: icons.Run, On: icons.RunOn, Label: tip, Active: on, Toggle: true, Size: Small}).Clicked(c, "toggle") {
 			toggled = true
-			a.ToggleForward(f.ID)
+			a.runSecretAction(func() error { return a.ToggleForward(f.ID) }, func(err error) { a.toastError(m.ErrGeneric(secretStoreErrorText(m, err))) })
 		}
 	})
 	a.contextMenu(row, func() []menuEntry {
@@ -298,7 +301,9 @@ func (a *App) forwardItem(c *ui.Context, m locales.Messages, tok theme.Tokens, f
 			tip, ic = m.FwdStop(), icons.Stop
 		}
 		return []menuEntry{
-			{Icon: ic, Label: tip, Do: func() { a.ToggleForward(f.ID) }},
+			{Icon: ic, Label: tip, Do: func() {
+				a.runSecretAction(func() error { return a.ToggleForward(f.ID) }, func(err error) { a.toastError(m.ErrGeneric(secretStoreErrorText(m, err))) })
+			}},
 			{Icon: icons.Edit, Label: m.Edit(), Do: func() {
 				ff := f
 				a.openFwdForm(m, &ff, "")
@@ -497,10 +502,19 @@ func (a *App) SaveFwdForm(m locales.Messages) bool {
 		f.err = msg
 		return false
 	}
+	if !a.unlocked() && (f.password != "" || (!f.isNew && f.orig.Kind == assets.ForwardDynamic && f.orig.User != "" && !auth)) {
+		draft := a.fwdForm
+		a.withSecrets(func() {
+			if a.fwdForm == draft {
+				a.SaveFwdForm(m)
+			}
+		})
+		return false
+	}
 	key := keychain.ForwardPassword(out.ID)
 	var err error
 	switch {
-	case !auth:
+	case !auth && !f.isNew && f.orig.Kind == assets.ForwardDynamic && f.orig.User != "":
 		err = tx.delete(key)
 	case f.password != "":
 		err = tx.set(key, []byte(f.password))
@@ -541,15 +555,21 @@ func fwdFieldError(m locales.Messages, err error) string {
 // DeleteForward stops a port forward, then removes it and its password;
 // the password goes first.
 func (a *App) DeleteForward(id string) error {
-	if _, ok := a.store.Forward(id); !ok {
+	f, ok := a.store.Forward(id)
+	if !ok {
 		return assets.ErrNotFound
+	}
+	if f.Kind == assets.ForwardDynamic && f.User != "" {
+		if err := a.kc.Delete(keychain.ForwardPassword(id)); err != nil {
+			return &keychainDeleteError{err}
+		}
+	}
+	if err := a.store.DeleteForward(id); err != nil {
+		return err
 	}
 	a.StopForward(id)
 	delete(a.fwdOpen, id)
-	if err := a.kc.Delete(keychain.ForwardPassword(id)); err != nil {
-		return &keychainDeleteError{err}
-	}
-	return a.store.DeleteForward(id)
+	return nil
 }
 
 func (a *App) fwdView(c *ui.Context, m locales.Messages) {
@@ -687,9 +707,8 @@ func (a *App) fwdDeleteView(c *ui.Context, m locales.Messages) {
 		name = f.Label()
 	}
 	if ui.AlertDialog(c, &a.fwdDeleting, m.DeleteForward(), m.DeleteForwardConfirm(name), m.Cancel(), m.Delete()) == 1 {
-		if err := a.DeleteForward(a.fwdDeleteID); err != nil {
-			c.AddToast(ui.Toast{Title: a.inUseText(m, err), Type: "error"})
-		}
+		id := a.fwdDeleteID
+		a.runSecretAction(func() error { return a.DeleteForward(id) }, func(err error) { a.toastError(a.inUseText(m, err)) })
 	}
 }
 

@@ -16,11 +16,12 @@ import (
 
 func TestUnlockReloadsMetadataAfterAnotherInstance(t *testing.T) {
 	dir := t.TempDir()
-	system := keychain.NewMemory()
+	system := &authorizationBackend{Memory: keychain.NewMemory()}
 	first, _ := appIn(t, dir, system)
+	calls := system.calls.Load()
 	second, err := New(Platform{DataDir: dir, Secrets: system, HomeDir: dir, CacheDir: filepath.Join(dir, "cache")})
-	if err != nil {
-		t.Fatal(err)
+	if !errors.Is(err, keychain.ErrBusy) {
+		t.Fatalf("second open: %v", err)
 	}
 	defer second.Close()
 	if second.Store() != nil {
@@ -38,7 +39,10 @@ func TestUnlockReloadsMetadataAfterAnotherInstance(t *testing.T) {
 	}
 	first.Close()
 	second.retryUnlock()
-	waitFor(t, tt, "second unlock", second.unlocked)
+	waitFor(t, tt, "second metadata ready", second.ready)
+	if system.calls.Load() != calls || second.unlocked() {
+		t.Fatal("storage retry requested authorization")
+	}
 	if _, ok := second.Store().Get(saved.ID); !ok {
 		t.Fatal("successful retry reused stale metadata")
 	}
@@ -79,6 +83,7 @@ func TestUnlockKeepsWindowControls(t *testing.T) {
 	b.fail.Store(true)
 	a, tt := lockedTestApp(t, b)
 	closed := false
+	a.withSecrets(nil)
 	a.SetWindow(WindowControls{Minimize: func() {}, Maximize: func() {}, Unmaximize: func() {}, Close: func() { closed = true }})
 	waitFor(t, tt, "modal", func() bool { return a.unlock.modal })
 	mustClick(t, tt, locales.In("en").Cancel())

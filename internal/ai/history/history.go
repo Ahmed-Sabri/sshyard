@@ -196,13 +196,13 @@ func (st *Store) Save(c Conversation) error {
 	if !validID(c.ID) || c.Host == "" {
 		return ErrNotFound
 	}
+	list, err := st.List(c.Host)
+	if err != nil {
+		return err
+	}
 	fit(&c)
 	if err := st.write(c.Host, c.ID, c); err != nil {
 		return err
-	}
-	list, err := st.List(c.Host)
-	if err != nil {
-		list = nil // a damaged index is rebuilt from here on
 	}
 	list = slices.DeleteFunc(list, func(s Summary) bool { return s.ID == c.ID })
 	list = append([]Summary{{ID: c.ID, Title: c.Title, Agent: c.Agent, Provider: c.Provider, Model: c.Model, Created: c.Created, Updated: c.Updated}}, list...)

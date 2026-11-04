@@ -161,7 +161,7 @@ func TestOldDataDiscarded(t *testing.T) {
 	defer a.Close()
 	a.Start()
 	tt := ui.NewTester(a.View, 1200, 760)
-	waitFor(t, tt, "credential store unlocked", a.unlocked)
+	waitFor(t, tt, "metadata ready", a.ready)
 	if a.Store().Len() != 0 {
 		t.Errorf("%d hosts kept from the old file", a.Store().Len())
 	}

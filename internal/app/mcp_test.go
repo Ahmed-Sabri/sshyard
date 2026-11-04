@@ -125,3 +125,35 @@ func TestMCPPortNormalize(t *testing.T) {
 		}
 	}
 }
+
+func TestMCPEnableWaitsForExplicitUnlock(t *testing.T) {
+	b := &authorizationBackend{Memory: keychain.NewMemory()}
+	b.fail.Store(true)
+	a, tt := lockedTestApp(t, b)
+	a.settings.MCPPort = freePort(t)
+	a.openSettings(prefAgents)
+	tt.Frame()
+	if b.calls.Load() != 0 {
+		t.Fatal("entering settings requested authorization")
+	}
+	a.mcpAsk = &mcpAsk{open: true}
+	tt.Frame()
+	tt.Advance(mcpWait)
+	tt.Frame()
+	mustClick(t, tt, "I Understand, Turn On")
+	waitFor(t, tt, "MCP unlock failure", func() bool { return a.unlock.modal })
+	if a.settings.MCPEnabled || a.mcp.srv != nil {
+		t.Fatal("MCP enabled before authorization")
+	}
+	mustClick(t, tt, "Cancel")
+	tt.Frame()
+	if a.settings.MCPEnabled || a.mcpAsk == nil {
+		t.Fatal("cancel changed MCP or lost confirmation")
+	}
+	b.fail.Store(false)
+	mustClick(t, tt, "I Understand, Turn On")
+	waitFor(t, tt, "MCP starts after authorization", func() bool { return a.mcp.srv != nil })
+	if !a.settings.MCPEnabled || !a.unlocked() || a.mcpAsk != nil {
+		t.Fatal("MCP enable did not finish")
+	}
+}
