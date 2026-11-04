@@ -1209,6 +1209,15 @@
   "aiDeleteChatTitle": "Delete this chat?",
   "aiDeleteChatBody": "It is removed from this host's chat history. This cannot be undone.",
   "scpFallbackNote": "This server has no SFTP: files move with scp and shell commands. An upload is sent once it is complete.",
+  "colorScheme": "Color Scheme",
+  "schemeFollowAppearance": "Follow Appearance",
+  "schemeImport": "Import a Color Scheme",
+  "schemeImportNote": "An .itermcolors file, as the iTerm2-Color-Schemes collection publishes them. You can also drop it on the schemes above.",
+  "schemeImportButton": "Import…",
+  "schemeChooseFile": "Choose an .itermcolors File",
+  "schemeImported": "Imported",
+  "schemeDelete": "Delete Color Scheme",
+  "errSchemeImport": "{name} is not an .itermcolors color scheme.",
   "mygo.previousMonth": "Previous month",
   "@mygo.previousMonth": {
     "description": "Labels the button of a calendar that shows the previous month."

@@ -1,6 +1,9 @@
 package theme
 
 import (
+	"errors"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/egoist/mygo/ui"
@@ -197,5 +200,89 @@ func TestTintNamed(t *testing.T) {
 		if _, ok := l.TintNamed(n); ok {
 			t.Errorf("%q names a tint", n)
 		}
+	}
+}
+
+func TestSchemes(t *testing.T) {
+	if len(Schemes) != 10 {
+		t.Errorf("%d built-in schemes", len(Schemes))
+	}
+	ids := map[string]bool{}
+	for _, s := range Schemes {
+		if !s.Valid() || s.Custom() || ids[s.ID] {
+			t.Errorf("scheme %q: valid %v, custom %v, twice %v", s.ID, s.Valid(), s.Custom(), ids[s.ID])
+		}
+		ids[s.ID] = true
+		if got, ok := FindScheme(s.ID, nil); !ok || got.Name != s.Name {
+			t.Errorf("FindScheme(%q)", s.ID)
+		}
+	}
+	d, _ := FindScheme("dracula", nil)
+	base := DarkTokens().Terminal
+	pal := d.Terminal(base)
+	if pal.Background != ui.Hex("#282A36") || pal.ANSI[4] != ui.Hex("#BD93F9") || pal.Selection != ui.Hex("#44475A") ||
+		pal.CursorText != pal.Background || pal.Match != base.Match {
+		t.Errorf("dracula palette %+v", pal)
+	}
+	if !d.Dark() {
+		t.Error("dracula is not dark")
+	}
+	if l, _ := FindScheme("solarized-light", nil); l.Dark() {
+		t.Error("solarized light is dark")
+	}
+	custom := []Scheme{{ID: CustomPrefix + "x", Name: "x"}}
+	if s, ok := FindScheme(CustomPrefix+"x", custom); !ok || !s.Custom() {
+		t.Error("custom scheme not found")
+	}
+	if _, ok := FindScheme("nope", custom); ok {
+		t.Error("found an unknown scheme")
+	}
+	bad := d
+	bad.ANSI[3] = "#12345"
+	if bad.Valid() {
+		t.Error("a bad color is valid")
+	}
+}
+
+// plistColor is a color's dict, as iTerm2 writes it.
+func plistColor(key string, r, g, b float64) string {
+	return fmt.Sprintf(`<key>%s</key><dict><key>Alpha Component</key><real>1</real>
+<key>Blue Component</key><real>%g</real><key>Color Space</key><string>sRGB</string>
+<key>Green Component</key><real>%g</real><key>Red Component</key><real>%g</real></dict>`, key, b, g, r)
+}
+
+func TestParseITermColors(t *testing.T) {
+	var b strings.Builder
+	b.WriteString(`<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>`)
+	for i := range 16 {
+		b.WriteString(plistColor(fmt.Sprintf("Ansi %d Color", i), float64(i)/15, 0, 1))
+	}
+	b.WriteString(plistColor("Background Color", 0, 0, 0))
+	b.WriteString(plistColor("Foreground Color", 1, 1, 1))
+	b.WriteString(plistColor("Selection Color", 0.2, 0.4, 0.6))
+	b.WriteString(plistColor("Bold Color", 1, 0, 0))
+	b.WriteString(`<key>Name</key><string>ignored</string></dict></plist>`)
+	s, err := ParseITermColors("My Theme", []byte(b.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.ID != CustomPrefix+"My Theme" || s.Name != "My Theme" || !s.Custom() || !s.Dark() {
+		t.Errorf("scheme %+v", s)
+	}
+	if s.Background != "#000000" || s.Foreground != "#FFFFFF" || s.Selection != "#336699" || s.Cursor != "" ||
+		s.ANSI[0] != "#0000FF" || s.ANSI[15] != "#FF00FF" {
+		t.Errorf("colors %+v", s)
+	}
+	// Without the 16 colors, or not a property list at all, it is none.
+	short := strings.Replace(b.String(), plistColor("Ansi 7 Color", 7.0/15, 0, 1), "", 1)
+	for _, data := range []string{short, "hello", `{"name": "x"}`, ""} {
+		if _, err := ParseITermColors("x", []byte(data)); !errors.Is(err, ErrNotITermColors) {
+			t.Errorf("%.20q: %v", data, err)
+		}
+	}
+	if _, err := ParseITermColors(" ", []byte(b.String())); !errors.Is(err, ErrNotITermColors) {
+		t.Error("a scheme without a name")
 	}
 }

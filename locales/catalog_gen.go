@@ -12228,3 +12228,93 @@ func ScpFallbackNote() string { return In(i18n.Locale()).ScpFallbackNote() }
 func (msgs Messages) ScpFallbackNote() string {
 	return Catalog.Format(msgs.locale, "scpFallbackNote", nil)
 }
+
+// ColorScheme says "Color Scheme"
+// in the language the app shows.
+func ColorScheme() string { return In(i18n.Locale()).ColorScheme() }
+
+// ColorScheme says "Color Scheme"
+// in the language of msgs.
+func (msgs Messages) ColorScheme() string {
+	return Catalog.Format(msgs.locale, "colorScheme", nil)
+}
+
+// SchemeFollowAppearance says "Follow Appearance"
+// in the language the app shows.
+func SchemeFollowAppearance() string { return In(i18n.Locale()).SchemeFollowAppearance() }
+
+// SchemeFollowAppearance says "Follow Appearance"
+// in the language of msgs.
+func (msgs Messages) SchemeFollowAppearance() string {
+	return Catalog.Format(msgs.locale, "schemeFollowAppearance", nil)
+}
+
+// SchemeImport says "Import a Color Scheme"
+// in the language the app shows.
+func SchemeImport() string { return In(i18n.Locale()).SchemeImport() }
+
+// SchemeImport says "Import a Color Scheme"
+// in the language of msgs.
+func (msgs Messages) SchemeImport() string {
+	return Catalog.Format(msgs.locale, "schemeImport", nil)
+}
+
+// SchemeImportNote says "An .itermcolors file, as the iTerm2-Color-Schemes collection publishes them. You can also drop it on the schemes above."
+// in the language the app shows.
+func SchemeImportNote() string { return In(i18n.Locale()).SchemeImportNote() }
+
+// SchemeImportNote says "An .itermcolors file, as the iTerm2-Color-Schemes collection publishes them. You can also drop it on the schemes above."
+// in the language of msgs.
+func (msgs Messages) SchemeImportNote() string {
+	return Catalog.Format(msgs.locale, "schemeImportNote", nil)
+}
+
+// SchemeImportButton says "Import…"
+// in the language the app shows.
+func SchemeImportButton() string { return In(i18n.Locale()).SchemeImportButton() }
+
+// SchemeImportButton says "Import…"
+// in the language of msgs.
+func (msgs Messages) SchemeImportButton() string {
+	return Catalog.Format(msgs.locale, "schemeImportButton", nil)
+}
+
+// SchemeChooseFile says "Choose an .itermcolors File"
+// in the language the app shows.
+func SchemeChooseFile() string { return In(i18n.Locale()).SchemeChooseFile() }
+
+// SchemeChooseFile says "Choose an .itermcolors File"
+// in the language of msgs.
+func (msgs Messages) SchemeChooseFile() string {
+	return Catalog.Format(msgs.locale, "schemeChooseFile", nil)
+}
+
+// SchemeImported says "Imported"
+// in the language the app shows.
+func SchemeImported() string { return In(i18n.Locale()).SchemeImported() }
+
+// SchemeImported says "Imported"
+// in the language of msgs.
+func (msgs Messages) SchemeImported() string {
+	return Catalog.Format(msgs.locale, "schemeImported", nil)
+}
+
+// SchemeDelete says "Delete Color Scheme"
+// in the language the app shows.
+func SchemeDelete() string { return In(i18n.Locale()).SchemeDelete() }
+
+// SchemeDelete says "Delete Color Scheme"
+// in the language of msgs.
+func (msgs Messages) SchemeDelete() string {
+	return Catalog.Format(msgs.locale, "schemeDelete", nil)
+}
+
+// ErrSchemeImport says "{name} is not an .itermcolors color scheme."
+// in the language the app shows.
+func ErrSchemeImport(name string) string { return In(i18n.Locale()).ErrSchemeImport(name) }
+
+// ErrSchemeImport says "{name} is not an .itermcolors color scheme."
+// in the language of msgs.
+func (msgs Messages) ErrSchemeImport(name string) string {
+	return Catalog.Format(msgs.locale, "errSchemeImport", map[string]any{"name": name})
+}

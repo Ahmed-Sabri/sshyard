@@ -330,7 +330,7 @@ func (a *App) paneView(c *ui.Context, t *layout.Tab, n *layout.Node, tok theme.T
 	}
 	multi := len(t.Panes()) > 1
 	focused := t.Focus == n.ID
-	pal := tok.Terminal
+	pal := a.termPalette(tok)
 	bg := pal.Background
 	if cn.kind != layout.Terminal {
 		bg = tok.Inset

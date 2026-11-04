@@ -248,3 +248,45 @@ func TestLanguagesRoundTrip(t *testing.T) {
 		})
 	}
 }
+
+func TestTerminalSchemes(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "s.json")
+	s := Default()
+	s.TerminalScheme = "nord"
+	sc := theme.Schemes[0]
+	sc.ID, sc.Name = theme.CustomPrefix+"Mine", "Mine"
+	s.AddTerminalScheme(sc)
+	if s.TerminalScheme != sc.ID || len(s.TerminalSchemes) != 1 {
+		t.Fatalf("import not chosen: %+v", s.TerminalSchemes)
+	}
+	// Again, under the same name: replaced, not added.
+	sc.Background = "#000000"
+	s.AddTerminalScheme(sc)
+	if len(s.TerminalSchemes) != 1 || s.TerminalSchemes[0].Background != "#000000" {
+		t.Fatalf("reimport %+v", s.TerminalSchemes)
+	}
+	if err := Save(p, s); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := Load(p); err != nil || !reflect.DeepEqual(got, s) {
+		t.Fatalf("round trip %+v %v", got.TerminalSchemes, err)
+	}
+	s.RemoveTerminalScheme(sc.ID)
+	if s.TerminalScheme != "" || len(s.TerminalSchemes) != 0 {
+		t.Errorf("removed scheme still chosen: %q", s.TerminalScheme)
+	}
+	// A broken or built-in looking entry is dropped, an unknown choice
+	// cleared.
+	os.WriteFile(p, []byte(`{"terminalScheme":"gone","terminalSchemes":[{"id":"dracula","name":"x"},{"id":"custom:bad","name":"bad","foreground":"red"}]}`), 0o600)
+	if got, _ := Load(p); got.TerminalScheme != "" || got.TerminalSchemes != nil {
+		t.Errorf("not normalized: %q %+v", got.TerminalScheme, got.TerminalSchemes)
+	}
+	s = Default()
+	for i := range MaxTerminalSchemes + 1 {
+		sc.ID = theme.CustomPrefix + strings.Repeat("x", i+1)
+		s.AddTerminalScheme(sc)
+	}
+	if len(s.TerminalSchemes) != MaxTerminalSchemes || s.TerminalScheme != sc.ID || s.TerminalSchemes[0].ID != theme.CustomPrefix+"xx" {
+		t.Errorf("%d schemes, chosen %q", len(s.TerminalSchemes), s.TerminalScheme)
+	}
+}

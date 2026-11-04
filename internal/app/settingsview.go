@@ -371,6 +371,7 @@ func (a *App) materialSection(c *ui.Context, m locales.Messages, tok theme.Token
 }
 
 func (a *App) prefTerminal(c *ui.Context, m locales.Messages, tok theme.Tokens, s *settings.Settings, changed *bool) {
+	a.schemeSection(c, m, tok, s, changed)
 	settingsSection(c, tok, icons.Edit, tok.TintAt(4), m.FontsSection(), func(g *settingsGroup) {
 		g.row(m.TerminalFont(), "", func() {
 			if f, ok := a.fontPicker(c, "termfont", m.TerminalFont(), m.SystemDefault(), &a.fonts.termSel, s.TerminalFont, fonts.ForTerminal(a.fonts.list, s.MonospacedOnly)); ok {

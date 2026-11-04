@@ -1209,6 +1209,15 @@
   "aiDeleteChatTitle": "이 채팅을 삭제하시겠습니까?",
   "aiDeleteChatBody": "이 호스트의 채팅 기록에서 제거합니다. 되돌릴 수 없습니다.",
   "scpFallbackNote": "이 서버는 SFTP를 제공하지 않아 scp와 셸 명령으로 파일을 옮깁니다. 업로드는 준비가 끝난 뒤 한 번에 보냅니다.",
+  "colorScheme": "색 구성표",
+  "schemeFollowAppearance": "모양 따르기",
+  "schemeImport": "색 구성표 가져오기",
+  "schemeImportNote": "iTerm2-Color-Schemes에서 제공하는 .itermcolors 파일입니다. 위의 색 구성표 목록에 끌어다 놓아도 됩니다.",
+  "schemeImportButton": "가져오기…",
+  "schemeChooseFile": ".itermcolors 파일 선택",
+  "schemeImported": "가져옴",
+  "schemeDelete": "색 구성표 삭제",
+  "errSchemeImport": "{name}은(는) .itermcolors 색 구성표가 아닙니다.",
   "mygo.previousMonth": "이전 달",
   "@mygo.previousMonth": {
     "description": "Labels the button of a calendar that shows the previous month."

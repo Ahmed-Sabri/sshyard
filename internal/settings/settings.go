@@ -43,6 +43,12 @@ type Settings struct {
 	// TerminalFont is the terminal's font family, "" for the system's
 	// monospaced font.
 	TerminalFont string `json:"terminalFont,omitempty"`
+	// TerminalScheme is the terminal's color scheme, the ID of a
+	// built-in (theme.Schemes) or imported one; "" the app's own colors
+	// for the appearance.
+	TerminalScheme string `json:"terminalScheme,omitempty"`
+	// TerminalSchemes are the color schemes the user imported.
+	TerminalSchemes []theme.Scheme `json:"terminalSchemes,omitempty"`
 	// MonospacedOnly limits the terminal font choice to monospaced
 	// families.
 	MonospacedOnly bool `json:"monospacedOnly"`
@@ -429,8 +435,48 @@ func (s *Settings) Normalize() {
 	if !session.MetricsMountOK(s.MetricsMount) {
 		s.MetricsMount = ""
 	}
+	s.normalizeSchemes()
 	s.normalizeAI(d)
 	s.normalizeBackups()
+}
+
+// MaxTerminalSchemes bounds the imported color schemes.
+const MaxTerminalSchemes = 100
+
+// normalizeSchemes keeps the valid imported schemes, one of each ID, and
+// a chosen scheme that exists.
+func (s *Settings) normalizeSchemes() {
+	seen := map[string]bool{}
+	var keep []theme.Scheme
+	for _, sc := range s.TerminalSchemes {
+		if sc.Custom() && sc.Valid() && !seen[sc.ID] && len(keep) < MaxTerminalSchemes {
+			seen[sc.ID] = true
+			keep = append(keep, sc)
+		}
+	}
+	s.TerminalSchemes = keep
+	if _, ok := theme.FindScheme(s.TerminalScheme, keep); !ok {
+		s.TerminalScheme = ""
+	}
+}
+
+// AddTerminalScheme keeps an imported scheme, in place of one of the same
+// name (or of the oldest, when there are too many), and chooses it.
+func (s *Settings) AddTerminalScheme(sc theme.Scheme) {
+	s.TerminalSchemes = slices.DeleteFunc(slices.Clone(s.TerminalSchemes), func(o theme.Scheme) bool { return o.ID == sc.ID })
+	if n := len(s.TerminalSchemes) - MaxTerminalSchemes + 1; n > 0 {
+		s.TerminalSchemes = s.TerminalSchemes[n:]
+	}
+	s.TerminalSchemes = append(s.TerminalSchemes, sc)
+	s.TerminalScheme = sc.ID
+	s.normalizeSchemes()
+}
+
+// RemoveTerminalScheme forgets an imported scheme; the terminal goes back
+// to the app's colors when it was chosen.
+func (s *Settings) RemoveTerminalScheme(id string) {
+	s.TerminalSchemes = slices.DeleteFunc(slices.Clone(s.TerminalSchemes), func(o theme.Scheme) bool { return o.ID == id })
+	s.normalizeSchemes()
 }
 
 // aiModes are the permission modes a settings file may name.
