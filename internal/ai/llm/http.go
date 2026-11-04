@@ -253,6 +253,15 @@ func (c *countReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
+// readErr is a failed read of a response: a cancelled ctx closes the body,
+// which may come back as a closed connection rather than ctx's error.
+func (c *Client) readErr(ctx context.Context, err error) error {
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return ctxErr
+	}
+	return c.scrub(err)
+}
+
 func (c *Client) scrub(err error) error {
 	if err == nil || c.APIKey == "" || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, ErrTooBig) || errors.Is(err, ErrBaseURL) || errors.Is(err, ErrProtocol) || errors.Is(err, ErrIncompleteResponse) {
 		return err

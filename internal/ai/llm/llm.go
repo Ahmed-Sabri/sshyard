@@ -247,14 +247,14 @@ func (c *Client) Stream(ctx context.Context, req Request, emit func(Event)) (Mes
 	defer resp.Body.Close()
 	br, err := c.body(resp.Body)
 	if err != nil {
-		return Message{}, c.scrub(err)
+		return Message{}, c.readErr(ctx, err)
 	}
 	msg, err := read(br, emit)
 	if err == nil && br.r.n > br.r.max {
 		err = ErrTooBig
 	}
 	if err != nil {
-		return Message{}, c.scrub(err)
+		return Message{}, c.readErr(ctx, err)
 	}
 	if msg.Opaque != nil {
 		msg.OpaqueFormat, msg.OpaqueModel = c.format(), model
