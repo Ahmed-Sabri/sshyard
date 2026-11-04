@@ -44,11 +44,12 @@
 // An assignment that can change what runs (LD_*, DYLD_*, PATH, BASH_ENV,
 // ENV, IFS, PROMPT_COMMAND, SHELLOPTS, PS4, a name ending in PAGER, EDITOR,
 // VISUAL, GIT_*, PYTHONPATH, PYTHONSTARTUP, PERL5OPT, NODE_OPTIONS,
-// LESSOPEN, LESSCLOSE), including env NAME=value cmd and the same words
-// after sudo or another wrapper, is Unknown. Unknown ranks above High, so
+// LESSOPEN, LESSCLOSE, GETCONF_DIR), including bare assignments, export,
+// env NAME=value cmd and the same words after sudo or another wrapper,
+// is Unknown. Unknown ranks above High, so
 // LD_PRELOAD, LD_LIBRARY_PATH, LD_AUDIT, and DYLD_* are not lowered to a
-// High "exec-inject" grade. LANG, TZ, and LC_ALL stay neutral. A bare
-// assignment with no command stays read-only. The command is still graded,
+// High "exec-inject" grade. LANG, TZ, and LC_ALL stay neutral. Ordinary bare
+// assignments with no command stay read-only. The command is still graded,
 // so a visible critical stays critical.
 //
 // Writes under a writable root are Low for mkdir, touch, and redirections.
@@ -87,6 +88,11 @@
 // ModeAsk does not offer "allow similar" for a file write, so the diff is
 // shown every time. That is stricter than the spec table and is an open
 // question. Session grants never skip the review model.
+// ModeReview with a configured model sends every risk grade to that model,
+// including ReadOnly and Unknown. Only an explicit allow runs automatically;
+// ask, invalid replies, errors and timeouts ask the user. Session grants do
+// not replace that confirmation. Without a model, ReadOnly and Low auto-run
+// and all other grades ask. Grades remain metadata and audit context.
 // ModeFull auto-runs every grade except Unknown. Unknown asks with the
 // red confirmation and does not offer "allow similar". Critical in
 // ModeFull still auto-runs and sets Red. High, including git exec-config,

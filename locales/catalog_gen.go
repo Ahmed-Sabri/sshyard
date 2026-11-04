@@ -4890,11 +4890,11 @@ func (msgs Messages) AiModeAskNote() string {
 	return Catalog.Format(msgs.locale, "aiModeAskNote", nil)
 }
 
-// AiModeReviewNote says "A review model allows safe actions"
+// AiModeReviewNote says "The configured model reviews every operation"
 // in the language the app shows.
 func AiModeReviewNote() string { return In(i18n.Locale()).AiModeReviewNote() }
 
-// AiModeReviewNote says "A review model allows safe actions"
+// AiModeReviewNote says "The configured model reviews every operation"
 // in the language of msgs.
 func (msgs Messages) AiModeReviewNote() string {
 	return Catalog.Format(msgs.locale, "aiModeReviewNote", nil)
@@ -10328,11 +10328,11 @@ func (msgs Messages) AiHTTPFailedDetail(status string, detail string) string {
 	return Catalog.Format(msgs.locale, "aiHTTPFailedDetail", map[string]any{"status": status, "detail": detail})
 }
 
-// AiReviewProviderNote says "Checks medium-risk actions in Auto Review mode. High-risk actions always ask you."
+// AiReviewProviderNote says "In Review mode, the selected model checks every operation; only explicit approval runs it, otherwise you are asked."
 // in the language the app shows.
 func AiReviewProviderNote() string { return In(i18n.Locale()).AiReviewProviderNote() }
 
-// AiReviewProviderNote says "Checks medium-risk actions in Auto Review mode. High-risk actions always ask you."
+// AiReviewProviderNote says "In Review mode, the selected model checks every operation; only explicit approval runs it, otherwise you are asked."
 // in the language of msgs.
 func (msgs Messages) AiReviewProviderNote() string {
 	return Catalog.Format(msgs.locale, "aiReviewProviderNote", nil)
@@ -10728,4 +10728,14 @@ func AiToolFailed() string { return In(i18n.Locale()).AiToolFailed() }
 // in the language of msgs.
 func (msgs Messages) AiToolFailed() string {
 	return Catalog.Format(msgs.locale, "aiToolFailed", nil)
+}
+
+// AiReviewDeclined says "The review model declined to judge this action"
+// in the language the app shows.
+func AiReviewDeclined() string { return In(i18n.Locale()).AiReviewDeclined() }
+
+// AiReviewDeclined says "The review model declined to judge this action"
+// in the language of msgs.
+func (msgs Messages) AiReviewDeclined() string {
+	return Catalog.Format(msgs.locale, "aiReviewDeclined", nil)
 }

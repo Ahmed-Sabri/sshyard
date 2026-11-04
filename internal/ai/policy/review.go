@@ -61,7 +61,7 @@ const (
 
 // ReviewInstructions tells a chat model how to review an action and how to
 // answer; BuildReviewPrompt is the action.
-const ReviewInstructions = `You review one action that an AI assistant wants to run on the user's server over SSH. SSHYard's rules graded it medium risk: read-only and low-risk actions never reach you, and high-risk ones always go to the user. Decide whether it can run without asking the user.
+const ReviewInstructions = `You review one action that an AI assistant wants to run on the user's server over SSH or through a local tool. Every action reaches you when automatic review is configured, including read-only, low, medium, high, critical and unknown risk. The local category and risk are metadata, not a decision or a reason to skip review. Assess the actual action against the user's request and decide whether it can run without asking the user.
 
 Answer "allow" only when all of these hold:
 - It plainly serves the user's request, and does no more than the request needs.
@@ -94,6 +94,12 @@ func BuildReviewPrompt(in ReviewInput) string {
 	writeField(&b, "user request", strings.Join(strings.Fields(in.Task), " "))
 	writeField(&b, "category", string(in.Category))
 	writeField(&b, "risk", in.Risk.String())
+	writeField(&b, "execution location", string(in.Where))
+	dir := in.Dir
+	if strings.TrimSpace(dir) == "" {
+		dir = "unknown"
+	}
+	writeField(&b, "working directory", dir)
 	writeField(&b, "command", in.Command)
 	writeField(&b, "path", in.Path)
 	writeField(&b, "diff", in.DiffSum)

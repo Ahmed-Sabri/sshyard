@@ -480,7 +480,7 @@
   "aiModeReview": "Review",
   "aiModeFull": "Full access",
   "aiModeAskNote": "Asks you before every action",
-  "aiModeReviewNote": "A review model allows safe actions",
+  "aiModeReviewNote": "The configured model reviews every operation",
   "aiModeFullNote": "Every action runs without asking",
   "aiPermission": "Permission",
   "aiModeInherit": "Inherit",
@@ -1021,7 +1021,7 @@
   "aiAttachTotal": "Attachments can total at most {limit}.",
   "aiDropFiles": "Drop files to attach them",
   "aiHTTPFailedDetail": "Provider response failed (HTTP {status}): {detail}",
-  "aiReviewProviderNote": "Checks medium-risk actions in Auto Review mode. High-risk actions always ask you.",
+  "aiReviewProviderNote": "In Review mode, the selected model checks every operation; only explicit approval runs it, otherwise you are asked.",
   "aiReviewCustom": "Custom…",
   "aiReviewWith": "Review provider",
   "aiReviewKind": "Review method",
@@ -1060,5 +1060,6 @@
   "aiToolRunning": "Running",
   "aiToolSucceeded": "Succeeded",
   "aiToolApproved": "Approved · {source}",
-  "aiToolFailed": "Failed"
+  "aiToolFailed": "Failed",
+  "aiReviewDeclined": "The review model declined to judge this action"
 }

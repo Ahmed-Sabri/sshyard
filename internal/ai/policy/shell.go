@@ -391,6 +391,9 @@ func (e *shellEnv) command(cmd syntax.Command) partial {
 				g = better(g, e.word(a.Value).subst)
 			}
 		}
+		if dangerAssigns(c.Args) {
+			g = better(unk("environment"), g)
+		}
 		return g
 	case *syntax.TestClause:
 		g := partial{cat: "read", risk: RiskReadOnly, prefix: "[[", why: "test"}
@@ -620,12 +623,15 @@ func (e *shellEnv) call(c *syntax.CallExpr) partial {
 	}
 	args := e.words(c.Args)
 	if len(args) == 0 {
-		// A bare assignment changes only the shell.
+		// Bare assignments can change which code a later command runs.
 		g := partial{cat: "read", risk: RiskReadOnly, prefix: "assign", why: "assignment"}
 		for _, a := range c.Assigns {
 			if a != nil && a.Value != nil {
 				g = better(g, e.word(a.Value).subst)
 			}
+		}
+		if dangerAssigns(c.Assigns) {
+			g = better(unk("environment"), g)
 		}
 		return g
 	}

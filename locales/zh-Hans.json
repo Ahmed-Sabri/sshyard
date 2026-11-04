@@ -480,7 +480,7 @@
   "aiModeReview": "自动审核",
   "aiModeFull": "完全允许",
   "aiModeAskNote": "每个操作都先征求你的同意",
-  "aiModeReviewNote": "审核模型放行安全的操作",
+  "aiModeReviewNote": "已配置的模型审核每个操作",
   "aiModeFullNote": "所有操作直接执行，不再询问",
   "aiPermission": "权限",
   "aiModeInherit": "继承",
@@ -1021,7 +1021,7 @@
   "aiAttachTotal": "附件总大小不能超过 {limit}。",
   "aiDropFiles": "松开即可添加附件",
   "aiHTTPFailedDetail": "服务商响应失败（HTTP {status}）：{detail}",
-  "aiReviewProviderNote": "在“自动审核”权限下检查中风险操作；高风险操作始终由你确认。",
+  "aiReviewProviderNote": "在“自动审核”下，每个操作均交给所选模型审核；模型允许才执行，要求确认或审核失败时询问你",
   "aiReviewCustom": "自定义…",
   "aiReviewWith": "审核服务商",
   "aiReviewKind": "审核方式",
@@ -1060,5 +1060,6 @@
   "aiToolRunning": "执行中",
   "aiToolSucceeded": "执行成功",
   "aiToolApproved": "已批准 · {source}",
-  "aiToolFailed": "执行失败"
+  "aiToolFailed": "执行失败",
+  "aiReviewDeclined": "审核模型拒绝判断此操作"
 }

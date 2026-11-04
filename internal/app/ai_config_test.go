@@ -86,6 +86,85 @@ func TestAIReviewUsesSelectedProviderAndNoneAsks(t *testing.T) {
 	}
 }
 
+// The gate factory records the real reviewer rebuilt by ensureAI, so each
+// independent settings change must refresh a live session's cached gate.
+func TestAIReviewSettingsRefreshExistingSession(t *testing.T) {
+	for _, field := range []string{"kind", "model", "strictness"} {
+		t.Run(field, func(t *testing.T) {
+			var request atomic.Value
+			var calls atomic.Int32
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				raw, _ := io.ReadAll(r.Body)
+				request.Store(r.URL.Path + " " + string(raw))
+				calls.Add(1)
+				w.Header().Set("Content-Type", "application/json")
+				if strings.HasSuffix(r.URL.Path, "/decisions") {
+					io.WriteString(w, decisionAnswer(0.95, "none"))
+				} else {
+					io.WriteString(w, `{"choices":[{"message":{"content":"{\"decision\":\"allow\",\"reason\":\"safe\"}"},"finish_reason":"stop"}]}`)
+				}
+			}))
+			defer srv.Close()
+			a, _ := newTestApp(t)
+			h := savedHost(t, a, "review", "127.0.0.1")
+			s := a.Settings()
+			s.AIProviders = []settings.AIProvider{{ID: "p", BaseURL: srv.URL, Model: "chat"}}
+			s.AIReviewProvider, s.AIReviewModel = "p", "review-old"
+			s.AIReviewKind, s.AIDefaultMode = settings.AIReviewDecisions, "review"
+			if field == "kind" {
+				s.AIReviewKind = settings.AIReviewChat
+			}
+			if err := a.kc.Set(keychain.AIKey("p"), []byte("test-key-not-real")); err != nil {
+				t.Fatal(err)
+			}
+			if err := a.ApplySettings(s); err != nil {
+				t.Fatal(err)
+			}
+			id, err := a.OpenAI(h.ID, openAt{}, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			c := a.conns[id]
+			var gate policy.Gate
+			a.newGate = func(mode func() policy.Mode, _ policy.Prompter) policy.Gate {
+				gate = policy.NewGate(policy.GateConfig{Mode: mode, Reviewer: a.newReviewer(c)})
+				return gate
+			}
+			if err := a.ensureAI(c); err != nil {
+				t.Fatal(err)
+			}
+			session := c.ai.sess
+			action := policy.Action{Where: policy.Remote, Tool: "run_command", Command: "systemctl restart nginx"}
+			if v, err := gate.Authorize(t.Context(), action, ""); err != nil || !v.Run {
+				t.Fatalf("initial review: %+v %v", v, err)
+			}
+			s = a.Settings()
+			switch field {
+			case "kind":
+				s.AIReviewKind = settings.AIReviewDecisions
+			case "model":
+				s.AIReviewModel = "review-new"
+			case "strictness":
+				s.AIReviewStrictness = settings.AIReviewStrict
+			}
+			if err := a.ApplySettings(s); err != nil {
+				t.Fatal(err)
+			}
+			if err := a.ensureAI(c); err != nil {
+				t.Fatal(err)
+			}
+			v, err := gate.Authorize(t.Context(), action, "")
+			if err != nil || v.Run != (field != "strictness") || calls.Load() != 2 || c.ai.sess != session {
+				t.Fatalf("stale review: verdict=%+v error=%v calls=%d sessionKept=%v", v, err, calls.Load(), c.ai.sess == session)
+			}
+			body, _ := request.Load().(string)
+			if !strings.HasPrefix(body, "/decisions ") || field == "model" && !strings.Contains(body, `"model":"review-new"`) {
+				t.Fatalf("stale review request %q", body)
+			}
+		})
+	}
+}
+
 func TestAIProviderDeletionInvalidatesCachedClient(t *testing.T) {
 	a, _ := newTestApp(t)
 	h := savedHost(t, a, "provider", "127.0.0.1")

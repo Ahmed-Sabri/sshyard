@@ -35,8 +35,11 @@ func TestDecideOpenAI(t *testing.T) {
 	if m["model"] != "gpt-6-luna" || m["input"] != "rm -rf build" || len(qs) != 2 {
 		t.Fatalf("payload %s", *payload)
 	}
-	if q := qs[0].(map[string]any); q["type"] != "predicate" || q["name"] != "safe" || q["instructions"] != "Is it safe?" {
+	if q := qs[0].(map[string]any); q["type"] != "predicate" || q["name"] != "safe" || !strings.HasPrefix(q["instructions"].(string), "Is it safe?") {
 		t.Fatalf("predicate %v", q)
+	}
+	if instructions := qs[0].(map[string]any)["instructions"].(string); !strings.Contains(instructions, "harmless") || !strings.Contains(instructions, "harmful") {
+		t.Fatalf("predicate lost its truth criteria: %q", instructions)
 	}
 	if q := qs[1].(map[string]any); q["type"] != "choice" || q["name"] != "risk" {
 		t.Fatalf("choice %v", q)
@@ -75,10 +78,12 @@ func TestDecideRefusalAndBadAnswers(t *testing.T) {
 		t.Fatalf("refusal %+v %v", ans, err)
 	}
 	for name, body := range map[string]string{
-		"missing":     `{"answers":[{"type":"predicate","name":"safe","probability":0.5}]}`,
-		"range":       `{"answers":[{"type":"predicate","name":"safe","probability":1.5},{"type":"choice","name":"risk","choice":"none","confidence":0.5}]}`,
-		"choice":      `{"answers":[{"type":"predicate","name":"safe","probability":0.5},{"type":"choice","name":"risk","choice":"other","confidence":0.5}]}`,
-		"no estimate": `{"answers":[{"type":"predicate","name":"safe"},{"type":"choice","name":"risk","choice":"none","confidence":0.5}]}`,
+		"invalid JSON": `{`,
+		"wrong schema": `[]`,
+		"missing":      `{"answers":[{"type":"predicate","name":"safe","probability":0.5}]}`,
+		"range":        `{"answers":[{"type":"predicate","name":"safe","probability":1.5},{"type":"choice","name":"risk","choice":"none","confidence":0.5}]}`,
+		"choice":       `{"answers":[{"type":"predicate","name":"safe","probability":0.5},{"type":"choice","name":"risk","choice":"other","confidence":0.5}]}`,
+		"no estimate":  `{"answers":[{"type":"predicate","name":"safe"},{"type":"choice","name":"risk","choice":"none","confidence":0.5}]}`,
 	} {
 		srv, _, _ := serve(t, body)
 		c := &Client{BaseURL: srv.URL, APIKey: "k", Model: "m"}

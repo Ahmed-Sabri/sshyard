@@ -4,9 +4,8 @@
 // agent says (its reason, its own approval settings, allow_always) changes
 // a decision.
 //
-// This file is the contract shared by A1 (engine, audit) and A2 (AI panel,
-// built-in agent). Both branches carry it byte for byte; change it only on
-// feat/ai-a1 and tell the reviewer.
+// In automatic review mode, a configured review model judges every action;
+// local risk grades supply metadata and audit context, not approval.
 package policy
 
 import (
@@ -157,6 +156,8 @@ type ReviewInput struct {
 	Task     string
 	Category Category
 	Risk     Risk
+	Where    Where
+	Dir      string // actual working directory; empty means unknown
 	Command  string
 	Path     string
 	DiffSum  string

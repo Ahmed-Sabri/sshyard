@@ -8,6 +8,21 @@ func verifiedReadArgs(name string, args []arg) bool {
 	if name == "echo" || name == "printf" {
 		return true
 	}
+	if name == "ps" {
+		ok, _ := processArgs(args)
+		return ok
+	}
+	if name == "getconf" {
+		if len(args) != 2 || !args[1].ok || args[1].text == "" {
+			return false
+		}
+		variable := args[1].text
+		const letters = "_ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		return strings.ContainsRune(letters, rune(variable[0])) && strings.Trim(variable, letters+"0123456789") == ""
+	}
+	if name == "nproc" {
+		return verifiedNprocArgs(args)
+	}
 	short, values := "", ""
 	long := "help version"
 	switch name {
@@ -30,14 +45,14 @@ func verifiedReadArgs(name string, args []arg) bool {
 		short = "clmwL"
 	case "less", "more":
 		short = "EFGIMNQRSTUVWXceginqrsuw"
-	case "df", "du":
+	case "df":
+		short = "ahHiklmPstxT"
+	case "du":
 		short = "ahHiklmPstx"
 	case "free":
 		short = "bhkmgwt"
 	case "uname":
 		short = "asnrvmpio"
-	case "ps":
-		short = "aefjluxw"
 	case "top":
 		short, values = "bHic", "ndp"
 	case "journalctl":
@@ -128,7 +143,18 @@ func shellReadsContent(name string, args []arg) bool {
 		return false
 	}
 	switch name {
-	case "cat", "head", "tail", "less", "more", "grep", "rg", "egrep", "fgrep", "sort", "uniq", "wc", "file", "sed":
+	case "head", "tail":
+		operands, _, _, ok := stripOpts(args, "nc", nil)
+		if !ok {
+			return true
+		}
+		for _, a := range operands {
+			if !a.ok || a.text != "-" {
+				return true
+			}
+		}
+		return false
+	case "cat", "less", "more", "grep", "rg", "egrep", "fgrep", "sort", "uniq", "wc", "file", "sed":
 		// A shell operand can resolve through a link or glob; only the built-in
 		// file tools can verify actual SFTP paths before automatic reads.
 		if name == "grep" || name == "egrep" || name == "fgrep" {
@@ -164,10 +190,96 @@ func processEnvironment(name string, args []arg) bool {
 	if name != "ps" {
 		return false
 	}
-	for _, a := range args[1:] {
-		if a.ok && !strings.HasPrefix(a.text, "-") && strings.Contains(a.text, "e") {
-			return true
+	_, environment := processArgs(args)
+	return environment
+}
+
+// processArgs distinguishes BSD's bare e (show environment) from POSIX -e
+// (select all processes), and validates every format before it can be replaced.
+func processArgs(args []arg) (bool, bool) {
+	environment := false
+	for i := 1; i < len(args); i++ {
+		if !args[i].ok {
+			return false, environment
+		}
+		t := args[i].text
+		if t == "--help" || t == "--version" {
+			continue
+		}
+		if !strings.HasPrefix(t, "-") {
+			if t == "" || strings.Trim(t, "aefjluxw0123456789") != "" {
+				return false, environment
+			}
+			environment = environment || strings.Contains(t, "e")
+			continue
+		}
+		value, sort := "", false
+		if t == "--sort" || strings.HasPrefix(t, "--sort=") {
+			_, value, _ = strings.Cut(t, "=")
+			if t != "--sort" && value == "" {
+				return false, environment
+			}
+			sort = true
+		} else {
+			flags, attached, format := strings.Cut(t[1:], "o")
+			if strings.Trim(flags, "aefjluxw") != "" || flags == "" && !format {
+				return false, environment
+			}
+			if !format {
+				continue
+			}
+			value = attached
+		}
+		if value == "" {
+			i++
+			if i >= len(args) || !args[i].ok {
+				return false, environment
+			}
+			value = args[i].text
+		}
+		if !processFields(value, sort) {
+			return false, environment
 		}
 	}
-	return false
+	return true, environment
+}
+
+func processFields(value string, sort bool) bool {
+	for _, field := range strings.Split(value, ",") {
+		if sort && (strings.HasPrefix(field, "+") || strings.HasPrefix(field, "-")) {
+			field = field[1:]
+		}
+		switch field {
+		case "pid", "comm", "%cpu", "%mem", "rss", "time":
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+func verifiedNprocArgs(args []arg) bool {
+	for i := 1; i < len(args); i++ {
+		if !args[i].ok {
+			return false
+		}
+		t := args[i].text
+		if t == "--all" || t == "--help" || t == "--version" {
+			continue
+		}
+		_, value, attached := strings.Cut(t, "=")
+		if t == "--ignore" {
+			i++
+			if i >= len(args) || !args[i].ok {
+				return false
+			}
+			value = args[i].text
+		} else if !attached || !strings.HasPrefix(t, "--ignore=") {
+			return false
+		}
+		if value == "" || strings.Trim(value, "0123456789") != "" {
+			return false
+		}
+	}
+	return true
 }

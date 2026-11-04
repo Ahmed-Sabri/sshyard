@@ -115,7 +115,16 @@ func unit(f float64) bool { return !math.IsNaN(f) && f >= 0 && f <= 1 }
 func (c *Client) decisionsPayload(state string, qs []Question) map[string]any {
 	questions := make([]map[string]any, len(qs))
 	for i, q := range qs {
-		w := map[string]any{"type": "predicate", "name": q.Name, "instructions": q.Instructions}
+		instructions := q.Instructions
+		if len(q.Choices) == 0 {
+			if q.Yes != "" {
+				instructions += "\nThe predicate is true when: " + q.Yes
+			}
+			if q.No != "" {
+				instructions += "\nThe predicate is false when: " + q.No
+			}
+		}
+		w := map[string]any{"type": "predicate", "name": q.Name, "instructions": instructions}
 		if len(q.Choices) > 0 {
 			choices := make([]map[string]any, len(q.Choices))
 			for j, ch := range q.Choices {
@@ -142,7 +151,7 @@ func readDecisions(b []byte) (map[string]Answer, error) {
 		} `json:"answers"`
 	}
 	if err := json.Unmarshal(b, &parsed); err != nil {
-		return nil, fmt.Errorf("llm: decision: %w", err)
+		return nil, fmt.Errorf("%w: invalid decision JSON", ErrProtocol)
 	}
 	out := map[string]Answer{}
 	for _, a := range parsed.Answers {
@@ -197,7 +206,7 @@ func readSystemOne(b []byte) (map[string]Answer, error) {
 		} `json:"answers"`
 	}
 	if err := json.Unmarshal(b, &parsed); err != nil {
-		return nil, fmt.Errorf("llm: decision: %w", err)
+		return nil, fmt.Errorf("%w: invalid decision JSON", ErrProtocol)
 	}
 	out := map[string]Answer{}
 	for name, a := range parsed.Answers {

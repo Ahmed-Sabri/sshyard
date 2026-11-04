@@ -92,6 +92,47 @@ func itoa(n int) string {
 	return string(b[i:])
 }
 
+func TestReviewExecutionContext(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		where        Where
+		dir, wantDir string
+		wantWhere    Where
+	}{
+		{"remote root", Remote, "/", "/", Remote},
+		{"local redacted directory", Local, "/tmp/password=fake-context-secret", "/tmp/password=[REDACTED]", Local},
+		{"default remote unknown directory", "", "", "unknown", Remote},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &scriptReview{raw: `{"decision":"allow","reason":"covered"}`}
+			g := NewGate(GateConfig{
+				Mode: func() Mode { return ModeReview }, Reviewer: r,
+				Scope: Scope{Home: "/home/should-not-be-invented"},
+				Task:  func() string { return "查看服务器资源使用情况" },
+			})
+			a := cmdAction(resourceQueryWithCPUCount + "; vmstat 1 3")
+			a.Where, a.Dir = tc.where, tc.dir
+			v, err := g.Authorize(context.Background(), a, "")
+			if err != nil || !v.Run || r.n() != 1 {
+				t.Fatalf("review failed: %+v err=%v", v, err)
+			}
+			in := r.input()
+			if in.Command != a.Command || in.Task != "查看服务器资源使用情况" {
+				t.Fatalf("review did not receive the complete request: %+v", in)
+			}
+			if in.Where != tc.wantWhere || in.Dir != Redact(tc.dir) || strings.Contains(in.Dir, "fake-context-secret") {
+				t.Fatalf("wrong review input context: %+v", in)
+			}
+			prompt := BuildReviewPrompt(in)
+			if !strings.Contains(prompt, "execution location: "+string(tc.wantWhere)+"\n") ||
+				!strings.Contains(prompt, "working directory: "+tc.wantDir+"\n") ||
+				strings.Contains(prompt, "fake-context-secret") || strings.Contains(prompt, "should-not-be-invented") {
+				t.Fatalf("wrong execution context: %s", prompt)
+			}
+		})
+	}
+}
+
 // TestReviewSeesTheTask checks that the reviewer is told what the user
 // asked for, redacted and on one line, ahead of the action.
 func TestReviewSeesTheTask(t *testing.T) {

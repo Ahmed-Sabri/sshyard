@@ -294,7 +294,7 @@ func dangerVar(name string) bool {
 	switch name {
 	case "PATH", "BASH_ENV", "ENV", "IFS", "PROMPT_COMMAND", "SHELLOPTS", "PS4",
 		"EDITOR", "VISUAL", "PYTHONPATH", "PYTHONSTARTUP", "PERL5OPT", "NODE_OPTIONS",
-		"LESSOPEN", "LESSCLOSE":
+		"LESSOPEN", "LESSCLOSE", "GETCONF_DIR":
 		return true
 	}
 	if strings.HasPrefix(name, "LD_") || strings.HasPrefix(name, "DYLD_") || strings.HasPrefix(name, "GIT_") {
@@ -2055,7 +2055,7 @@ func pathLike(s string) bool {
 func readOnlyCmd(name string) bool {
 	switch name {
 	case "ls", "cat", "head", "tail", "less", "more", "grep", "rg", "egrep", "fgrep",
-		"stat", "df", "du", "free", "uptime", "uname", "ps", "top", "journalctl",
+		"stat", "df", "du", "free", "uptime", "uname", "ps", "top", "journalctl", "getconf", "nproc",
 		"ss", "netstat", "hostname", "id", "whoami", "which", "whereis", "file",
 		"wc", "sort", "uniq", "date", "echo", "printf", "pwd", "true", "false",
 		":", "env", "printenv":

@@ -74,8 +74,8 @@ func (engine) Classify(a Action, scope Scope) Grade {
 // every time. That is stricter than the spec's table and is an open
 // product question.
 //
-// ModeReview auto-runs ReadOnly and Low. Medium is Review when a
-// reviewer is configured, otherwise Ask. High, Critical and Unknown ask.
+// ModeReview sends every grade to a configured reviewer. Without one,
+// ReadOnly and Low auto-run and all other grades ask the user.
 //
 // ModeFull auto-runs every grade except Unknown. Unknown asks with the
 // red confirmation (Red, not Similar). Critical still auto-runs and sets
@@ -103,13 +103,10 @@ func (engine) Decide(mode Mode, g Grade, reviewerConfigured bool) Decision {
 			d.By = ByFull
 		}
 	case ModeReview:
-		switch g.Risk {
-		case RiskReadOnly, RiskLow:
+		if reviewerConfigured {
+			d.Outcome = Review
+		} else if g.Risk == RiskReadOnly || g.Risk == RiskLow {
 			d.Outcome = Allow
-		case RiskMedium:
-			if reviewerConfigured {
-				d.Outcome = Review
-			}
 		}
 	default:
 		if g.Risk == RiskReadOnly {
@@ -120,6 +117,9 @@ func (engine) Decide(mode Mode, g Grade, reviewerConfigured bool) Decision {
 		d.Similar = true
 	}
 	if mode == ModeAsk && d.Diff {
+		d.Similar = false
+	}
+	if mode == ModeReview && reviewerConfigured {
 		d.Similar = false
 	}
 	return d

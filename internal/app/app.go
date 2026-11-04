@@ -490,7 +490,10 @@ func (a *App) ApplySettings(s settings.Settings) error {
 		if c.ai == nil {
 			continue
 		}
-		all := c.ai.agent == "acp" && !reflect.DeepEqual(old.AIACP, s.AIACP) || old.AIReviewProvider != s.AIReviewProvider || old.AIRedact != s.AIRedact || old.AIDefaultMode != s.AIDefaultMode
+		all := c.ai.agent == "acp" && !reflect.DeepEqual(old.AIACP, s.AIACP) ||
+			old.AIReviewProvider != s.AIReviewProvider || old.AIReviewKind != s.AIReviewKind ||
+			old.AIReviewModel != s.AIReviewModel || old.AIReviewStrictness != s.AIReviewStrictness ||
+			old.AIRedact != s.AIRedact || old.AIDefaultMode != s.AIDefaultMode
 		if all || c.ai.agent == "builtin" && !reflect.DeepEqual(providerIn(old, c.ai.provider), providerIn(s, c.ai.provider)) || !reflect.DeepEqual(providerIn(old, old.AIReviewProvider), providerIn(s, s.AIReviewProvider)) {
 			a.invalidateAI(c)
 		}

@@ -1,10 +1,14 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -70,8 +74,8 @@ func TestDecisionReviewer(t *testing.T) {
 	}
 	srv, _ := decisionServer(t, `{"answers":[{"type":"refusal","name":"safe"},{"type":"choice","name":"risk","choice":"none","confidence":0.5}]}`)
 	r := decisionReviewer{client: &llm.Client{BaseURL: srv.URL, APIKey: "test-key-not-real", Model: settings.AIDecisionsModel}, kind: settings.AIReviewDecisions, threshold: 0.9}
-	if allow, _, err := r.Review(t.Context(), in); err == nil || allow {
-		t.Fatalf("refusal allow=%v err=%v", allow, err)
+	if allow, note, err := r.Review(t.Context(), in); err == nil || allow || note != "review-declined" {
+		t.Fatalf("refusal allow=%v note=%q err=%v", allow, note, err)
 	}
 }
 
@@ -85,6 +89,7 @@ func TestReviewNoteText(t *testing.T) {
 		{"decision:jev:42:destructive", "Jev: 42% likely safe · may destroy data", "Jev：安全概率 42% · 可能破坏数据"},
 		{"decision:decisions:97:none", "OpenAI Decisions: 97% likely safe · no risk found", "OpenAI Decisions：安全概率 97% · 未发现风险"},
 		{"review timed out", "The review timed out", "审核超时"},
+		{"review-declined", "The review model declined to judge this action", "审核模型拒绝判断此操作"},
 		{"Restarts a web server the user named.", "Restarts a web server the user named.", "Restarts a web server the user named."},
 		{"decision:jev:x:none", "decision:jev:x:none", "decision:jev:x:none"},
 	} {
@@ -233,5 +238,88 @@ func TestTypeSafeProviderOnlyReviews(t *testing.T) {
 	}
 	if s, _ := got.Load().(string); !strings.HasPrefix(s, "/v1/systemone ") {
 		t.Fatalf("request %q", s)
+	}
+}
+
+// Both reviewer protocols must call their endpoint for the same action;
+// transport failures keep a safe diagnostic without provider response text.
+func TestReviewProtocolsKeepSafeFailureReason(t *testing.T) {
+	for _, kind := range []string{settings.AIReviewChat, settings.AIReviewDecisions} {
+		for _, status := range []int{200, 400, 401, 404, 429, 500} {
+			t.Run(kind+"/"+http.StatusText(status), func(t *testing.T) {
+				var calls atomic.Int32
+				srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					calls.Add(1)
+					want := "/v1/decisions"
+					if kind == settings.AIReviewChat {
+						want = "/v1/chat/completions"
+					}
+					if r.URL.Path != want {
+						t.Errorf("endpoint %q, want %q", r.URL.Path, want)
+					}
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(status)
+					if status != 200 {
+						io.WriteString(w, `{"error":{"message":"provider-private-text test-key-not-real https://private.invalid"}}`)
+					} else if kind == settings.AIReviewChat {
+						io.WriteString(w, `{"choices":[{"message":{"content":"{\"decision\":\"allow\",\"reason\":\"safe\"}"},"finish_reason":"stop"}]}`)
+					} else {
+						io.WriteString(w, decisionAnswer(0.99, "none"))
+					}
+				}))
+				defer srv.Close()
+				a, _ := newTestApp(t)
+				h := savedHost(t, a, "review", "127.0.0.1")
+				s := a.Settings()
+				s.AIProviders = []settings.AIProvider{{ID: "p", BaseURL: srv.URL + "/v1", Model: "gpt-6-luna"}}
+				s.AIReviewProvider, s.AIReviewKind = "p", kind
+				if err := a.kc.Set(keychain.AIKey("p"), []byte("test-key-not-real")); err != nil {
+					t.Fatal(err)
+				}
+				if err := a.ApplySettings(s); err != nil {
+					t.Fatal(err)
+				}
+				id, err := a.OpenAI(h.ID, openAt{}, 0)
+				if err != nil {
+					t.Fatal(err)
+				}
+				gate := policy.NewGate(policy.GateConfig{Mode: func() policy.Mode { return policy.ModeReview }, Reviewer: a.newReviewer(a.conns[id])})
+				v, err := gate.Authorize(t.Context(), policy.Action{Where: policy.Remote, Tool: "run_command", Command: "systemctl restart nginx"}, "")
+				if err != nil || calls.Load() != 1 || v.Run != (status == 200) {
+					t.Fatalf("review %+v error=%v calls=%d", v, err, calls.Load())
+				}
+				if status != 200 {
+					want := "review-error:http:" + strconv.Itoa(status)
+					if v.ReviewReason != want {
+						t.Fatalf("reason %q, want safe code %q", v.ReviewReason, want)
+					}
+					for _, lang := range []string{"en", "zh-Hans"} {
+						text := reviewNoteText(locales.In(lang), v.ReviewReason)
+						if !strings.Contains(text, strconv.Itoa(status)) || strings.Contains(text, "private") || strings.Contains(text, "test-key") || strings.Contains(text, "review-error:") {
+							t.Fatalf("unsafe or unlocalized diagnostic %q", text)
+						}
+					}
+				}
+			})
+		}
+	}
+}
+
+func TestReviewFailureCategoriesHideRawErrors(t *testing.T) {
+	for _, tc := range []struct {
+		err  error
+		code string
+	}{
+		{errAIKey, "key"},
+		{errAIProvider, "provider"},
+		{context.DeadlineExceeded, "timeout"},
+		{llm.ErrProtocol, "protocol"},
+		{llm.ErrTooBig, "size"},
+		{&net.DNSError{Err: "provider-private-text", Name: "private.invalid"}, "network"},
+		{errors.New("test-key-not-real https://private.invalid"), "request"},
+	} {
+		if got := reviewErrorNote(tc.err); got != "review-error:"+tc.code {
+			t.Errorf("safe failure code %q, want %q", got, tc.code)
+		}
 	}
 }
