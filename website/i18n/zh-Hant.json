@@ -1,0 +1,270 @@
+{
+  "name": "繁體中文",
+  "meta": {
+    "title": "SSHYard — 免費開源的 SSH / SFTP 用戶端，內建 AI 助理｜Mac、Windows、Linux",
+    "description": "SSHYard 是一款免費開源的原生 SSH / SFTP 用戶端，支援 macOS、Windows 和 Linux，集多分頁分割終端機、SFTP 檔案管理與可執行命令的 AI 助理於一體。",
+    "keywords": "SSH 用戶端, SSH 連線工具, SSH 遠端連線, 免費 SSH 用戶端, 開源 SSH 用戶端, Mac SSH 用戶端, Windows SSH 工具, SSH 終端機, SFTP 用戶端, 檔案傳輸, 遠端伺服器管理, 伺服器監控, 跳板機, 連接埠轉發, AI 助理, MCP",
+    "og_alt": "SSHYard：內建 AI 助理的原生 SSH / SFTP 用戶端",
+    "og_title": ["SSH、SFTP 與 AI", "盡在一個原生用戶端"],
+    "download_title": "下載 SSHYard：支援 macOS、Windows 和 Linux",
+    "download_description": "下載 SSHYard {version}，免費的 SSH / SFTP 用戶端：Apple 晶片與 Intel Mac 的 DMG、Windows 安裝程式或免安裝 ZIP、Linux 的 .deb 與 .tar.gz。",
+    "notfound_title": "找不到頁面 — SSHYard"
+  },
+  "nav": {
+    "main": "主要導覽",
+    "home": "首頁",
+    "features": "功能",
+    "ai": "AI 助理",
+    "security": "安全",
+    "download": "下載",
+    "faq": "常見問題",
+    "github": "在 GitHub 上檢視 SSHYard",
+    "menu": "選單",
+    "language": "語言",
+    "theme": "外觀",
+    "theme_auto": "跟隨系統",
+    "theme_light": "淺色",
+    "theme_dark": "深色",
+    "skip": "跳至主要內容"
+  },
+  "hero": {
+    "release": "版本 {version}",
+    "release_link": "更新內容",
+    "title": ["SSH、SFTP 與 AI", "盡在一個原生用戶端"],
+    "lead": "SSHYard 是一款免費開源的 SSH / SFTP 用戶端，支援 macOS、Windows 和 Linux。在終端機裡操作、管理遠端檔案，再讓 AI 助理直接在主機上執行命令，一個視窗全部完成。",
+    "cta": "免費下載",
+    "cta_for": {
+      "macos": "下載 macOS 版",
+      "windows": "下載 Windows 版",
+      "linux": "下載 Linux 版"
+    },
+    "cta_other": "其他平台",
+    "note": "免費開源 · 無需註冊帳號 · 支援 macOS、Windows 和 Linux"
+  },
+  "demo": {
+    "aria": "動畫示例：在 SSHYard 中，AI 助理查明伺服器回傳 502 的原因並完成修復，終端機始終保持開啟。",
+    "search": "搜尋主機",
+    "group": "主機",
+    "ai_title": "AI",
+    "user_q": "部署之後 nginx 一直回傳 502，是怎麼回事？",
+    "tool_run": "執行命令",
+    "tool_edit": "寫入檔案",
+    "tool_ok": "已批准 · 審核模型",
+    "tool_done": "執行成功",
+    "a1": "部署後 php-fpm 沒有啟動：處理程序集區仍監聽 PHP 8.2 的 socket，而 nginx 現在連線的是 php8.3-fpm.sock。",
+    "a2": "已將處理程序集區改為 8.3 的 socket 並重新啟動 php-fpm，nginx 恢復回傳 200。",
+    "placeholder": "詢問這臺主機",
+    "mode": "自動審核",
+    "hosts": "4 臺主機"
+  },
+  "glance": {
+    "title": "SSHYard 一覽",
+    "rows": [
+      ["價格", "免費"],
+      ["授權條款", "開放原始碼，GNU AGPL-3.0"],
+      ["平台", "macOS 12 以上（Apple 晶片與 Intel）、Windows x64、Linux x64"],
+      ["介面", "原生繪製，不使用 WebView"],
+      ["下載大小", "約 {size}"],
+      ["語言", "English、简体中文、繁體中文、日本語、한국어"],
+      ["帳號", "無需註冊"],
+      ["憑證", "加密儲存在本機"],
+      ["AI 服務", "任何 OpenAI 相容、OpenAI Responses 或 Anthropic 介面"],
+      ["代理程式接入", "開放 API、MCP 與 Skill，預設關閉"]
+    ]
+  },
+  "features": {
+    "title": "為一整天的\u200b伺服器工作而設計",
+    "lead": "終端機、檔案、網路與備份協同設計，從建立第一個連線到完成最後一次傳輸，都不必離開這個應用程式。",
+    "items": [
+      {
+        "icon": "terminal-box-line",
+        "title": "終端機",
+        "text": "多分頁、分割窗格與終端機搜尋，支援真彩色、寬字元和輸入法。",
+        "points": ["tmux、vim、htop 都能用滑鼠操作", "同一主機的多個窗格共用一條連線", "斷線後自動重新連線"]
+      },
+      {
+        "icon": "folder-transfer-line",
+        "title": "SFTP 檔案管理",
+        "text": "遠端檔案就在終端機旁邊，還能跟隨終端機的目前目錄。",
+        "points": ["內建編輯器，直接修改遠端檔案", "支援拖放，整個資料夾也能傳", "傳輸佇列支援暫停、續傳和重試"]
+      },
+      {
+        "icon": "robot-2-line",
+        "title": "AI 助理",
+        "text": "每臺主機都有獨立的助理，可以執行命令、編輯檔案。",
+        "points": ["詢問、自動審核、完全允許三種權限模式", "可選用審核模型把關每一步操作", "使用你自己選擇的 AI 服務"]
+      },
+      {
+        "icon": "plug-line",
+        "title": "代理程式接入",
+        "text": "本機的 AI 代理程式可透過開放 API、MCP 或 Skill 使用你的主機。",
+        "points": ["為 Claude Code、Codex 一鍵設定 Skill", "已儲存的憑證絕不交給代理程式", "預設關閉，由你決定是否開啟"]
+      },
+      {
+        "icon": "key-2-line",
+        "title": "主機與憑證",
+        "text": "從 SSH 設定匯入，或輸入 user@host:port 直接連線。",
+        "points": ["密碼、OpenSSH / PEM / PuTTY 金鑰與 SSH Agent", "產生金鑰並一鍵安裝公鑰", "憑證在本機加密儲存"]
+      },
+      {
+        "icon": "upload-cloud-2-line",
+        "title": "備份與還原",
+        "text": "以密碼加密備份主機、憑證、快速指令和設定。",
+        "points": ["儲存到本機、WebDAV、S3 相容儲存或 GitHub 私密 Gist", "手動或定時備份，可設定保留份數", "在另一臺裝置上還原"]
+      },
+      {
+        "icon": "route-line",
+        "title": "網路連線",
+        "text": "輕鬆連上藏在跳板機和代理後面的伺服器。",
+        "points": ["多級跳板機", "HTTP 與 SOCKS5 代理", "本機、遠端和動態連接埠轉發"]
+      },
+      {
+        "icon": "dashboard-3-line",
+        "title": "日常體驗",
+        "text": "每天都會用到的細節，一點一滴累積成順手。",
+        "points": ["CPU、記憶體、磁碟、網路和延遲一目了然", "淺色與深色主題，可跟隨系統", "五種介面語言"]
+      }
+    ]
+  },
+  "tour": {
+    "title": "看看實際效果",
+    "lead": "以下為 SSHYard 深色模式截圖。",
+    "tabs": "截圖",
+    "items": [
+      {"key": "terminal", "label": "終端機與 AI", "caption": "AI 助理檢查主機的記憶體使用量並以表格回報，終端機就在一旁。", "alt": "SSHYard 視窗：左側是終端機，右側 AI 助理正在回報記憶體使用情況"},
+      {"key": "sftp", "label": "SFTP", "caption": "在終端機旁瀏覽和編輯遠端檔案，傳輸在背景進行。", "alt": "SSHYard 的 SFTP 檔案管理器與終端機並排顯示"},
+      {"key": "monitor", "label": "系統監視", "caption": "即時檢視已連線主機的 CPU、記憶體、磁碟和網路數據。", "alt": "SSHYard 系統監視，顯示 CPU、記憶體、磁碟和網路圖表"},
+      {"key": "settings", "label": "AI 設定", "caption": "選擇 AI 服務和模型、審核模型，以及助理可以自主執行到什麼程度。", "alt": "SSHYard AI 助理設定，列出服務供應商與模型"}
+    ]
+  },
+  "ai": {
+    "title": "在主機上\u200b動手的 AI\u00a0助理，\u200b主導權\u200b始終在你",
+    "lead": "助理能看到所在主機的終端機上下文，並透過同一條 SSH 連線執行命令、編輯檔案。它能自主做多少，由你決定。",
+    "modes_label": "權限模式",
+    "modes": [
+      {"key": "ask", "label": "詢問", "text": "助理在執行命令或修改檔案之前，都會先徵求你的同意。"},
+      {"key": "review", "label": "自動審核", "text": "由審核模型檢查每一步操作，只有它明確批准才會執行，其餘情況交回給你確認。"},
+      {"key": "full", "label": "完全允許", "text": "所有操作直接執行，不再詢問。開啟前需要確認，開啟期間始終顯示警示。"}
+    ],
+    "card": {
+      "command": "sudo systemctl restart php8.3-fpm",
+      "waiting": "等待你確認",
+      "allow": "允許",
+      "deny": "拒絕",
+      "reviewed": "審核模型已批准",
+      "ran": "未詢問直接執行",
+      "full_bar": "完全允許 — 所有操作不再詢問"
+    },
+    "providers_title": "使用你自己的模型",
+    "providers_text": "可接入任何支援 OpenAI 相容 Chat Completions、OpenAI Responses 或 Anthropic Messages 介面的服務，包括你自行部署的模型。終端機輸出和檔案內容只會傳送給你選擇的服務，而且要先在該主機上取得你的同意。",
+    "agents_title": "讓本機代理程式依你的規則接入",
+    "agents_text": "開啟代理程式接入後，本機的 AI 代理程式可以透過開放 API、MCP 或 SSHYard Skill 檢視主機、建立 SSH 連線並執行命令。它們使用權杖驗證，你儲存的密碼和金鑰始終留在 SSHYard 內。",
+    "agents_points": ["為 Claude Code、Codex 一鍵設定 Skill", "每條命令都會記入 AI 稽核日誌", "重新產生權杖即可中斷所有代理程式"]
+  },
+  "security": {
+    "title": "你的憑證，\u200b只留在\u200b你的裝置上",
+    "lead": "密碼、金鑰和權杖都在本機加密；即使需要離開裝置，也是密封後才離開。",
+    "steps": [
+      {"icon": "key-2-line", "title": "系統鑰匙圈", "text": "只為 SSHYard 儲存一把隨機產生的 256 位元主金鑰，別無他物。"},
+      {"icon": "safe-2-line", "title": "本機加密憑證庫", "text": "密碼、私鑰、密語、快速指令和 API 金鑰都以這把主金鑰加密，儲存在一個本機檔案裡。"},
+      {"icon": "shield-keyhole-line", "title": "密封備份", "text": "備份在本機完成壓縮和加密，金鑰由你的密碼透過 Argon2id 衍生，並使用 XChaCha20-Poly1305 加密。"},
+      {"icon": "upload-cloud-2-line", "title": "你的儲存空間", "text": "WebDAV、S3 相容儲存和 GitHub Gist 只會收到加密後的檔案，備份密碼本身從不儲存。"}
+    ],
+    "points": ["代理程式拿到的是權杖，而不是你儲存的憑證", "無需註冊任何帳號", "以 AGPL-3.0 開放原始碼，任何人都能審查程式碼"]
+  },
+  "download": {
+    "title": "下載 SSHYard",
+    "lead": "免費提供 macOS、Windows 和 Linux 版本。",
+    "version_date": "版本 {version}，發布於 {date}",
+    "version": "版本 {version}",
+    "recommended": "建議此裝置使用",
+    "all": "全部下載與安裝說明",
+    "release_notes": "更新日誌",
+    "all_releases": "GitHub 上的所有版本",
+    "file": "檔案",
+    "size": "大小",
+    "get": "下載",
+    "install": "安裝說明",
+    "for_platform": "下載 {platform} 版 SSHYard",
+    "other_platforms": "其他平台",
+    "verify_title": "驗證下載檔案",
+    "verify_text": "每個版本都會發布 SHA256SUMS。計算所下載檔案的雜湊值，並與其中對應的一行比對。",
+    "checksums": "SHA256SUMS",
+    "requirements": "系統需求",
+    "platforms": {
+      "macos": {
+        "name": "macOS",
+        "req": "macOS 12 以上 · 已簽署並通過公證",
+        "description": "下載 macOS 版 SSHYard {version}：適用於 Apple 晶片和 Intel Mac 的已簽署、已公證 DMG。內建 AI 助理的免費 SSH / SFTP 用戶端。",
+        "files": {"mac_arm64": "Apple 晶片", "mac_amd64": "Intel"},
+        "steps": ["開啟 DMG，將 SSHYard 拖進「應用程式」檔案夾。", "之後的更新可以在應用程式內直接下載並安裝。"],
+        "verify": "shasum -a 256 sshyard-{version}-arm64.dmg"
+      },
+      "windows": {
+        "name": "Windows",
+        "req": "Windows x64 · 無需系統管理員權限",
+        "description": "下載 Windows x64 版 SSHYard {version}：支援應用程式內更新的安裝程式，或免安裝的 ZIP。內建 AI 助理的免費 SSH / SFTP 用戶端。",
+        "files": {"win_setup": "安裝程式", "win_portable": "免安裝 ZIP"},
+        "steps": ["安裝程式會為目前使用者安裝到 %LOCALAPPDATA%\\Programs，並支援應用程式內更新。", "免安裝版請將 ZIP 解壓縮到可寫入的資料夾，執行 SSHYard.exe 即可；應用程式資料儲存在 %APPDATA%\\SSHYard。"],
+        "verify": "Get-FileHash .\\sshyard-setup-{version}-amd64.exe -Algorithm SHA256"
+      },
+      "linux": {
+        "name": "Linux",
+        "req": "x64（amd64）· .deb 套件或 .tar.gz 壓縮檔",
+        "description": "下載 Linux x64 版 SSHYard {version}，提供 .deb 套件和 .tar.gz 壓縮檔。內建 AI 助理的免費 SSH / SFTP 用戶端。",
+        "files": {"linux_deb": ".deb 套件", "linux_tar": ".tar.gz 壓縮檔"},
+        "steps": ["使用系統的套件管理器安裝 .deb。", "或將 install.sh 放在 .tar.gz 旁邊並執行它，安裝到 ~/.local。"],
+        "verify": "sha256sum -c --ignore-missing SHA256SUMS"
+      }
+    }
+  },
+  "faq": {
+    "title": "常見問題",
+    "items": [
+      {"q": "SSHYard 是什麼？", "a": "SSHYard 是一款免費開源的原生桌面 SSH / SFTP 用戶端，支援 macOS、Windows 和 Linux。它集多分頁分割終端機、SFTP 檔案管理、連接埠轉發，以及能在主機上執行命令的 AI 助理於一體。"},
+      {"q": "SSHYard 免費嗎？", "a": "免費。SSHYard 可以免費下載和使用，也不需要註冊帳號。原始碼以 GNU AGPL-3.0 授權條款發布在 GitHub 上。"},
+      {"q": "SSHYard 支援哪些系統？", "a": "支援 macOS 12 以上（Apple 晶片和 Intel Mac）、Windows x64，以及 Linux x64（提供 .deb 套件和 .tar.gz 壓縮檔）。"},
+      {"q": "SSHYard 是用 Electron 或 WebView 做的嗎？", "a": "不是。SSHYard 的整個介面都是原生繪製的，不依賴 WebView，也不內建瀏覽器，所以下載檔只有約 {size}。"},
+      {"q": "我的密碼和金鑰儲存在哪裡？", "a": "加密儲存在你自己的裝置上。系統鑰匙圈裡只存一把隨機主金鑰，密碼、私鑰、密語和 API 金鑰都以它加密後存入本機檔案。除非你主動備份，否則這些資料不會離開裝置；備份也會先加密再離開。"},
+      {"q": "AI 助理是怎麼運作的？我能控制它嗎？", "a": "可以。每臺主機都有獨立的助理，它讀取終端機上下文，透過 SSH 連線執行命令、編輯檔案。詢問模式下每一步都等你同意，自動審核模式下由審核模型檢查每個操作，完全允許模式必須由你明確開啟。助理使用你自己設定的 AI 服務和 API 金鑰。"},
+      {"q": "Claude Code 或 Codex 能使用我的 SSH 主機嗎？", "a": "可以，開啟代理程式接入即可。之後本機的代理程式就能透過 SSHYard 的開放 API、MCP 端點或 Skill 檢視主機、建立連線並執行命令，SSHYard 還能為 Claude Code 和 Codex 一鍵安裝 Skill。代理程式使用權杖驗證，永遠拿不到你儲存的憑證。"},
+      {"q": "SSHYard 支援跳板機、代理和連接埠轉發嗎？", "a": "支援。主機可以經由多級跳板機和 HTTP 或 SOCKS5 代理連線，也可以設定本機、遠端和動態連接埠轉發。"},
+      {"q": "備份和還原是怎麼做的？", "a": "SSHYard 將主機、憑證、快速指令和設定壓縮成一個檔案，並在本機以你的備份密碼加密。你可以存在本機，或手動、定時上傳到 WebDAV、S3 相容儲存或 GitHub 私密 Gist，在另一臺裝置上用同一個密碼還原。"},
+      {"q": "能匯入現有的 SSH 設定嗎？", "a": "能。SSHYard 可以從 SSH 設定檔匯入主機，也可以直接輸入 user@host:port 快速連線。"},
+      {"q": "SSHYard 支援哪些語言？", "a": "支援英文、簡體中文、繁體中文、日文和韓文，應用程式和本網站皆是如此。"}
+    ]
+  },
+  "cta": {
+    "title": "你的伺服器，\u200b只隔\u200b一個視窗",
+    "text": "SSHYard 免費提供 macOS、Windows 和 Linux 版本。"
+  },
+  "footer": {
+    "tagline": "內建 AI 助理的原生 SSH / SFTP 用戶端，支援 macOS、Windows 和 Linux。",
+    "product": "產品",
+    "project": "專案",
+    "community": "社群",
+    "release_notes": "更新日誌",
+    "source": "原始碼",
+    "issues": "回報問題",
+    "license": "授權條款（AGPL-3.0）",
+    "linuxdo": "LinuxDO",
+    "copyright": "© {year} SSHYard，以 GNU AGPL-3.0 開放原始碼。"
+  },
+  "banner": {
+    "text": "本頁面提供繁體中文版。",
+    "switch": "切換",
+    "dismiss": "關閉"
+  },
+  "copy": {
+    "copy": "複製",
+    "copied": "已複製"
+  },
+  "notfound": {
+    "title": "找不到頁面",
+    "text": "你造訪的頁面不存在，或已移至其他位置。",
+    "home": "返回首頁"
+  },
+  "a11y": {
+    "breadcrumb": "頁面路徑"
+  }
+}

@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+{% block main %}
+{% set prompt %}<span class="t-ok">deploy@web-01</span>:<span class="t-blue">~</span>$ {% endset %}
+<section class="hero">
+  <div class="wrap hero-in">
+    <a class="pill reveal" href="{{ release.url }}" rel="noopener">
+      <span class="pill-tag">{{ t.hero.release | fill(**v) }}</span>
+      <span>{{ t.hero.release_link }}</span>{{ icon('arrow-right-s-line') }}
+    </a>
+    <h1 class="hero-title reveal">{% for line in t.hero.title %}<span>{{ line }}</span>{{ ' ' if not loop.last }}{% endfor %}</h1>
+    <p class="hero-lead reveal">{{ t.hero.lead }}</p>
+    <div class="hero-cta reveal">
+      <a class="btn btn-primary btn-lg" href="{{ url('download') }}" data-dl-cta>{{ icon('download-2-line') }}<span data-dl-label>{{ t.hero.cta }}</span></a>
+      <a class="btn btn-quiet btn-lg" href="{{ url('download') }}">{{ t.hero.cta_other }}{{ icon('arrow-right-s-line') }}</a>
+    </div>
+    <p class="hero-note reveal"><span class="dl-meta" data-dl-meta></span>{{ t.hero.note }}</p>
+  </div>
+
+  <div class="wrap demo-wrap reveal">
+    <div class="demo" role="img" aria-label="{{ t.demo.aria }}">
+      <div class="win">
+        <div class="win-bar">
+          <span class="lights" aria-hidden="true"><i></i><i></i><i></i></span>
+          <div class="win-tabs">
+            <span class="wtab on"><span class="tile" style="--tint: var(--tint-green)">w</span>web-01<i class="dot"></i></span>
+            <span class="wtab"><span class="tile" style="--tint: var(--tint-orange)">d</span>db-primary</span>
+            <span class="wtab-add">{{ icon('add-line') }}</span>
+          </div>
+          <span class="win-actions">{{ icon('upload-cloud-2-line') }}{{ icon('settings-3-line') }}</span>
+        </div>
+        <div class="win-body">
+          <aside class="win-side">
+            <div class="side-search">{{ icon('search-line') }}<span>{{ t.demo.search }}</span></div>
+            <div class="side-group">{{ t.demo.group }}</div>
+            <ul>
+              <li class="on"><span class="tile" style="--tint: var(--tint-green)">w</span>web-01<i class="dot"></i></li>
+              <li><span class="tile" style="--tint: var(--tint-orange)">d</span>db-primary<i class="dot"></i></li>
+              <li><span class="tile" style="--tint: var(--tint-teal)">s</span>staging</li>
+              <li><span class="tile" style="--tint: var(--tint-purple)">b</span>bastion</li>
+            </ul>
+            <div class="side-foot">{{ t.demo.hosts }}</div>
+          </aside>
+          <section class="pane term">
+            <div class="pane-head"><i class="dot"></i><strong>web-01</strong><span class="muted">deploy@10.0.1.12</span><span class="pane-icons">{{ icon('search-line') }}{{ icon('folder-3-line') }}{{ icon('layout-column-line') }}</span></div>
+            <pre class="term-out"><span class="tl t-dim">Last login: Tue Nov  3 09:12:44 2026 from 10.0.0.8</span>
+<span class="tl">{{ prompt }}<span class="cmd">systemctl is-active nginx</span></span>
+<span class="tl">active</span>
+<span class="tl" data-at="1">{{ prompt }}<span class="cmd" data-type>curl -sI localhost | head -1</span></span>
+<span class="tl t-red" data-at="2">HTTP/1.1 502 Bad Gateway</span>
+<span class="tl" data-at="3">{{ prompt }}<span class="cmd" data-type-at="10">curl -sI localhost | head -1</span></span>
+<span class="tl t-ok" data-at="11">HTTP/1.1 200 OK</span>
+<span class="tl" data-at="12">{{ prompt }}<span class="cmd"></span><i class="cursor"></i></span></pre>
+            <div class="term-stats">
+              <span>{{ icon('cpu-line') }}<b data-stat="cpu">3%</b></span>
+              <span>{{ icon('ram-2-line') }}<b data-stat="mem">1.1G/1.6G</b></span>
+              <span>{{ icon('hard-drive-2-line') }}<b>33%</b></span>
+              <span>{{ icon('arrow-up-line') }}<b data-stat="up">437B/s</b></span>
+              <span>{{ icon('arrow-down-line') }}<b data-stat="down">863B/s</b></span>
+              <span class="lat">{{ icon('pulse-line') }}<b data-stat="lat">14 ms</b></span>
+            </div>
+          </section>
+          <section class="pane ai">
+            <div class="pane-head">{{ icon('robot-2-line') }}<strong>{{ t.demo.ai_title }} · web-01</strong></div>
+            <div class="ai-log">
+              <div class="msg-user" data-at="4"><span>{{ t.demo.user_q }}</span></div>
+              <div class="tool" data-at="5">
+                <div class="tool-head">{{ icon('terminal-box-line') }}<b>{{ t.demo.tool_run }}</b><span class="muted">{{ t.demo.tool_ok }}</span><span class="t-ok">{{ t.demo.tool_done }}</span></div>
+                <code>systemctl is-active php8.3-fpm</code>
+                <code class="t-red">failed</code>
+              </div>
+              <p class="msg-ai" data-at="6" data-stream>{{ t.demo.a1 }}</p>
+              <div class="tool" data-at="7">
+                <div class="tool-head">{{ icon('file-edit-line') }}<b>{{ t.demo.tool_edit }}</b><span class="muted">{{ t.demo.tool_ok }}</span><span class="t-ok">{{ t.demo.tool_done }}</span></div>
+                <code>/etc/php/8.3/fpm/pool.d/www.conf</code>
+                <code class="t-red">- listen = /run/php/php8.2-fpm.sock</code>
+                <code class="t-ok">+ listen = /run/php/php8.3-fpm.sock</code>
+              </div>
+              <div class="tool" data-at="8">
+                <div class="tool-head">{{ icon('terminal-box-line') }}<b>{{ t.demo.tool_run }}</b><span class="muted">{{ t.demo.tool_ok }}</span><span class="t-ok">{{ t.demo.tool_done }}</span></div>
+                <code>sudo systemctl restart php8.3-fpm</code>
+              </div>
+              <p class="msg-ai" data-at="9" data-stream>{{ t.demo.a2 }}</p>
+            </div>
+            <div class="ai-input">
+              <span class="muted">{{ t.demo.placeholder }}</span>
+              <span class="ai-input-row"><span class="chip chip-warn">{{ icon('eye-line') }}{{ t.demo.mode }}</span>{{ icon('send-plane-2-line') }}</span>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="features" aria-labelledby="features-title">
+  <div class="wrap">
+    <header class="sec-head reveal">
+      <h2 id="features-title">{{ t.features.title }}</h2>
+      <p>{{ t.features.lead }}</p>
+    </header>
+    <div class="feat-grid">
+      {% for f in t.features["items"] %}
+      <article class="card feat spot reveal{% if loop.index <= 4 %} feat-lg{% endif %}" style="--i: {{ loop.index0 % 4 }}">
+        <span class="feat-icon">{{ icon(f.icon) }}</span>
+        <h3>{{ f.title }}</h3>
+        <p>{{ f.text }}</p>
+        <ul class="ticks">
+          {% for p in f.points %}
+          <li>{{ icon('check-line') }}<span>{{ p }}</span></li>
+          {% endfor %}
+        </ul>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section tour" id="tour" aria-labelledby="tour-title">
+  <div class="wrap">
+    <header class="sec-head reveal">
+      <h2 id="tour-title">{{ t.tour.title }}</h2>
+      <p>{{ t.tour.lead }}</p>
+    </header>
+    <div class="seg seg-lg tour-tabs reveal" role="tablist" aria-label="{{ t.tour.tabs }}">
+      {% for s in t.tour["items"] %}
+      <button type="button" role="tab" id="tab-{{ s.key }}" aria-controls="shot-{{ s.key }}" aria-selected="{{ 'true' if loop.first else 'false' }}" tabindex="{{ 0 if loop.first else -1 }}">{{ s.label }}<i class="tab-progress" aria-hidden="true"></i></button>
+      {% endfor %}
+    </div>
+    <div class="tour-stage reveal">
+      {% for s in t.tour["items"] %}
+      {% set shot = shots[s.key] %}
+      <div class="shot{% if loop.first %} on{% endif %}" role="tabpanel" id="shot-{{ s.key }}" aria-labelledby="tab-{{ s.key }}"><figure>
+        <img src="{{ file(shot.src) }}" srcset="{% for f, w in shot.srcset %}{{ file(f) }} {{ w }}w{{ ', ' if not loop.last }}{% endfor %}" sizes="(min-width: 1240px) 1160px, calc(100vw - 32px)" width="{{ shot.width }}" height="{{ shot.height }}" alt="{{ s.alt }}" loading="lazy" decoding="async">
+        <figcaption>{{ s.caption }}</figcaption>
+      </figure></div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section alt" id="ai" aria-labelledby="ai-title">
+  <div class="wrap ai-grid">
+    <div class="ai-copy reveal">
+      <h2 id="ai-title">{{ t.ai.title }}</h2>
+      <p class="lead">{{ t.ai.lead }}</p>
+      <div class="seg mode-tabs" role="tablist" aria-label="{{ t.ai.modes_label }}">
+        {% for m in t.ai.modes %}
+        <button type="button" role="tab" id="mode-tab-{{ m.key }}" aria-controls="mode-{{ m.key }}" aria-selected="{{ 'true' if loop.first else 'false' }}" tabindex="{{ 0 if loop.first else -1 }}" data-mode="{{ m.key }}">{{ m.label }}</button>
+        {% endfor %}
+      </div>
+      {% for m in t.ai.modes %}
+      <div class="mode-text" role="tabpanel" id="mode-{{ m.key }}" aria-labelledby="mode-tab-{{ m.key }}"{% if not loop.first %} hidden{% endif %}>
+        <h3>{{ m.label }}</h3>
+        <p>{{ m.text }}</p>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="ai-visual reveal" aria-hidden="true">
+      <div class="approval" data-mode="ask">
+        <div class="full-bar">{{ icon('error-warning-line') }}<span>{{ t.ai.card.full_bar }}</span></div>
+        <div class="approval-card">
+          <div class="tool-head">{{ icon('terminal-box-line') }}<b>{{ t.demo.tool_run }}</b>
+            <span class="state" data-for="ask">{{ icon('time-line') }}{{ t.ai.card.waiting }}</span>
+            <span class="state t-ok" data-for="review">{{ icon('shield-check-line') }}{{ t.ai.card.reviewed }}</span>
+            <span class="state t-warn" data-for="full">{{ icon('flashlight-line') }}{{ t.ai.card.ran }}</span>
+          </div>
+          <code>$ {{ t.ai.card.command }}</code>
+          <div class="approval-actions" data-for="ask">
+            <span class="btn btn-quiet btn-sm">{{ t.ai.card.deny }}</span>
+            <span class="btn btn-primary btn-sm">{{ t.ai.card.allow }}</span>
+          </div>
+          <div class="approval-out" data-for="review full"><code class="t-dim">● php8.3-fpm.service — active (running)</code></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="wrap ai-cards">
+    <article class="card ai-card reveal">
+      <h3>{{ t.ai.providers_title }}</h3>
+      <p>{{ t.ai.providers_text }}</p>
+      <ul class="brands" role="list">
+        {% for b in ai_brands %}
+        <li title="{{ b.name }}"><img class="only-light" src="{{ file(b.light) }}" width="28" height="28" alt="{{ b.name }}" loading="lazy" decoding="async"><img class="only-dark" src="{{ file(b.dark) }}" width="28" height="28" alt="" loading="lazy" decoding="async"></li>
+        {% endfor %}
+      </ul>
+    </article>
+    <article class="card ai-card reveal">
+      <h3>{{ t.ai.agents_title }}</h3>
+      <p>{{ t.ai.agents_text }}</p>
+      <ul class="ticks">
+        {% for p in t.ai.agents_points %}
+        <li>{{ icon('check-line') }}<span>{{ p }}</span></li>
+        {% endfor %}
+      </ul>
+    </article>
+  </div>
+</section>
+
+<section class="section" id="security" aria-labelledby="security-title">
+  <div class="wrap sec-grid">
+    <div class="reveal">
+      <h2 id="security-title">{{ t.security.title }}</h2>
+      <p class="lead">{{ t.security.lead }}</p>
+      <ul class="ticks ticks-lg">
+        {% for p in t.security.points %}
+        <li>{{ icon('shield-check-line') }}<span>{{ p }}</span></li>
+        {% endfor %}
+      </ul>
+    </div>
+    <ol class="chain" role="list">
+      {% for s in t.security.steps %}
+      <li class="card reveal" style="--i: {{ loop.index0 }}">
+        <span class="chain-icon">{{ icon(s.icon) }}</span>
+        <div>
+          <h3>{{ s.title }}</h3>
+          <p>{{ s.text }}</p>
+        </div>
+      </li>
+      {% endfor %}
+    </ol>
+  </div>
+</section>
+
+<section class="section alt" id="glance" aria-labelledby="glance-title">
+  <div class="wrap narrow">
+    <header class="sec-head reveal"><h2 id="glance-title">{{ t.glance.title }}</h2></header>
+    <dl class="spec card reveal">
+      {% for k, val in t.glance.rows %}
+      <div><dt>{{ k }}</dt><dd>{{ val | fill(**v) }}</dd></div>
+      {% endfor %}
+    </dl>
+  </div>
+</section>
+
+<section class="section" id="download" aria-labelledby="download-title">
+  <div class="wrap">
+    <header class="sec-head reveal">
+      <h2 id="download-title">{{ t.download.title }}</h2>
+      <p>{{ t.download.lead }} {{ (t.download.version_date if release.date else t.download.version) | fill(**v) }}</p>
+    </header>
+    {% include "_platforms.html" %}
+    <p class="dl-links reveal">
+      <a href="{{ url('download') }}">{{ t.download.all }}{{ icon('arrow-right-s-line') }}</a>
+      <a href="{{ release.url }}" rel="noopener">{{ t.download.release_notes }}{{ icon('arrow-right-up-line') }}</a>
+      <a href="{{ release.assets.sha256sums.url }}" rel="noopener">{{ t.download.checksums }}{{ icon('arrow-right-up-line') }}</a>
+    </p>
+  </div>
+</section>
+
+<section class="section alt" id="faq" aria-labelledby="faq-title">
+  <div class="wrap narrow">
+    <header class="sec-head reveal"><h2 id="faq-title">{{ t.faq.title }}</h2></header>
+    <div class="faq">
+      {% for q in t.faq["items"] %}
+      <details class="qa reveal"{% if loop.first %} open{% endif %}>
+        <summary><h3>{{ q.q }}</h3>{{ icon('add-line') }}</summary>
+        <div class="qa-a"><p>{{ q.a | fill(**v) }}</p></div>
+      </details>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="cta-band">
+  <div class="wrap">
+    <div class="cta-in reveal">
+      <img src="{{ file('icon-192.png') }}" width="72" height="72" alt="" loading="lazy" decoding="async">
+      <h2>{{ t.cta.title }}</h2>
+      <p>{{ t.cta.text }}</p>
+      <div class="hero-cta">
+        <a class="btn btn-white btn-lg" href="{{ url('download') }}" data-dl-cta>{{ icon('download-2-line') }}<span data-dl-label>{{ t.hero.cta }}</span></a>
+        <a class="btn btn-ghost btn-lg" href="{{ github }}" rel="noopener">{{ icon('github-line') }}GitHub</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

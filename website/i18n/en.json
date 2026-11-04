@@ -1,0 +1,270 @@
+{
+  "name": "English",
+  "meta": {
+    "title": "SSHYard — Free SSH & SFTP Client with AI for Mac, Windows, Linux",
+    "description": "SSHYard is a free, open-source native SSH and SFTP client for macOS, Windows and Linux, with split terminals, a file manager and an AI assistant built in.",
+    "keywords": "SSH client, SFTP client, free SSH client, open source SSH client, SSH client for Mac, SSH client for Windows, SSH client for Linux, AI SSH client, terminal, MCP, port forwarding, jump host",
+    "og_alt": "SSHYard, a native SSH and SFTP client with an AI assistant",
+    "og_title": ["SSH, SFTP and AI,", "in one native app"],
+    "download_title": "Download SSHYard for macOS, Windows and Linux",
+    "download_description": "Download SSHYard {version}, the free SSH and SFTP client: DMG for Apple Silicon and Intel Macs, installer or portable ZIP for Windows, .deb or .tar.gz for Linux.",
+    "notfound_title": "Page not found — SSHYard"
+  },
+  "nav": {
+    "main": "Main",
+    "home": "Home",
+    "features": "Features",
+    "ai": "AI assistant",
+    "security": "Security",
+    "download": "Download",
+    "faq": "FAQ",
+    "github": "SSHYard on GitHub",
+    "menu": "Menu",
+    "language": "Language",
+    "theme": "Appearance",
+    "theme_auto": "Match system",
+    "theme_light": "Light",
+    "theme_dark": "Dark",
+    "skip": "Skip to content"
+  },
+  "hero": {
+    "release": "Version {version}",
+    "release_link": "What's new",
+    "title": ["SSH, SFTP and AI,", "in one native app"],
+    "lead": "SSHYard is a free, open-source SSH and SFTP client for macOS, Windows and Linux. Work in the terminal, move files and let an AI assistant run commands on the host, all in the same window.",
+    "cta": "Download free",
+    "cta_for": {
+      "macos": "Download for macOS",
+      "windows": "Download for Windows",
+      "linux": "Download for Linux"
+    },
+    "cta_other": "Other platforms",
+    "note": "Free and open source · No account needed · macOS, Windows and Linux"
+  },
+  "demo": {
+    "aria": "Animated example: in SSHYard, the AI assistant finds why a server returns 502 and fixes it while the terminal stays open.",
+    "search": "Search hosts",
+    "group": "Hosts",
+    "ai_title": "AI",
+    "user_q": "Since the deploy, nginx returns 502. What happened?",
+    "tool_run": "Run command",
+    "tool_edit": "Write file",
+    "tool_ok": "Approved · review model",
+    "tool_done": "Succeeded",
+    "a1": "php-fpm stopped after the deploy: its pool still listens on the PHP 8.2 socket, while nginx now expects php8.3-fpm.sock.",
+    "a2": "I pointed the pool at the 8.3 socket and restarted php-fpm. nginx answers 200 again.",
+    "placeholder": "Ask about this host",
+    "mode": "Auto review",
+    "hosts": "4 hosts"
+  },
+  "glance": {
+    "title": "SSHYard at a glance",
+    "rows": [
+      ["Price", "Free"],
+      ["License", "Open source, GNU AGPL-3.0"],
+      ["Platforms", "macOS 12 or later (Apple Silicon and Intel), Windows x64, Linux x64"],
+      ["Interface", "Native, drawn without a web view"],
+      ["Download size", "About {size}"],
+      ["Languages", "English, 简体中文, 繁體中文, 日本語, 한국어"],
+      ["Account", "Not required"],
+      ["Credentials", "Encrypted and stored on your device"],
+      ["AI providers", "Any OpenAI-compatible, OpenAI Responses or Anthropic API"],
+      ["Agent access", "Open API, MCP and Skill, off by default"]
+    ]
+  },
+  "features": {
+    "title": "Built for a day of server work",
+    "lead": "Terminal, files, networking and backups are designed together, so you stay in one app from the first connection to the last transfer.",
+    "items": [
+      {
+        "icon": "terminal-box-line",
+        "title": "Terminal",
+        "text": "Tabs, split panes and search, with true colour, wide characters and input methods.",
+        "points": ["Mouse support for tmux, vim and htop", "Panes on one host share a single connection", "Reconnects on its own after a drop"]
+      },
+      {
+        "icon": "folder-transfer-line",
+        "title": "SFTP file manager",
+        "text": "Remote files open beside the terminal and can follow its working directory.",
+        "points": ["Built-in editor for remote files", "Drag and drop, whole folders included", "Transfer queue with pause, resume and retry"]
+      },
+      {
+        "icon": "robot-2-line",
+        "title": "AI assistant",
+        "text": "Every host has its own assistant that can run commands and edit files.",
+        "points": ["Ask, Review and Full access modes", "Optional checks by a review model", "Uses the AI provider you choose"]
+      },
+      {
+        "icon": "plug-line",
+        "title": "Agent integrations",
+        "text": "AI agents on your computer can use your hosts through an open API, MCP or a Skill.",
+        "points": ["One-click Skill setup for Claude Code and Codex", "Saved credentials are never handed to agents", "Off until you turn it on"]
+      },
+      {
+        "icon": "key-2-line",
+        "title": "Hosts and credentials",
+        "text": "Import your SSH config, or connect straight away with user@host:port.",
+        "points": ["Passwords, OpenSSH, PEM and PuTTY keys, SSH agent", "Generate keys and install public keys", "Encrypted local credential store"]
+      },
+      {
+        "icon": "upload-cloud-2-line",
+        "title": "Backup and restore",
+        "text": "Password-encrypted backups of hosts, credentials, snippets and settings.",
+        "points": ["Local file, WebDAV, S3-compatible storage or a private GitHub Gist", "By hand or on a schedule, with retention", "Restore on another device"]
+      },
+      {
+        "icon": "route-line",
+        "title": "Networking",
+        "text": "Reach servers that sit behind bastions and proxies.",
+        "points": ["Multi-hop jump hosts", "HTTP and SOCKS5 proxies", "Local, remote and dynamic port forwarding"]
+      },
+      {
+        "icon": "dashboard-3-line",
+        "title": "Everyday comfort",
+        "text": "Small things that add up over a working day.",
+        "points": ["CPU, memory, disk, network and latency at a glance", "Light and dark themes that follow the system", "Five interface languages"]
+      }
+    ]
+  },
+  "tour": {
+    "title": "See it at work",
+    "lead": "Screenshots of SSHYard in dark mode.",
+    "tabs": "Screenshots",
+    "items": [
+      {"key": "terminal", "label": "Terminal and AI", "caption": "The assistant checks memory use on the host and reports back in a table, with the terminal right beside it.", "alt": "SSHYard window with a terminal on the left and the AI assistant on the right reporting memory use"},
+      {"key": "sftp", "label": "SFTP", "caption": "Browse and edit remote files next to the terminal while transfers run in the background.", "alt": "SSHYard SFTP file manager next to a terminal"},
+      {"key": "monitor", "label": "System monitor", "caption": "Live CPU, memory, disk and network figures for the connected host.", "alt": "SSHYard system monitor showing CPU, memory, disk and network charts"},
+      {"key": "settings", "label": "AI settings", "caption": "Pick providers and models, a review model, and how much the assistant may do.", "alt": "SSHYard AI assistant settings with providers and models"}
+    ]
+  },
+  "ai": {
+    "title": "An assistant that works on the host, with you in control",
+    "lead": "The assistant sees the terminal context of its host and runs commands and edits files over the same SSH connection. You decide how much it may do on its own.",
+    "modes_label": "Permission mode",
+    "modes": [
+      {"key": "ask", "label": "Ask", "text": "The assistant asks you before it runs a command or changes a file."},
+      {"key": "review", "label": "Review", "text": "A review model checks every action. Only its explicit approval lets an action run; anything else comes back to you."},
+      {"key": "full", "label": "Full access", "text": "Every action runs without asking. Turning it on takes a confirmation, and a warning stays visible while it is on."}
+    ],
+    "card": {
+      "command": "sudo systemctl restart php8.3-fpm",
+      "waiting": "Waiting for you",
+      "allow": "Allow",
+      "deny": "Deny",
+      "reviewed": "Approved by the review model",
+      "ran": "Ran without asking",
+      "full_bar": "Full access — every action runs without asking"
+    },
+    "providers_title": "Bring your own model",
+    "providers_text": "Connect any provider that speaks the OpenAI-compatible Chat Completions, OpenAI Responses or Anthropic Messages API, including models you host yourself. Terminal output and file contents go only to the provider you pick, and only after you agree for that host.",
+    "agents_title": "Let your local agents in, on your terms",
+    "agents_text": "With agent access on, AI agents on this computer can list hosts, open SSH connections and run commands through the open API, MCP or the SSHYard Skill. They sign in with a token; your saved passwords and keys stay inside SSHYard.",
+    "agents_points": ["One-click Skill setup for Claude Code and Codex", "Every command lands in the AI audit log", "A new token disconnects every agent at once"]
+  },
+  "security": {
+    "title": "Your credentials stay on your device",
+    "lead": "Passwords, keys and tokens are encrypted locally. When they travel, they travel sealed.",
+    "steps": [
+      {"icon": "key-2-line", "title": "System keychain", "text": "Holds one random 256-bit master key for SSHYard, and nothing else."},
+      {"icon": "safe-2-line", "title": "Encrypted local store", "text": "Passwords, private keys, passphrases, snippets and API keys are encrypted with that key in a single local file."},
+      {"icon": "shield-keyhole-line", "title": "Sealed backups", "text": "Backups are compressed and encrypted on your device with a key derived from your password, using Argon2id and XChaCha20-Poly1305."},
+      {"icon": "upload-cloud-2-line", "title": "Your storage", "text": "WebDAV, S3-compatible storage and GitHub Gists only ever receive sealed files. The backup password itself is never stored."}
+    ],
+    "points": ["Agents get a token, never your saved credentials", "No account to create", "Open source under AGPL-3.0, so anyone can audit it"]
+  },
+  "download": {
+    "title": "Download SSHYard",
+    "lead": "Free for macOS, Windows and Linux.",
+    "version_date": "Version {version}, released {date}",
+    "version": "Version {version}",
+    "recommended": "Recommended for this device",
+    "all": "All downloads and install notes",
+    "release_notes": "Release notes",
+    "all_releases": "All releases on GitHub",
+    "file": "File",
+    "size": "Size",
+    "get": "Download",
+    "install": "Install",
+    "for_platform": "Download SSHYard for {platform}",
+    "other_platforms": "Other platforms",
+    "verify_title": "Verify your download",
+    "verify_text": "Each release publishes SHA256SUMS. Compute the checksum of the file you downloaded and compare it with the matching line.",
+    "checksums": "SHA256SUMS",
+    "requirements": "System requirements",
+    "platforms": {
+      "macos": {
+        "name": "macOS",
+        "req": "macOS 12 or later · signed and notarized",
+        "description": "Download SSHYard {version} for macOS: a signed and notarized DMG for Apple Silicon and Intel Macs. Free SSH and SFTP client with an AI assistant.",
+        "files": {"mac_arm64": "Apple Silicon", "mac_amd64": "Intel"},
+        "steps": ["Open the DMG and drag SSHYard into Applications.", "Updates download and install from inside the app."],
+        "verify": "shasum -a 256 sshyard-{version}-arm64.dmg"
+      },
+      "windows": {
+        "name": "Windows",
+        "req": "Windows x64 · no administrator rights needed",
+        "description": "Download SSHYard {version} for Windows x64: an installer with in-app updates or a portable ZIP. Free SSH and SFTP client with an AI assistant.",
+        "files": {"win_setup": "Installer", "win_portable": "Portable ZIP"},
+        "steps": ["The installer installs for the current user into %LOCALAPPDATA%\\Programs and updates from inside the app.", "For the portable version, extract the ZIP into a writable folder and run SSHYard.exe. App data is kept in %APPDATA%\\SSHYard."],
+        "verify": "Get-FileHash .\\sshyard-setup-{version}-amd64.exe -Algorithm SHA256"
+      },
+      "linux": {
+        "name": "Linux",
+        "req": "x64 (amd64) · .deb package or .tar.gz archive",
+        "description": "Download SSHYard {version} for Linux x64 as a .deb package or a .tar.gz archive. Free SSH and SFTP client with an AI assistant.",
+        "files": {"linux_deb": ".deb package", "linux_tar": ".tar.gz archive"},
+        "steps": ["Install the .deb with your package manager.", "Or put install.sh next to the .tar.gz and run it to install into ~/.local."],
+        "verify": "sha256sum -c --ignore-missing SHA256SUMS"
+      }
+    }
+  },
+  "faq": {
+    "title": "Frequently asked questions",
+    "items": [
+      {"q": "What is SSHYard?", "a": "SSHYard is a free, open-source native desktop SSH and SFTP client for macOS, Windows and Linux. It combines tabbed and split terminals, an SFTP file manager, port forwarding and an AI assistant that can run commands on the host."},
+      {"q": "Is SSHYard free?", "a": "Yes. SSHYard is free to download and use, and it doesn't need an account. Its source code is on GitHub under the GNU AGPL-3.0 license."},
+      {"q": "Which systems does SSHYard run on?", "a": "macOS 12 or later on Apple Silicon and Intel Macs, Windows on x64, and Linux on x64 as a .deb package or a .tar.gz archive."},
+      {"q": "Is SSHYard built with Electron or a web view?", "a": "No. Its whole interface is drawn natively, without a web view or a bundled browser, which keeps the download at about {size}."},
+      {"q": "Where are my passwords and keys stored?", "a": "On your device, encrypted. The system keychain holds only a random master key, and passwords, private keys, passphrases and API keys are encrypted with it in a local file. Nothing leaves the device unless you make a backup, and backups are encrypted before they do."},
+      {"q": "How does the AI assistant work, and can I control it?", "a": "Each host has its own assistant that reads the terminal context, runs commands and edits files over the SSH connection. In Ask mode it waits for your approval, in Review mode a review model checks every action, and Full access has to be turned on explicitly. It uses the AI provider and API key you set up."},
+      {"q": "Can Claude Code or Codex use my SSH hosts?", "a": "Yes, once you turn on agent access. Local agents can then list hosts, connect and run commands through SSHYard's open API, MCP endpoint or Skill, and SSHYard installs the Skill for Claude Code and Codex in one click. Agents sign in with a token and never receive your saved credentials."},
+      {"q": "Does SSHYard support jump hosts, proxies and port forwarding?", "a": "Yes. A host can connect through several jump hosts and an HTTP or SOCKS5 proxy, and you can set up local, remote and dynamic port forwards."},
+      {"q": "How do backup and restore work?", "a": "SSHYard compresses hosts, credentials, snippets and settings into one file and encrypts it with your backup password on your device. You can keep it locally or send it to WebDAV, S3-compatible storage or a private GitHub Gist, by hand or on a schedule, and restore it on another device with the same password."},
+      {"q": "Can I import my existing SSH config?", "a": "Yes. SSHYard imports hosts from your SSH config file, and you can also connect straight away by typing user@host:port."},
+      {"q": "Which languages does SSHYard support?", "a": "English, Simplified Chinese, Traditional Chinese, Japanese and Korean, in the app and on this website."}
+    ]
+  },
+  "cta": {
+    "title": "Your servers, one window away",
+    "text": "SSHYard is free for macOS, Windows and Linux."
+  },
+  "footer": {
+    "tagline": "A native SSH and SFTP client with an AI assistant, for macOS, Windows and Linux.",
+    "product": "Product",
+    "project": "Project",
+    "community": "Community",
+    "release_notes": "Release notes",
+    "source": "Source code",
+    "issues": "Report an issue",
+    "license": "License (AGPL-3.0)",
+    "linuxdo": "LinuxDO",
+    "copyright": "© {year} SSHYard. Released under the GNU AGPL-3.0."
+  },
+  "banner": {
+    "text": "This page is also available in English.",
+    "switch": "Switch",
+    "dismiss": "Dismiss"
+  },
+  "copy": {
+    "copy": "Copy",
+    "copied": "Copied"
+  },
+  "notfound": {
+    "title": "Page not found",
+    "text": "The page you are looking for doesn't exist or has moved.",
+    "home": "Back to home"
+  },
+  "a11y": {
+    "breadcrumb": "Breadcrumb"
+  }
+}

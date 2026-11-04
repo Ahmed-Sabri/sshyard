@@ -1,0 +1,18 @@
+<div class="dl-grid">
+  {% for p in platforms %}
+  {% set info = t.download.platforms[p] %}
+  <article class="card dl-card spot reveal" data-platform="{{ p }}" style="--i: {{ loop.index0 }}">
+    <span class="dl-rec">{{ icon('checkbox-circle-fill') }}{{ t.download.recommended }}</span>
+    <span class="dl-icon">{{ icon(platform_icons[p]) }}</span>
+    <h3>{{ info.name }}</h3>
+    <p class="muted">{{ info.req }}</p>
+    <div class="dl-files">
+      {% for k, label in info.files.items() %}
+      {% set a = release.assets[k] %}
+      <a class="btn {{ 'btn-primary' if loop.first else 'btn-quiet' }}" href="{{ a.url }}" data-asset="{{ k }}">{{ icon('download-2-line') }}<span>{{ label }}</span>{% if a.size %}<span class="size">{{ format_size(a.size) }}</span>{% endif %}</a>
+      {% endfor %}
+    </div>
+    <a class="more" href="{{ url('download-' ~ p) }}">{{ t.download.install }}{{ icon('arrow-right-s-line') }}</a>
+  </article>
+  {% endfor %}
+</div>

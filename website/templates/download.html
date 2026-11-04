@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block main %}
+{% set shown = [page.platform] if page.platform else platforms %}
+<section class="page-head">
+  <div class="wrap">
+    <nav class="crumbs reveal" aria-label="{{ t.a11y.breadcrumb }}">
+      <ol>
+        <li><a href="{{ url('home') }}">{{ t.nav.home }}</a></li>
+        {% if page.platform %}
+        <li><a href="{{ url('download') }}">{{ t.download.title }}</a></li>
+        <li><span aria-current="page">{{ t.download.platforms[page.platform].name }}</span></li>
+        {% else %}
+        <li><span aria-current="page">{{ t.download.title }}</span></li>
+        {% endif %}
+      </ol>
+    </nav>
+    <h1 class="reveal">{{ title }}</h1>
+    <p class="lead reveal">{{ t.download.lead }} {{ (t.download.version_date if release.date else t.download.version) | fill(**v) }}</p>
+    <div class="seg seg-lg platform-tabs reveal">
+      <a href="{{ url('download') }}"{% if not page.platform %} aria-current="page"{% endif %}>{{ t.download.title }}</a>
+      {% for p in platforms %}
+      <a href="{{ url('download-' ~ p) }}"{% if page.platform == p %} aria-current="page"{% endif %}>{{ icon(platform_icons[p]) }}{{ t.download.platforms[p].name }}</a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="section section-tight">
+  <div class="wrap dl-blocks">
+    {% for p in shown %}
+    {% set info = t.download.platforms[p] %}
+    <article class="card dl-block reveal" id="{{ p }}" data-platform="{{ p }}" aria-labelledby="{{ p }}-title">
+      <header class="dl-block-head">
+        <span class="dl-icon">{{ icon(platform_icons[p]) }}</span>
+        <div>
+          <h2 id="{{ p }}-title">{{ info.name }}</h2>
+          <p class="muted"><span class="sr">{{ t.download.requirements }}: </span>{{ info.req }}</p>
+        </div>
+        <span class="dl-rec">{{ icon('checkbox-circle-fill') }}{{ t.download.recommended }}</span>
+      </header>
+      <table class="files">
+        <thead><tr><th scope="col">{{ t.download.file }}</th><th scope="col">{{ t.download.size }}</th><th scope="col"><span class="sr">{{ t.download["get"] }}</span></th></tr></thead>
+        <tbody>
+          {% for k, label in info.files.items() %}
+          {% set a = release.assets[k] %}
+          <tr>
+            <td><strong>{{ label }}</strong><code>{{ a.name }}</code></td>
+            <td class="num">{{ format_size(a.size) if a.size else '—' }}</td>
+            <td class="act"><a class="btn {{ 'btn-primary' if loop.first else 'btn-quiet' }} btn-sm" href="{{ a.url }}" data-asset="{{ k }}">{{ icon('download-2-line') }}{{ t.download["get"] }}</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <h3>{{ t.download.install }}</h3>
+      <ol class="steps">
+        {% for s in info.steps %}
+        <li>{{ s }}</li>
+        {% endfor %}
+      </ol>
+      {% if p == 'linux' %}
+      <div class="code"><code>sudo apt install ./{{ release.assets.linux_deb.name }}</code><button type="button" class="icon-btn copy" data-copy="sudo apt install ./{{ release.assets.linux_deb.name }}" aria-label="{{ t["copy"].copy }}" title="{{ t["copy"].copy }}">{{ icon('file-copy-line') }}{{ icon('check-line') }}</button></div>
+      <div class="code"><code>sh install.sh</code><button type="button" class="icon-btn copy" data-copy="sh install.sh" aria-label="{{ t["copy"].copy }}" title="{{ t["copy"].copy }}">{{ icon('file-copy-line') }}{{ icon('check-line') }}</button></div>
+      <p class="muted small"><a href="{{ release.assets.install_sh.url }}" rel="noopener">install.sh</a></p>
+      {% endif %}
+    </article>
+    {% endfor %}
+
+    <article class="card dl-block reveal" id="verify" aria-labelledby="verify-title">
+      <header class="dl-block-head">
+        <span class="dl-icon">{{ icon('shield-check-line') }}</span>
+        <div>
+          <h2 id="verify-title">{{ t.download.verify_title }}</h2>
+          <p class="muted">{{ t.download.verify_text }}</p>
+        </div>
+      </header>
+      {% for p in shown %}
+      {% set cmd = t.download.platforms[p].verify | fill(**v) %}
+      <p class="code-label">{{ t.download.platforms[p].name }}</p>
+      <div class="code"><code>{{ cmd }}</code><button type="button" class="icon-btn copy" data-copy="{{ cmd }}" aria-label="{{ t["copy"].copy }}" title="{{ t["copy"].copy }}">{{ icon('file-copy-line') }}{{ icon('check-line') }}</button></div>
+      {% endfor %}
+      <p class="dl-links"><a href="{{ release.assets.sha256sums.url }}" rel="noopener">{{ t.download.checksums }}{{ icon('arrow-right-up-line') }}</a><a href="{{ release.url }}" rel="noopener">{{ t.download.release_notes }}{{ icon('arrow-right-up-line') }}</a><a href="{{ github }}/releases" rel="noopener">{{ t.download.all_releases }}{{ icon('arrow-right-up-line') }}</a></p>
+    </article>
+  </div>
+</section>
+{% endblock %}

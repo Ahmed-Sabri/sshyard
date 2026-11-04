@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block main %}
+<section class="notfound">
+  <div class="wrap narrow">
+    <p class="nf-code mono" aria-hidden="true">404</p>
+    <h1 data-nf="title">{{ t.notfound.title }}</h1>
+    <p class="lead" data-nf="text">{{ t.notfound.text }}</p>
+    <a class="btn btn-primary btn-lg" data-nf="home" href="{{ url('home') }}">{{ t.notfound.home }}</a>
+  </div>
+</section>
+<script type="application/json" id="notfound-data">{{ notfound }}</script>
+{% endblock %}

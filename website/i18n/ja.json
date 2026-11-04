@@ -1,0 +1,270 @@
+{
+  "name": "日本語",
+  "meta": {
+    "title": "SSHYard — 無料・オープンソースの SSH / SFTP クライアント｜AI アシスタント内蔵",
+    "description": "SSHYard は macOS・Windows・Linux 向けの無料でオープンソースのネイティブ SSH / SFTP クライアント。分割ターミナル、ファイル管理、AI アシスタントをひとつに。",
+    "keywords": "SSH クライアント, SSH クライアント おすすめ, 無料 SSH クライアント, オープンソース SSH クライアント, Mac SSH クライアント, Windows SSH クライアント, SSH 接続 ソフト, ターミナル ソフト, SFTP クライアント, ファイル転送, 踏み台サーバー, ポートフォワーディング, サーバー監視, AI アシスタント, MCP",
+    "og_alt": "SSHYard：AI アシスタントを内蔵したネイティブ SSH / SFTP クライアント",
+    "og_title": ["SSH・SFTP・AI を", "ひとつのアプリで"],
+    "download_title": "SSHYard をダウンロード（macOS・Windows・Linux）",
+    "download_description": "無料の SSH / SFTP クライアント SSHYard {version} をダウンロード。Apple シリコンと Intel Mac 用 DMG、Windows 用インストーラーとポータブル ZIP、Linux 用 .deb と .tar.gz。",
+    "notfound_title": "ページが見つかりません — SSHYard"
+  },
+  "nav": {
+    "main": "メイン",
+    "home": "ホーム",
+    "features": "機能",
+    "ai": "AI アシスタント",
+    "security": "セキュリティ",
+    "download": "ダウンロード",
+    "faq": "よくある質問",
+    "github": "GitHub で SSHYard を見る",
+    "menu": "メニュー",
+    "language": "言語",
+    "theme": "外観",
+    "theme_auto": "システムに合わせる",
+    "theme_light": "ライト",
+    "theme_dark": "ダーク",
+    "skip": "本文へスキップ"
+  },
+  "hero": {
+    "release": "バージョン {version}",
+    "release_link": "新機能",
+    "title": ["SSH、SFTP、そして AI。", "ひとつのネイティブアプリで。"],
+    "lead": "SSHYard は macOS・Windows・Linux 向けの無料でオープンソースの SSH / SFTP クライアントです。ターミナルでの作業もファイルのやり取りも、ホスト上でコマンドを実行する AI アシスタントも、ひとつのウィンドウで。",
+    "cta": "無料でダウンロード",
+    "cta_for": {
+      "macos": "macOS 版をダウンロード",
+      "windows": "Windows 版をダウンロード",
+      "linux": "Linux 版をダウンロード"
+    },
+    "cta_other": "ほかのプラットフォーム",
+    "note": "無料・オープンソース · アカウント不要 · macOS、Windows、Linux に対応"
+  },
+  "demo": {
+    "aria": "アニメーションの例：SSHYard で AI アシスタントがサーバーの 502 エラーの原因を突き止めて修正し、その間もターミナルは開いたままです。",
+    "search": "ホストを検索",
+    "group": "ホスト",
+    "ai_title": "AI",
+    "user_q": "デプロイ後から nginx が 502 を返します。原因は？",
+    "tool_run": "コマンドを実行",
+    "tool_edit": "ファイルを書き込む",
+    "tool_ok": "承認済み · レビューモデル",
+    "tool_done": "成功",
+    "a1": "デプロイ後に php-fpm が停止しています。プールはまだ PHP 8.2 のソケットで待ち受けていますが、nginx は php8.3-fpm.sock に接続しようとしています。",
+    "a2": "プールを 8.3 のソケットに変更して php-fpm を再起動しました。nginx は再び 200 を返しています。",
+    "placeholder": "このホストについて質問",
+    "mode": "自動レビュー",
+    "hosts": "4 台のホスト"
+  },
+  "glance": {
+    "title": "SSHYard の概要",
+    "rows": [
+      ["価格", "無料"],
+      ["ライセンス", "オープンソース、GNU AGPL-3.0"],
+      ["対応プラットフォーム", "macOS 12 以降（Apple シリコンと Intel）、Windows x64、Linux x64"],
+      ["インターフェース", "ネイティブ描画、WebView 不使用"],
+      ["ダウンロードサイズ", "約 {size}"],
+      ["言語", "English、简体中文、繁體中文、日本語、한국어"],
+      ["アカウント", "不要"],
+      ["認証情報", "暗号化してデバイス内に保存"],
+      ["AI プロバイダー", "OpenAI 互換、OpenAI Responses、Anthropic の各 API"],
+      ["エージェント連携", "オープン API、MCP、Skill（初期設定はオフ）"]
+    ]
+  },
+  "features": {
+    "title": "サーバー作業の一日を、\u200bひとつのアプリで",
+    "lead": "ターミナル、ファイル、ネットワーク、バックアップを一体で設計。最初の接続から最後の転送まで、アプリを行き来する必要はありません。",
+    "items": [
+      {
+        "icon": "terminal-box-line",
+        "title": "ターミナル",
+        "text": "タブ、分割ペイン、検索に対応。トゥルーカラー、全角文字、IME もそのまま使えます。",
+        "points": ["tmux、vim、htop でマウス操作", "同じホストのペインは 1 本の接続を共有", "切断されても自動で再接続"]
+      },
+      {
+        "icon": "folder-transfer-line",
+        "title": "SFTP ファイル管理",
+        "text": "リモートのファイルをターミナルの隣に表示し、作業ディレクトリに追従させることもできます。",
+        "points": ["リモートファイルを直接編集できる内蔵エディタ", "フォルダごとのドラッグ＆ドロップ", "一時停止・再開・再試行ができる転送キュー"]
+      },
+      {
+        "icon": "robot-2-line",
+        "title": "AI アシスタント",
+        "text": "ホストごとに専用のアシスタントがつき、コマンドの実行やファイルの編集ができます。",
+        "points": ["確認・自動レビュー・フルアクセスの 3 モード", "レビューモデルによるチェックも可能", "使う AI プロバイダーは自分で選択"]
+      },
+      {
+        "icon": "plug-line",
+        "title": "エージェント連携",
+        "text": "PC 上の AI エージェントが、オープン API、MCP、Skill を通じてホストを利用できます。",
+        "points": ["Claude Code と Codex に Skill をワンクリックで設定", "保存した認証情報はエージェントに渡さない", "オンにするまで無効のまま"]
+      },
+      {
+        "icon": "key-2-line",
+        "title": "ホストと認証情報",
+        "text": "SSH 設定をインポートするか、user@host:port ですぐに接続できます。",
+        "points": ["パスワード、OpenSSH・PEM・PuTTY 鍵、SSH エージェント", "鍵の生成と公開鍵のインストール", "暗号化されたローカル認証情報ストア"]
+      },
+      {
+        "icon": "upload-cloud-2-line",
+        "title": "バックアップと復元",
+        "text": "ホスト、認証情報、スニペット、設定をパスワードで暗号化してバックアップ。",
+        "points": ["ローカル、WebDAV、S3 互換ストレージ、GitHub のシークレット Gist に保存", "手動または定期実行、保持数も設定可能", "別のデバイスで復元"]
+      },
+      {
+        "icon": "route-line",
+        "title": "ネットワーク",
+        "text": "踏み台やプロキシの向こうにあるサーバーにも届きます。",
+        "points": ["多段の踏み台サーバー", "HTTP・SOCKS5 プロキシ", "ローカル・リモート・ダイナミックのポートフォワーディング"]
+      },
+      {
+        "icon": "dashboard-3-line",
+        "title": "毎日の快適さ",
+        "text": "一日の作業で積み重なる、小さな使いやすさ。",
+        "points": ["CPU、メモリ、ディスク、ネットワーク、遅延をひと目で", "システムに合わせるライト／ダークテーマ", "5 つの表示言語"]
+      }
+    ]
+  },
+  "tour": {
+    "title": "実際の画面",
+    "lead": "ダークモードの SSHYard のスクリーンショットです。",
+    "tabs": "スクリーンショット",
+    "items": [
+      {"key": "terminal", "label": "ターミナルと AI", "caption": "アシスタントがホストのメモリ使用量を調べて表にまとめます。ターミナルはすぐ隣に。", "alt": "左にターミナル、右にメモリ使用量を報告する AI アシスタントを表示した SSHYard のウィンドウ"},
+      {"key": "sftp", "label": "SFTP", "caption": "ターミナルの隣でリモートファイルを閲覧・編集。転送はバックグラウンドで進みます。", "alt": "ターミナルと並んで表示された SSHYard の SFTP ファイルマネージャー"},
+      {"key": "monitor", "label": "システムモニター", "caption": "接続中のホストの CPU、メモリ、ディスク、ネットワークをリアルタイムに表示。", "alt": "CPU、メモリ、ディスク、ネットワークのグラフを表示した SSHYard のシステムモニター"},
+      {"key": "settings", "label": "AI 設定", "caption": "プロバイダーとモデル、レビューモデル、アシスタントに任せる範囲を選べます。", "alt": "プロバイダーとモデルが並ぶ SSHYard の AI アシスタント設定"}
+    ]
+  },
+  "ai": {
+    "title": "ホストで\u200b手を動かす AI\u00a0アシスタント。\u200b主導権は\u200bいつも\u200bあなたに",
+    "lead": "アシスタントはそのホストのターミナルの文脈を読み取り、同じ SSH 接続でコマンドを実行し、ファイルを編集します。どこまで任せるかはあなたが決めます。",
+    "modes_label": "権限モード",
+    "modes": [
+      {"key": "ask", "label": "確認", "text": "コマンドの実行やファイルの変更の前に、必ずあなたの許可を求めます。"},
+      {"key": "review", "label": "自動レビュー", "text": "レビューモデルがすべての操作をチェックし、明確に承認したものだけを実行します。それ以外はあなたの判断に戻ります。"},
+      {"key": "full", "label": "フルアクセス", "text": "すべての操作を確認なしで実行します。オンにするには確認が必要で、オンの間は警告が表示され続けます。"}
+    ],
+    "card": {
+      "command": "sudo systemctl restart php8.3-fpm",
+      "waiting": "あなたの確認待ち",
+      "allow": "許可",
+      "deny": "拒否",
+      "reviewed": "レビューモデルが承認",
+      "ran": "確認なしで実行",
+      "full_bar": "フルアクセス — すべての操作を確認なしで実行します"
+    },
+    "providers_title": "使うモデルは自分で選ぶ",
+    "providers_text": "OpenAI 互換の Chat Completions、OpenAI Responses、Anthropic Messages のいずれかの API に対応したサービスなら接続できます。自分でホストしているモデルも使えます。ターミナルの出力やファイルの内容は、あなたが選んだプロバイダーにだけ、そのホストで同意したあとに送られます。",
+    "agents_title": "ローカルのエージェントを、あなたのルールで",
+    "agents_text": "エージェント連携をオンにすると、PC 上の AI エージェントがオープン API、MCP、SSHYard Skill を通じてホスト一覧の取得、SSH 接続、コマンドの実行を行えます。認証はトークンで行い、保存したパスワードや鍵は SSHYard の外に出ません。",
+    "agents_points": ["Claude Code と Codex に Skill をワンクリックで設定", "すべてのコマンドを AI 監査ログに記録", "トークンを再発行すれば全エージェントを一括で切断"]
+  },
+  "security": {
+    "title": "認証情報は、\u200bあなたの\u200bデバイスの中に",
+    "lead": "パスワード、鍵、トークンはローカルで暗号化。外に出るときも、封をしたまま出ていきます。",
+    "steps": [
+      {"icon": "key-2-line", "title": "システムのキーチェーン", "text": "SSHYard 用のランダムな 256 ビットのマスターキーを 1 つだけ保管します。それ以外は何も入れません。"},
+      {"icon": "safe-2-line", "title": "暗号化されたローカルストア", "text": "パスワード、秘密鍵、パスフレーズ、スニペット、API キーは、そのマスターキーで暗号化して 1 つのローカルファイルに保存します。"},
+      {"icon": "shield-keyhole-line", "title": "封をしたバックアップ", "text": "バックアップはデバイス上で圧縮・暗号化されます。鍵はパスワードから Argon2id で導出し、XChaCha20-Poly1305 で暗号化します。"},
+      {"icon": "upload-cloud-2-line", "title": "あなたのストレージ", "text": "WebDAV、S3 互換ストレージ、GitHub Gist が受け取るのは暗号化済みのファイルだけ。バックアップのパスワード自体は保存しません。"}
+    ],
+    "points": ["エージェントに渡すのはトークンだけ、保存した認証情報は渡さない", "アカウント登録は不要", "AGPL-3.0 のオープンソースなので、誰でもコードを検証可能"]
+  },
+  "download": {
+    "title": "SSHYard をダウンロード",
+    "lead": "macOS、Windows、Linux 向けに無料で提供しています。",
+    "version_date": "バージョン {version}（{date} リリース）",
+    "version": "バージョン {version}",
+    "recommended": "このデバイスにおすすめ",
+    "all": "すべてのダウンロードとインストール方法",
+    "release_notes": "リリースノート",
+    "all_releases": "GitHub のすべてのリリース",
+    "file": "ファイル",
+    "size": "サイズ",
+    "get": "ダウンロード",
+    "install": "インストール方法",
+    "for_platform": "{platform} 版 SSHYard をダウンロード",
+    "other_platforms": "ほかのプラットフォーム",
+    "verify_title": "ダウンロードしたファイルの検証",
+    "verify_text": "各リリースには SHA256SUMS が付いています。ダウンロードしたファイルのチェックサムを計算し、該当する行と照らし合わせてください。",
+    "checksums": "SHA256SUMS",
+    "requirements": "動作環境",
+    "platforms": {
+      "macos": {
+        "name": "macOS",
+        "req": "macOS 12 以降 · 署名・公証済み",
+        "description": "macOS 版 SSHYard {version} をダウンロード。Apple シリコンと Intel Mac に対応した署名・公証済みの DMG です。AI アシスタント内蔵の無料 SSH / SFTP クライアント。",
+        "files": {"mac_arm64": "Apple シリコン", "mac_amd64": "Intel"},
+        "steps": ["DMG を開き、SSHYard をアプリケーションフォルダにドラッグします。", "アップデートはアプリ内でダウンロードしてインストールできます。"],
+        "verify": "shasum -a 256 sshyard-{version}-arm64.dmg"
+      },
+      "windows": {
+        "name": "Windows",
+        "req": "Windows x64 · 管理者権限は不要",
+        "description": "Windows x64 版 SSHYard {version} をダウンロード。アプリ内アップデートに対応したインストーラーと、インストール不要のポータブル ZIP があります。AI アシスタント内蔵の無料 SSH / SFTP クライアント。",
+        "files": {"win_setup": "インストーラー", "win_portable": "ポータブル ZIP"},
+        "steps": ["インストーラーは現在のユーザー向けに %LOCALAPPDATA%\\Programs へインストールし、アプリ内でアップデートできます。", "ポータブル版は ZIP を書き込み可能なフォルダに展開し、SSHYard.exe を実行してください。アプリのデータは %APPDATA%\\SSHYard に保存されます。"],
+        "verify": "Get-FileHash .\\sshyard-setup-{version}-amd64.exe -Algorithm SHA256"
+      },
+      "linux": {
+        "name": "Linux",
+        "req": "x64（amd64）· .deb パッケージまたは .tar.gz アーカイブ",
+        "description": "Linux x64 版 SSHYard {version} を .deb パッケージまたは .tar.gz アーカイブでダウンロード。AI アシスタント内蔵の無料 SSH / SFTP クライアント。",
+        "files": {"linux_deb": ".deb パッケージ", "linux_tar": ".tar.gz アーカイブ"},
+        "steps": [".deb はパッケージマネージャーでインストールします。", "または install.sh を .tar.gz と同じ場所に置いて実行すると、~/.local にインストールされます。"],
+        "verify": "sha256sum -c --ignore-missing SHA256SUMS"
+      }
+    }
+  },
+  "faq": {
+    "title": "よくある質問",
+    "items": [
+      {"q": "SSHYard とは何ですか？", "a": "SSHYard は macOS・Windows・Linux 向けの無料でオープンソースのネイティブ SSH / SFTP クライアントです。タブと分割に対応したターミナル、SFTP ファイルマネージャー、ポートフォワーディング、ホスト上でコマンドを実行できる AI アシスタントをひとつにまとめています。"},
+      {"q": "SSHYard は無料ですか？", "a": "はい。SSHYard は無料でダウンロード・利用でき、アカウントも必要ありません。ソースコードは GNU AGPL-3.0 ライセンスで GitHub に公開されています。"},
+      {"q": "対応している OS は？", "a": "macOS 12 以降（Apple シリコンと Intel Mac）、Windows x64、Linux x64（.deb パッケージと .tar.gz アーカイブ）に対応しています。"},
+      {"q": "SSHYard は Electron や WebView で作られていますか？", "a": "いいえ。インターフェースはすべてネイティブに描画しており、WebView もブラウザーも同梱していません。そのためダウンロードサイズは約 {size} に収まっています。"},
+      {"q": "パスワードや鍵はどこに保存されますか？", "a": "あなたのデバイスに暗号化して保存されます。システムのキーチェーンにはランダムなマスターキーだけを置き、パスワード、秘密鍵、パスフレーズ、API キーはそのキーで暗号化してローカルファイルに保存します。バックアップを作らない限りデバイスの外には出ず、バックアップも暗号化してから送られます。"},
+      {"q": "AI アシスタントはどう動き、どこまで制御できますか？", "a": "ホストごとのアシスタントがターミナルの文脈を読み取り、SSH 接続でコマンドを実行し、ファイルを編集します。確認モードではあなたの許可を待ち、自動レビューモードではレビューモデルがすべての操作をチェックし、フルアクセスは明示的にオンにしたときだけ有効になります。AI プロバイダーと API キーは自分で設定したものを使います。"},
+      {"q": "Claude Code や Codex から SSH ホストを使えますか？", "a": "はい、エージェント連携をオンにすれば使えます。ローカルのエージェントは SSHYard のオープン API、MCP エンドポイント、Skill を通じてホスト一覧の取得、接続、コマンドの実行ができ、Claude Code と Codex には Skill をワンクリックでインストールできます。エージェントはトークンで認証し、保存した認証情報を受け取ることはありません。"},
+      {"q": "踏み台サーバー、プロキシ、ポートフォワーディングに対応していますか？", "a": "はい。多段の踏み台サーバーや HTTP・SOCKS5 プロキシを経由して接続でき、ローカル・リモート・ダイナミックのポートフォワーディングも設定できます。"},
+      {"q": "バックアップと復元の仕組みは？", "a": "SSHYard はホスト、認証情報、スニペット、設定を 1 つのファイルに圧縮し、デバイス上でバックアップのパスワードを使って暗号化します。ローカルに保存するほか、手動または定期的に WebDAV、S3 互換ストレージ、GitHub のシークレット Gist に送ることができ、別のデバイスでも同じパスワードで復元できます。"},
+      {"q": "既存の SSH 設定をインポートできますか？", "a": "はい。SSH の設定ファイルからホストをインポートできるほか、user@host:port と入力してすぐに接続することもできます。"},
+      {"q": "対応している言語は？", "a": "英語、簡体字中国語、繁体字中国語、日本語、韓国語に対応しています。アプリもこのサイトも同じです。"}
+    ]
+  },
+  "cta": {
+    "title": "サーバーは、\u200bウィンドウ\u200bひとつ先に",
+    "text": "SSHYard は macOS、Windows、Linux で無料です。"
+  },
+  "footer": {
+    "tagline": "AI アシスタントを内蔵した macOS・Windows・Linux 向けネイティブ SSH / SFTP クライアント。",
+    "product": "製品",
+    "project": "プロジェクト",
+    "community": "コミュニティ",
+    "release_notes": "リリースノート",
+    "source": "ソースコード",
+    "issues": "問題を報告",
+    "license": "ライセンス（AGPL-3.0）",
+    "linuxdo": "LinuxDO",
+    "copyright": "© {year} SSHYard. GNU AGPL-3.0 で公開しています。"
+  },
+  "banner": {
+    "text": "このページは日本語でもご覧いただけます。",
+    "switch": "切り替える",
+    "dismiss": "閉じる"
+  },
+  "copy": {
+    "copy": "コピー",
+    "copied": "コピーしました"
+  },
+  "notfound": {
+    "title": "ページが見つかりません",
+    "text": "お探しのページは存在しないか、移動した可能性があります。",
+    "home": "ホームに戻る"
+  },
+  "a11y": {
+    "breadcrumb": "パンくずリスト"
+  }
+}
