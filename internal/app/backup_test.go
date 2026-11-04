@@ -145,8 +145,10 @@ func TestBackupWithoutSecrets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var p backupPayload
-	json.Unmarshal(plain, &p)
+	p, err := unpackBackup(plain)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(p.Secrets) != 0 || len(p.Assets.Credentials) != 2 {
 		t.Fatalf("payload %+v", p)
 	}
@@ -271,9 +273,14 @@ func TestMergeSettings(t *testing.T) {
 	in.SidebarWidth, in.UIFont, in.KeepAliveSeconds = 400, "Other Font", 99
 	in.AIProviders = []settings.AIProvider{{ID: "b", Name: "B2"}, {ID: "c", Name: "C"}}
 	in.AIConsentHosts = []string{"h1", "h2"}
+	cur.BackupTargets = []settings.BackupTarget{{ID: "here", Name: "NAS", Kind: settings.BackupWebDAV}}
+	in.BackupTargets = []settings.BackupTarget{{ID: "there", Name: "Other", Kind: settings.BackupS3}}
 	out := mergeSettings(cur, in)
 	if out.SidebarWidth != 260 || out.UIFont != "Local Font" || out.KeepAliveSeconds != 99 {
 		t.Fatalf("merged %+v", out)
+	}
+	if len(out.BackupTargets) != 1 || out.BackupTargets[0].ID != "here" {
+		t.Fatalf("backup locations %+v", out.BackupTargets)
 	}
 	if len(out.AIProviders) != 3 || out.AIProviders[1].Name != "B2" || out.AIProviders[2].ID != "c" {
 		t.Fatalf("providers %+v", out.AIProviders)
@@ -316,14 +323,16 @@ func TestBackupIndependentDeviceMasters(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var payload backupPayload
-	if err := json.Unmarshal(plain, &payload); err != nil {
+	payload, err := unpackBackup(plain)
+	if err != nil {
 		t.Fatal(err)
 	}
+	// The archive is compressed: look for the token in what it holds.
+	held, _ := json.Marshal(payload)
 	if _, ok := payload.Secrets[keychain.MasterKey]; ok {
 		t.Fatal("backup contains device master")
 	}
-	if _, ok := payload.Secrets[keychain.MCPToken]; ok || bytes.Contains(plain, []byte("source-device-token")) {
+	if _, ok := payload.Secrets[keychain.MCPToken]; ok || bytes.Contains(held, []byte("source-device-token")) {
 		t.Fatal("backup contains device MCP token")
 	}
 	dst, _, _ := backupApp(t)

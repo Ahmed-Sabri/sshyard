@@ -180,6 +180,7 @@ func (a *App) acceptUnlock(err error) {
 		a.unlock.servicesStarted = true
 		a.autoStartForwards()
 		a.syncMCP()
+		a.startAutoBackup()
 	}
 	if after != nil {
 		after()

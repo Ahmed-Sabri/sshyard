@@ -7734,11 +7734,11 @@ func (msgs Messages) BackupSection() string {
 	return Catalog.Format(msgs.locale, "backupSection", nil)
 }
 
-// BackupDesc says "Keep a copy of SSHYard, or move it to another device, in one encrypted file."
+// BackupDesc says "Keep a copy of SSHYard, or move it to another device, in one encrypted file, on this computer or in the cloud."
 // in the language the app shows.
 func BackupDesc() string { return In(i18n.Locale()).BackupDesc() }
 
-// BackupDesc says "Keep a copy of SSHYard, or move it to another device, in one encrypted file."
+// BackupDesc says "Keep a copy of SSHYard, or move it to another device, in one encrypted file, on this computer or in the cloud."
 // in the language of msgs.
 func (msgs Messages) BackupDesc() string {
 	return Catalog.Format(msgs.locale, "backupDesc", nil)
@@ -7754,11 +7754,11 @@ func (msgs Messages) ExportBackup() string {
 	return Catalog.Format(msgs.locale, "exportBackup", nil)
 }
 
-// ExportBackupNote says "Hosts, credentials, proxies, port forwards, preferences and trusted host keys, encrypted with a password you choose."
+// ExportBackupNote says "Hosts, credentials, proxies, port forwards, snippets, preferences and trusted host keys, compressed into one file enc…"
 // in the language the app shows.
 func ExportBackupNote() string { return In(i18n.Locale()).ExportBackupNote() }
 
-// ExportBackupNote says "Hosts, credentials, proxies, port forwards, preferences and trusted host keys, encrypted with a password you choose."
+// ExportBackupNote says "Hosts, credentials, proxies, port forwards, snippets, preferences and trusted host keys, compressed into one file enc…"
 // in the language of msgs.
 func (msgs Messages) ExportBackupNote() string {
 	return Catalog.Format(msgs.locale, "exportBackupNote", nil)
@@ -7996,6 +7996,622 @@ func BackupDamaged() string { return In(i18n.Locale()).BackupDamaged() }
 // in the language of msgs.
 func (msgs Messages) BackupDamaged() string {
 	return Catalog.Format(msgs.locale, "backupDamaged", nil)
+}
+
+// CloudBackupSection says "Cloud Backup"
+// in the language the app shows.
+func CloudBackupSection() string { return In(i18n.Locale()).CloudBackupSection() }
+
+// CloudBackupSection says "Cloud Backup"
+// in the language of msgs.
+func (msgs Messages) CloudBackupSection() string {
+	return Catalog.Format(msgs.locale, "cloudBackupSection", nil)
+}
+
+// CloudBackupNote says "Backups are compressed and encrypted on this device before they leave it: the location only ever stores sealed files."
+// in the language the app shows.
+func CloudBackupNote() string { return In(i18n.Locale()).CloudBackupNote() }
+
+// CloudBackupNote says "Backups are compressed and encrypted on this device before they leave it: the location only ever stores sealed files."
+// in the language of msgs.
+func (msgs Messages) CloudBackupNote() string {
+	return Catalog.Format(msgs.locale, "cloudBackupNote", nil)
+}
+
+// NoBackupTargets says "No backup locations yet"
+// in the language the app shows.
+func NoBackupTargets() string { return In(i18n.Locale()).NoBackupTargets() }
+
+// NoBackupTargets says "No backup locations yet"
+// in the language of msgs.
+func (msgs Messages) NoBackupTargets() string {
+	return Catalog.Format(msgs.locale, "noBackupTargets", nil)
+}
+
+// NoBackupTargetsNote says "Back up to a folder on a WebDAV server, an S3 bucket or a GitHub gist."
+// in the language the app shows.
+func NoBackupTargetsNote() string { return In(i18n.Locale()).NoBackupTargetsNote() }
+
+// NoBackupTargetsNote says "Back up to a folder on a WebDAV server, an S3 bucket or a GitHub gist."
+// in the language of msgs.
+func (msgs Messages) NoBackupTargetsNote() string {
+	return Catalog.Format(msgs.locale, "noBackupTargetsNote", nil)
+}
+
+// AddBackupTarget says "Add Location…"
+// in the language the app shows.
+func AddBackupTarget() string { return In(i18n.Locale()).AddBackupTarget() }
+
+// AddBackupTarget says "Add Location…"
+// in the language of msgs.
+func (msgs Messages) AddBackupTarget() string {
+	return Catalog.Format(msgs.locale, "addBackupTarget", nil)
+}
+
+// NewBackupTarget says "New Backup Location"
+// in the language the app shows.
+func NewBackupTarget() string { return In(i18n.Locale()).NewBackupTarget() }
+
+// NewBackupTarget says "New Backup Location"
+// in the language of msgs.
+func (msgs Messages) NewBackupTarget() string {
+	return Catalog.Format(msgs.locale, "newBackupTarget", nil)
+}
+
+// EditBackupTarget says "Edit Backup Location"
+// in the language the app shows.
+func EditBackupTarget() string { return In(i18n.Locale()).EditBackupTarget() }
+
+// EditBackupTarget says "Edit Backup Location"
+// in the language of msgs.
+func (msgs Messages) EditBackupTarget() string {
+	return Catalog.Format(msgs.locale, "editBackupTarget", nil)
+}
+
+// BackupNow says "Back Up Now"
+// in the language the app shows.
+func BackupNow() string { return In(i18n.Locale()).BackupNow() }
+
+// BackupNow says "Back Up Now"
+// in the language of msgs.
+func (msgs Messages) BackupNow() string {
+	return Catalog.Format(msgs.locale, "backupNow", nil)
+}
+
+// BackupUp says "Back Up"
+// in the language the app shows.
+func BackupUp() string { return In(i18n.Locale()).BackupUp() }
+
+// BackupUp says "Back Up"
+// in the language of msgs.
+func (msgs Messages) BackupUp() string {
+	return Catalog.Format(msgs.locale, "backupUp", nil)
+}
+
+// RestoreFromTarget says "Restore from This Location"
+// in the language the app shows.
+func RestoreFromTarget() string { return In(i18n.Locale()).RestoreFromTarget() }
+
+// RestoreFromTarget says "Restore from This Location"
+// in the language of msgs.
+func (msgs Messages) RestoreFromTarget() string {
+	return Catalog.Format(msgs.locale, "restoreFromTarget", nil)
+}
+
+// DeleteBackupTarget says "Delete Location"
+// in the language the app shows.
+func DeleteBackupTarget() string { return In(i18n.Locale()).DeleteBackupTarget() }
+
+// DeleteBackupTarget says "Delete Location"
+// in the language of msgs.
+func (msgs Messages) DeleteBackupTarget() string {
+	return Catalog.Format(msgs.locale, "deleteBackupTarget", nil)
+}
+
+// TargetNeverBackedUp says "Not backed up yet"
+// in the language the app shows.
+func TargetNeverBackedUp() string { return In(i18n.Locale()).TargetNeverBackedUp() }
+
+// TargetNeverBackedUp says "Not backed up yet"
+// in the language of msgs.
+func (msgs Messages) TargetNeverBackedUp() string {
+	return Catalog.Format(msgs.locale, "targetNeverBackedUp", nil)
+}
+
+// TargetLastBackup says "Last backup {date}"
+// in the language the app shows.
+func TargetLastBackup(date string) string { return In(i18n.Locale()).TargetLastBackup(date) }
+
+// TargetLastBackup says "Last backup {date}"
+// in the language of msgs.
+func (msgs Messages) TargetLastBackup(date string) string {
+	return Catalog.Format(msgs.locale, "targetLastBackup", map[string]any{"date": date})
+}
+
+// TargetBackingUp says "Backing up…"
+// in the language the app shows.
+func TargetBackingUp() string { return In(i18n.Locale()).TargetBackingUp() }
+
+// TargetBackingUp says "Backing up…"
+// in the language of msgs.
+func (msgs Messages) TargetBackingUp() string {
+	return Catalog.Format(msgs.locale, "targetBackingUp", nil)
+}
+
+// TargetBackupFailed says "Last backup failed: {detail}"
+// in the language the app shows.
+func TargetBackupFailed(detail string) string { return In(i18n.Locale()).TargetBackupFailed(detail) }
+
+// TargetBackupFailed says "Last backup failed: {detail}"
+// in the language of msgs.
+func (msgs Messages) TargetBackupFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "targetBackupFailed", map[string]any{"detail": detail})
+}
+
+// TargetAuto says "Automatic: {interval}"
+// in the language the app shows.
+func TargetAuto(interval string) string { return In(i18n.Locale()).TargetAuto(interval) }
+
+// TargetAuto says "Automatic: {interval}"
+// in the language of msgs.
+func (msgs Messages) TargetAuto(interval string) string {
+	return Catalog.Format(msgs.locale, "targetAuto", map[string]any{"interval": interval})
+}
+
+// BackupEvery6Hours says "Every 6 hours"
+// in the language the app shows.
+func BackupEvery6Hours() string { return In(i18n.Locale()).BackupEvery6Hours() }
+
+// BackupEvery6Hours says "Every 6 hours"
+// in the language of msgs.
+func (msgs Messages) BackupEvery6Hours() string {
+	return Catalog.Format(msgs.locale, "backupEvery6Hours", nil)
+}
+
+// BackupEveryDay says "Daily"
+// in the language the app shows.
+func BackupEveryDay() string { return In(i18n.Locale()).BackupEveryDay() }
+
+// BackupEveryDay says "Daily"
+// in the language of msgs.
+func (msgs Messages) BackupEveryDay() string {
+	return Catalog.Format(msgs.locale, "backupEveryDay", nil)
+}
+
+// BackupEveryWeek says "Weekly"
+// in the language the app shows.
+func BackupEveryWeek() string { return In(i18n.Locale()).BackupEveryWeek() }
+
+// BackupEveryWeek says "Weekly"
+// in the language of msgs.
+func (msgs Messages) BackupEveryWeek() string {
+	return Catalog.Format(msgs.locale, "backupEveryWeek", nil)
+}
+
+// BackupUploaded says "Backed up to {name}"
+// in the language the app shows.
+func BackupUploaded(name string) string { return In(i18n.Locale()).BackupUploaded(name) }
+
+// BackupUploaded says "Backed up to {name}"
+// in the language of msgs.
+func (msgs Messages) BackupUploaded(name string) string {
+	return Catalog.Format(msgs.locale, "backupUploaded", map[string]any{"name": name})
+}
+
+// BackupUploadFailed says "Couldn’t back up to {name}: {detail}"
+// in the language the app shows.
+func BackupUploadFailed(name string, detail string) string {
+	return In(i18n.Locale()).BackupUploadFailed(name, detail)
+}
+
+// BackupUploadFailed says "Couldn’t back up to {name}: {detail}"
+// in the language of msgs.
+func (msgs Messages) BackupUploadFailed(name string, detail string) string {
+	return Catalog.Format(msgs.locale, "backupUploadFailed", map[string]any{"name": name, "detail": detail})
+}
+
+// FieldServerURL says "Server URL"
+// in the language the app shows.
+func FieldServerURL() string { return In(i18n.Locale()).FieldServerURL() }
+
+// FieldServerURL says "Server URL"
+// in the language of msgs.
+func (msgs Messages) FieldServerURL() string {
+	return Catalog.Format(msgs.locale, "fieldServerURL", nil)
+}
+
+// WebdavFolder says "Folder"
+// in the language the app shows.
+func WebdavFolder() string { return In(i18n.Locale()).WebdavFolder() }
+
+// WebdavFolder says "Folder"
+// in the language of msgs.
+func (msgs Messages) WebdavFolder() string {
+	return Catalog.Format(msgs.locale, "webdavFolder", nil)
+}
+
+// S3Endpoint says "Endpoint"
+// in the language the app shows.
+func S3Endpoint() string { return In(i18n.Locale()).S3Endpoint() }
+
+// S3Endpoint says "Endpoint"
+// in the language of msgs.
+func (msgs Messages) S3Endpoint() string {
+	return Catalog.Format(msgs.locale, "s3Endpoint", nil)
+}
+
+// S3EndpointPlaceholder says "Empty for Amazon S3"
+// in the language the app shows.
+func S3EndpointPlaceholder() string { return In(i18n.Locale()).S3EndpointPlaceholder() }
+
+// S3EndpointPlaceholder says "Empty for Amazon S3"
+// in the language of msgs.
+func (msgs Messages) S3EndpointPlaceholder() string {
+	return Catalog.Format(msgs.locale, "s3EndpointPlaceholder", nil)
+}
+
+// S3Region says "Region"
+// in the language the app shows.
+func S3Region() string { return In(i18n.Locale()).S3Region() }
+
+// S3Region says "Region"
+// in the language of msgs.
+func (msgs Messages) S3Region() string {
+	return Catalog.Format(msgs.locale, "s3Region", nil)
+}
+
+// S3Bucket says "Bucket"
+// in the language the app shows.
+func S3Bucket() string { return In(i18n.Locale()).S3Bucket() }
+
+// S3Bucket says "Bucket"
+// in the language of msgs.
+func (msgs Messages) S3Bucket() string {
+	return Catalog.Format(msgs.locale, "s3Bucket", nil)
+}
+
+// S3AccessKey says "Access key ID"
+// in the language the app shows.
+func S3AccessKey() string { return In(i18n.Locale()).S3AccessKey() }
+
+// S3AccessKey says "Access key ID"
+// in the language of msgs.
+func (msgs Messages) S3AccessKey() string {
+	return Catalog.Format(msgs.locale, "s3AccessKey", nil)
+}
+
+// S3SecretKey says "Secret access key"
+// in the language the app shows.
+func S3SecretKey() string { return In(i18n.Locale()).S3SecretKey() }
+
+// S3SecretKey says "Secret access key"
+// in the language of msgs.
+func (msgs Messages) S3SecretKey() string {
+	return Catalog.Format(msgs.locale, "s3SecretKey", nil)
+}
+
+// S3Prefix says "Key prefix"
+// in the language the app shows.
+func S3Prefix() string { return In(i18n.Locale()).S3Prefix() }
+
+// S3Prefix says "Key prefix"
+// in the language of msgs.
+func (msgs Messages) S3Prefix() string {
+	return Catalog.Format(msgs.locale, "s3Prefix", nil)
+}
+
+// S3PathStyle says "Path-style access"
+// in the language the app shows.
+func S3PathStyle() string { return In(i18n.Locale()).S3PathStyle() }
+
+// S3PathStyle says "Path-style access"
+// in the language of msgs.
+func (msgs Messages) S3PathStyle() string {
+	return Catalog.Format(msgs.locale, "s3PathStyle", nil)
+}
+
+// S3PathStyleNote says "For MinIO and other services that don’t take the bucket in the host name."
+// in the language the app shows.
+func S3PathStyleNote() string { return In(i18n.Locale()).S3PathStyleNote() }
+
+// S3PathStyleNote says "For MinIO and other services that don’t take the bucket in the host name."
+// in the language of msgs.
+func (msgs Messages) S3PathStyleNote() string {
+	return Catalog.Format(msgs.locale, "s3PathStyleNote", nil)
+}
+
+// GistToken says "Personal access token"
+// in the language the app shows.
+func GistToken() string { return In(i18n.Locale()).GistToken() }
+
+// GistToken says "Personal access token"
+// in the language of msgs.
+func (msgs Messages) GistToken() string {
+	return Catalog.Format(msgs.locale, "gistToken", nil)
+}
+
+// GistTokenNote says "A fine-grained token with read and write access to Gists, or a classic token with the gist scope."
+// in the language the app shows.
+func GistTokenNote() string { return In(i18n.Locale()).GistTokenNote() }
+
+// GistTokenNote says "A fine-grained token with read and write access to Gists, or a classic token with the gist scope."
+// in the language of msgs.
+func (msgs Messages) GistTokenNote() string {
+	return Catalog.Format(msgs.locale, "gistTokenNote", nil)
+}
+
+// GistID says "Gist ID"
+// in the language the app shows.
+func GistID() string { return In(i18n.Locale()).GistID() }
+
+// GistID says "Gist ID"
+// in the language of msgs.
+func (msgs Messages) GistID() string {
+	return Catalog.Format(msgs.locale, "gistID", nil)
+}
+
+// GistIDPlaceholder says "Empty to find or create one"
+// in the language the app shows.
+func GistIDPlaceholder() string { return In(i18n.Locale()).GistIDPlaceholder() }
+
+// GistIDPlaceholder says "Empty to find or create one"
+// in the language of msgs.
+func (msgs Messages) GistIDPlaceholder() string {
+	return Catalog.Format(msgs.locale, "gistIDPlaceholder", nil)
+}
+
+// GistNotice says "The gist is secret, not private: anyone with its link can download the encrypted backups, and its history keeps delet…"
+// in the language the app shows.
+func GistNotice() string { return In(i18n.Locale()).GistNotice() }
+
+// GistNotice says "The gist is secret, not private: anyone with its link can download the encrypted backups, and its history keeps delet…"
+// in the language of msgs.
+func (msgs Messages) GistNotice() string {
+	return Catalog.Format(msgs.locale, "gistNotice", nil)
+}
+
+// BackupKeep says "Backups to keep"
+// in the language the app shows.
+func BackupKeep() string { return In(i18n.Locale()).BackupKeep() }
+
+// BackupKeep says "Backups to keep"
+// in the language of msgs.
+func (msgs Messages) BackupKeep() string {
+	return Catalog.Format(msgs.locale, "backupKeep", nil)
+}
+
+// BackupKeepNote says "After each backup, older backups made by this device are deleted. 0 keeps them all."
+// in the language the app shows.
+func BackupKeepNote() string { return In(i18n.Locale()).BackupKeepNote() }
+
+// BackupKeepNote says "After each backup, older backups made by this device are deleted. 0 keeps them all."
+// in the language of msgs.
+func (msgs Messages) BackupKeepNote() string {
+	return Catalog.Format(msgs.locale, "backupKeepNote", nil)
+}
+
+// AutoBackup says "Automatic backup"
+// in the language the app shows.
+func AutoBackup() string { return In(i18n.Locale()).AutoBackup() }
+
+// AutoBackup says "Automatic backup"
+// in the language of msgs.
+func (msgs Messages) AutoBackup() string {
+	return Catalog.Format(msgs.locale, "autoBackup", nil)
+}
+
+// AutoBackupNote says "The key derived from this password is kept in the encrypted local credential store, so automatic backups run without …"
+// in the language the app shows.
+func AutoBackupNote() string { return In(i18n.Locale()).AutoBackupNote() }
+
+// AutoBackupNote says "The key derived from this password is kept in the encrypted local credential store, so automatic backups run without …"
+// in the language of msgs.
+func (msgs Messages) AutoBackupNote() string {
+	return Catalog.Format(msgs.locale, "autoBackupNote", nil)
+}
+
+// AutoBackupInterval says "Frequency"
+// in the language the app shows.
+func AutoBackupInterval() string { return In(i18n.Locale()).AutoBackupInterval() }
+
+// AutoBackupInterval says "Frequency"
+// in the language of msgs.
+func (msgs Messages) AutoBackupInterval() string {
+	return Catalog.Format(msgs.locale, "autoBackupInterval", nil)
+}
+
+// AutoBackupSecretsNote says "Include passwords, private keys and API keys in automatic backups."
+// in the language the app shows.
+func AutoBackupSecretsNote() string { return In(i18n.Locale()).AutoBackupSecretsNote() }
+
+// AutoBackupSecretsNote says "Include passwords, private keys and API keys in automatic backups."
+// in the language of msgs.
+func (msgs Messages) AutoBackupSecretsNote() string {
+	return Catalog.Format(msgs.locale, "autoBackupSecretsNote", nil)
+}
+
+// AutoBackupNowNote says "With automatic backup on, Back Up Now uses its saved key."
+// in the language the app shows.
+func AutoBackupNowNote() string { return In(i18n.Locale()).AutoBackupNowNote() }
+
+// AutoBackupNowNote says "With automatic backup on, Back Up Now uses its saved key."
+// in the language of msgs.
+func (msgs Messages) AutoBackupNowNote() string {
+	return Catalog.Format(msgs.locale, "autoBackupNowNote", nil)
+}
+
+// TestConnection says "Test Connection"
+// in the language the app shows.
+func TestConnection() string { return In(i18n.Locale()).TestConnection() }
+
+// TestConnection says "Test Connection"
+// in the language of msgs.
+func (msgs Messages) TestConnection() string {
+	return Catalog.Format(msgs.locale, "testConnection", nil)
+}
+
+// TestingConnection says "Testing…"
+// in the language the app shows.
+func TestingConnection() string { return In(i18n.Locale()).TestingConnection() }
+
+// TestingConnection says "Testing…"
+// in the language of msgs.
+func (msgs Messages) TestingConnection() string {
+	return Catalog.Format(msgs.locale, "testingConnection", nil)
+}
+
+// ConnectionOK says "Connected."
+// in the language the app shows.
+func ConnectionOK() string { return In(i18n.Locale()).ConnectionOK() }
+
+// ConnectionOK says "Connected."
+// in the language of msgs.
+func (msgs Messages) ConnectionOK() string {
+	return Catalog.Format(msgs.locale, "connectionOK", nil)
+}
+
+// ConnectionGistFound says "Connected. An existing backup gist was found."
+// in the language the app shows.
+func ConnectionGistFound() string { return In(i18n.Locale()).ConnectionGistFound() }
+
+// ConnectionGistFound says "Connected. An existing backup gist was found."
+// in the language of msgs.
+func (msgs Messages) ConnectionGistFound() string {
+	return Catalog.Format(msgs.locale, "connectionGistFound", nil)
+}
+
+// ErrTargetURL says "Enter an http or https URL with a host, without a user name or password in it."
+// in the language the app shows.
+func ErrTargetURL() string { return In(i18n.Locale()).ErrTargetURL() }
+
+// ErrTargetURL says "Enter an http or https URL with a host, without a user name or password in it."
+// in the language of msgs.
+func (msgs Messages) ErrTargetURL() string {
+	return Catalog.Format(msgs.locale, "errTargetURL", nil)
+}
+
+// WarnPlainHTTP says "Plain HTTP sends the password unencrypted. Use it only on a network you trust."
+// in the language the app shows.
+func WarnPlainHTTP() string { return In(i18n.Locale()).WarnPlainHTTP() }
+
+// WarnPlainHTTP says "Plain HTTP sends the password unencrypted. Use it only on a network you trust."
+// in the language of msgs.
+func (msgs Messages) WarnPlainHTTP() string {
+	return Catalog.Format(msgs.locale, "warnPlainHTTP", nil)
+}
+
+// ErrCloudAuth says "The credentials were refused, or don’t allow this."
+// in the language the app shows.
+func ErrCloudAuth() string { return In(i18n.Locale()).ErrCloudAuth() }
+
+// ErrCloudAuth says "The credentials were refused, or don’t allow this."
+// in the language of msgs.
+func (msgs Messages) ErrCloudAuth() string {
+	return Catalog.Format(msgs.locale, "errCloudAuth", nil)
+}
+
+// ErrCloudNotFound says "Not found. Check the address, bucket or gist."
+// in the language the app shows.
+func ErrCloudNotFound() string { return In(i18n.Locale()).ErrCloudNotFound() }
+
+// ErrCloudNotFound says "Not found. Check the address, bucket or gist."
+// in the language of msgs.
+func (msgs Messages) ErrCloudNotFound() string {
+	return Catalog.Format(msgs.locale, "errCloudNotFound", nil)
+}
+
+// ErrCloudTooLarge says "The file is too large."
+// in the language the app shows.
+func ErrCloudTooLarge() string { return In(i18n.Locale()).ErrCloudTooLarge() }
+
+// ErrCloudTooLarge says "The file is too large."
+// in the language of msgs.
+func (msgs Messages) ErrCloudTooLarge() string {
+	return Catalog.Format(msgs.locale, "errCloudTooLarge", nil)
+}
+
+// ErrBackupKeyMissing says "The key for automatic backups is missing. Set its password again."
+// in the language the app shows.
+func ErrBackupKeyMissing() string { return In(i18n.Locale()).ErrBackupKeyMissing() }
+
+// ErrBackupKeyMissing says "The key for automatic backups is missing. Set its password again."
+// in the language of msgs.
+func (msgs Messages) ErrBackupKeyMissing() string {
+	return Catalog.Format(msgs.locale, "errBackupKeyMissing", nil)
+}
+
+// ErrBackupProxyMissing says "The proxy this location goes through was deleted. Choose another in its settings."
+// in the language the app shows.
+func ErrBackupProxyMissing() string { return In(i18n.Locale()).ErrBackupProxyMissing() }
+
+// ErrBackupProxyMissing says "The proxy this location goes through was deleted. Choose another in its settings."
+// in the language of msgs.
+func (msgs Messages) ErrBackupProxyMissing() string {
+	return Catalog.Format(msgs.locale, "errBackupProxyMissing", nil)
+}
+
+// RemoteBackupsLoading says "Loading backups…"
+// in the language the app shows.
+func RemoteBackupsLoading() string { return In(i18n.Locale()).RemoteBackupsLoading() }
+
+// RemoteBackupsLoading says "Loading backups…"
+// in the language of msgs.
+func (msgs Messages) RemoteBackupsLoading() string {
+	return Catalog.Format(msgs.locale, "remoteBackupsLoading", nil)
+}
+
+// RemoteBackupsEmpty says "No backups here yet."
+// in the language the app shows.
+func RemoteBackupsEmpty() string { return In(i18n.Locale()).RemoteBackupsEmpty() }
+
+// RemoteBackupsEmpty says "No backups here yet."
+// in the language of msgs.
+func (msgs Messages) RemoteBackupsEmpty() string {
+	return Catalog.Format(msgs.locale, "remoteBackupsEmpty", nil)
+}
+
+// RemoteBackupThisDevice says "{date} · this device"
+// in the language the app shows.
+func RemoteBackupThisDevice(date string) string {
+	return In(i18n.Locale()).RemoteBackupThisDevice(date)
+}
+
+// RemoteBackupThisDevice says "{date} · this device"
+// in the language of msgs.
+func (msgs Messages) RemoteBackupThisDevice(date string) string {
+	return Catalog.Format(msgs.locale, "remoteBackupThisDevice", map[string]any{"date": date})
+}
+
+// RemoteBackupOtherDevice says "{date} · device {device}"
+// in the language the app shows.
+func RemoteBackupOtherDevice(date string, device string) string {
+	return In(i18n.Locale()).RemoteBackupOtherDevice(date, device)
+}
+
+// RemoteBackupOtherDevice says "{date} · device {device}"
+// in the language of msgs.
+func (msgs Messages) RemoteBackupOtherDevice(date string, device string) string {
+	return Catalog.Format(msgs.locale, "remoteBackupOtherDevice", map[string]any{"date": date, "device": device})
+}
+
+// RestoreThisBackup says "Restore This Backup"
+// in the language the app shows.
+func RestoreThisBackup() string { return In(i18n.Locale()).RestoreThisBackup() }
+
+// RestoreThisBackup says "Restore This Backup"
+// in the language of msgs.
+func (msgs Messages) RestoreThisBackup() string {
+	return Catalog.Format(msgs.locale, "restoreThisBackup", nil)
+}
+
+// RemoteBackupDownloading says "Downloading…"
+// in the language the app shows.
+func RemoteBackupDownloading() string { return In(i18n.Locale()).RemoteBackupDownloading() }
+
+// RemoteBackupDownloading says "Downloading…"
+// in the language of msgs.
+func (msgs Messages) RemoteBackupDownloading() string {
+	return Catalog.Format(msgs.locale, "remoteBackupDownloading", nil)
 }
 
 // SecuritySftpOperationsBusy says "Too many SFTP operations are pending; try again later"

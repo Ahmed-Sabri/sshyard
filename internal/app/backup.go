@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/Licoy/sshyard/internal/assets"
+	"github.com/Licoy/sshyard/internal/backup"
+	"github.com/Licoy/sshyard/internal/backup/gist"
 	"github.com/Licoy/sshyard/internal/icons"
 	"github.com/Licoy/sshyard/internal/keychain"
 	"github.com/Licoy/sshyard/internal/settings"
@@ -22,10 +24,12 @@ import (
 
 // A backup is everything SSHYard keeps (the hosts and what they use, the
 // preferences, the trusted host keys and, unless left out, their secrets
-// from the encrypted local store) in one file sealed with a password (package vault),
-// to keep or to move to another device. Restoring merges it in.
+// from the encrypted local store) in one compressed archive (package
+// backup) sealed with a password (package vault), to keep, here or in the
+// cloud, or to move to another device. Restoring merges it in.
 
-// backupPayload is what a backup file holds once opened.
+// backupPayload is what a backup file holds once opened. A backup from
+// before archives is this, as JSON.
 type backupPayload struct {
 	Assets     assets.Snapshot   `json:"assets"`
 	Settings   settings.Settings `json:"settings"`
@@ -34,14 +38,72 @@ type backupPayload struct {
 	Secrets map[string][]byte `json:"secrets,omitempty"`
 }
 
+// The files of a backup's archive.
+const (
+	backupAssets   = "assets.json"
+	backupSettings = "settings.json"
+	backupKnown    = "known_hosts"
+	backupSecrets  = "secrets.json"
+)
+
+// packBackup is the archive of p, made on this device.
+func (a *App) packBackup(p backupPayload) ([]byte, error) {
+	files := map[string][]byte{}
+	var err error
+	if files[backupAssets], err = json.Marshal(p.Assets); err != nil {
+		return nil, err
+	}
+	if files[backupSettings], err = json.Marshal(p.Settings); err != nil {
+		return nil, err
+	}
+	if p.KnownHosts != "" {
+		files[backupKnown] = []byte(p.KnownHosts)
+	}
+	if p.Secrets != nil {
+		if files[backupSecrets], err = json.Marshal(p.Secrets); err != nil {
+			return nil, err
+		}
+	}
+	m := backup.Manifest{App: a.p.Version, Created: time.Now().UTC().Truncate(time.Second), Device: a.deviceID(), Secrets: p.Secrets != nil}
+	return backup.Pack(m, files)
+}
+
+// unpackBackup is what an opened backup holds: its archive, or the JSON of
+// a backup from before archives.
+func unpackBackup(plain []byte) (backupPayload, error) {
+	p := backupPayload{Settings: settings.Default()}
+	if !backup.IsArchive(plain) {
+		if json.Unmarshal(plain, &p) != nil {
+			return p, vault.ErrCorrupt
+		}
+		return p, nil
+	}
+	_, files, err := backup.Unpack(plain)
+	if err != nil {
+		return p, err
+	}
+	b, ok := files[backupAssets]
+	if !ok || json.Unmarshal(b, &p.Assets) != nil {
+		return p, vault.ErrCorrupt
+	}
+	if b, ok := files[backupSettings]; ok && json.Unmarshal(b, &p.Settings) != nil {
+		return p, vault.ErrCorrupt
+	}
+	p.KnownHosts = string(files[backupKnown])
+	if b, ok := files[backupSecrets]; ok && json.Unmarshal(b, &p.Secrets) != nil {
+		return p, vault.ErrCorrupt
+	}
+	return p, nil
+}
+
 // backupExt is the extension of a backup file.
-const backupExt = ".sshyard-backup"
+const backupExt = backup.Ext
 
 // minBackupPassword is the shortest backup password taken, in characters.
 const minBackupPassword = 8
 
 // maxBackupFile bounds what a restore reads.
-const maxBackupFile = 64 << 20
+const maxBackupFile = backup.MaxSize
 
 // backupForm is the backup sheet: exporting, with a new password typed
 // twice, or restoring the file data with its password. The password lives
@@ -55,6 +117,8 @@ type backupForm struct {
 	name    string
 	data    []byte
 	created time.Time
+	// target is the ID of the place an export goes to instead of a file
+	target string
 	// busy is set while the password is derived and the file sealed or
 	// opened, off the UI thread
 	busy bool
@@ -98,6 +162,7 @@ func backupSecretKeys(snap assets.Snapshot, provs []settings.AIProvider) []strin
 // backup missing secrets it seems to have is worse than none.
 func (a *App) collectBackup(secrets bool) (backupPayload, error) {
 	p := backupPayload{Assets: a.store.Snapshot(), Settings: a.settings}
+	p.Settings.BackupTargets = nil
 	if b, err := a.known.Contents(); err == nil {
 		p.KnownHosts = string(b)
 	}
@@ -228,14 +293,17 @@ func backupIDs(snap assets.Snapshot, provs []settings.AIProvider) []string {
 
 // mergeSettings are the preferences of a backup, in, over those of this
 // device, cur: what belongs to this device stays (the window's layout and
-// materials, the fonts installed here, the MCP endpoint), AI providers
-// are merged by ID and the hosts that confirmed AI use are joined.
+// materials, the fonts installed here, the MCP endpoint, the places it
+// backs up to), AI providers are merged by ID and the hosts that confirmed
+// AI use are joined.
 func mergeSettings(cur, in settings.Settings) settings.Settings {
 	out := in
 	out.SidebarWidth, out.ChromeMaterial, out.ContentMaterial = cur.SidebarWidth, cur.ChromeMaterial, cur.ContentMaterial
 	out.UIFont, out.TerminalFont = cur.UIFont, cur.TerminalFont
 	// A backup never turns the MCP endpoint on: that is asked here.
 	out.MCPEnabled, out.MCPPort = cur.MCPEnabled, cur.MCPPort
+	// Nor does it choose where this device backs up to.
+	out.BackupTargets = slices.Clone(cur.BackupTargets)
 	out.AIProviders = slices.Clone(cur.AIProviders)
 	for _, p := range in.AIProviders {
 		if i := slices.IndexFunc(out.AIProviders, func(o settings.AIProvider) bool { return o.ID == p.ID }); i >= 0 {
@@ -253,17 +321,28 @@ func mergeSettings(cur, in settings.Settings) settings.Settings {
 	return out
 }
 
-// backupErrText says why a backup could not be opened or restored.
+// backupErrText says why a backup could not be made, put in a place,
+// fetched from one, opened or restored.
 func backupErrText(m locales.Messages, err error) string {
 	switch {
 	case errors.Is(err, vault.ErrFormat):
 		return m.BackupNotBackup()
-	case errors.Is(err, vault.ErrVersion):
+	case errors.Is(err, vault.ErrVersion), errors.Is(err, backup.ErrVersion):
 		return m.BackupNewer()
 	case errors.Is(err, vault.ErrPassword):
 		return m.BackupWrongPassword()
-	case errors.Is(err, vault.ErrCorrupt), errors.Is(err, errBadBackup):
+	case errors.Is(err, vault.ErrCorrupt), errors.Is(err, errBadBackup), errors.Is(err, backup.ErrArchive):
 		return m.BackupDamaged()
+	case errors.Is(err, backup.ErrTooLarge):
+		return m.ErrCloudTooLarge()
+	case errors.Is(err, backup.ErrAuth), errors.Is(err, gist.ErrToken):
+		return m.ErrCloudAuth()
+	case errors.Is(err, backup.ErrNotFound):
+		return m.ErrCloudNotFound()
+	case errors.Is(err, errBackupKey):
+		return m.ErrBackupKeyMissing()
+	case errors.Is(err, errBackupProxy):
+		return m.ErrBackupProxyMissing()
 	}
 	return m.ErrGeneric(secretStoreErrorText(m, err))
 }
@@ -282,10 +361,11 @@ func (a *App) closeBackup() {
 }
 
 // ExportBackup checks the sheet's password and gathers the backup, then,
-// off the UI thread, asks where to save it and seals it there.
+// off the UI thread, asks where to save it and seals it there, or seals it
+// and puts it in the sheet's place.
 func (a *App) ExportBackup(m locales.Messages) bool {
 	f := a.backup
-	if f == nil || f.restore || f.busy || a.p.SaveFile == nil {
+	if f == nil || f.restore || f.busy || (f.target == "" && a.p.SaveFile == nil) {
 		return false
 	}
 	f.err = ""
@@ -297,7 +377,8 @@ func (a *App) ExportBackup(m locales.Messages) bool {
 		f.err = m.BackupPasswordMismatch()
 		return false
 	}
-	if f.secrets && !a.unlocked() {
+	// A place's secret is in the store too.
+	if (f.secrets || f.target != "") && !a.unlocked() {
 		draft := a.backup
 		a.withSecrets(func() {
 			if a.backup == draft {
@@ -309,11 +390,14 @@ func (a *App) ExportBackup(m locales.Messages) bool {
 	p, err := a.collectBackup(f.secrets)
 	var data []byte
 	if err == nil {
-		data, err = json.Marshal(p)
+		data, err = a.packBackup(p)
 	}
 	if err != nil {
 		f.err = m.BackupExportFailed(secretStoreErrorText(m, err))
 		return false
+	}
+	if f.target != "" {
+		return a.exportTo(m, f, data, []byte(f.password))
 	}
 	pw, cost, title := []byte(f.password), a.kdf, m.ExportBackup()
 	def := filepath.Join(a.homeDir(), "SSHYard-"+time.Now().Format("2006-01-02")+backupExt)
@@ -415,8 +499,8 @@ func (a *App) RestoreBackup(m locales.Messages) bool {
 	go func() {
 		p := backupPayload{Settings: settings.Default()}
 		plain, err := vault.Open(data, pw)
-		if err == nil && json.Unmarshal(plain, &p) != nil {
-			err = vault.ErrCorrupt
+		if err == nil {
+			p, err = unpackBackup(plain)
 		}
 		a.post(func() { a.restoreDone(m, f, p, err) })
 	}()
@@ -480,6 +564,7 @@ func (a *App) backupSection(c *ui.Context, m locales.Messages, tok theme.Tokens)
 			}
 		})
 	})
+	a.cloudSection(c, m, tok)
 }
 
 // backupView is the export or restore sheet.
@@ -491,12 +576,16 @@ func (a *App) backupView(c *ui.Context, m locales.Messages) {
 	tok := currentTokens(c)
 	sheet(ui.Modal(c, &a.backingUp, func() {
 		ui.Column(c).Gap(18).Width(460).Children(func() {
-			title, sub := m.ExportBackup(), ""
-			if f.restore {
+			title, sub, ic := m.ExportBackup(), "", icons.Backup
+			t, toTarget := a.settings.BackupTarget(f.target)
+			switch {
+			case f.restore:
 				title, sub = m.RestoreBackup(), f.name
+			case toTarget:
+				title, sub, ic = m.BackupNow(), t.Name, icons.CloudUpload
 			}
 			ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
-				tile(c, icons.Backup, tok.TintAt(6), 36)
+				tile(c, ic, tok.TintAt(6), 36)
 				ui.Column(c).Gap(1).Shrink(1).Children(func() {
 					sheetTitle(c, title)
 					if sub != "" {
@@ -551,8 +640,14 @@ func (a *App) backupView(c *ui.Context, m locales.Messages) {
 					if pill(c, m.Restore(), true, false, false) {
 						a.RestoreBackup(m)
 					}
+				case f.busy && toTarget:
+					pill(c, m.TargetBackingUp(), true, false, true)
 				case f.busy:
 					pill(c, m.BackupExporting(), true, false, true)
+				case toTarget:
+					if pill(c, m.BackupUp(), true, false, false) {
+						a.ExportBackup(m)
+					}
 				default:
 					if pill(c, m.ExportEllipsis(), true, false, false) {
 						a.ExportBackup(m)

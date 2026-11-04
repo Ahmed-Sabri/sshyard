@@ -387,6 +387,19 @@ type App struct {
 	backingUp  bool
 	backupHold focusHold
 	kdf        vault.Params
+	// cloud is what this device knows of the places it backs up to, read
+	// once; cloudCtx ends their requests when the app closes. target is
+	// the backup location sheet open, remotes the sheet of a place's
+	// backups. gistAPI replaces GitHub's API, for tests.
+	cloud         *cloudState
+	cloudCtx      context.Context
+	cloudStop     context.CancelFunc
+	target        *targetForm
+	targetEditing bool
+	targetHold    focusHold
+	remotes       *remoteList
+	listingRemote bool
+	gistAPI       string
 }
 
 // New opens the app's data.
@@ -395,6 +408,7 @@ func New(p Platform) (*App, error) {
 	a.logo = appicon.Bitmap()
 	a.settings = settings.Default()
 	a.kdf = vault.DefaultParams
+	a.cloudCtx, a.cloudStop = context.WithCancel(context.Background())
 	a.kc = keychain.New(lockedSecrets{})
 	a.upd = p.Updates
 	if a.upd == nil {
@@ -614,6 +628,7 @@ func (a *App) Close() {
 	defer a.unlock.mu.Unlock()
 	a.unlock.closed = true
 	a.unlock.after = nil
+	a.cloudStop()
 	a.stopCollectors()
 	a.stopMCP()
 	a.waitMCP()

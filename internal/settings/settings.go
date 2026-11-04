@@ -108,6 +108,107 @@ type Settings struct {
 	MCPEnabled bool `json:"mcpEnabled,omitempty"`
 	// MCPPort is the endpoint's port, 1024 to 65535.
 	MCPPort int `json:"mcpPort,omitempty"`
+	// BackupTargets are the places this device backs up to. They belong
+	// to this device: a backup neither holds nor replaces them.
+	BackupTargets []BackupTarget `json:"backupTargets,omitempty"`
+}
+
+// The kinds of BackupTarget.
+const (
+	BackupWebDAV = "webdav"
+	BackupS3     = "s3"
+	BackupGist   = "gist"
+)
+
+// BackupAutoHours are the times between automatic backups a target may
+// have, in hours.
+var BackupAutoHours = []int{6, 24, 168}
+
+// BackupKeepDefault is how many of this device's backups a new target
+// keeps; BackupKeepMax bounds it.
+const (
+	BackupKeepDefault = 20
+	BackupKeepMax     = 1000
+)
+
+// BackupTarget is a place backups go: a folder on a WebDAV server, an S3
+// bucket or a GitHub gist. Its password, secret key or token is in the
+// keychain (keychain.BackupSecret), and while AutoHours is set so is the
+// key automatic backups seal with (keychain.BackupKey).
+type BackupTarget struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Kind string `json:"kind"`
+	// URL is the WebDAV server, or the S3 endpoint ("" for AWS).
+	URL string `json:"url,omitempty"`
+	// User is the WebDAV user, or the S3 access key ID.
+	User   string `json:"user,omitempty"`
+	Bucket string `json:"bucket,omitempty"`
+	Region string `json:"region,omitempty"`
+	// Dir is the folder on the WebDAV server, or the key prefix in the
+	// bucket.
+	Dir string `json:"dir,omitempty"`
+	// PathStyle names the bucket in the path rather than the host name.
+	PathStyle bool `json:"pathStyle,omitempty"`
+	// GistID is the gist the backups are in, "" until one is found or made.
+	GistID string `json:"gistId,omitempty"`
+	// ProxyID is the proxy the place is reached through, "" for none.
+	ProxyID string `json:"proxyId,omitempty"`
+	// Keep is how many of this device's backups stay; older ones are
+	// deleted after a backup. 0 keeps them all.
+	Keep int `json:"keep"`
+	// AutoHours is the time between automatic backups, one of
+	// BackupAutoHours; 0 is off. AutoSecrets puts the secrets in them.
+	AutoHours   int  `json:"autoHours,omitempty"`
+	AutoSecrets bool `json:"autoSecrets,omitempty"`
+}
+
+// backupKindOK reports whether k is a kind of BackupTarget.
+func backupKindOK(k string) bool { return k == BackupWebDAV || k == BackupS3 || k == BackupGist }
+
+// backupIDOK reports whether id can name a target, and its keychain entries.
+func backupIDOK(id string) bool {
+	if id == "" || len(id) > 64 {
+		return false
+	}
+	for _, r := range id {
+		if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '-' || r == '_') {
+			return false
+		}
+	}
+	return true
+}
+
+// normalizeBackups drops targets of no kind or ID, or an ID twice, and
+// bounds the rest.
+func (s *Settings) normalizeBackups() {
+	var out []BackupTarget
+	seen := map[string]bool{}
+	for _, t := range s.BackupTargets {
+		t.ID, t.Name, t.Kind = strings.TrimSpace(t.ID), strings.TrimSpace(t.Name), strings.TrimSpace(t.Kind)
+		if !backupIDOK(t.ID) || seen[t.ID] || !backupKindOK(t.Kind) {
+			continue
+		}
+		seen[t.ID] = true
+		t.URL, t.User, t.Bucket, t.Region = strings.TrimSpace(t.URL), strings.TrimSpace(t.User), strings.TrimSpace(t.Bucket), strings.TrimSpace(t.Region)
+		t.Dir, t.GistID, t.ProxyID = strings.TrimSpace(t.Dir), strings.TrimSpace(t.GistID), strings.TrimSpace(t.ProxyID)
+		t.Keep = min(max(t.Keep, 0), BackupKeepMax)
+		if !slices.Contains(BackupAutoHours, t.AutoHours) {
+			t.AutoHours, t.AutoSecrets = 0, false
+		}
+		out = append(out, t)
+	}
+	s.BackupTargets = out
+}
+
+// BackupTarget is the target of id, and whether there is one.
+func (s Settings) BackupTarget(id string) (BackupTarget, bool) {
+	for _, t := range s.BackupTargets {
+		if t.ID == id {
+			return t, true
+		}
+	}
+	return BackupTarget{}, false
 }
 
 // ACPConfig describes the one external ACP backend
@@ -304,6 +405,7 @@ func (s *Settings) Normalize() {
 		s.MetricsMount = ""
 	}
 	s.normalizeAI(d)
+	s.normalizeBackups()
 }
 
 // aiModes are the permission modes a settings file may name.

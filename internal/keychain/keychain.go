@@ -20,8 +20,9 @@ const (
 var Kinds = []Kind{Password, PrivateKey, Passphrase}
 
 // The keys of the entries SSHYard keeps; there are no others:
-// cred/<id>/<kind>, proxy/<id>/password, forward/<id>/password,
-// snippet/<id>/content, ai/<profileID>/apikey, ai/<agentID>/env/<NAME> and mcp/token.
+// host/<id>/<kind>, cred/<id>/<kind>, proxy/<id>/password, forward/<id>/password,
+// snippet/<id>/content, ai/<profileID>/apikey, ai/<agentID>/env/<NAME>,
+// backup/<id>/secret, backup/<id>/key and mcp/token.
 
 // Cred is the entry of a credential's secret: cred/<id>/<kind>.
 // Host is a host-owned secret entry.
@@ -38,6 +39,14 @@ func ForwardPassword(id string) string { return "forward/" + id + "/password" }
 
 // SnippetContent is the encrypted body of a saved command: snippet/<id>/content.
 func SnippetContent(id string) string { return "snippet/" + id + "/content" }
+
+// BackupSecret is the password, secret key or token a backup target is
+// reached with: backup/<id>/secret.
+func BackupSecret(id string) string { return "backup/" + id + "/secret" }
+
+// BackupKey is the key a backup target's automatic backups are sealed
+// with, derived from their password: backup/<id>/key.
+func BackupKey(id string) string { return "backup/" + id + "/key" }
 
 // MCPToken is the bearer token of the MCP endpoint.
 const MCPToken = "mcp/token"

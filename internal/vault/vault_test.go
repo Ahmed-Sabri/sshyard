@@ -127,3 +127,51 @@ func TestBoundedParams(t *testing.T) {
 		t.Fatal("sealed with no password")
 	}
 }
+
+// TestKeySeal: a derived key seals without the password, files the
+// password opens, each with a fresh vault key.
+func TestKeySeal(t *testing.T) {
+	k, err := Derive([]byte("correct horse"), cheap)
+	if err != nil || !k.Valid() {
+		t.Fatalf("derive: %v", err)
+	}
+	a, err := k.Seal([]byte("one"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _ := k.Seal([]byte("one"))
+	if bytes.Equal(a, b) {
+		t.Fatal("two seals are the same")
+	}
+	for _, f := range [][]byte{a, b} {
+		if got, err := Open(f, []byte("correct horse")); err != nil || string(got) != "one" {
+			t.Fatalf("open: %q, %v", got, err)
+		}
+		if _, err := Open(f, []byte("wrong")); !errors.Is(err, ErrPassword) {
+			t.Fatalf("wrong password: %v", err)
+		}
+	}
+	// A key kept as JSON, in the local encrypted store, seals the same.
+	kb, _ := json.Marshal(k)
+	var back Key
+	if json.Unmarshal(kb, &back) != nil || !back.Valid() {
+		t.Fatal("key does not survive JSON")
+	}
+	c, err := back.Seal([]byte("two"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, err := Open(c, []byte("correct horse")); err != nil || string(got) != "two" {
+		t.Fatalf("open: %q, %v", got, err)
+	}
+	k.Clear()
+	if !bytes.Equal(k.KEK, make([]byte, len(k.KEK))) {
+		t.Fatal("clear left the key")
+	}
+	if _, err := (Key{}).Seal([]byte("x")); err == nil {
+		t.Fatal("sealed with no key")
+	}
+	if _, err := Derive(nil, cheap); err == nil {
+		t.Fatal("derived from no password")
+	}
+}
