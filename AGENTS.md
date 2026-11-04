@@ -27,7 +27,7 @@ Global rules for anyone (human or agent) changing SSHYard. Read this before you 
 
 ## App icon
 
-- The source is `icon/logo.jpg`. `resources/icon.png` (Windows, Linux and the `.icns` fallback), `icon/Assets.car` (macOS, `macos.icon`) and `resources/icon-dev.png` (the `mygo dev` app, not shipped) are generated from it: never edit them by hand. After changing the logo, run `go run icon/gen.go` on a Mac with Xcode and commit the logo and every generated file.
+- The source is `icon/logo.jpg`. `resources/icon.png` (Windows, Linux and the `.icns` fallback), `icon/Assets.car` (macOS, `macos.icon`), `resources/icon-dev.png` (the `mygo dev` app, not shipped) and `icon/logo-ui.png` (the logo the interface draws) are generated from it: never edit them by hand. After changing the logo, run `go run icon/gen.go` on a Mac with Xcode and commit the logo and every generated file.
 - Keep sources out of `resources/`: everything there ships with the app.
 
 ## IconButton vs text Button

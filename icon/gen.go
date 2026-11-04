@@ -9,8 +9,10 @@
 // mygo build turns into the Windows and Linux icons (and the .icns
 // fallback); icon/Assets.car, the macOS icon on Apple's grid (an 824px
 // rounded square in 1024px, with its shadow), which needs Xcode's actool;
-// and resources/icon-dev.png, the same grid for mygo dev, which shows only
-// the .icns and does not ship the dev icon.
+// resources/icon-dev.png, the same grid for mygo dev, which shows only
+// the .icns and does not ship the dev icon; and icon/logo-ui.png, the logo
+// the interface draws, which would take 80MB to decode from the 4096px
+// source at every launch.
 package main
 
 import (
@@ -31,6 +33,9 @@ import (
 
 const size = 1024
 
+// uiSize is the side of icon/logo-ui.png, as uiSize in logo.go.
+const uiSize = 256
+
 func main() {
 	f, err := os.Open("icon/logo.jpg")
 	if err != nil {
@@ -50,6 +55,11 @@ func main() {
 		log.Fatal(err)
 	}
 	if err := writeCar("icon/Assets.car", mac); err != nil {
+		log.Fatal(err)
+	}
+	small := image.NewRGBA(image.Rect(0, 0, uiSize, uiSize))
+	draw.CatmullRom.Scale(small, small.Bounds(), logo, logo.Bounds(), draw.Src, nil)
+	if err := writePNG("icon/logo-ui.png", small); err != nil {
 		log.Fatal(err)
 	}
 }
