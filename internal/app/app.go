@@ -640,6 +640,9 @@ func (a *App) OpenFiles(hostID string, at openAt, from *conn) (int, error) {
 }
 
 func (a *App) open(hostID string, kind layout.Kind, at openAt, from *conn) (int, error) {
+	if ex := a.singleAt(kind, at); ex != nil {
+		return a.reuse(ex, hostID, 0)
+	}
 	c, err := a.makeConn(hostID, kind, 0)
 	if err != nil {
 		return 0, err
@@ -714,6 +717,11 @@ func (a *App) place(c *conn, at openAt) {
 	if at.pane == 0 || !a.ws.Place(c.item(), at.pane, at.edge) {
 		a.ws.Open(c.item())
 	}
+	a.shown(c)
+}
+
+// shown starts c, now in a pane, and focuses it.
+func (a *App) shown(c *conn) {
 	a.focusReq = c.id
 	a.page = pageWorkspace
 	if c.temp == "" {

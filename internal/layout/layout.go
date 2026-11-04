@@ -351,6 +351,31 @@ func (w *Workspace) Move(id, targetPane int, edge Edge) bool {
 	return true
 }
 
+// Replace shows item, which is in no pane yet, in the pane showing the
+// item with ID old, which leaves the workspace. The pane is focused.
+func (w *Workspace) Replace(old int, item Item) bool {
+	if t, _ := w.Locate(item.ID); t != nil {
+		return false
+	}
+	t, p := w.Locate(old)
+	if t == nil {
+		return false
+	}
+	p.Item = item
+	w.Activate(item.ID)
+	return true
+}
+
+// TabOf is the tab with the pane of node ID pane, nil for none.
+func (w *Workspace) TabOf(pane int) *Tab {
+	for _, t := range w.Tabs {
+		if t.Pane(pane) != nil {
+			return t
+		}
+	}
+	return nil
+}
+
 // Detach moves an item out to a tab of its own.
 func (w *Workspace) Detach(id int) bool {
 	t, p := w.Locate(id)

@@ -133,8 +133,16 @@ var (
 )
 
 // OpenAI opens an assistant for hostID. link is a terminal pane to attach,
-// or 0. It does not open an SSH connection.
+// or 0. It does not open an SSH connection. A tab has one: on a pane of a
+// tab that has one already, it shows that one (reuse).
 func (a *App) OpenAI(hostID string, at openAt, link int) (int, error) {
+	if ex := a.singleAt(layout.AI, at); ex != nil {
+		id, err := a.reuse(ex, hostID, link)
+		if err == nil {
+			a.aiRecent[hostID] = id
+		}
+		return id, err
+	}
 	c, err := a.makeConn(hostID, layout.AI, link)
 	if err != nil {
 		return 0, err
@@ -706,28 +714,25 @@ func (a *App) syncLink(t *layout.Tab, c *conn) {
 	}
 }
 
-// AskAI sends selection to the AI pane last used on that host, or splits
-// a new one beside from. The selection is marked untrusted.
+// AskAI sends selection to the AI pane of from's tab, opened beside from
+// when the tab has none. The selection is marked untrusted.
 func (a *App) AskAI(from *conn, selection string) {
 	if from == nil || strings.TrimSpace(selection) == "" {
 		return
 	}
-	id := a.aiRecent[from.host.ID]
-	c := a.conns[id]
-	if c == nil || c.kind != layout.AI || c.host.ID != from.host.ID {
-		pane := 0
-		if _, n := a.ws.Locate(from.id); n != nil {
-			pane = n.ID
-		}
-		nid, err := a.OpenAI(from.host.ID, openAt{pane: pane, edge: layout.Right}, from.id)
-		if err != nil {
-			return
-		}
-		c = a.conns[nid]
-	} else if c.ai != nil && c.ai.link == 0 && from.kind == layout.Terminal {
-		c.ai.link = from.id
+	pane := 0
+	if _, n := a.ws.Locate(from.id); n != nil {
+		pane = n.ID
 	}
-	a.SendAI(c.id, agent.WrapUntrusted("selection", selection))
+	link := 0
+	if from.kind == layout.Terminal {
+		link = from.id
+	}
+	id, err := a.OpenAI(from.host.ID, openAt{pane: pane, edge: layout.Right}, link)
+	if err != nil {
+		return
+	}
+	a.SendAI(id, agent.WrapUntrusted("selection", selection))
 }
 
 func (a *App) consented(hostID string) bool {

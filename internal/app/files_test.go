@@ -461,53 +461,54 @@ func TestFilesTenThousand(t *testing.T) {
 	}
 }
 
-// TestFilesDragBetweenPanes: rows drag between two files panes too. A
-// local row of one uploads to the other's remote folder; a remote row of
-// one downloads into the other's local folder, on its own connection.
-func TestFilesDragBetweenPanes(t *testing.T) {
-	a, tt, fc, root := filesPane(t)
-	id, err := a.OpenFiles(fc.host.ID, openAt{pane: fc.id, edge: layout.Right}, fc)
+// TestOneFilesPanePerTab: a tab has one files pane. Opening another on
+// its host shows that one, the rail's Files button is lit while it is
+// there and closes it, and a files pane does not drag into a tab that
+// has one.
+func TestOneFilesPanePerTab(t *testing.T) {
+	a, tt, fc, _ := filesPane(t)
+	term, err := a.Connect(fc.host.ID, openAt{pane: a.paneNode(fc.id), edge: layout.Right})
 	if err != nil {
 		t.Fatal(err)
 	}
-	fc2 := a.conns[id]
-	waitFor(t, tt, "second pane connected", func() bool { return fc2.fs.remote.client != nil })
-	write(t, filepath.Join(root, "sub", "in-sub.txt"), "sub")
-	write(t, filepath.Join(root, "from-remote.txt"), "remote one")
-	write(t, filepath.Join(fc.fs.local.dir, "from-local.txt"), "local one")
-	other := filepath.Join(t.TempDir(), "elsewhere")
-	write(t, filepath.Join(other, "keep.txt"), "x")
-	a.listLocal(&fc2.fs.local, other)
-	a.listRemote(&fc2.fs.remote, sftpsvc.RemoteJoin(fc.fs.remote.dir, "sub"))
-	a.refreshSides(fc)
-	waitFor(t, tt, "listings", func() bool {
-		return tt.HasText("in-sub.txt") && tt.HasText("keep.txt") && tt.HasText("from-remote.txt") && tt.HasText("from-local.txt")
-	})
-	drag := func(from, to string) {
-		t.Helper()
-		x, y := nameAt(t, tt, from)
-		tx, ty := center(t, tt, to)
-		tt.ClickAt(x, y)        // a row chosen drags; elsewhere, a drag chooses
-		tt.Advance(time.Second) // not a double click
-		tt.Frame()
-		tt.Press(x, y)
-		tt.Move(x+10, y+5)
-		tt.Move(tx, ty)
-		tt.Release(tx, ty)
-		tt.Frame()
+	tt.Frame()
+	tab := a.ws.ActiveTab()
+	id, err := a.OpenFiles(fc.host.ID, openAt{pane: a.paneNode(term), edge: layout.Bottom}, nil)
+	if err != nil || id != fc.id || tab.Count(layout.Files) != 1 || a.focused() != fc {
+		t.Fatalf("second files pane %d (first %d), %d in the tab, err %v", id, fc.id, tab.Count(layout.Files), err)
 	}
-	// pane 1's local row onto pane 2's remote list (its "sub" folder)
-	drag("from-local.txt", "in-sub.txt")
-	waitFor(t, tt, "cross-pane upload", func() bool { return read(filepath.Join(root, "sub", "from-local.txt")) == "local one" })
-	// pane 1's remote row onto pane 2's local list
-	drag("from-remote.txt", "keep.txt")
-	waitFor(t, tt, "cross-pane download", func() bool { return read(filepath.Join(other, "from-remote.txt")) == "remote one" })
-	// a remote row onto another pane's remote side is not a transfer
-	drag("from-remote.txt", "in-sub.txt")
-	fc.fs.transfers.Wait()
-	fc2.fs.transfers.Wait()
-	if _, err := os.Stat(filepath.Join(root, "sub", "from-remote.txt")); err == nil {
-		t.Error("copied between remotes")
+	tt.Key(appMods, ui.KeyO) // toggles: the tab has one, so it closes
+	tt.Frame()
+	if tab.Count(layout.Files) != 0 || a.conns[fc.id] != nil {
+		t.Fatal("the Files shortcut did not close the tab's files pane")
+	}
+	mustClick(t, tt, "Open Files on the Right")
+	tt.Frame()
+	if tab.Count(layout.Files) != 1 || !tt.HasText("Close Files") {
+		t.Fatalf("rail did not open a lit files pane: %q", tt.Texts())
+	}
+	mustClick(t, tt, "Close Files")
+	tt.Frame()
+	if tab.Count(layout.Files) != 0 {
+		t.Fatal("rail did not close the files pane")
+	}
+
+	// A files pane of another tab does not drop into this one at an edge;
+	// a swap with this tab's own files pane keeps one each.
+	mustClick(t, tt, "Open Files on the Right")
+	here := a.tabPane(tab, layout.Files)
+	other, err := a.OpenFiles(fc.host.ID, openAt{}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a.fits(other, tab.Pane(a.paneNode(term)), layout.Right) {
+		t.Fatal("a second files pane fits into the tab")
+	}
+	if !a.fits(other, tab.Pane(a.paneNode(here.id)), layout.Center) {
+		t.Fatal("swapping two files panes does not fit")
+	}
+	if a.fits(other, tab.Pane(a.paneNode(term)), layout.Center) {
+		t.Fatal("swapping a terminal for a second files pane fits")
 	}
 }
 

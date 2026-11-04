@@ -129,7 +129,8 @@ func (a *App) loadLayout() {
 	a.restoring = true
 	defer func() { a.restoring = false }()
 	for _, t := range snap.Tabs {
-		root := a.restoreNode(t.Root)
+		ai := false // a tab has one AI pane; a second one saved is dropped
+		root := a.restoreNode(t.Root, &ai)
 		if root == nil {
 			continue
 		}
@@ -145,13 +146,13 @@ func (a *App) loadLayout() {
 	}
 }
 
-func (a *App) restoreNode(n *nodeSnap) *layout.Node {
+func (a *App) restoreNode(n *nodeSnap, ai *bool) *layout.Node {
 	if n == nil {
 		return nil
 	}
 	if n.Split == "row" || n.Split == "column" {
-		left := a.restoreNode(n.A)
-		right := a.restoreNode(n.B)
+		left := a.restoreNode(n.A, ai)
+		right := a.restoreNode(n.B, ai)
 		if left == nil {
 			return right
 		}
@@ -168,10 +169,14 @@ func (a *App) restoreNode(n *nodeSnap) *layout.Node {
 		}
 		return &layout.Node{ID: a.ws.FreshID(), Axis: axis, Ratio: ratio, A: left, B: right}
 	}
+	if *ai {
+		return nil
+	}
 	c := a.restoreLeaf(n)
 	if c == nil {
 		return nil
 	}
+	*ai = true
 	return &layout.Node{ID: a.ws.FreshID(), Item: c.item()}
 }
 

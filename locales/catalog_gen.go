@@ -10759,3 +10759,43 @@ func AiPermissionSection() string { return In(i18n.Locale()).AiPermissionSection
 func (msgs Messages) AiPermissionSection() string {
 	return Catalog.Format(msgs.locale, "aiPermissionSection", nil)
 }
+
+// CloseFilesPane says "Close Files"
+// in the language the app shows.
+func CloseFilesPane() string { return In(i18n.Locale()).CloseFilesPane() }
+
+// CloseFilesPane says "Close Files"
+// in the language of msgs.
+func (msgs Messages) CloseFilesPane() string {
+	return Catalog.Format(msgs.locale, "closeFilesPane", nil)
+}
+
+// CloseAIPane says "Close AI"
+// in the language the app shows.
+func CloseAIPane() string { return In(i18n.Locale()).CloseAIPane() }
+
+// CloseAIPane says "Close AI"
+// in the language of msgs.
+func (msgs Messages) CloseAIPane() string {
+	return Catalog.Format(msgs.locale, "closeAIPane", nil)
+}
+
+// FilesPaneBusy says "The files pane of this tab is still transferring. Finish or cancel its transfers first."
+// in the language the app shows.
+func FilesPaneBusy() string { return In(i18n.Locale()).FilesPaneBusy() }
+
+// FilesPaneBusy says "The files pane of this tab is still transferring. Finish or cancel its transfers first."
+// in the language of msgs.
+func (msgs Messages) FilesPaneBusy() string {
+	return Catalog.Format(msgs.locale, "filesPaneBusy", nil)
+}
+
+// AiPaneBusy says "The AI assistant of this tab is still working. Stop it first."
+// in the language the app shows.
+func AiPaneBusy() string { return In(i18n.Locale()).AiPaneBusy() }
+
+// AiPaneBusy says "The AI assistant of this tab is still working. Stop it first."
+// in the language of msgs.
+func (msgs Messages) AiPaneBusy() string {
+	return Catalog.Format(msgs.locale, "aiPaneBusy", nil)
+}

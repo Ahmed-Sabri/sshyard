@@ -190,10 +190,10 @@ func (a *App) shortcuts(c *ui.Context) {
 		a.SplitFocused(layout.Bottom)
 	}
 	if c.Shortcut(appMods, ui.KeyO) {
-		a.OpenFilesBeside()
+		a.ToggleFiles()
 	}
 	if c.Shortcut(aiMods, ui.KeyA) && a.page == pageWorkspace {
-		a.OpenAIBeside()
+		a.ToggleAI()
 	}
 	if c.Shortcut(stopMods, ui.KeyPeriod) {
 		a.stopShortcut()
@@ -472,13 +472,15 @@ func (a *App) paneDrops(n *layout.Node, cn *conn, pane ui.Element, tok theme.Tok
 	// Drops: a session from a tab or a pane, a host from the sidebar. An
 	// element takes the one type it last asked for, so both go as one.
 	v, over := ui.DragOver[paneDrop](pane)
-	if s, ok := v.(dragSession); ok && s.ID == cn.id {
-		over = false // onto itself, where it is
-	}
 	edge := layout.Center
 	if x, y, ok := pane.PointerPosition(); ok {
 		b := pane.Bounds()
 		edge = edgeFor(x, y, b.W, b.H)
+	}
+	if s, ok := v.(dragSession); ok && (s.ID == cn.id || !a.fits(s.ID, n, edge)) {
+		// Onto itself, where it is; or a second files or AI pane into a
+		// tab, which has one at most.
+		over = false
 	}
 	if over {
 		a.dropPreview = &dropTarget{pane: n.ID, edge: edge}
@@ -489,7 +491,7 @@ func (a *App) paneDrops(n *layout.Node, cn *conn, pane ui.Element, tok theme.Tok
 	if v, ok := ui.Drop[paneDrop](pane); ok {
 		switch v := v.(type) {
 		case dragSession:
-			if v.ID != cn.id {
+			if v.ID != cn.id && a.fits(v.ID, n, edge) {
 				a.ws.Move(v.ID, n.ID, edge)
 				a.focusReq = v.ID
 			}

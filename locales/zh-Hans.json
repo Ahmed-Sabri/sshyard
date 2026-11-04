@@ -1063,5 +1063,9 @@
   "aiToolApproved": "已批准 · {source}",
   "aiToolFailed": "执行失败",
   "aiReviewDeclined": "审核模型拒绝判断此操作",
-  "aiPermissionSection": "权限审批"
+  "aiPermissionSection": "权限审批",
+  "closeFilesPane": "关闭文件面板",
+  "closeAIPane": "关闭 AI 助手",
+  "filesPaneBusy": "此标签页的文件面板仍在传输，请先完成或取消传输。",
+  "aiPaneBusy": "此标签页的 AI 助手仍在运行，请先停止。"
 }

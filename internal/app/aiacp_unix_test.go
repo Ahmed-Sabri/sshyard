@@ -11,7 +11,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Licoy/sshyard/internal/layout"
 	"github.com/Licoy/sshyard/internal/session"
 	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/locales"
@@ -279,7 +278,7 @@ func TestACPBackendMenuIsScopedToOnePane(t *testing.T) {
 	a, tt := newTestApp(t)
 	h := savedHost(t, a, "backend", "127.0.0.1")
 	first := openAIPane(t, a, h.ID)
-	second, err := a.OpenAI(h.ID, openAt{pane: a.ws.ActiveTab().Focus, edge: layout.Right}, 0)
+	second, err := a.OpenAI(h.ID, openAt{}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

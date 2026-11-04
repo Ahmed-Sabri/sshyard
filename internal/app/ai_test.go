@@ -156,8 +156,8 @@ func TestTwoAIPanesAreIndependent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tab := a.ws.ActiveTab()
-	id2, err := a.OpenAI(h.ID, openAt{pane: tab.Focus, edge: layout.Right}, 0)
+	// A tab has one AI pane: the second is in a tab of its own.
+	id2, err := a.OpenAI(h.ID, openAt{}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,7 +170,7 @@ func TestTwoAIPanesAreIndependent(t *testing.T) {
 	if a.conns[id1].ai.sess == a.conns[id2].ai.sess {
 		t.Fatal("panes share a session")
 	}
-	mustClick(t, tt, "Close Pane")
+	a.CloseSession(id1)
 	tt.Frame()
 	if aiPaneOf(a, id1) != nil {
 		t.Fatal("first pane still open")
@@ -365,9 +365,6 @@ func TestLayoutSkipsTempHosts(t *testing.T) {
 	if termNode == 0 {
 		t.Fatal("terminal pane missing")
 	}
-	if _, err := a.OpenAI("tmp-1", openAt{pane: termNode, edge: layout.Left}, 0); err != nil {
-		t.Fatal(err)
-	}
 	termTab := a.ws.Active
 	if _, err := a.OpenAI(other.ID, openAt{}, 0); err != nil {
 		t.Fatal(err)
@@ -458,10 +455,11 @@ func TestLayoutRestoreDoesNotDial(t *testing.T) {
 					B: &nodeSnap{
 						Split: "row", Ratio: 0.6,
 						A: &nodeSnap{Kind: "files", Host: hb.ID},
-						B: &nodeSnap{Kind: "ai", Host: hb.ID, Mode: "ask"},
+						B: &nodeSnap{Kind: "ai", Host: hb.ID, Mode: "dropped"},
 					},
 				},
 			},
+			{Focus: 1, Root: &nodeSnap{Kind: "ai", Host: hb.ID, Mode: "ask"}},
 			{Focus: 1, Root: &nodeSnap{Kind: "editor", Host: ha.ID, Path: "/etc/hostname"}},
 		},
 	}
@@ -478,12 +476,13 @@ func TestLayoutRestoreDoesNotDial(t *testing.T) {
 	again, tt := appIn(t, dir, kc)
 	again.loadLayout()
 	tt.Frame()
-	if len(again.ws.Tabs) != 1 {
+	if len(again.ws.Tabs) != 2 {
 		t.Fatalf("tabs %d, editor tab should be dropped", len(again.ws.Tabs))
 	}
-	root := again.ws.Tabs[0].Root
-	if root == nil || root.Leaf() || root.Axis != layout.Row || root.Ratio < 0.29 || root.Ratio > 0.31 || !root.A.Leaf() || !root.B.Leaf() {
-		t.Fatalf("split %+v", root)
+	// A tab has one AI pane: of two saved in one, the first comes back.
+	first, second := again.ws.Tabs[0].Root, again.ws.Tabs[1].Root
+	if first == nil || !first.Leaf() || second == nil || !second.Leaf() {
+		t.Fatalf("tabs %+v %+v", first, second)
 	}
 	if len(again.conns) != 2 {
 		t.Fatalf("conns %d", len(again.conns))
@@ -503,9 +502,8 @@ func TestLayoutRestoreDoesNotDial(t *testing.T) {
 	if review == nil || review.ai.mode != "review" || review.ai.agent != "other" || review.ai.provider != "prov1" || ask == nil || ask.ai.mode != "ask" {
 		t.Fatalf("review %+v ask %+v", review, ask)
 	}
-	left, right := again.conns[root.A.Item.ID], again.conns[root.B.Item.ID]
-	if left != review || right != ask {
-		t.Fatal("AI panes lost their side of the split")
+	if again.conns[first.Item.ID] != review || again.conns[second.Item.ID] != ask {
+		t.Fatal("AI panes lost their tabs")
 	}
 	h1, _ := again.host(ha.ID)
 	h2, _ := again.host(hb.ID)
@@ -770,7 +768,7 @@ func TestAIShortcutsAndStopAll(t *testing.T) {
 	tt.Key(stopMods, ui.KeyPeriod)
 	waitFor(t, tt, "stopped", func() bool { return !a.conns[id1].ai.running })
 
-	id2, err := a.OpenAI(h.ID, openAt{pane: a.ws.ActiveTab().Focus, edge: layout.Bottom}, 0)
+	id2, err := a.OpenAI(h.ID, openAt{}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1225,4 +1223,44 @@ func (f *failDel) Delete(key string) error {
 		return errors.New("keychain busy")
 	}
 	return f.Backend.Delete(key)
+}
+
+// TestOneAIPanePerTab: a tab has one AI pane. Opening another there shows
+// it on the same host, takes the other host in its place, but not while
+// it works; the rail's AI button is lit while there is one and closes it.
+func TestOneAIPanePerTab(t *testing.T) {
+	a, tt := newTestApp(t)
+	ha := savedHost(t, a, "alpha", "10.0.0.8")
+	hb := savedHost(t, a, "beta", "10.0.0.9")
+	consentHost(t, a, hb.ID)
+	block := &blockModel{done: make(chan struct{})}
+	a.newModel = func(*conn) agent.Streamer { return block }
+	first, err := a.OpenAI(ha.ID, openAt{}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tab := a.ws.ActiveTab()
+	if id, err := a.OpenAI(ha.ID, openAt{pane: a.paneNode(first), edge: layout.Right}, 0); err != nil || id != first {
+		t.Fatalf("same host gave %d (want %d), err %v", id, first, err)
+	}
+	second, err := a.OpenAI(hb.ID, openAt{pane: a.paneNode(first), edge: layout.Bottom}, 0)
+	if err != nil || second == first || a.conns[first] != nil || tab.Count(layout.AI) != 1 || a.conns[second].host.ID != hb.ID {
+		t.Fatalf("other host: pane %d, first left %v, %d AI panes, err %v", second, a.conns[first] != nil, tab.Count(layout.AI), err)
+	}
+	tt.Frame()
+	a.SendAI(second, "hold")
+	waitFor(t, tt, "running", func() bool { return a.conns[second].ai.running })
+	if id, err := a.OpenAI(ha.ID, openAt{pane: a.paneNode(second), edge: layout.Right}, 0); err != errPaneBusy || id != second {
+		t.Fatalf("a working pane was replaced: %d, err %v", id, err)
+	}
+	a.StopAI(second)
+	waitFor(t, tt, "stopped", func() bool { return !a.conns[second].ai.running })
+	if !tt.HasText("Close AI") {
+		t.Fatalf("rail AI button not lit: %q", tt.Texts())
+	}
+	mustClick(t, tt, "Close AI")
+	tt.Frame()
+	if a.conns[second] != nil {
+		t.Fatal("the rail did not close the tab's AI pane")
+	}
 }

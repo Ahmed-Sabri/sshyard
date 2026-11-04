@@ -309,3 +309,20 @@ func TestAIKindMixesWithTheOthers(t *testing.T) {
 		t.Fatal("FreshID reused an id")
 	}
 }
+
+func TestReplaceKeepsThePane(t *testing.T) {
+	w := New()
+	w.Open(T(1))
+	n := w.SplitFocused(Row, F(2))
+	w.Open(T(3))
+	if !w.Replace(2, F(4)) {
+		t.Fatal("replace")
+	}
+	tab := w.Tabs[0]
+	if !slices.Equal(sessions(tab), []int{1, 4}) || tab.Focus != n.ID || w.Active != 0 || w.TabOf(n.ID) != tab {
+		t.Fatalf("panes %v focus %d active %d", sessions(tab), tab.Focus, w.Active)
+	}
+	if w.Replace(9, F(5)) || w.Replace(1, F(4)) || w.TabOf(99) != nil {
+		t.Fatal("replaced a missing item, or with one already shown")
+	}
+}

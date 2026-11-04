@@ -20,7 +20,6 @@ import (
 	"github.com/Licoy/sshyard/internal/ai/llm"
 	"github.com/Licoy/sshyard/internal/ai/policy"
 	"github.com/Licoy/sshyard/internal/assets"
-	"github.com/Licoy/sshyard/internal/layout"
 	"github.com/Licoy/sshyard/internal/sshtest"
 	"github.com/egoist/mygo/ui"
 	"golang.org/x/crypto/ssh"
@@ -212,11 +211,11 @@ func TestAICommandConcurrency(t *testing.T) {
 	}
 	a.newModel = scripted(toolCall("c1", "run_command", `{"command":"tail -f /dev/null"}`))
 	id1 := openAIPane(t, a, h.ID)
-	id2, err := a.OpenAI(h.ID, openAt{pane: id1, edge: layout.Right}, 0)
+	id2, err := a.OpenAI(h.ID, openAt{}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	id3, err := a.OpenAI(h.ID, openAt{pane: id2, edge: layout.Bottom}, 0)
+	id3, err := a.OpenAI(h.ID, openAt{}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

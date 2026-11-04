@@ -58,12 +58,24 @@ func (a *App) railView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 		toggle(inspectHost, icons.Info, icons.InfoOn, m.HostDetails())
 		toggle(inspectSnippets, icons.API, nil, m.Snippets())
 		ui.Box(c.Key("sep")).Width(14).Height(1).Shrink(0).MarginY(theme.Space(1)).Background(tok.Line)
-		if (IconButton{Icon: icons.Folder, Label: m.OpenFilesBeside(), Disabled: !remoteOnly(cn), Size: Small}).Clicked(c, "files") {
-			a.OpenFilesBeside()
+		// The tab's files pane and AI pane, one each: lit while it has
+		// one, which a click closes.
+		t := a.ws.ActiveTab()
+		files, ai := a.tabPane(t, layout.Files) != nil, a.tabPane(t, layout.AI) != nil
+		label := m.OpenFilesBeside()
+		if files {
+			label = m.CloseFilesPane()
+		}
+		if (IconButton{Icon: icons.Folder, On: icons.FolderOn, Label: label, Active: files, Toggle: true, Disabled: !files && !remoteOnly(cn), Size: Small}).Clicked(c, "files") {
+			a.ToggleFiles()
 		}
 		toggle(inspectDocker, icons.Docker, icons.DockerOn, m.DockerManager())
-		if (IconButton{Icon: icons.Robot, Label: m.OpenAIRight(), Disabled: !remoteOnly(cn), Size: Small}).Clicked(c, "ai") {
-			a.OpenAIBeside()
+		label = m.OpenAIRight()
+		if ai {
+			label = m.CloseAIPane()
+		}
+		if (IconButton{Icon: icons.Robot, On: icons.RobotOn, Label: label, Active: ai, Toggle: true, Disabled: !ai && !remoteOnly(cn), Size: Small}).Clicked(c, "ai") {
+			a.ToggleAI()
 		}
 		if (IconButton{Icon: icons.Forward, Label: m.NewForwardMenu(), Disabled: a.store.Len() == 0, Size: Small}).Clicked(c, "fwd") {
 			id := a.selectedHost()
