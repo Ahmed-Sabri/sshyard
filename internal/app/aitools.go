@@ -152,8 +152,6 @@ func (h *hostTools) Call(ctx context.Context, name string, raw json.RawMessage) 
 		}
 	}
 	switch name {
-	case "host_info":
-		return fmt.Sprintf("name: %s\naddress: %s\nuser: %s", h.host.Label(), h.host.Addr(), h.host.User), 0, nil
 	case "pane_output":
 		return trimLines(h.a.aiOutput(h.c), args.Lines), 0, nil
 	case "list_dir", "read_file", "search_files", "write_file", "run_command":

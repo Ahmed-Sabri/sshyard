@@ -30,7 +30,7 @@ func TestTurnRunsCommandAndShowsOutput(t *testing.T) {
 	if len(tools.calls) != 1 || !strings.Contains(tools.calls[0], "df -h") {
 		t.Fatalf("calls %#v", tools.calls)
 	}
-	if len(model.reqs) != 2 || len(model.reqs[0].Tools) != 7 {
+	if len(model.reqs) != 2 || len(model.reqs[0].Tools) != 6 {
 		t.Fatalf("requests %d tools %d", len(model.reqs), len(model.reqs[0].Tools))
 	}
 	done := lastCard(t, ev)

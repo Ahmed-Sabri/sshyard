@@ -6,9 +6,9 @@ import (
 	"testing"
 )
 
-func TestToolDefsMatchRemoteSet(t *testing.T) {
+func TestBuiltinToolDefs(t *testing.T) {
 	defs := ToolDefs()
-	want := []string{"host_info", "pane_output", "list_dir", "read_file", "search_files", "write_file", "run_command"}
+	want := []string{"pane_output", "list_dir", "read_file", "search_files", "write_file", "run_command"}
 	if len(defs) != len(want) {
 		t.Fatalf("got %d tools", len(defs))
 	}
@@ -32,10 +32,6 @@ func TestToolDefsMatchRemoteSet(t *testing.T) {
 			t.Fatalf("%s schema: %+v", name, schema)
 		}
 		switch name {
-		case "host_info":
-			if len(schema.Required) != 0 {
-				t.Fatalf("host_info required: %v", schema.Required)
-			}
 		case "run_command":
 			if !has(schema.Required, "command") || schema.Properties["timeout"] == nil || schema.Properties["dir"] == nil {
 				t.Fatalf("run_command schema: %+v", schema)
