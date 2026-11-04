@@ -1702,6 +1702,26 @@ func (msgs Messages) ErrAgentEmpty() string {
 	return Catalog.Format(msgs.locale, "errAgentEmpty", nil)
 }
 
+// SavePasswordCredential says "Save password credential"
+// in the language the app shows.
+func SavePasswordCredential() string { return In(i18n.Locale()).SavePasswordCredential() }
+
+// SavePasswordCredential says "Save password credential"
+// in the language of msgs.
+func (msgs Messages) SavePasswordCredential() string {
+	return Catalog.Format(msgs.locale, "savePasswordCredential", nil)
+}
+
+// SaveHostPasswordHint says "The password will be encrypted and saved for this host for future connections."
+// in the language the app shows.
+func SaveHostPasswordHint() string { return In(i18n.Locale()).SaveHostPasswordHint() }
+
+// SaveHostPasswordHint says "The password will be encrypted and saved for this host for future connections."
+// in the language of msgs.
+func (msgs Messages) SaveHostPasswordHint() string {
+	return Catalog.Format(msgs.locale, "saveHostPasswordHint", nil)
+}
+
 // TypedNotSaved says "Kept in memory for this session only, never saved."
 // in the language the app shows.
 func TypedNotSaved() string { return In(i18n.Locale()).TypedNotSaved() }

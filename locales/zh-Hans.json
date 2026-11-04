@@ -166,6 +166,8 @@
   "cwdFollow": "文件跟随终端目录",
   "errAgentUnavailable": "没有运行中的 SSH Agent。请启动 ssh-agent（Windows 上为 OpenSSH Authentication Agent 服务）并添加密钥。",
   "errAgentEmpty": "SSH Agent 中没有密钥，请用 ssh-add 添加。",
+  "savePasswordCredential": "保存密码凭证",
+  "saveHostPasswordHint": "密码将加密保存到当前主机，下次连接自动使用。",
   "typedNotSaved": "仅在本次运行中保存在内存，不会写入磁盘。",
   "mouseReporting": "程序正在接收鼠标，按住 Shift 选择文字",
   "credentials": "凭据",

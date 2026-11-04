@@ -190,15 +190,16 @@ func rootCause(err error) string {
 
 // credPrompt asks for a password or a key's passphrase that is missing or
 // was refused, for a pane's host or one of its jump hosts (host).
-// What is typed is held in memory for this run only, under key (see
-// promptKey), and serves every pane that needs it.
+// Typed values serve this run under key; saved hosts can opt into an
+// encrypted host-owned password for future connections.
 type credPrompt struct {
-	conn       int
-	host       assets.Host
-	key        string
-	passphrase bool
-	value      string
-	err        string
+	conn         int
+	host         assets.Host
+	key          string
+	passphrase   bool
+	savePassword bool
+	value        string
+	err          string
 }
 
 // hostKeyAsk asks whether to trust a host's key seen for the first time.
@@ -265,18 +266,26 @@ func (a *App) checkFailures(m locales.Messages) {
 	}
 }
 
-// SubmitPrompt connects again with what the prompt was given, which is
-// kept in memory for this run and never saved.
-func (a *App) SubmitPrompt() {
+// SubmitPrompt retains the non-UI entry point used by connection flows.
+func (a *App) SubmitPrompt() { a.submitPrompt(locales.In(a.settings.Language)) }
+
+func (a *App) submitPrompt(m locales.Messages) {
 	p := a.prompt
-	a.prompt, a.prompting = nil, false
 	if p == nil {
 		return
 	}
 	c := a.conns[p.conn]
 	if c == nil {
+		a.prompt, a.prompting = nil, false
 		return
 	}
+	if p.savePassword {
+		if err := a.savePromptPassword(m, p); err != nil {
+			p.err = m.ErrKeychainSave(secretStoreErrorText(m, err))
+			return
+		}
+	}
+	a.prompt, a.prompting = nil, false
 	a.mu.Lock()
 	a.typed[p.key] = p.value
 	a.typedGen[p.key]++
@@ -353,7 +362,14 @@ func (a *App) promptsView(c *ui.Context, m locales.Messages) {
 				}
 				in := ui.TextInput(c.Key("secret"), &p.value).Password().AutoFocus().Label(title).FillWidth()
 				a.promptHold.apply(c, [2]any{p, p.err}, in)
-				ui.Text(c, m.TypedNotSaved()).FontSize(theme.Caption).TextColor(tok.TextMuted)
+				hint := m.TypedNotSaved()
+				if p.savePassword {
+					hint = m.SaveHostPasswordHint()
+				}
+				ui.Text(c, hint).FontSize(theme.Caption).TextColor(tok.TextMuted)
+				if a.canSavePromptPassword(p) {
+					ui.Checkbox(c.Key("prompt:save-password"), &p.savePassword, m.SavePasswordCredential())
+				}
 				submit := in.Submitted()
 				ui.Row(c).Gap(8).Margin(4, 0, 0, 0).Children(func() {
 					ui.Spacer(c)
@@ -365,7 +381,7 @@ func (a *App) promptsView(c *ui.Context, m locales.Messages) {
 					}
 				})
 				if submit {
-					a.SubmitPrompt()
+					a.submitPrompt(m)
 				}
 			})
 		}), tok)

@@ -166,6 +166,8 @@
   "cwdFollow": "Files follow the terminal's directory",
   "errAgentUnavailable": "No SSH agent is running. Start ssh-agent (or the OpenSSH Authentication Agent service on Windows) and add a key.",
   "errAgentEmpty": "The SSH agent has no keys. Add one with ssh-add.",
+  "savePasswordCredential": "Save password credential",
+  "saveHostPasswordHint": "The password will be encrypted and saved for this host for future connections.",
   "typedNotSaved": "Kept in memory for this session only, never saved.",
   "mouseReporting": "The program is receiving the mouse. Hold Shift to select text.",
   "credentials": "Credentials",
