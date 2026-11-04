@@ -117,8 +117,6 @@ type backupForm struct {
 	name    string
 	data    []byte
 	created time.Time
-	// target is the ID of the place an export goes to instead of a file
-	target string
 	// busy is set while the password is derived and the file sealed or
 	// opened, off the UI thread
 	busy bool
@@ -361,11 +359,10 @@ func (a *App) closeBackup() {
 }
 
 // ExportBackup checks the sheet's password and gathers the backup, then,
-// off the UI thread, asks where to save it and seals it there, or seals it
-// and puts it in the sheet's place.
+// off the UI thread, asks where to save it and seals it there.
 func (a *App) ExportBackup(m locales.Messages) bool {
 	f := a.backup
-	if f == nil || f.restore || f.busy || (f.target == "" && a.p.SaveFile == nil) {
+	if f == nil || f.restore || f.busy || a.p.SaveFile == nil {
 		return false
 	}
 	f.err = ""
@@ -377,8 +374,7 @@ func (a *App) ExportBackup(m locales.Messages) bool {
 		f.err = m.BackupPasswordMismatch()
 		return false
 	}
-	// A place's secret is in the store too.
-	if (f.secrets || f.target != "") && !a.unlocked() {
+	if f.secrets && !a.unlocked() {
 		draft := a.backup
 		a.withSecrets(func() {
 			if a.backup == draft {
@@ -395,9 +391,6 @@ func (a *App) ExportBackup(m locales.Messages) bool {
 	if err != nil {
 		f.err = m.BackupExportFailed(secretStoreErrorText(m, err))
 		return false
-	}
-	if f.target != "" {
-		return a.exportTo(m, f, data, []byte(f.password))
 	}
 	pw, cost, title := []byte(f.password), a.kdf, m.ExportBackup()
 	def := filepath.Join(a.homeDir(), "SSHYard-"+time.Now().Format("2006-01-02")+backupExt)
@@ -576,16 +569,12 @@ func (a *App) backupView(c *ui.Context, m locales.Messages) {
 	tok := currentTokens(c)
 	sheet(ui.Modal(c, &a.backingUp, func() {
 		ui.Column(c).Gap(18).Width(460).Children(func() {
-			title, sub, ic := m.ExportBackup(), "", icons.Backup
-			t, toTarget := a.settings.BackupTarget(f.target)
-			switch {
-			case f.restore:
+			title, sub := m.ExportBackup(), ""
+			if f.restore {
 				title, sub = m.RestoreBackup(), f.name
-			case toTarget:
-				title, sub, ic = m.BackupNow(), t.Name, icons.CloudUpload
 			}
 			ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
-				tile(c, ic, tok.TintAt(6), 36)
+				tile(c, icons.Backup, tok.TintAt(6), 36)
 				ui.Column(c).Gap(1).Shrink(1).Children(func() {
 					sheetTitle(c, title)
 					if sub != "" {
@@ -640,14 +629,8 @@ func (a *App) backupView(c *ui.Context, m locales.Messages) {
 					if pill(c, m.Restore(), true, false, false) {
 						a.RestoreBackup(m)
 					}
-				case f.busy && toTarget:
-					pill(c, m.TargetBackingUp(), true, false, true)
 				case f.busy:
 					pill(c, m.BackupExporting(), true, false, true)
-				case toTarget:
-					if pill(c, m.BackupUp(), true, false, false) {
-						a.ExportBackup(m)
-					}
 				default:
 					if pill(c, m.ExportEllipsis(), true, false, false) {
 						a.ExportBackup(m)

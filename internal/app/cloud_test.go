@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -82,13 +83,23 @@ func davWrite(t *testing.T, fs xwebdav.FileSystem, name string, b []byte) {
 	f.Close()
 }
 
-// addTarget saves tg with its secret, as the editor would.
+// addTarget saves tg with its secret and the key of the backup password
+// "correct horse", as the editor would.
 func addTarget(t *testing.T, a *App, tg settings.BackupTarget, secret string) settings.BackupTarget {
 	t.Helper()
 	if tg.ID == "" {
 		tg.ID = assets.NewID()
 	}
+	k, err := vault.Derive([]byte("correct horse"), a.kdf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer k.Clear()
+	kb, _ := json.Marshal(k)
 	if err := a.kc.Set(keychain.BackupSecret(tg.ID), []byte(secret)); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.kc.Set(keychain.BackupKey(tg.ID), kb); err != nil {
 		t.Fatal(err)
 	}
 	s := a.settings
@@ -156,30 +167,14 @@ func TestCloudTargetForm(t *testing.T) {
 	if f.tested != en.ConnectionOK() || f.err != "" {
 		t.Fatalf("test: %q, %q", f.tested, f.err)
 	}
-	if !a.SaveTargetForm(en) || a.target != nil {
-		t.Fatalf("save refused: %q", f.err)
+	// The backup password, shared by backups by hand and automatic ones,
+	// is asked for a new place, typed twice.
+	if !tt.HasText(en.BackupPassword()) || tt.HasText(en.AutoBackupInterval()) {
+		t.Fatalf("texts %q", tt.Texts())
 	}
-	ts := a.settings.BackupTargets
-	if len(ts) != 1 || ts[0].Kind != settings.BackupWebDAV || ts[0].URL != srv.URL+"/" || ts[0].Keep != settings.BackupKeepDefault || ts[0].AutoHours != 0 {
-		t.Fatalf("saved %+v", ts)
+	if a.SaveTargetForm(en) || f.err != en.RequiredField(en.BackupPassword()) {
+		t.Fatalf("no password: %q", f.err)
 	}
-	id := ts[0].ID
-	if got, err := a.kc.Get(keychain.BackupSecret(id)); err != nil || string(got) != "dav-secret-1" {
-		t.Fatalf("secret %q, %v", got, err)
-	}
-	if dataHas(t, a, "dav-secret-1") {
-		t.Fatal("the password is readable in the data directory")
-	}
-	tt.Frame()
-	if !tt.HasText("NAS") || !tt.HasText(en.BackupNow()) || !tt.HasText(en.RestoreFromTarget()) {
-		t.Fatalf("no row for the place; texts %q", tt.Texts())
-	}
-
-	// Editing keeps the secret unless one is typed; turning automatic
-	// backups on asks for their password, typed twice.
-	a.openTargetForm(&ts[0])
-	f = a.target
-	f.auto = true
 	f.password, f.confirm = "short", "short"
 	if a.SaveTargetForm(en) || f.err != en.BackupPasswordShort("8") {
 		t.Fatalf("short password: %q", f.err)
@@ -193,20 +188,45 @@ func TestCloudTargetForm(t *testing.T) {
 		t.Fatalf("save refused: %q", f.err)
 	}
 	waitForIn(t, tt, slowWait, "derive", func() bool { return a.target == nil })
-	tg, _ := a.settings.BackupTarget(id)
-	if tg.AutoHours != 24 || !tg.AutoSecrets {
-		t.Fatalf("automatic backups %+v", tg)
+	ts := a.settings.BackupTargets
+	if len(ts) != 1 || ts[0].Kind != settings.BackupWebDAV || ts[0].URL != srv.URL+"/" || ts[0].Keep != settings.BackupKeepDefault || ts[0].AutoHours != 0 || ts[0].OmitSecrets {
+		t.Fatalf("saved %+v", ts)
 	}
-	if got, _ := a.kc.Get(keychain.BackupSecret(id)); string(got) != "dav-secret-1" {
-		t.Fatalf("secret became %q", got)
+	id := ts[0].ID
+	if got, err := a.kc.Get(keychain.BackupSecret(id)); err != nil || string(got) != "dav-secret-1" {
+		t.Fatalf("secret %q, %v", got, err)
 	}
 	k, err := a.backupKey(id)
 	if err != nil {
 		t.Fatal(err)
 	}
 	k.Clear()
-	if dataHas(t, a, "correct horse") {
-		t.Fatal("the backup password is readable in the data directory")
+	if dataHas(t, a, "dav-secret-1") || dataHas(t, a, "correct horse") {
+		t.Fatal("a password is readable in the data directory")
+	}
+	tt.Frame()
+	if !tt.HasText("NAS") || !tt.HasText(en.BackupNow()) || !tt.HasText(en.RestoreFromTarget()) {
+		t.Fatalf("no row for the place; texts %q", tt.Texts())
+	}
+
+	// Editing keeps the secret and the key unless one is typed, with
+	// automatic backups turned on too.
+	key, _ := a.kc.Get(keychain.BackupKey(id))
+	a.openTargetForm(&ts[0])
+	f = a.target
+	f.auto, f.secrets = true, false
+	if !a.SaveTargetForm(en) || a.target != nil {
+		t.Fatalf("save refused: %q", f.err)
+	}
+	tg, _ := a.settings.BackupTarget(id)
+	if tg.AutoHours != 24 || !tg.OmitSecrets {
+		t.Fatalf("edited %+v", tg)
+	}
+	if got, _ := a.kc.Get(keychain.BackupSecret(id)); string(got) != "dav-secret-1" {
+		t.Fatalf("secret became %q", got)
+	}
+	if got, _ := a.kc.Get(keychain.BackupKey(id)); !bytes.Equal(got, key) {
+		t.Fatal("the key changed with no password typed")
 	}
 
 	// Another kind's secret is not kept.
@@ -218,21 +238,41 @@ func TestCloudTargetForm(t *testing.T) {
 	}
 	a.closeTargetForm()
 
-	// Turning automatic backups off deletes their key; deleting the place
-	// its secret.
+	// Turning automatic backups off keeps the key, for backups by hand.
 	a.openTargetForm(&tg)
 	a.target.auto = false
 	if !a.SaveTargetForm(en) {
 		t.Fatalf("save refused: %q", a.target.err)
 	}
-	if ok, _ := a.kc.Exists(keychain.BackupKey(id)); ok {
-		t.Fatal("the key stayed with automatic backups off")
+	if ok, _ := a.kc.Exists(keychain.BackupKey(id)); !ok {
+		t.Fatal("the key went with automatic backups off")
 	}
+
+	// A place without its key asks for the password again.
+	a.kc.Delete(keychain.BackupKey(id))
+	tg, _ = a.settings.BackupTarget(id)
+	a.openTargetForm(&tg)
+	f = a.target
+	if a.SaveTargetForm(en) || f.err != en.RequiredField(en.BackupPassword()) {
+		t.Fatalf("no key, no password: %q", f.err)
+	}
+	f.password, f.confirm = "battery staple", "battery staple"
+	if !a.SaveTargetForm(en) {
+		t.Fatalf("save refused: %q", f.err)
+	}
+	waitForIn(t, tt, slowWait, "derive", func() bool { return a.target == nil })
+
+	// Deleting the place deletes its secret and key.
 	if err := a.DeleteBackupTarget(id); err != nil {
 		t.Fatal(err)
 	}
-	if ok, _ := a.kc.Exists(keychain.BackupSecret(id)); ok || len(a.settings.BackupTargets) != 0 {
-		t.Fatal("the place or its secret stayed")
+	for _, k := range []string{keychain.BackupSecret(id), keychain.BackupKey(id)} {
+		if ok, _ := a.kc.Exists(k); ok {
+			t.Fatalf("%s stayed", k)
+		}
+	}
+	if len(a.settings.BackupTargets) != 0 {
+		t.Fatal("the place stayed")
 	}
 }
 
@@ -246,17 +286,13 @@ func TestCloudBackupAndRestore(t *testing.T) {
 	if !stt.HasText(en.TargetNeverBackedUp()) {
 		t.Fatalf("texts %q", stt.Texts())
 	}
+	// Backing up by hand seals with the place's key, without asking.
 	mustClick(t, stt, en.BackupNow())
-	stt.Frame()
-	f := src.backup
-	if f == nil || f.target != tg.ID || !stt.HasText(tg.Name) || !stt.HasText(en.BackupUp()) {
-		t.Fatalf("backup sheet did not open for the place; texts %q", stt.Texts())
+	st := src.cloudNow().of(tg.ID)
+	waitForIn(t, stt, slowWait, "upload", func() bool { return !st.Last.IsZero() || st.err != nil })
+	if src.backup != nil || st.err != nil {
+		t.Fatalf("backup sheet %+v, err %v", src.backup, st.err)
 	}
-	f.password, f.confirm = "correct horse", "correct horse"
-	if !src.ExportBackup(en) {
-		t.Fatalf("backup refused: %q", f.err)
-	}
-	waitForIn(t, stt, slowWait, "upload", func() bool { return src.backup == nil })
 	stt.Frame()
 	if !stt.HasText(en.BackupUploaded("NAS")) {
 		t.Fatalf("no success toast; texts %q", stt.Texts())
@@ -274,7 +310,7 @@ func TestCloudBackupAndRestore(t *testing.T) {
 			t.Fatalf("%q readable in the uploaded backup", secret)
 		}
 	}
-	if st := src.cloudNow().of(tg.ID); st.Object != files[0] || st.Last.IsZero() || st.err != nil {
+	if st.Object != files[0] {
 		t.Fatalf("state %+v", st)
 	}
 	stt.Frame()
@@ -325,13 +361,13 @@ func TestCloudAutoBackup(t *testing.T) {
 	if a.cloudNow().of(tg.ID).busy {
 		t.Fatal("a place without automatic backups backed up")
 	}
-	a.openTargetForm(&tg)
-	a.target.auto, a.target.password, a.target.confirm = true, "correct horse", "correct horse"
-	if !a.SaveTargetForm(en) {
-		t.Fatalf("save refused: %q", a.target.err)
+	s := a.settings
+	s.BackupTargets = slices.Clone(s.BackupTargets)
+	s.BackupTargets[0].AutoHours = 24
+	if err := a.ApplySettings(s); err != nil {
+		t.Fatal(err)
 	}
-	waitForIn(t, tt, slowWait, "derive", func() bool { return a.target == nil })
-	tg, _ = a.settings.BackupTarget(tg.ID)
+	tg = s.BackupTargets[0]
 
 	// Two older backups of this device and one of another.
 	old := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -446,17 +482,49 @@ func TestCloudGistKeepsItsGist(t *testing.T) {
 	a.gistAPI = srv.URL
 	tg := addTarget(t, a, settings.BackupTarget{Name: "Gist", Kind: settings.BackupGist}, "ghp_test")
 	a.BackupNow(tg.ID)
-	f := a.backup
-	f.password, f.confirm = "correct horse", "correct horse"
-	if !a.ExportBackup(en) {
-		t.Fatalf("backup refused: %q", f.err)
+	st := a.cloudNow().of(tg.ID)
+	waitForIn(t, tt, slowWait, "upload", func() bool { return !st.busy })
+	if st.err != nil {
+		t.Fatal(st.err)
 	}
-	waitForIn(t, tt, slowWait, "upload", func() bool { return a.backup == nil })
 	waitFor(t, tt, "gist kept", func() bool { got, _ := a.settings.BackupTarget(tg.ID); return got.GistID == "g1" })
 	api.mu.Lock()
 	defer api.mu.Unlock()
 	if len(api.created) != 1 || api.created[0]["description"] != gist.Description || api.created[0]["public"] != false {
 		t.Fatalf("created %v", api.created)
+	}
+}
+
+// TestCloudBackupNowKey: a backup by hand leaves the secrets out when the
+// place says so, and a place without its key says so.
+func TestCloudBackupNowKey(t *testing.T) {
+	srv, fs := davServer(t)
+	a, tt, _ := backupApp(t)
+	fillStore(t, a)
+	tg := addTarget(t, a, settings.BackupTarget{Name: "NAS", Kind: settings.BackupWebDAV, URL: srv.URL, Dir: "b", User: "me", OmitSecrets: true}, "dav-secret-1")
+	st := a.cloudNow().of(tg.ID)
+	a.BackupNow(tg.ID)
+	waitForIn(t, tt, slowWait, "upload", func() bool { return !st.busy })
+	if st.err != nil || a.backup != nil {
+		t.Fatalf("err %v, backup sheet %+v", st.err, a.backup)
+	}
+	plain, err := vault.Open(davRead(t, fs, "/b/"+st.Object), []byte("correct horse"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err := unpackBackup(plain)
+	if err != nil || len(p.Assets.Credentials) != 2 || len(p.Secrets) != 0 {
+		t.Fatalf("backup holds %+v, %v", p, err)
+	}
+
+	a.kc.Delete(keychain.BackupKey(tg.ID))
+	a.BackupNow(tg.ID)
+	if !errors.Is(st.err, errBackupKey) || st.busy {
+		t.Fatalf("state %+v", st)
+	}
+	tt.Frame()
+	if !tt.HasText(en.BackupUploadFailed("NAS", en.ErrBackupKeyMissing())) {
+		t.Fatalf("texts %q", tt.Texts())
 	}
 }
 

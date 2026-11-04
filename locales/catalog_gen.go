@@ -8078,16 +8078,6 @@ func (msgs Messages) BackupNow() string {
 	return Catalog.Format(msgs.locale, "backupNow", nil)
 }
 
-// BackupUp says "Back Up"
-// in the language the app shows.
-func BackupUp() string { return In(i18n.Locale()).BackupUp() }
-
-// BackupUp says "Back Up"
-// in the language of msgs.
-func (msgs Messages) BackupUp() string {
-	return Catalog.Format(msgs.locale, "backupUp", nil)
-}
-
 // RestoreFromTarget says "Restore from This Location"
 // in the language the app shows.
 func RestoreFromTarget() string { return In(i18n.Locale()).RestoreFromTarget() }
@@ -8390,6 +8380,16 @@ func (msgs Messages) BackupKeepNote() string {
 	return Catalog.Format(msgs.locale, "backupKeepNote", nil)
 }
 
+// BackupPasswordNote says "Backups here are sealed with this password, and restoring one asks for it. The key derived from it is kept in the enc…"
+// in the language the app shows.
+func BackupPasswordNote() string { return In(i18n.Locale()).BackupPasswordNote() }
+
+// BackupPasswordNote says "Backups here are sealed with this password, and restoring one asks for it. The key derived from it is kept in the enc…"
+// in the language of msgs.
+func (msgs Messages) BackupPasswordNote() string {
+	return Catalog.Format(msgs.locale, "backupPasswordNote", nil)
+}
+
 // AutoBackup says "Automatic backup"
 // in the language the app shows.
 func AutoBackup() string { return In(i18n.Locale()).AutoBackup() }
@@ -8400,11 +8400,11 @@ func (msgs Messages) AutoBackup() string {
 	return Catalog.Format(msgs.locale, "autoBackup", nil)
 }
 
-// AutoBackupNote says "The key derived from this password is kept in the encrypted local credential store, so automatic backups run without …"
+// AutoBackupNote says "Backs up on its own while SSHYard is open, skipped when nothing changed."
 // in the language the app shows.
 func AutoBackupNote() string { return In(i18n.Locale()).AutoBackupNote() }
 
-// AutoBackupNote says "The key derived from this password is kept in the encrypted local credential store, so automatic backups run without …"
+// AutoBackupNote says "Backs up on its own while SSHYard is open, skipped when nothing changed."
 // in the language of msgs.
 func (msgs Messages) AutoBackupNote() string {
 	return Catalog.Format(msgs.locale, "autoBackupNote", nil)
@@ -8418,26 +8418,6 @@ func AutoBackupInterval() string { return In(i18n.Locale()).AutoBackupInterval()
 // in the language of msgs.
 func (msgs Messages) AutoBackupInterval() string {
 	return Catalog.Format(msgs.locale, "autoBackupInterval", nil)
-}
-
-// AutoBackupSecretsNote says "Include passwords, private keys and API keys in automatic backups."
-// in the language the app shows.
-func AutoBackupSecretsNote() string { return In(i18n.Locale()).AutoBackupSecretsNote() }
-
-// AutoBackupSecretsNote says "Include passwords, private keys and API keys in automatic backups."
-// in the language of msgs.
-func (msgs Messages) AutoBackupSecretsNote() string {
-	return Catalog.Format(msgs.locale, "autoBackupSecretsNote", nil)
-}
-
-// AutoBackupNowNote says "With automatic backup on, Back Up Now uses its saved key."
-// in the language the app shows.
-func AutoBackupNowNote() string { return In(i18n.Locale()).AutoBackupNowNote() }
-
-// AutoBackupNowNote says "With automatic backup on, Back Up Now uses its saved key."
-// in the language of msgs.
-func (msgs Messages) AutoBackupNowNote() string {
-	return Catalog.Format(msgs.locale, "autoBackupNowNote", nil)
 }
 
 // TestConnection says "Test Connection"
@@ -8530,11 +8510,11 @@ func (msgs Messages) ErrCloudTooLarge() string {
 	return Catalog.Format(msgs.locale, "errCloudTooLarge", nil)
 }
 
-// ErrBackupKeyMissing says "The key for automatic backups is missing. Set its password again."
+// ErrBackupKeyMissing says "This location’s backup key is missing. Set its backup password again."
 // in the language the app shows.
 func ErrBackupKeyMissing() string { return In(i18n.Locale()).ErrBackupKeyMissing() }
 
-// ErrBackupKeyMissing says "The key for automatic backups is missing. Set its password again."
+// ErrBackupKeyMissing says "This location’s backup key is missing. Set its backup password again."
 // in the language of msgs.
 func (msgs Messages) ErrBackupKeyMissing() string {
 	return Catalog.Format(msgs.locale, "errBackupKeyMissing", nil)

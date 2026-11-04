@@ -33,12 +33,12 @@ import (
 
 // Cloud backup: the places this device backs up to (settings.BackupTarget),
 // a folder on a WebDAV server, an S3 bucket or a GitHub gist. A backup goes
-// there as a backup file does to disk, sealed here first: by hand with a
-// password typed for it, or, once automatic backups are on, with the key
-// derived from their password, kept in the encrypted local store. Each
-// backup is a new file named for when and by which device it was made, so
-// devices never overwrite each other; after one, this device's oldest past
-// the place's Keep are deleted.
+// there as a backup file does to disk, sealed here first with the key
+// derived from the place's backup password, kept in the encrypted local
+// store, so that neither a backup by hand nor the automatic ones, when
+// turned on, ask for it. Each backup is a new file named for when and by
+// which device it was made, so devices never overwrite each other; after
+// one, this device's oldest past the place's Keep are deleted.
 
 // cloudFile is what this device knows of its places, in DataDir.
 const cloudFile = "backups.json"
@@ -58,8 +58,8 @@ type targetState struct {
 	Object string    `json:"object,omitempty"`
 	// Checked is when an automatic backup last found nothing changed.
 	Checked time.Time `json:"checked,omitzero"`
-	// Digest is an HMAC, under the automatic backups' key, of what the
-	// last backup sealed with it held, so that an unchanged one is skipped.
+	// Digest is an HMAC, under the place's key, of what the last backup
+	// held, so that an unchanged automatic one is skipped.
 	Digest string `json:"digest,omitempty"`
 	// busy is set while a backup goes there, err is why the last failed
 	// and retry when a failed automatic one is tried again; none is kept.
@@ -78,8 +78,8 @@ const (
 )
 
 var (
-	// errBackupKey reports automatic backups whose key is not in the store.
-	errBackupKey = errors.New("app: automatic backup key missing")
+	// errBackupKey reports a place whose key is not in the store.
+	errBackupKey = errors.New("app: backup key missing")
 	// errBackupProxy reports a place whose proxy was deleted: it is not
 	// reached directly instead.
 	errBackupProxy = errors.New("app: backup location proxy missing")
@@ -187,7 +187,7 @@ func (a *App) bindGist(id, gid string) {
 	}
 }
 
-// backupKey is the key the place id's automatic backups are sealed with.
+// backupKey is the key the place id's backups are sealed with.
 func (a *App) backupKey(id string) (vault.Key, error) {
 	b, err := a.kc.Get(keychain.BackupKey(id))
 	defer clear(b)
@@ -227,8 +227,8 @@ func putBackup(ctx context.Context, r backup.Remote, name string, sealed []byte,
 	return nil
 }
 
-// backupDone records how the backup name to the place id went. digest is
-// what a backup sealed with the key held, "" for one sealed otherwise.
+// backupDone records how the backup name to the place id went; digest is
+// the HMAC of what it held.
 func (a *App) backupDone(id, name, digest string, err error) {
 	st := a.cloudNow().of(id)
 	st.busy = false
@@ -251,8 +251,7 @@ func (a *App) cloudToast(name string, err error) {
 	})
 }
 
-// BackupNow backs up to the place id: with its automatic backups' key
-// while they are on, otherwise from the backup sheet with a password.
+// BackupNow backs up to the place id with its key.
 func (a *App) BackupNow(id string) {
 	t, ok := a.settings.BackupTarget(id)
 	if !ok || a.cloudNow().of(id).busy {
@@ -262,16 +261,12 @@ func (a *App) BackupNow(id string) {
 		a.withSecrets(func() { a.BackupNow(id) })
 		return
 	}
-	if t.AutoHours > 0 {
-		a.backupWithKey(t, false)
-		return
-	}
-	a.backup, a.backingUp = &backupForm{secrets: true, target: id}, true
+	a.backupWithKey(t, false)
 }
 
-// backupWithKey backs up to t with its automatic backups' key, off the UI
-// thread once gathered. An automatic one (auto) is skipped when nothing
-// changed since the last, and tells only through the settings.
+// backupWithKey backs up to t with its key, off the UI thread once
+// gathered. An automatic one (auto) is skipped when nothing changed since
+// the last, and tells only through the settings.
 func (a *App) backupWithKey(t settings.BackupTarget, auto bool) {
 	st := a.cloudNow().of(t.ID)
 	fail := func(err error) {
@@ -285,7 +280,7 @@ func (a *App) backupWithKey(t settings.BackupTarget, auto bool) {
 		fail(err)
 		return
 	}
-	p, err := a.collectBackup(t.AutoSecrets)
+	p, err := a.collectBackup(!t.OmitSecrets)
 	var plain []byte
 	if err == nil {
 		plain, err = json.Marshal(p)
@@ -330,44 +325,6 @@ func (a *App) backupWithKey(t settings.BackupTarget, auto bool) {
 			}
 		})
 	}()
-}
-
-// exportTo seals data with pw and puts it in the backup sheet's place,
-// off the UI thread.
-func (a *App) exportTo(m locales.Messages, f *backupForm, data, pw []byte) bool {
-	t, ok := a.settings.BackupTarget(f.target)
-	st := a.cloudNow().of(f.target)
-	if !ok || st.busy {
-		return false
-	}
-	r, err := a.targetRemote(t)
-	if err != nil {
-		f.err = m.BackupUploadFailed(t.Name, backupErrText(m, err))
-		return false
-	}
-	device := a.deviceID()
-	name, cost, ctx := backup.Name(time.Now(), device), a.kdf, a.cloudCtx
-	f.busy, st.busy, st.err = true, true, nil
-	go func() {
-		sealed, err := vault.Seal(data, pw, cost)
-		if err == nil {
-			err = putBackup(ctx, r, name, sealed, device, t.Keep)
-		}
-		a.post(func() {
-			a.backupDone(t.ID, name, "", err)
-			f.busy = false
-			switch {
-			case a.backup != f:
-				a.cloudToast(t.Name, err)
-			case err != nil:
-				f.err = m.BackupUploadFailed(t.Name, backupErrText(m, err))
-			default:
-				a.closeBackup()
-				a.cloudToast(t.Name, nil)
-			}
-		})
-	}()
-	return true
 }
 
 // startAutoBackup checks the automatic backups until the app closes.
@@ -432,9 +389,9 @@ func (a *App) DeleteBackupTarget(id string) error {
 var targetKinds = []string{settings.BackupWebDAV, settings.BackupS3, settings.BackupGist}
 
 // targetForm is the backup location editor's fields. The place's secret
-// and the automatic backups' password live here only while the sheet is
-// open: saving moves the secret, and the key derived from the password,
-// into the encrypted local store.
+// and backup password live here only while the sheet is open: saving moves
+// the secret, and the key derived from the password, into the encrypted
+// local store.
 type targetForm struct {
 	isNew bool
 	// orig is the place edited; a new one has its ID already
@@ -448,12 +405,14 @@ type targetForm struct {
 	// proxy is the proxy select's label
 	proxy string
 	keep  float64
-	// auto, every (the index in settings.BackupAutoHours), password,
-	// confirm and autoSecrets are the automatic backups'
-	auto              bool
-	every             int
+	// password, typed twice, is the place's backup password; secrets puts
+	// the local store's secrets in its backups
 	password, confirm string
-	autoSecrets       bool
+	secrets           bool
+	// auto turns automatic backups on, every
+	// (settings.BackupAutoHours[every]) apart
+	auto  bool
+	every int
 	// busy is set while the password is derived, testing while the
 	// connection is tested; tested says it was reached
 	busy, testing bool
@@ -462,14 +421,11 @@ type targetForm struct {
 }
 
 func (a *App) openTargetForm(t *settings.BackupTarget) {
-	f := &targetForm{isNew: t == nil, orig: settings.BackupTarget{ID: assets.NewID(), Kind: settings.BackupWebDAV}, keep: settings.BackupKeepDefault, every: 1, autoSecrets: true}
+	f := &targetForm{isNew: t == nil, orig: settings.BackupTarget{ID: assets.NewID(), Kind: settings.BackupWebDAV}, keep: settings.BackupKeepDefault, secrets: true, every: 1}
 	if t != nil {
 		f.orig = *t
 		f.name, f.url, f.dir, f.user, f.bucket, f.region, f.gistID, f.pathStyle = t.Name, t.URL, t.Dir, t.User, t.Bucket, t.Region, t.GistID, t.PathStyle
-		f.keep, f.auto = float64(t.Keep), t.AutoHours > 0
-		if f.auto {
-			f.autoSecrets = t.AutoSecrets
-		}
+		f.keep, f.secrets, f.auto = float64(t.Keep), !t.OmitSecrets, t.AutoHours > 0
 		if px, ok := a.store.Proxy(t.ProxyID); ok {
 			f.proxy = px.Name
 		}
@@ -498,9 +454,9 @@ func (a *App) targetDraft(m locales.Messages, f *targetForm) (settings.BackupTar
 	t.URL, t.Dir, t.User = strings.TrimSpace(f.url), strings.TrimSpace(f.dir), strings.TrimSpace(f.user)
 	t.Bucket, t.Region, t.GistID, t.PathStyle = strings.TrimSpace(f.bucket), strings.TrimSpace(f.region), strings.TrimSpace(f.gistID), f.pathStyle
 	t.Keep = min(max(int(f.keep), 0), settings.BackupKeepMax)
-	t.AutoHours, t.AutoSecrets = 0, false
+	t.OmitSecrets, t.AutoHours = !f.secrets, 0
 	if f.auto {
-		t.AutoHours, t.AutoSecrets = settings.BackupAutoHours[f.every], f.autoSecrets
+		t.AutoHours = settings.BackupAutoHours[f.every]
 	}
 	labels, ids := a.proxyChoices(m)
 	t.ProxyID = ""
@@ -549,8 +505,10 @@ func plainHTTP(raw string) bool {
 	return err == nil && strings.EqualFold(u.Scheme, "http")
 }
 
-// SaveTargetForm checks the sheet, derives the automatic backups' key off
-// the UI thread when a password was typed for it, then saves the place.
+// SaveTargetForm checks the sheet, derives the place's key off the UI
+// thread when a password was typed, then saves the place. A new place, or
+// one without a key, needs the password; a place edited otherwise keeps
+// its key.
 func (a *App) SaveTargetForm(m locales.Messages) bool {
 	f := a.target
 	if f == nil || f.busy {
@@ -562,9 +520,12 @@ func (a *App) SaveTargetForm(m locales.Messages) bool {
 		f.err = msg
 		return false
 	}
-	newKey := t.AutoHours > 0 && (f.password != "" || f.orig.AutoHours == 0)
+	newKey := f.isNew || f.password != ""
 	if newKey {
 		switch {
+		case f.password == "":
+			f.err = m.RequiredField(m.BackupPassword())
+			return false
 		case len([]rune(f.password)) < minBackupPassword:
 			f.err = m.BackupPasswordShort(strconv.Itoa(minBackupPassword))
 			return false
@@ -583,6 +544,14 @@ func (a *App) SaveTargetForm(m locales.Messages) bool {
 		return false
 	}
 	if !newKey {
+		switch ok, err := a.kc.Exists(keychain.BackupKey(t.ID)); {
+		case err != nil:
+			f.err = m.ErrGeneric(secretStoreErrorText(m, err))
+			return false
+		case !ok:
+			f.err = m.RequiredField(m.BackupPassword())
+			return false
+		}
 		return a.commitTarget(m, f, t, nil)
 	}
 	pw, cost := []byte(f.password), a.kdf
@@ -616,8 +585,7 @@ func (a *App) commitTarget(m locales.Messages, f *targetForm, t settings.BackupT
 	case !f.keepsSecret():
 		changes = append(changes, keychain.Change{Key: keychain.BackupSecret(t.ID), Delete: true})
 	}
-	switch {
-	case k != nil:
+	if k != nil {
 		b, err := json.Marshal(k)
 		if err != nil {
 			f.err = m.ErrGeneric(err.Error())
@@ -625,8 +593,6 @@ func (a *App) commitTarget(m locales.Messages, f *targetForm, t settings.BackupT
 		}
 		defer clear(b)
 		changes = append(changes, keychain.Change{Key: keychain.BackupKey(t.ID), Value: b})
-	case t.AutoHours == 0:
-		changes = append(changes, keychain.Change{Key: keychain.BackupKey(t.ID), Delete: true})
 	}
 	tx := &secretTx{kc: a.kc}
 	fail := func(msg string) bool {
@@ -1036,18 +1002,11 @@ func (a *App) targetFields(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 		notice(c, "bt:http", icons.Warning, tok.Warning, m.WarnPlainHTTP())
 	}
 	ui.Box(c).Height(1).FillWidth().Background(tok.Line)
-	switchRow(c, tok, "bt:auto", m.AutoBackup(), m.AutoBackupNote(), &f.auto, f.busy)
-	if !f.auto {
-		return
-	}
 	ph := ""
-	if f.orig.AutoHours > 0 {
+	if !f.isNew {
 		ph = m.PasswordUnchanged()
 	}
 	ui.Form(c, func() {
-		ui.Field(c, m.AutoBackupInterval(), func() {
-			ui.Segmented(c.Key("bt:every"), &f.every, m.BackupEvery6Hours(), m.BackupEveryDay(), m.BackupEveryWeek()).Label(m.AutoBackupInterval())
-		})
 		ui.Field(c, m.BackupPassword(), func() {
 			ui.TextInput(c.Key("bt:pw"), &f.password).Password().Placeholder(ph).Disabled(f.busy)
 		})
@@ -1055,8 +1014,17 @@ func (a *App) targetFields(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 			ui.TextInput(c.Key("bt:confirm"), &f.confirm).Password().Placeholder(ph).Disabled(f.busy)
 		})
 	})
-	switchRow(c, tok, "bt:secrets", m.BackupIncludeSecrets(), m.AutoBackupSecretsNote(), &f.autoSecrets, f.busy)
-	ui.Text(c, m.AutoBackupNowNote()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
+	ui.Text(c, m.BackupPasswordNote()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
+	switchRow(c, tok, "bt:secrets", m.BackupIncludeSecrets(), m.BackupIncludeSecretsNote(), &f.secrets, f.busy)
+	ui.Box(c).Height(1).FillWidth().Background(tok.Line)
+	switchRow(c, tok, "bt:auto", m.AutoBackup(), m.AutoBackupNote(), &f.auto, f.busy)
+	if f.auto {
+		ui.Form(c, func() {
+			ui.Field(c, m.AutoBackupInterval(), func() {
+				ui.Segmented(c.Key("bt:every"), &f.every, m.BackupEvery6Hours(), m.BackupEveryDay(), m.BackupEveryWeek()).Label(m.AutoBackupInterval())
+			})
+		})
+	}
 }
 
 // remoteListView is the sheet of a place's backups.

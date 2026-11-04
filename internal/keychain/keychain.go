@@ -44,8 +44,8 @@ func SnippetContent(id string) string { return "snippet/" + id + "/content" }
 // reached with: backup/<id>/secret.
 func BackupSecret(id string) string { return "backup/" + id + "/secret" }
 
-// BackupKey is the key a backup target's automatic backups are sealed
-// with, derived from their password: backup/<id>/key.
+// BackupKey is the key a backup target's backups are sealed with, derived
+// from its backup password: backup/<id>/key.
 func BackupKey(id string) string { return "backup/" + id + "/key" }
 
 // MCPToken is the bearer token of the MCP endpoint.

@@ -133,8 +133,8 @@ const (
 
 // BackupTarget is a place backups go: a folder on a WebDAV server, an S3
 // bucket or a GitHub gist. Its password, secret key or token is in the
-// keychain (keychain.BackupSecret), and while AutoHours is set so is the
-// key automatic backups seal with (keychain.BackupKey).
+// keychain (keychain.BackupSecret), and so is the key its backups are
+// sealed with, by hand or automatically (keychain.BackupKey).
 type BackupTarget struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
@@ -157,10 +157,11 @@ type BackupTarget struct {
 	// Keep is how many of this device's backups stay; older ones are
 	// deleted after a backup. 0 keeps them all.
 	Keep int `json:"keep"`
+	// OmitSecrets leaves the secrets out of its backups.
+	OmitSecrets bool `json:"omitSecrets,omitempty"`
 	// AutoHours is the time between automatic backups, one of
-	// BackupAutoHours; 0 is off. AutoSecrets puts the secrets in them.
-	AutoHours   int  `json:"autoHours,omitempty"`
-	AutoSecrets bool `json:"autoSecrets,omitempty"`
+	// BackupAutoHours; 0 is off.
+	AutoHours int `json:"autoHours,omitempty"`
 }
 
 // backupKindOK reports whether k is a kind of BackupTarget.
@@ -194,7 +195,7 @@ func (s *Settings) normalizeBackups() {
 		t.Dir, t.GistID, t.ProxyID = strings.TrimSpace(t.Dir), strings.TrimSpace(t.GistID), strings.TrimSpace(t.ProxyID)
 		t.Keep = min(max(t.Keep, 0), BackupKeepMax)
 		if !slices.Contains(BackupAutoHours, t.AutoHours) {
-			t.AutoHours, t.AutoSecrets = 0, false
+			t.AutoHours = 0
 		}
 		out = append(out, t)
 	}
