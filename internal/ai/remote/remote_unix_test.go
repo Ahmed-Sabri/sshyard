@@ -304,7 +304,8 @@ func TestRunKillsTermIgnoringCommand(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() {
-		_, err := r.Run(ctx, "echo $$ > '"+pidfile+"'; trap '' TERM; sleep 600", "", nil, nil)
+		// Publishing the PID means the command is ready to ignore TERM.
+		_, err := r.Run(ctx, "trap '' TERM; echo $$ > '"+pidfile+"'; sleep 600", "", nil, nil)
 		done <- err
 	}()
 	pid := waitPID(t, pidfile)
