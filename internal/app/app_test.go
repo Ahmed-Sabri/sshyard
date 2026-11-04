@@ -3,6 +3,7 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/Licoy/sshyard/internal/keychain"
 	"github.com/Licoy/sshyard/internal/layout"
 	"github.com/Licoy/sshyard/internal/session"
+	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/internal/sshtest"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/locales"
@@ -264,6 +266,35 @@ func TestSettingsLanguageAndTheme(t *testing.T) {
 	tt.Frame()
 	if len(locs) == 0 || !tt.HasText(locales.In("zh-Hans").Settings()) {
 		t.Errorf("Chinese UI missing: %v %q", locs, tt.Texts())
+	}
+}
+
+func TestSettingsAllLanguagesAndThemes(t *testing.T) {
+	for _, dark := range []bool{false, true} {
+		t.Run(strconv.FormatBool(dark), func(t *testing.T) {
+			a, tt := newTestApp(t)
+			a.p.SetLocale = func(lang string) { tt.SetLocale(lang) }
+			a.page = pageSettings
+			tt.SetDark(dark)
+			tt.Frame()
+			current := locales.In("en").LanguageAuto()
+			for _, lang := range settings.Languages {
+				mustClick(t, tt, current)
+				tt.Frame()
+				mustClick(t, tt, languageNames[lang])
+				tt.Frame()
+				if a.Settings().Language != lang {
+					t.Fatalf("selected language = %q, want %q", a.Settings().Language, lang)
+				}
+				m := locales.In(lang)
+				for _, label := range []string{m.Settings(), m.Appearance(), m.Language(), m.Theme(), languageNames[lang]} {
+					if !tt.HasText(label) {
+						t.Errorf("%s dark=%v missing %q", lang, dark, label)
+					}
+				}
+				current = languageNames[lang]
+			}
+		})
 	}
 }
 
@@ -805,5 +836,24 @@ func TestDragPaneToEdge(t *testing.T) {
 	tt.Frame()
 	if n := len(a.ws.ActiveTab().Panes()); n != before+1 {
 		t.Errorf("%d panes after the host drop, want %d", n, before+1)
+	}
+}
+
+// Native text controls must also use the selected app language, including Korean.
+func TestNativeControlLanguages(t *testing.T) {
+	for _, lang := range settings.Languages {
+		t.Run(lang, func(t *testing.T) {
+			value := "text"
+			tt := ui.NewTester(func(c *ui.Context) { ui.TextInput(c, &value).Label("field").Width(240) }, 400, 200)
+			tt.SetLocale(lang)
+			tt.Frame()
+			if err := tt.RightClick("field"); err != nil {
+				t.Fatal(err)
+			}
+			want := locales.Catalog.Format(lang, "mygo.copy", nil)
+			if !slices.Contains(tt.Menu(), want) {
+				t.Errorf("native menu %q lacks %q", tt.Menu(), want)
+			}
+		})
 	}
 }

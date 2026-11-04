@@ -14,7 +14,7 @@ import (
 )
 
 // languageNames are the languages offered, by their own names.
-var languageNames = map[string]string{"en": "English", "zh-Hans": "简体中文"}
+var languageNames = map[string]string{"en": "English", "zh-Hans": "简体中文", "zh-Hant": "繁體中文", "ko": "한국어", "ja": "日本語"}
 
 // repoURL is where SSHYard's source and issues live.
 const repoURL = "https://github.com/Licoy/sshyard"

@@ -1,0 +1,120 @@
+<p align="left"><a href="README.md">English</a> · <a href="README_ZH.md">简体中文</a> · <a href="README_ZH_TW.md">繁體中文</a> · <strong>한국어</strong> · <a href="README_JA.md">日本語</a></p>
+
+<p align="center">
+  <img src="resources/icon.png" alt="SSHYard 로고" width="128" height="128">
+</p>
+
+<h1 align="center">SSHYard</h1>
+
+SSHYard는 macOS, Windows 및 Linux용 네이티브 데스크톱 SSH / SFTP 클라이언트로, 터미널과 파일 관리, AI 도우미를 하나의 앱에서 제공합니다.
+
+## 스크린샷
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/terminal-ai-assistant.webp" alt="터미널 및 AI 도우미" width="100%"><br>
+      터미널 및 AI 도우미
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/sftp-file-manager.webp" alt="SFTP 파일 관리자" width="100%"><br>
+      SFTP 파일 관리자
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/system-monitor.webp" alt="시스템 모니터" width="100%"><br>
+      시스템 모니터
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/ai-assistant-settings.webp" alt="AI 도우미 설정" width="100%"><br>
+      AI 도우미 설정
+    </td>
+  </tr>
+</table>
+
+## 주요 기능
+
+- **터미널**
+  - 탭, 분할 창 및 터미널 검색
+  - 트루 컬러, 전각 문자, 입력기와 tmux, vim, htop의 마우스 조작 지원
+  - 같은 호스트의 여러 창에서 연결을 공유하고 자동으로 재연결
+
+- **파일 관리**
+  - 터미널 옆에서 SFTP 사용, 디렉터리 따라가기 및 내장 편집기
+  - 드래그 앤 드롭과 폴더 전송 지원
+  - 일시 정지, 재개 및 다시 시도가 가능한 전송 대기열
+
+- **AI 도우미**
+  - 호스트별 전용 도우미로 명령 실행 및 파일 편집
+  - AI 제공자 연결 또는 외부 ACP 에이전트 사용
+  - 묻기, 검토 또는 전체 접근 모드 선택 및 AI 검토 설정
+
+- **에이전트 연동**
+  - 공개 API, MCP 및 스킬을 통해 로컬 AI 에이전트 연결
+  - 저장된 자격 증명을 노출하지 않고 호스트 탐색, 연결 및 명령 실행
+  - Claude Code와 Codex용 스킬을 한 번의 클릭으로 설정, 에이전트 접근은 기본적으로 꺼짐
+
+- **호스트 및 자격 증명**
+  - SSH 설정에서 가져오기 또는 `user@host:port`로 빠르게 연결
+  - 비밀번호, OpenSSH / PEM / PuTTY 키 및 SSH 에이전트 지원
+  - 로컬 암호화 자격 증명 저장소, 키 생성 및 공개 키 설치
+
+- **백업 및 복원**
+  - 호스트, 자격 증명, 스니펫 및 설정을 비밀번호로 암호화하여 백업하고 다른 기기에서 복원
+  - 로컬, WebDAV, S3 호환 스토리지 및 비밀 GitHub Gist에 저장
+  - 수동 또는 예약 백업과 보관 개수 설정
+
+- **네트워크**
+  - 여러 홉의 점프 호스트 및 HTTP / SOCKS5 프록시
+  - 로컬, 원격 및 동적 포트 포워딩
+
+- **일상적인 사용**
+  - 서버 지표를 한눈에 확인
+  - 라이트 및 다크 테마, 영어, 중국어 간체, 중국어 번체, 한국어 및 일본어 지원
+
+## 개발
+
+[mygo](https://github.com/egoist/mygo)로 개발했습니다. Go 1.27.3이 필요하며 `GOTOOLCHAIN`으로 다운로드할 수 있습니다. cgo는 필요하지 않습니다.
+
+```sh
+# 실행
+go run .
+
+# 개발 앱 실행, macOS에서는 "Apple Development" 서명 인증서 권장
+# 일관된 서명은 키체인 승인 요청을 줄일 수 있지만 자체 서명은
+# 재빌드 후의 접근을 보장하지 않으며 macOS가 다시 승인을 요청할 수 있음
+scripts/run-dev-app.sh
+
+# 데이터를 별도 디렉터리에 보관
+SSHYARD_DATA_DIR=/tmp/demo go run .
+
+# 테스트용 로컬 SSH 서버(macOS / Linux)
+go run ./cmd/devsshd -addr 127.0.0.1:2222 -user demo -password demo -root /tmp/remote
+
+# 테스트용 로컬 HTTP / SOCKS 프록시
+go run ./cmd/devproxy -addr 127.0.0.1:3128
+
+# 테스트 및 검사
+go test -race -count=1 ./...
+go vet ./...
+gofmt -l .
+
+# locales/*.json 편집 후 로케일 카탈로그 다시 생성
+GOFLAGS=-mod=mod go run github.com/egoist/mygo/cmd/mygo generate
+
+# dist/에 패키징
+go tool mygo build -platform linux/amd64,windows/amd64,darwin/arm64,darwin/amd64 -o dist
+```
+
+devsshd로 테스트하려면 호스트 `127.0.0.1`, 포트 `2222`, 사용자 `demo`, 비밀번호 `demo`를 추가하세요.
+
+기여자 규칙은 [AGENTS.md](AGENTS.md)를 참고하세요.
+
+## 커뮤니티 지원
+
+- [LinuxDO](https://linux.do)
+
+## 라이선스
+
+SSHYard는 [GNU Affero General Public License v3.0](LICENSE)으로 배포됩니다.

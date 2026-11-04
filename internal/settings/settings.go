@@ -19,7 +19,7 @@ import (
 // Settings are the user's preferences.
 type Settings struct {
 	Theme theme.Mode `json:"theme"`
-	// Language is "" to follow the system, else "en" or "zh-Hans".
+	// Language is "" to follow the system, else one of Languages.
 	Language     string `json:"language"`
 	CheckUpdates bool   `json:"checkUpdates"`
 	// UpdateIntervalHours is the time between automatic checks for
@@ -339,7 +339,7 @@ const MCPPortDefault = 47320
 var UpdateIntervals = []int{1, 2, 6, 12, 24}
 
 // Languages are the languages SSHYard ships, besides following the system.
-var Languages = []string{"en", "zh-Hans"}
+var Languages = []string{"en", "zh-Hans", "zh-Hant", "ko", "ja"}
 
 // Default returns the defaults.
 func Default() Settings {

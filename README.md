@@ -1,4 +1,4 @@
-<p align="left"><strong>English</strong> · <a href="README_ZH.md">中文</a></p>
+<p align="left"><strong>English</strong> · <a href="README_ZH.md">简体中文</a> · <a href="README_ZH_TW.md">繁體中文</a> · <a href="README_KO.md">한국어</a> · <a href="README_JA.md">日本語</a></p>
 
 <p align="center">
   <img src="resources/icon.png" alt="SSHYard logo" width="128" height="128">
@@ -71,7 +71,7 @@ SSHYard is a native desktop SSH / SFTP client for macOS, Windows and Linux, brin
 
 - **Everyday use**
   - Server metrics at a glance
-  - Light and dark themes, English and Simplified Chinese
+  - Light and dark themes, with English, Simplified Chinese, Traditional Chinese, Korean and Japanese
 
 ## Development
 

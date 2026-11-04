@@ -10,6 +10,7 @@ import (
 	"github.com/Licoy/sshyard/internal/keychain"
 	"github.com/Licoy/sshyard/internal/layout"
 	"github.com/Licoy/sshyard/internal/session"
+	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/locales"
 	"github.com/egoist/mygo/ui"
@@ -257,7 +258,7 @@ func snippetGroupTitle(m locales.Messages, g string) string {
 // stored "", so that the choice survives a change of language.
 func snippetGroupName(g string) string {
 	g = strings.TrimSpace(g)
-	for _, l := range []string{"en", "zh-Hans"} {
+	for _, l := range settings.Languages {
 		if strings.EqualFold(g, locales.In(l).SnippetDefaultGroup()) {
 			return ""
 		}

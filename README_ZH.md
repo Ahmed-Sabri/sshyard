@@ -1,4 +1,4 @@
-<p align="left"><a href="README.md">English</a> · <strong>中文</strong></p>
+<p align="left"><a href="README.md">English</a> · <strong>简体中文</strong> · <a href="README_ZH_TW.md">繁體中文</a> · <a href="README_KO.md">한국어</a> · <a href="README_JA.md">日本語</a></p>
 
 <p align="center">
   <img src="resources/icon.png" alt="SSHYard 图标" width="128" height="128">
@@ -71,7 +71,7 @@ SSHYard 是一款原生桌面 SSH / SFTP 客户端，支持 macOS、Windows 和 
 
 - **日常体验**
   - 服务器状态监控
-  - 浅色与深色主题，英文与简体中文
+  - 浅色与深色主题，支持英文、简体中文、繁体中文、韩文和日文
 
 ## 开发
 

@@ -11,6 +11,7 @@ import (
 	"github.com/Licoy/sshyard/internal/keychain"
 	"github.com/Licoy/sshyard/internal/layout"
 	"github.com/Licoy/sshyard/internal/session"
+	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/locales"
 	"github.com/egoist/mygo/ui"
 )
@@ -562,5 +563,16 @@ func TestSnippetUIIntroAndLayout(t *testing.T) {
 	tt.Frame()
 	if !tt.HasText(m.SnippetEmpty()) {
 		t.Fatal("no match note", tt.Texts())
+	}
+}
+
+func TestSnippetGroupNameLanguages(t *testing.T) {
+	for _, lang := range settings.Languages {
+		if got := snippetGroupName("  " + locales.In(lang).SnippetDefaultGroup() + "  "); got != "" {
+			t.Errorf("%s default group = %q", lang, got)
+		}
+	}
+	if got := snippetGroupName(" Ops "); got != "Ops" {
+		t.Errorf("named group = %q", got)
 	}
 }

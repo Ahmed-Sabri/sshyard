@@ -1,0 +1,2071 @@
+{
+  "@@locale": "ko",
+  "appName": "SSHYard",
+  "hosts": "호스트",
+  "favorites": "즐겨찾기",
+  "ungrouped": "그룹 없음",
+  "newHost": "새 호스트",
+  "editHost": "호스트 편집",
+  "deleteHost": "호스트 삭제",
+  "deleteForward": "포트 포워딩 삭제",
+  "deleteForwardConfirm": "{name}을(를) 삭제하시겠습니까? 즉시 중지되며 저장된 비밀번호가 암호화된 로컬 자격 증명 저장소에서 삭제됩니다.",
+  "deleteHostConfirm": "{name}을(를) 삭제하시겠습니까? 다른 호스트에서 사용하는 자격 증명은 유지됩니다.",
+  "searchHosts": "호스트 검색",
+  "noHosts": "아직 호스트가 없습니다",
+  "noHostsHint": "SSH로 연결할 호스트를 추가하세요.",
+  "fieldName": "이름",
+  "fieldHost": "호스트",
+  "fieldPort": "포트",
+  "fieldUser": "사용자 이름",
+  "fieldGroup": "그룹",
+  "fieldAuth": "인증",
+  "authPassword": "비밀번호",
+  "authKey": "개인 키",
+  "fieldPassword": "비밀번호",
+  "fieldPrivateKey": "개인 키(PEM)",
+  "importKey": "키 파일 가져오기…",
+  "fieldPassphrase": "키 암호문",
+  "savePassword": "암호화된 로컬 자격 증명 저장소에 저장",
+  "favorite": "즐겨찾기",
+  "save": "저장",
+  "cancel": "취소",
+  "connect": "연결",
+  "delete": "삭제",
+  "close": "닫기",
+  "edit": "편집",
+  "keychainError": "암호화된 자격 증명 저장소 오류: {detail}",
+  "requiredField": "{field}은(는) 필수입니다.",
+  "invalidPort": "포트는 1~65535 사이여야 합니다.",
+  "splitRight": "오른쪽으로 분할",
+  "splitDown": "아래로 분할",
+  "closePane": "창 닫기",
+  "closeTab": "탭 닫기",
+  "newTab": "새 탭",
+  "emptyPane": "호스트를 여기로 드래그하거나 사이드바에서 선택하세요.",
+  "dropToOpen": "여기에 놓아 열기",
+  "welcomeTitle": "SSHYard에 오신 것을 환영합니다",
+  "welcomeHint": "왼쪽에서 호스트를 선택하여 세션을 여세요.",
+  "stateConnecting": "연결 중…",
+  "stateConnected": "연결됨",
+  "stateReconnecting": "{seconds}초 후 다시 연결 중({attempt}번째 시도)…",
+  "stateDisconnected": "연결 끊김",
+  "stateFailed": "연결 실패",
+  "reconnect": "다시 연결",
+  "errAuth": "{user}@{host} 인증에 실패했습니다.",
+  "errNetwork": "{host}에 연결할 수 없습니다: {detail}",
+  "errHostKeyChanged": "{host}의 호스트 키가 변경되었습니다. 연결이 가로채기 당하고 있을 수 있어 SSHYard가 연결을 거부했습니다.",
+  "errTimeout": "{host} 연결 시간이 초과되었습니다.",
+  "errNoBanner": "{host}에서 연결을 수락했지만 SSH 서버가 아무것도 보내지 않았습니다. sshd가 실행 중인지, 방화벽이 트래픽을 차단하지 않는지 확인하세요.",
+  "errClosed": "세션이 종료되었습니다: {detail}",
+  "errGeneric": "{detail}",
+  "hostKeyUnknownTitle": "알 수 없는 호스트 키",
+  "hostKeyUnknown": "{host}의 진위를 확인할 수 없습니다. {keyType} 키 지문은 {fingerprint}입니다.",
+  "trustAndConnect": "신뢰하고 연결",
+  "passwordPromptTitle": "{target}의 비밀번호",
+  "sftp": "파일",
+  "terminal": "터미널",
+  "local": "로컬",
+  "remote": "원격",
+  "upload": "업로드",
+  "download": "다운로드",
+  "refresh": "새로 고침",
+  "goUp": "상위 폴더",
+  "transferProgress": "{name} — {percent}%",
+  "transferDone": "{name} 전송 완료",
+  "transferFailed": "전송 실패: {detail}",
+  "colName": "이름",
+  "colSize": "크기",
+  "colModified": "수정 날짜",
+  "selectFile": "먼저 파일을 선택하세요.",
+  "settings": "설정",
+  "appearance": "외관",
+  "themeAuto": "자동",
+  "themeLight": "라이트",
+  "themeDark": "다크",
+  "language": "언어",
+  "languageAuto": "시스템",
+  "updates": "업데이트",
+  "checkForUpdates": "업데이트 확인",
+  "updateAvailable": "{version} 버전을 사용할 수 있습니다.",
+  "updatesDisabled": "이 빌드에서는 업데이트가 활성화되지 않았습니다.",
+  "currentVersion": "버전 {version}",
+  "checkAutomatically": "자동으로 업데이트 확인",
+  "updateInterval": "확인 간격",
+  "updateIntervalNote": "SSHYard를 다시 실행하면 적용됩니다.",
+  "viewUpdate": "업데이트 보기",
+  "fontSize": "글꼴 크기",
+  "keepAlive": "연결 유지 간격(초)",
+  "autoReconnect": "자동으로 다시 연결",
+  "copy": "복사",
+  "paste": "붙여넣기",
+  "clearScreen": "지우기",
+  "find": "찾기",
+  "passphrasePromptTitle": "{target} 키의 암호문",
+  "errPassphrase": "{host}의 개인 키가 암호화되어 있습니다. 키 암호문을 입력하세요.",
+  "errAskPassword": "연결하려면 {host}의 비밀번호를 입력하세요.",
+  "errNoCredentials": "{host}에 저장된 비밀번호나 키가 없습니다.",
+  "hostKeyChangedTitle": "호스트 키 변경됨",
+  "stateExited": "세션 종료됨",
+  "transfers": "전송",
+  "clearFinished": "완료 항목 지우기",
+  "openInNewTab": "새 탭에서 열기",
+  "duplicateSession": "세션 복제",
+  "keychainSessionOnly": "이번 실행에만 유지",
+  "noSession": "세션 없음",
+  "pickSession": "세션",
+  "empty": "빈 폴더",
+  "chooseKeyFile": "키 파일 선택…",
+  "keyLoaded": "키를 불러왔습니다({bytes}바이트)",
+  "scrollback": "스크롤 기록",
+  "general": "일반",
+  "terminalSection": "터미널",
+  "about": "정보",
+  "matches": "{count}개 일치",
+  "dragHint": "탭, 창 머리글 또는 호스트를 창으로 드래그하세요. 가운데에 놓으면 교체하고 가장자리에 놓으면 분할합니다.",
+  "seconds": "{n}초",
+  "hours": "{n}시간",
+  "openFiles": "파일 열기",
+  "openFilesBeside": "오른쪽에 파일 열기",
+  "openFilesHere": "이 호스트의 파일 열기",
+  "openTerminalBeside": "오른쪽에 터미널 열기",
+  "filesPane": "파일 · {host}",
+  "newFolder": "새 폴더",
+  "folderName": "폴더 이름",
+  "create": "생성",
+  "localUp": "로컬: 상위 폴더로 이동",
+  "remoteUp": "원격: 상위 폴더로 이동",
+  "localRefresh": "로컬 파일 새로 고침",
+  "remoteRefresh": "원격 파일 새로 고침",
+  "localNewFolder": "새 로컬 폴더",
+  "remoteNewFolder": "새 원격 폴더",
+  "uploadSelected": "선택한 파일 업로드",
+  "downloadSelected": "선택한 파일 다운로드",
+  "cancelTransfer": "{name} 취소",
+  "addFavorite": "즐겨찾기에 추가",
+  "removeFavorite": "즐겨찾기에서 제거",
+  "paneActions": "창 작업",
+  "noTransfers": "아직 전송이 없습니다. 업로드할 파일을 여기에 놓으세요.",
+  "hostCount": "{count, plural, other {호스트 #개}}",
+  "theme": "테마",
+  "clearSearch": "검색 지우기",
+  "interfaceFont": "인터페이스 글꼴",
+  "terminalFont": "터미널 글꼴",
+  "systemDefault": "시스템 기본값",
+  "monospacedOnly": "고정폭 글꼴만",
+  "monospacedOnlyNote": "어느 경우든 고정폭 글꼴을 먼저 표시합니다",
+  "fontPreviewText": "SSHYard로 서버를 가까이에서 관리하세요",
+  "errFontMissing": "“{name}” 글꼴이 설치되지 않아 시스템 글꼴을 사용합니다",
+  "authAsk": "매번 비밀번호 묻기",
+  "authAgent": "SSH 에이전트",
+  "credKindPassword": "비밀번호",
+  "credKindKey": "키",
+  "inUse": "{names}에서 아직 사용 중입니다.",
+  "cwdFollow": "파일이 터미널 디렉터리를 따라감",
+  "errAgentUnavailable": "실행 중인 SSH 에이전트가 없습니다. ssh-agent(Windows에서는 OpenSSH Authentication Agent 서비스)를 시작하고 키를 추가하세요.",
+  "errAgentEmpty": "SSH 에이전트에 키가 없습니다. ssh-add로 추가하세요.",
+  "savePasswordCredential": "비밀번호 자격 증명 저장",
+  "saveHostPasswordHint": "다음 연결에 사용할 수 있도록 이 호스트의 비밀번호를 암호화하여 저장합니다.",
+  "typedNotSaved": "이 세션 동안 메모리에만 유지되며 저장되지 않습니다.",
+  "mouseReporting": "프로그램이 마우스 입력을 받고 있습니다. 텍스트를 선택하려면 Shift를 누르세요.",
+  "credentials": "자격 증명",
+  "newCredential": "새 자격 증명",
+  "editCredential": "자격 증명 편집",
+  "newCredentialChoice": "새 자격 증명…",
+  "noCredentials": "아직 자격 증명이 없습니다. 자격 증명은 호스트 간에 공유하는 비밀번호나 개인 키입니다.",
+  "fieldType": "유형",
+  "fieldNote": "메모",
+  "credKindPrivateKey": "개인 키",
+  "credUserPlaceholder": "호스트의 사용자 이름",
+  "credUserNote": "설정하면 호스트의 사용자 대신 이 사용자로 로그인합니다.",
+  "passwordUnchanged": "변경 없음",
+  "keyChooseFile": "파일 선택…",
+  "keyGenerate": "ed25519 생성",
+  "keyDropHint": "키 파일을 여기에 놓거나 붙여넣거나 새 키를 생성하세요. OpenSSH, PEM 및 PuTTY .ppk 키를 읽을 수 있습니다.",
+  "keyInfo": "{type} · {fingerprint}",
+  "keyFromFile": "{name}에서 가져옴",
+  "keyGenerated": "여기서 생성한 새 키",
+  "keyPuttyConverted": "PuTTY 키, OpenSSH 형식으로 보관됨",
+  "keyEncrypted": "암호문으로 암호화됨",
+  "askPassphraseEachTime": "암호문을 저장하지 않고 실행할 때마다 한 번 묻기",
+  "credUsedBy": "{names}에서 사용 중",
+  "credUnused": "사용 중인 호스트 없음",
+  "credKeyRequired": "개인 키를 불러오거나 붙여넣거나 생성하세요.",
+  "credPasswordRequired": "비밀번호를 입력하세요.",
+  "errKeyPassphraseNeeded": "이 키는 암호화되어 있습니다. 키 암호문을 입력하세요.",
+  "errKeyPassphraseWrong": "이 키의 암호문이 올바르지 않습니다.",
+  "errNotAKey": "개인 키가 아닙니다. OpenSSH, PEM 및 PuTTY .ppk 키를 읽을 수 있습니다.",
+  "errPublicKey": "공개 키입니다. 개인 키를 불러오세요.",
+  "errKeyCorrupt": "키 파일이 손상되었습니다.",
+  "errKeyUnsupported": "지원하지 않는 키: {detail}",
+  "errReadFile": "{name}을(를) 읽을 수 없습니다: {detail}",
+  "nameTaken": "이미 사용 중인 이름입니다.",
+  "deleteCredential": "자격 증명 삭제",
+  "deleteCredentialConfirm": "{name}을(를) 삭제하시겠습니까? 비밀 정보가 암호화된 로컬 자격 증명 저장소에서 삭제됩니다.",
+  "deleteCredentialInUse": "{name}은(는) {names}에서 사용 중입니다. 앞으로 사용할 로그인 방법을 선택한 후 삭제하세요.",
+  "rebindTo": "다음으로 로그인",
+  "rebindAndDelete": "전환하고 삭제",
+  "installPublicKey": "공개 키 설치…",
+  "installKeyTitle": "공개 키 설치",
+  "installKeyNote": "현재 방식으로 {host}에 로그인하여 ~/.ssh/authorized_keys에 키를 추가한 뒤 키만으로 새 로그인이 가능한지 확인합니다.",
+  "installNoKeys": "아직 개인 키 자격 증명이 없습니다. 설정 › 자격 증명에서 추가하세요.",
+  "install": "설치",
+  "installing": "설치 중…",
+  "installLoginPassword": "{target}의 비밀번호",
+  "installAlready": "이미 authorized_keys에 키가 있어 추가하지 않았습니다.",
+  "installAdded": "authorized_keys에 키를 추가했습니다.",
+  "installVerified": "키만으로 로그인할 수 있습니다.",
+  "switchToCredential": "앞으로 {name}을(를) 사용하여 {host}에 로그인하시겠습니까?",
+  "switchAuth": "전환",
+  "keepCurrent": "현재 설정 유지",
+  "installVerifyFailed": "키가 authorized_keys에 있지만 키만으로 로그인하지 못했습니다: {detail}",
+  "installFailed": "키를 설치할 수 없습니다: {detail}",
+  "installHints": "호스트의 로그인 방식은 변경되지 않았습니다. ~/.ssh 권한이 700이고 authorized_keys 권한이 600이며 둘 다 해당 사용자 소유인지, 서버의 AuthorizedKeysFile 설정이 올바른지, SELinux 파일 레이블이 올바른지(restorecon -R ~/.ssh) 확인하세요.",
+  "hostSwitched": "이제 {host}은(는) {name}을(를) 사용하여 로그인합니다.",
+  "stateConnectingTo": "{host}에 연결 중…",
+  "errAtJump": "점프 호스트 {name}: {detail}",
+  "errProxyAuth": "{proxy}에서 프록시 인증에 실패했습니다. 설정에서 프록시의 사용자 이름과 비밀번호를 확인하세요.",
+  "errProxy": "{proxy} 프록시를 통해 연결할 수 없습니다: {detail}",
+  "errJumpLoop": "점프 호스트가 순환하거나 중복됩니다. 호스트는 자신을 통해 접근하거나 경로에 두 번 나타날 수 없습니다.",
+  "network": "네트워크",
+  "fieldProxy": "프록시",
+  "proxyNone": "없음(직접 연결)",
+  "newProxyChoice": "새 프록시…",
+  "fieldJumpHosts": "연결 순서대로 나열된 점프 호스트(드래그하여 순서 변경)",
+  "noJumpHosts": "점프 호스트 없음: 직접 연결합니다.",
+  "addJumpHost": "점프 호스트 추가…",
+  "removeJumpHost": "점프 호스트 제거",
+  "proxies": "프록시",
+  "noProxies": "아직 프록시가 없습니다. 프록시(HTTP CONNECT 또는 SOCKS5)는 호스트까지의 첫 번째 홉을 전달합니다.",
+  "newProxy": "새 프록시",
+  "editProxy": "프록시 편집",
+  "proxyUserPlaceholder": "없음",
+  "proxyFirstHop": "호스트 자체나 첫 번째 점프 호스트까지의 첫 홉만 프록시를 통과합니다. SOCKS5는 프록시에서 이름을 확인합니다.",
+  "viaJumps": "{chain} 경유 {target}",
+  "errKeychainSave": "암호화된 로컬 자격 증명 저장소에 저장할 수 없습니다: {detail}. 아무것도 변경되지 않았습니다.",
+  "errKeychainRestore": "{message} 암호화된 로컬 자격 증명 저장소도 복원할 수 없습니다: {detail}",
+  "errKeychainDelete": "암호화된 로컬 자격 증명 저장소에서 비밀 정보를 제거할 수 없습니다: {detail}. 다시 시도할 수 있도록 유지했습니다.",
+  "installOtherUser": "{user} 사용자에게 설치했지만 이 키 자격 증명은 {keyUser}(으)로 로그인하므로 호스트 전환을 제안하지 않습니다. 여기서 사용하려면 자격 증명의 사용자 이름을 지우세요.",
+  "installOtherHostUser": "{user} 사용자에게 설치했지만 이 키 자격 증명에 사용자 이름이 없어 호스트 자체 사용자인 {hostUser}(으)로 로그인하므로 전환을 제안하지 않습니다. 여기서 사용하려면 자격 증명의 사용자 이름을 {user}(으)로 설정하세요.",
+  "errNetworkVia": "{via}을(를) 통해 {host}에 연결할 수 없습니다: {detail}",
+  "netRefused": "연결이 거부되었습니다(SSH 서버가 실행 중이고 포트가 올바른가요?)",
+  "netUnreachable": "네트워크 또는 호스트에 접근할 수 없습니다",
+  "netNoSuchHost": "호스트 이름을 확인할 수 없습니다",
+  "netTimedOut": "응답 없음(시간 초과)",
+  "netReset": "상대방이 연결을 종료했습니다",
+  "netRejected": "점프 호스트가 연결을 열 수 없습니다({detail})",
+  "addMenu": "추가",
+  "quickConnectMenu": "빠른 연결…",
+  "importSSHConfigMenu": "~/.ssh/config에서 가져오기…",
+  "importSSHConfig": "SSH 설정에서 가져오기",
+  "quickConnect": "빠른 연결",
+  "quickConnectHint": "호스트를 저장하지 않고 연결합니다.",
+  "quickTarget": "대상",
+  "quickPassword": "지금 입력할 비밀번호",
+  "quickPasswordHint": "비워 두면 연결 시 묻습니다",
+  "quickTempNote": "임시 연결입니다. 아무것도 저장하지 않으며 탭을 닫으면 비밀번호를 잊습니다.",
+  "quickInvalid": "user@host:port, 호스트 또는 ssh 명령을 입력하세요.",
+  "quickOption": "여기서는 {option}을(를) 지원하지 않습니다.",
+  "temporary": "임시",
+  "saveAsHost": "호스트로 저장",
+  "importSkip": "건너뛰기",
+  "importOverwrite": "덮어쓰기",
+  "importKeepBoth": "둘 다 유지",
+  "importNoConfig": "{path}에 SSH 설정이 없습니다.",
+  "importKeyError": "{file}: {detail}",
+  "importKeyNeedsPass": "{file}은(는) 암호화되어 있습니다. 가져오려면 암호문을 입력하거나 사용하는 호스트의 선택을 해제하세요.",
+  "importKeyUnreadable": "키 파일을 읽을 수 없습니다: {path}. 호스트가 비밀번호를 묻습니다.",
+  "importedFrom": "{path}에서 가져옴",
+  "importChooseFile": "설정 파일 선택…",
+  "importSummary": "가져올 항목 {count}개 · 건너뛴 항목 {skipped}개",
+  "importButton": "가져오기({count})",
+  "importDone": "호스트 {count}개를 가져오고 {skipped}개를 건너뛰었습니다.",
+  "importSkippedPattern": "건너뜀: 단일 호스트가 아닌 와일드카드 패턴",
+  "importReadOnlyNote": "설정과 키 파일은 읽기만 하며 변경하지 않습니다. 가져온 키는 암호화된 로컬 자격 증명 저장소에 저장합니다.",
+  "importPick": "{name} 가져오기",
+  "importConflictAction": "충돌 시 처리",
+  "importConflict": "{name}과(와) 같은 주소",
+  "importVia": "{hops} 경유",
+  "importKeyFile": "키 {file}",
+  "importNotImported": "가져오지 않음: {names}",
+  "importPassphrases": "암호화된 키의 암호문",
+  "importPassphraseAsk": "비워 두면 연결 시 묻기",
+  "importPassphraseNeeded": "가져오려면 필요함",
+  "importPassphraseFor": "{file}의 암호문",
+  "portForwards": "포트 포워딩",
+  "newForward": "새 포트 포워딩",
+  "newForwardMenu": "새 포트 포워딩…",
+  "editForward": "포트 포워딩 편집",
+  "fwdRowLabel": "포트 포워딩 {name}",
+  "fwdStart": "시작",
+  "fwdStop": "중지",
+  "fwdNoConns": "연결 없음",
+  "fwdConnFrom": "{source}에서 연결",
+  "fwdDisconnect": "연결 끊기",
+  "fwdRunningOnHost": "{count, plural, other {포트 포워딩 #개 실행 중}}",
+  "fwdStateStopped": "중지됨",
+  "fwdStateConnecting": "연결 중…",
+  "fwdStateRunning": "실행 중",
+  "fwdStateReconnecting": "다시 연결 중…",
+  "fwdPortInUse": "오류: 포트가 이미 사용 중입니다",
+  "fwdRemoteRefused": "오류: 서버가 {addr} 수신 대기를 거부했습니다",
+  "fwdPasswordMissing": "오류: 암호화된 로컬 자격 증명 저장소에 프록시 비밀번호가 없습니다",
+  "fwdError": "오류: {detail}",
+  "fwdProtoAuto": "자동 감지",
+  "fwdHost": "경유 호스트",
+  "fwdTarget": "대상",
+  "fwdNamePlaceholder": "선택 사항, 예: 웹",
+  "fwdKindLocal": "로컬 -L",
+  "fwdKindRemote": "원격 -R",
+  "fwdKindDynamic": "동적 -D",
+  "fwdListenLocal": "이 컴퓨터에서 수신 대기",
+  "fwdListenRemote": "서버에서 수신 대기",
+  "fwdTargetRemote": "서버에서 접근할 대상",
+  "fwdTargetLocal": "이 컴퓨터에서 접근할 대상",
+  "fwdProtocol": "프로토콜",
+  "fwdUserPlaceholder": "없음: 인증하지 않음",
+  "fwdAutoStart": "앱 실행 시 시작",
+  "fwdExposed": "{addr}에서 수신 대기하면 네트워크의 다른 컴퓨터도 이 포워딩을 사용할 수 있습니다.",
+  "fwdExposedAuth": "본인만 프록시를 사용할 수 있도록 사용자 이름과 비밀번호를 설정하세요.",
+  "fwdHintLocal": "이 컴퓨터의 포트로 들어온 연결을 호스트를 통해 서버에서 보이는 대상으로 전달합니다.",
+  "fwdHintRemote": "서버의 포트로 들어온 연결을 이 컴퓨터에서 보이는 대상으로 되돌려 전달합니다.",
+  "fwdHintDynamic": "이 컴퓨터의 포트가 HTTP 및 SOCKS 프록시로 동작합니다. 연결은 서버에서 나가며 이름도 서버에서 확인합니다.",
+  "applyToAll": "나머지 {n}개에도 적용",
+  "cancelAll": "모두 취소",
+  "conflictMessage": "{dir}에 “{name}”이(가) 이미 있습니다.",
+  "conflictTitle": "기존 파일을 교체하시겠습니까?",
+  "copyPath": "경로 복사",
+  "deleteFileConfirm": "“{name}”을(를) 삭제하시겠습니까? 되돌릴 수 없습니다.",
+  "deleteFolderConfirm": "“{name}” 폴더와 그 안의 모든 항목을 삭제하시겠습니까? 되돌릴 수 없습니다.",
+  "deleteItem": "삭제…",
+  "editInEditor": "편집",
+  "fileName": "파일 이름",
+  "keepBoth": "둘 다 유지",
+  "modeHint": "644 또는 755와 같은 8진수입니다.",
+  "modeOctal": "권한",
+  "newFileItem": "새 파일…",
+  "newFileTitle": "새 파일",
+  "newFolderItem": "새 폴더…",
+  "newName": "새 이름",
+  "openFolder": "열기",
+  "openWithDefault": "기본 앱으로 열기",
+  "overwrite": "교체",
+  "pauseAll": "모두 일시 정지",
+  "pauseTransfer": "{name} 일시 정지",
+  "permissions": "권한…",
+  "permissionsTitle": "{name}의 권한",
+  "renameItem": "이름 변경",
+  "renameTitle": "{name} 이름 변경",
+  "resumeAll": "모두 재개",
+  "resumeTransfer": "{name} 재개",
+  "retryAll": "실패 항목 다시 시도",
+  "retryTransfer": "{name} 다시 시도",
+  "skip": "건너뛰기",
+  "transferCanceled": "취소됨",
+  "transferDoneShort": "완료",
+  "transferETA": "{time} 남음",
+  "transferPaused": "{percent}%에서 일시 정지됨",
+  "transferQueued": "대기 중",
+  "transferRetrying": "다시 시도 중({max}회 중 {n}회)",
+  "transferSummary": "{active}개 진행 중 · {total}개 중 {done}개 완료",
+  "transferConcurrency": "동시 전송 수",
+  "transferConcurrencyHint": "각 파일 창에서 동시에 복사할 파일 수입니다.",
+  "openConfirmMB": "다음 크기(MB)를 넘는 파일을 열기 전 확인",
+  "openConfirmHint": "이보다 크거나 텍스트가 아닌 파일은 편집기나 다른 앱에서 열기 전에 확인합니다.",
+  "openLargeTitle": "대용량 파일을 여시겠습니까?",
+  "openLargeMessage": "“{name}”의 크기는 {size}입니다. 열면 파일 전체를 이 컴퓨터로 복사합니다.",
+  "openBinaryTitle": "바이너리 파일을 여시겠습니까?",
+  "openBinaryMessage": "“{name}”은(는) 텍스트 파일이 아닌 것 같습니다. 편집기에서 저장하면 손상될 수 있습니다.",
+  "openExecTitle": "프로그램 파일을 여시겠습니까?",
+  "openExecMessage": "“{name}”은(는) 열 때 이 컴퓨터에서 사용자 권한으로 프로그램이 실행될 수 있는 파일 유형입니다. 서버와 파일을 신뢰하는 경우에만 여세요. 안전하게 읽거나 변경하려면 편집을 사용하세요.",
+  "openAnyway": "열기",
+  "editorSave": "저장",
+  "editorSaved": "{name} 저장됨",
+  "editorModified": "수정됨",
+  "editorConflictTitle": "서버에서 변경됨",
+  "editorConflictMessage": "“{name}”을(를) 연 후 서버에서 파일이 변경되었습니다. 현재 버전으로 교체하시겠습니까?",
+  "editorReload": "다시 불러오기",
+  "openedLocally": "{name}을(를) 열었습니다. 해당 앱에서 저장하면 업로드합니다.",
+  "autoUploaded": "{name} 업로드됨",
+  "openFailed": "{name}을(를) 열 수 없습니다: {detail}",
+  "followTerminal": "터미널 따라가기",
+  "followNoReport": "이 셸은 폴더를 보고하지 않아 파일 창이 따라갈 수 없습니다.",
+  "copySnippet": "복사",
+  "hostCwdFollowHint": "셸이 폴더를 보고할 때마다 같은 탭의 파일 창이 해당 폴더로 이동합니다.",
+  "filesSection": "파일",
+  "editorReloadFromServer": "서버에서 다시 불러오기",
+  "downloadSkipped": "다운로드에서 제외됨: {count}개",
+  "skipName": "“{name}”: 일부 시스템에서 안전하지 않은 문자가 이름에 있어 건너뛰었습니다",
+  "skipLinkedFolder": "“{name}”: 폴더 안에 있는 폴더 링크입니다(직접 선택한 링크만 따라갑니다)",
+  "skipBrokenLink": "“{name}”: 대상을 읽을 수 없는 링크입니다",
+  "skippedMore": "…외 {count}개",
+  "dismissSkipped": "닫기",
+  "planningDownload": "다운로드 준비 중…",
+  "planningUpload": "업로드 준비 중…",
+  "cancelPlanning": "취소",
+  "unfinishedSave": "“{name}”의 마지막 저장이 완료되지 않았습니다. 복원할 수 있습니다",
+  "restoreUnfinished": "복원",
+  "discardUnfinished": "버리기",
+  "osc52Title": "원격 클립보드(OSC 52)",
+  "osc52Note": "원격 프로그램은 클립보드를 읽을 수 없습니다.",
+  "osc52Allow": "허용",
+  "osc52Ask": "묻기",
+  "osc52Deny": "거부",
+  "osc52Follow": "전역 설정 따르기",
+  "osc52Limit": "크기 제한(KiB)",
+  "osc52LimitHint": "64~8192. 이보다 큰 복사는 버립니다.",
+  "osc52Wrote": "{host}에서 클립보드에 썼습니다({bytes}바이트)",
+  "osc52Undo": "실행 취소",
+  "osc52UndoGone": "클립보드가 변경되어 더 이상 실행 취소할 수 없습니다",
+  "osc52Paused": "일시 정지됨. 클릭하여 재개하세요.",
+  "osc52Resume": "재개",
+  "osc52Refused": "{host}에서 클립보드를 읽으려 했습니다. 거부했습니다.",
+  "osc52TooBig": "{host}의 클립보드 쓰기가 제한을 초과하여 버렸습니다.",
+  "osc52AskTitle": "원격 클립보드 쓰기",
+  "osc52AskFrom": "{host} · {pane}",
+  "osc52AskPane": "터미널 {n}",
+  "osc52AskBytes": "{bytes}바이트",
+  "osc52AllowOnce": "한 번 허용",
+  "osc52AllowSession": "이 세션에서 항상 허용",
+  "advanced": "고급",
+  "metricsBar": "지표 표시줄",
+  "metricsDisabledGlobally": "전역에서 비활성화됨",
+  "metricsBarNote": "각 터미널 하단에 CPU, 메모리, 디스크, 네트워크, 부하 및 지연 시간을 표시합니다.",
+  "metricsInterval": "새로 고침 간격",
+  "metricsMount": "추가 마운트 지점",
+  "metricsMountNote": "루트 디스크와 함께 표시합니다. 비워 두면 루트만 표시합니다.",
+  "metricsFollow": "전역 설정 따르기",
+  "metricsHostOn": "켬",
+  "metricsHostOff": "끔",
+  "metricsUnavailable": "지표를 사용할 수 없음",
+  "metricsUnavailableReason": "{what}: {reason}",
+  "metricsReasonExec": "서버가 지표 명령을 거부했습니다.",
+  "metricsReasonShell": "원격 셸이 지표 명령을 실행할 수 없습니다.",
+  "metricsReasonParse": "지표 출력을 읽을 수 없습니다.",
+  "metricsDash": "—",
+  "metricsCPU": "CPU {pct}",
+  "metricsMemory": "메모리 {used}/{total}, 스왑 {swapUsed}/{swapTotal}",
+  "metricsDisk": "디스크 {pct}",
+  "metricsNet": "↑ {up}  ↓ {down}",
+  "metricsNetLabel": "네트워크 업로드 {up}, 다운로드 {down}",
+  "metricsLoad": "부하 {one} {five} {fifteen}",
+  "metricsGPU": "GPU {pct}",
+  "metricsLatency": "{n}ms",
+  "metricsLatencyLabel": "지연 시간 {n}",
+  "metricsCore": "코어 {n} {pct}",
+  "metricsLoadTitle": "평균 부하",
+  "metricsLoadLine": "{minutes, plural, other {#분}}  {value}",
+  "metricsLoadCPUs": "{count, plural, other {CPU #개가 공유}}",
+  "metricsCores": "CPU 코어",
+  "metricsNoCores": "코어별 수치를 사용할 수 없습니다.",
+  "metricsDiskTitle": "디스크",
+  "metricsNetTitle": "네트워크",
+  "metricsGPUTitle": "GPU",
+  "metricsVol": "{mount} {used}/{total} ({pct})",
+  "metricsNIC": "{name} ↑ {up}  ↓ {down}",
+  "metricsGPULine": "{util}, {mem}, {temp}",
+  "metricsHide": "이 호스트의 지표 표시줄 숨기기",
+  "metricsHideFailed": "지표 표시줄을 숨길 수 없습니다: {detail}. 아무것도 변경되지 않았습니다.",
+  "openSettings": "설정 열기",
+  "openAI": "AI 도우미 열기",
+  "openAIRight": "오른쪽에 AI 열기",
+  "openAIBelow": "아래에 AI 열기",
+  "askAI": "AI에게 묻기",
+  "stopAI": "중지",
+  "stopAllAI": "모든 AI 중지",
+  "aiPane": "AI · {host}",
+  "aiModeAsk": "묻기",
+  "aiModeReview": "검토",
+  "aiModeFull": "전체 접근",
+  "aiModeAskNote": "모든 작업을 실행하기 전에 확인합니다",
+  "aiModeReviewNote": "설정된 모델이 모든 작업을 검토합니다",
+  "aiModeFullNote": "모든 작업을 확인 없이 실행합니다",
+  "aiPermission": "권한",
+  "aiModeInherit": "상속",
+  "aiFullTitle": "모든 작업을 허용하시겠습니까?",
+  "aiFullBody": "전체 접근은 쓰기와 명령을 포함하여 이 호스트의 모든 작업을 확인 없이 실행합니다. 나중에 끌 수 있습니다.",
+  "aiFullCheck": "모든 작업이 확인 없이 실행된다는 점을 이해합니다",
+  "aiFullConfirm": "전체 접근 켜기",
+  "aiFullBar": "전체 접근 — 모든 작업을 확인 없이 실행합니다",
+  "aiAutoFull": "자동(전체 접근)",
+  "aiWhereRemote": "원격 · {host}",
+  "aiWhereLocal": "이 컴퓨터",
+  "aiAllowOnce": "한 번 허용",
+  "aiAllowSimilar": "이 세션에서 유사한 작업 허용",
+  "aiReject": "거부",
+  "aiInsert": "터미널에 삽입",
+  "aiBuiltin": "내장",
+  "aiModel": "모델",
+  "aiNoProvider": "제공자 없음",
+  "aiProvider": "제공자",
+  "aiManageProviders": "제공자 관리…",
+  "aiSend": "보내기",
+  "aiPlaceholder": "이 호스트에 대해 질문하세요",
+  "aiSettings": "AI 도우미",
+  "aiProviderURL": "기본 URL",
+  "aiProviderModel": "모델",
+  "aiProviderTemp": "온도",
+  "aiProviderTokens": "최대 출력 토큰",
+  "aiAPIKey": "API 키",
+  "aiAPIKeyNote": "암호화된 로컬 자격 증명 저장소에만 저장됩니다. 편집할 때 비워 두면 저장된 키를 유지합니다.",
+  "aiHeaders": "헤더",
+  "aiHeadersNote": "한 줄에 이름: 값 하나씩 입력하세요. API 키는 여기에 입력하지 마세요.",
+  "aiAddProvider": "제공자 추가",
+  "aiEditProvider": "제공자 편집",
+  "aiDeleteProviderConfirm": "{name}을(를) 삭제하시겠습니까? API 키가 암호화된 로컬 자격 증명 저장소에서 삭제됩니다.",
+  "aiTestConnection": "연결 테스트",
+  "aiTestOK": "연결 성공",
+  "aiTestFail": "연결 실패: {detail}",
+  "aiHTTPWarn": "이 URL은 다른 컴퓨터로 연결하는 일반 HTTP입니다. 네트워크에서 API 키를 읽을 수 있습니다.",
+  "aiBadURL": "기본 URL은 http 또는 https여야 하며 호스트를 포함해야 합니다.",
+  "aiBadHeader": "헤더가 비어 있거나 줄 바꿈 또는 API 키(Authorization, X-Api-Key)를 포함합니다. API 키는 키 필드에 입력하세요.",
+  "aiDefaultAgent": "기본 에이전트",
+  "aiDefaultMode": "기본 권한",
+  "aiReviewProvider": "검토 모델",
+  "aiDefaultProvider": "기본 제공자",
+  "aiSetDefaultProvider": "기본 제공자로 설정",
+  "aiReviewNone": "없음",
+  "aiContextLines": "터미널 컨텍스트 줄 수",
+  "aiAuditDays": "감사 기록 보관 기간(일)",
+  "aiRedact": "비밀 정보 가리기",
+  "aiRedactNote": "모델에 보내기 전에 개인 키나 토큰으로 의심되는 정보를 가립니다.",
+  "aiHostMode": "권한",
+  "aiWritableRoots": "쓰기를 허용할 루트",
+  "aiWritableRootsNote": "한 줄에 원격 경로 하나씩 입력하세요. 이 경로 밖의 쓰기는 위험도가 더 높습니다.",
+  "aiSensitive": "추가 민감 경로",
+  "aiSensitiveNote": "한 줄에 원격 경로나 글로브 패턴 하나씩 입력하여 내장 민감 경로에 추가합니다.",
+  "aiConsentTitle": "이 호스트의 데이터를 모델에 보내시겠습니까?",
+  "aiConsentBody": "터미널 출력과 파일 내용을 선택한 모델 제공자에게 보냅니다.",
+  "aiConsentConfirm": "계속",
+  "aiForgetConsent": "이 호스트의 AI 동의 삭제",
+  "aiConsentEmpty": "모델에 데이터 전송을 동의한 호스트가 없습니다.",
+  "aiThinking": "생각 중",
+  "aiExit": "종료 코드 {code}",
+  "aiDuration": "{ms}ms",
+  "aiOnlyChanges": "변경 사항만",
+  "aiDir": "디렉터리",
+  "aiReason": "이유",
+  "aiReviewNote": "검토 메모",
+  "aiEmpty": "이 탭의 터미널을 참고하여 답변합니다. 명령과 파일 변경은 아래 권한을 따릅니다.",
+  "aiEmptyTitle": "{host}에서 무엇을 할까요?",
+  "aiWorking": "작업 중…",
+  "aiPaused": "도구를 25회 호출한 후 일시 정지되었습니다.",
+  "aiContinue": "계속",
+  "aiNoKey": "이 제공자의 API 키가 저장되지 않았습니다.",
+  "aiNoModel": "질문하기 전에 설정 → AI 도우미에서 제공자를 선택하세요.",
+  "aiTabWarning": "전체 접근이 켜져 있습니다",
+  "aiRunning": "AI 실행 중",
+  "aiRiskReadonly": "읽기 전용",
+  "aiRiskLow": "낮음",
+  "aiRiskMedium": "중간",
+  "aiRiskHigh": "높음",
+  "aiRiskCritical": "치명적",
+  "aiRiskUnknown": "알 수 없음",
+  "aiVerdictAuto": "자동",
+  "aiVerdictReviewer": "검토자",
+  "aiVerdictUser": "사용자",
+  "aiVerdictReject": "거부됨",
+  "aiVerdictTimeout": "시간 초과",
+  "aiVerdictCancel": "취소됨",
+  "aiToolsPending": "아직 원격 도구가 연결되지 않았습니다.",
+  "aiRequestFailed": "요청 실패: {detail}",
+  "closeSettings": "설정 닫기",
+  "settingsGroupPreferences": "환경설정",
+  "settingsGroupManage": "관리",
+  "settingsGroupHelp": "도움말",
+  "monitoringSection": "모니터링",
+  "shortcutsSection": "키보드 단축키",
+  "aboutSection": "정보",
+  "appearanceDesc": "SSHYard의 테마, 언어, 반투명 효과와 인터페이스 글꼴을 설정합니다.",
+  "terminalDesc": "터미널 창의 글꼴, 연결 동작과 원격 클립보드를 설정합니다.",
+  "monitoringDesc": "연결된 호스트의 CPU, 메모리, 디스크 및 네트워크 수치를 실시간으로 표시합니다.",
+  "filesDesc": "파일 창의 전송 및 파일 열기 동작을 설정합니다.",
+  "aiDesc": "AI 도우미의 에이전트, 권한과 모델 제공자를 설정합니다.",
+  "credentialsDesc": "호스트 간에 공유하는 비밀번호와 키입니다. 비밀 정보는 암호화된 로컬 자격 증명 저장소에 보관됩니다.",
+  "proxiesDesc": "호스트 연결에 사용할 SOCKS5 및 HTTP 프록시입니다.",
+  "shortcutsDesc": "SSHYard 자체 단축키입니다. 다른 모든 키는 셸로 전달됩니다.",
+  "aboutDesc": "SSHYard 버전, 업데이트 및 정보입니다.",
+  "fontsSection": "글꼴",
+  "connectionSection": "연결",
+  "clipboardSection": "클립보드",
+  "aiConsentSection": "데이터 전송에 동의한 호스트",
+  "aiProvidersSection": "모델 제공자",
+  "aboutTagline": "macOS, Windows 및 Linux용 네이티브 SSH 클라이언트입니다.",
+  "aboutInfo": "정보",
+  "aboutVersion": "버전",
+  "aboutPlatform": "플랫폼",
+  "aboutDataFolder": "데이터 폴더",
+  "aboutDataInMemory": "메모리에만 보관, 저장하지 않음",
+  "openDataFolder": "데이터 폴더 열기",
+  "aboutSecrets": "비밀 정보 저장소",
+  "secretsKeychain": "로컬 암호화 저장소, 마스터 키는 시스템 키체인에 보관",
+  "aboutLinks": "링크",
+  "sourceCode": "소스 코드",
+  "license": "라이선스",
+  "reportIssue": "문제 신고",
+  "shortcutStopAI": "AI 응답 중지",
+  "shortcutSaveFile": "편집기의 파일 저장",
+  "systemMonitor": "시스템 모니터",
+  "hostDetails": "호스트 상세 정보",
+  "closePanel": "패널 닫기",
+  "inspectorEmpty": "세션을 열면 해당 호스트가 여기에 표시됩니다.",
+  "monitorNoTerminal": "이 호스트에서 터미널을 열어 지표를 확인하세요.",
+  "monitorOff": "이 호스트의 지표가 꺼져 있습니다.",
+  "monitorWaiting": "첫 번째 측정값을 기다리는 중…",
+  "monitorNotConnected": "세션이 연결되지 않았습니다.",
+  "sysSection": "시스템",
+  "sysOS": "운영 체제",
+  "sysAddress": "주소",
+  "sysLatency": "지연 시간",
+  "sysConnectedFor": "연결 시간",
+  "cpuCores": "{count, plural, other {코어 #개}}",
+  "cpuUsage": "평균 사용량",
+  "loadAverage": "평균 부하",
+  "memorySection": "메모리",
+  "memRAM": "RAM",
+  "memSwap": "스왑",
+  "networkSection": "네트워크",
+  "disksSection": "디스크",
+  "gpuSection": "GPU",
+  "noData": "데이터 없음",
+  "openPanes": "열린 창",
+  "authLabelCredential": "저장된 자격 증명 {name}",
+  "jumpHosts": "점프 호스트",
+  "statusNoSession": "활성 세션 없음",
+  "statusSessions": "{count, plural, other {세션 #개}}",
+  "statusForwards": "{count, plural, other {포워딩 #개 실행 중}}",
+  "statusUpdate": "업데이트",
+  "statusWorkingDir": "작업 디렉터리",
+  "durSeconds": "{n}초",
+  "durMinutes": "{n}분",
+  "durHours": "{h}시간 {m}분",
+  "durDays": "{d}일 {h}시간",
+  "privacyMode": "개인정보 보호 모드: IP 주소 가리기",
+  "localTerminal": "로컬 터미널",
+  "localTerminalNote": "이 컴퓨터의 셸입니다. 파일, AI, 포워딩과 지표를 사용하려면 서버가 필요합니다.",
+  "monitorLocal": "지표는 서버용입니다. 이 창은 이 컴퓨터의 셸입니다.",
+  "newGroup": "새 그룹",
+  "newGroupEllipsis": "새 그룹…",
+  "renameGroup": "그룹 이름 변경",
+  "deleteGroup": "그룹 삭제",
+  "deleteGroupConfirm": "{group} 그룹을 삭제하시겠습니까? 호스트는 그룹 없이 유지됩니다.",
+  "groupTaken": "이미 같은 이름의 그룹이 있습니다.",
+  "groupPlaceholder": "운영 환경",
+  "emptyGroup": "호스트가 없습니다. 호스트를 여기로 드래그하세요.",
+  "newHostInGroup": "이 그룹에 새 호스트 추가",
+  "moveToGroup": "그룹으로 이동",
+  "noGroup": "그룹 없음",
+  "fieldAppearance": "외관",
+  "hostEmoji": "이모지 또는 텍스트",
+  "emojiPlaceholder": "🚀 또는 최대 4자",
+  "autoIcon": "자동 아이콘",
+  "autoColor": "자동 색상",
+  "iconServer": "서버",
+  "iconDatabase": "데이터베이스",
+  "iconCloud": "클라우드",
+  "iconComputer": "컴퓨터",
+  "iconLaptop": "노트북",
+  "iconRouter": "라우터",
+  "iconStorage": "스토리지",
+  "iconContainer": "컨테이너",
+  "iconCode": "코드",
+  "iconRocket": "로켓",
+  "iconPlanet": "행성",
+  "iconTest": "테스트",
+  "iconGit": "Git",
+  "iconHome": "집",
+  "iconOffice": "사무실",
+  "iconSecure": "보안",
+  "iconGame": "게임",
+  "colorGreen": "초록색",
+  "colorOrange": "주황색",
+  "colorTeal": "청록색",
+  "colorPurple": "보라색",
+  "colorIndigo": "남색",
+  "colorPink": "분홍색",
+  "colorRed": "빨간색",
+  "colorBlue": "파란색",
+  "followHowTo": "이 셸의 폴더를 따라가는 방법",
+  "followHowToText": "Linux 서버에서는 SSHYard가 셸의 폴더를 직접 읽습니다. 다른 서버이거나 서버가 SSHYard의 터미널 태그를 거부하는 경우 셸 시작 파일(~/.bashrc 또는 ~/.zshrc)에 다음 내용을 추가하여 프롬프트마다 폴더를 보고하도록 하세요:",
+  "hideNotice": "안내 숨기기",
+  "copied": "복사됨",
+  "iconUbuntu": "Ubuntu",
+  "iconCentOS": "CentOS",
+  "iconApple": "macOS",
+  "iconWindows": "Windows",
+  "iconAndroid": "Android",
+  "windowMinimize": "최소화",
+  "windowMaximize": "최대화",
+  "windowRestore": "복원",
+  "windowClose": "윈도우 닫기",
+  "moreActions": "추가 작업",
+  "moreTabs": "{count, plural, other {탭 #개 더 보기}}",
+  "closeOtherTabs": "다른 탭 닫기",
+  "closeTabsLeft": "왼쪽 탭 닫기",
+  "closeTabsRight": "오른쪽 탭 닫기",
+  "closeHostTabs": "이 호스트의 모든 탭 닫기",
+  "closeOtherHostTabs": "다른 호스트의 탭 닫기",
+  "closeAllTabs": "모든 탭 닫기",
+  "processUsage": "프로세스 사용량",
+  "colProcess": "프로세스",
+  "colMemory": "메모리",
+  "colDisk": "디스크",
+  "usageLinuxOnly": "Linux 서버에만 있는 /proc에서 프로세스 사용량을 읽습니다.",
+  "usageFailed": "프로세스를 읽을 수 없습니다: {detail}",
+  "filterProcesses": "이름, 사용자 또는 PID로 필터링",
+  "processCount": "{count, plural, other {프로세스 #개}}",
+  "dockerManager": "Docker",
+  "dockerContainers": "컨테이너({count})",
+  "dockerImages": "이미지({count})",
+  "dockerMissing": "이 서버에 Docker가 설치되지 않았습니다.",
+  "dockerDenied": "이 사용자는 Docker를 사용할 수 없습니다. docker 그룹에 추가하거나 비밀번호 없는 sudo를 허용하세요.",
+  "dockerFailed": "Docker 실패: {detail}",
+  "dockerNoContainers": "이 서버에 컨테이너가 없습니다.",
+  "dockerNoImages": "이 서버에 이미지가 없습니다.",
+  "dockerPickContainer": "관리할 컨테이너를 선택하세요.",
+  "dockerColImage": "이미지",
+  "dockerColStatus": "상태",
+  "dockerColCreated": "생성 날짜",
+  "dockerPorts": "포트",
+  "dockerStart": "시작",
+  "dockerStop": "중지",
+  "dockerRestart": "다시 시작",
+  "dockerPause": "일시 정지",
+  "dockerUnpause": "재개",
+  "dockerLogs": "로그",
+  "dockerShell": "컨테이너에서 셸 열기",
+  "dockerRemove": "컨테이너 제거",
+  "dockerRemoveImage": "이미지 제거",
+  "dockerRemoveConfirm": "“{name}” 컨테이너를 제거하시겠습니까? 먼저 중지하며 볼륨에 저장되지 않은 데이터는 손실됩니다.",
+  "dockerRemoveImageConfirm": "“{name}” 이미지를 제거하시겠습니까?",
+  "dockerLogsOf": "{name}의 로그",
+  "dockerLogsNote": "마지막 {count}줄",
+  "dockerNoLogs": "컨테이너가 출력한 내용이 없습니다.",
+  "barCPU": "CPU",
+  "barMemory": "메모리",
+  "barSwap": "스왑",
+  "barDisk": "디스크",
+  "barLoad": "부하",
+  "barGPU": "GPU",
+  "materialSection": "반투명 효과",
+  "materialChrome": "사이드바 및 제목 표시줄",
+  "materialContent": "콘텐츠 영역",
+  "materialContentNote": "창 뒤의 데스크톱을 흐리게 하여 창과 패널에 표시합니다.",
+  "materialTranslucent": "반투명",
+  "materialOpaque": "불투명",
+  "materialUnsupported": "반투명 효과는 macOS에서만 사용할 수 있습니다.",
+  "aiCommandOutputLimit": "명령 출력 제한을 초과하여 실행을 취소하고 출력을 잘랐습니다",
+  "securitySftpReadLimit": "파일이 읽기 제한을 초과합니다",
+  "securitySftpUnsafePath": "심볼릭 링크 및 안전하지 않은 경로는 허용되지 않습니다",
+  "securitySftpUnsafeDestination": "대상 폴더에 다른 사용자의 쓰기 권한이 있습니다",
+  "securitySftpPartChanged": "부분 다운로드 파일이 변경되어 전송을 중지했습니다",
+  "securitySftpInvalidPath": "파일 경로가 올바르지 않습니다",
+  "securitySftpNotDirectory": "상위 경로가 폴더가 아닙니다",
+  "securitySftpNotRegular": "경로가 일반 파일이 아닙니다",
+  "securityProxyClientLimit": "프록시 활성 연결 수 제한에 도달했습니다",
+  "securityProxyHandshakeLimit": "프록시 핸드셰이크가 크기 제한을 초과합니다",
+  "backupSection": "백업",
+  "backupDesc": "이 컴퓨터나 클라우드의 암호화된 파일 하나로 SSHYard 사본을 보관하거나 다른 기기로 옮깁니다.",
+  "exportBackup": "백업 내보내기",
+  "exportBackupNote": "호스트, 자격 증명, 프록시, 포트 포워딩, 스니펫, 환경설정 및 신뢰한 호스트 키를 선택한 비밀번호로 암호화한 파일 하나로 압축합니다.",
+  "exportEllipsis": "내보내기…",
+  "restoreBackup": "백업에서 복원",
+  "restoreBackupNote": "이 기기에 백업을 병합합니다. 비밀 정보는 암호화된 로컬 자격 증명 저장소에 저장합니다.",
+  "backupPassword": "백업 비밀번호",
+  "confirmPassword": "비밀번호 확인",
+  "backupIncludeSecrets": "비밀번호와 키 포함",
+  "backupIncludeSecretsNote": "암호화된 로컬 자격 증명 저장소의 비밀번호, 개인 키, 암호문 및 API 키입니다.",
+  "backupExportWarning": "이 파일과 비밀번호가 있는 사람은 안의 모든 내용을 읽을 수 있습니다. 비밀번호는 복구할 수 없으며 비밀번호 없이는 백업을 열 수 없습니다.",
+  "backupRestoreNote": "백업 항목은 이 기기의 같은 ID를 가진 항목을 교체합니다. 그 외의 항목은 제거하지 않습니다.",
+  "backupMadeOn": "생성 날짜 {date}",
+  "backupPasswordShort": "비밀번호는 {count}자 이상이어야 합니다.",
+  "backupPasswordMismatch": "비밀번호가 일치하지 않습니다.",
+  "defaultBackupPassword": "기본 백업 비밀번호",
+  "defaultBackupPasswordNote": "한 번 설정하면 내보내기와 백업 위치에서 매번 비밀번호를 묻지 않고 사용할 수 있습니다. 비밀번호가 아닌 파생 키만 보관합니다.",
+  "defaultBackupPasswordSetNote": "설정됨. 이 비밀번호로 암호화한 백업을 복원할 때 필요합니다. 새 비밀번호는 이후 백업에만 적용됩니다.",
+  "defaultBackupPasswordSheetNote": "암호화된 로컬 자격 증명 저장소에 파생 키만 보관합니다. 비밀번호는 복구할 수 없으며 비밀번호 없이는 이를 사용해 암호화한 백업을 열 수 없습니다.",
+  "defaultBackupPasswordUsed": "기본 백업 비밀번호로 암호화됩니다. 복원할 때 비밀번호가 필요합니다.",
+  "backupPasswordSource": "암호화에 사용할 비밀번호",
+  "customPassword": "사용자 지정 비밀번호",
+  "setPasswordEllipsis": "설정…",
+  "changePasswordEllipsis": "변경…",
+  "remove": "제거",
+  "errDefaultBackupKeyMissing": "기본 백업 비밀번호가 설정되지 않았습니다. 백업 페이지 상단에서 설정하거나 사용자 지정 비밀번호를 사용하세요.",
+  "errDefaultBackupPasswordInUse": "백업 위치에서 기본 백업 비밀번호를 사용 중입니다. 먼저 사용자 지정 비밀번호로 전환하세요.",
+  "backupExporting": "내보내는 중…",
+  "backupRestoring": "복원 중…",
+  "restore": "복원",
+  "backupSaved": "{name}에 백업을 저장했습니다",
+  "backupRestored": "{hosts, plural, other {호스트 #개}}와 {creds, plural, other {자격 증명 #개}}를 복원했습니다",
+  "backupExportFailed": "백업을 내보낼 수 없습니다: {detail}",
+  "backupOpenFailed": "{name}을(를) 열 수 없습니다: {detail}",
+  "backupNotBackup": "SSHYard 백업이 아닙니다.",
+  "backupNewer": "이 백업은 더 최신 버전의 SSHYard에서 생성되었습니다. 복원하려면 SSHYard를 업데이트하세요.",
+  "backupWrongPassword": "비밀번호가 올바르지 않습니다.",
+  "backupDamaged": "백업이 손상되었거나 변경되었습니다.",
+  "cloudBackupSection": "클라우드 백업",
+  "cloudBackupNote": "백업은 이 기기에서 압축 및 암호화를 마친 후 전송되므로 백업 위치에는 암호화된 파일만 저장됩니다.",
+  "noBackupTargets": "아직 백업 위치가 없습니다",
+  "noBackupTargetsNote": "WebDAV 서버 폴더, S3 버킷 또는 GitHub gist에 백업합니다.",
+  "addBackupTarget": "위치 추가…",
+  "newBackupTarget": "새 백업 위치",
+  "editBackupTarget": "백업 위치 편집",
+  "backupNow": "지금 백업",
+  "restoreFromTarget": "이 위치에서 복원",
+  "deleteBackupTarget": "위치 삭제",
+  "targetNeverBackedUp": "아직 백업하지 않음",
+  "targetLastBackup": "마지막 백업 {date}",
+  "targetBackingUp": "백업 중…",
+  "targetBackupFailed": "마지막 백업 실패: {detail}",
+  "targetAuto": "자동: {interval}",
+  "backupEvery6Hours": "6시간마다",
+  "backupEveryDay": "매일",
+  "backupEveryWeek": "매주",
+  "backupUploaded": "{name}에 백업했습니다",
+  "backupUploadFailed": "{name}에 백업할 수 없습니다: {detail}",
+  "fieldServerURL": "서버 URL",
+  "webdavFolder": "폴더",
+  "s3Endpoint": "엔드포인트",
+  "s3EndpointPlaceholder": "Amazon S3는 비워 두세요",
+  "s3Region": "리전",
+  "s3Bucket": "버킷",
+  "s3AccessKey": "액세스 키 ID",
+  "s3SecretKey": "비밀 액세스 키",
+  "s3Prefix": "키 접두사",
+  "s3PathStyle": "경로 방식 접근",
+  "s3PathStyleNote": "호스트 이름에 버킷을 포함하지 않는 MinIO 등의 서비스에 사용합니다.",
+  "gistToken": "개인 액세스 토큰",
+  "gistTokenNote": "Gist 읽기 및 쓰기 권한이 있는 세분화된 토큰 또는 gist 범위의 클래식 토큰입니다.",
+  "gistID": "Gist ID",
+  "gistIDPlaceholder": "비워 두면 찾거나 생성합니다",
+  "gistNotice": "이 gist는 비밀 링크 방식이며 비공개가 아닙니다. 링크를 가진 사람은 누구나 암호화된 백업을 다운로드할 수 있고 삭제된 파일도 기록에 남습니다.",
+  "backupKeep": "보관할 백업 수",
+  "backupKeepNote": "각 백업 후 이 기기에서 만든 이전 백업을 삭제합니다. 0이면 모두 유지합니다.",
+  "backupPasswordNote": "이 위치의 백업은 이 비밀번호로 암호화되며 복원할 때 필요합니다. 파생 키를 암호화된 로컬 자격 증명 저장소에 보관하여 수동 또는 자동 백업 시 다시 묻지 않습니다. 비밀번호 자체는 보관하지 않습니다. 새 비밀번호는 이후 백업에만 적용됩니다.",
+  "autoBackup": "자동 백업",
+  "autoBackupNote": "SSHYard가 열려 있는 동안 자동으로 백업하며 변경이 없으면 건너뜁니다.",
+  "autoBackupInterval": "빈도",
+  "testConnection": "연결 테스트",
+  "testingConnection": "테스트 중…",
+  "connectionOK": "연결되었습니다.",
+  "connectionGistFound": "연결되었습니다. 기존 백업 gist를 찾았습니다.",
+  "errTargetURL": "호스트를 포함하고 사용자 이름이나 비밀번호가 없는 http 또는 https URL을 입력하세요.",
+  "warnPlainHTTP": "일반 HTTP는 비밀번호를 암호화하지 않고 전송합니다. 신뢰하는 네트워크에서만 사용하세요.",
+  "errCloudAuth": "자격 증명이 거부되었거나 이 작업에 대한 권한이 없습니다.",
+  "errCloudNotFound": "찾을 수 없습니다. 주소, 버킷 또는 gist를 확인하세요.",
+  "errCloudTooLarge": "파일이 너무 큽니다.",
+  "errBackupKeyMissing": "이 위치의 백업 키가 없습니다. 백업 비밀번호를 다시 설정하세요.",
+  "errBackupProxyMissing": "이 위치에서 사용하는 프록시가 삭제되었습니다. 설정에서 다른 프록시를 선택하세요.",
+  "remoteBackupsLoading": "백업을 불러오는 중…",
+  "remoteBackupsEmpty": "아직 이 위치에 백업이 없습니다.",
+  "remoteBackupThisDevice": "{date} · 이 기기",
+  "remoteBackupOtherDevice": "{date} · 기기 {device}",
+  "restoreThisBackup": "이 백업 복원",
+  "remoteBackupDownloading": "다운로드 중…",
+  "securitySftpOperationsBusy": "대기 중인 SFTP 작업이 너무 많습니다. 나중에 다시 시도하세요",
+  "gitHubRepo": "GitHub 저장소",
+  "crumbsLabel": "경로",
+  "crumbsHidden": "상위 폴더",
+  "loading": "불러오는 중…",
+  "itemsSelected": "{count, plural, other {항목 #개 선택됨}}",
+  "itemsCount": "{count, plural, other {항목 #개}}",
+  "previewItem": "미리 보기",
+  "getInfo": "정보 가져오기",
+  "compressItem": "압축…",
+  "extractItem": "여기에 압축 풀기",
+  "selectAll": "모두 선택",
+  "deleteItemsConfirm": "{count, plural, other {항목 #개}}를 삭제하시겠습니까? 되돌릴 수 없습니다.",
+  "infoKind": "종류",
+  "kindFolder": "폴더",
+  "kindFile": "파일",
+  "kindLink": "링크",
+  "infoWhere": "위치",
+  "infoPermissions": "권한",
+  "infoBytes": "{size}({bytes}바이트)",
+  "infoFolderSize": "{count, plural, other {파일 #개}}, {size}",
+  "infoCounting": "계산 중…",
+  "compressTitle": "압축",
+  "archiveName": "압축 파일 이름",
+  "archiveFormat": "형식",
+  "archiveDefaultName": "압축 파일",
+  "compressing": "{name} 압축 중…",
+  "extracting": "{name} 압축 해제 중…",
+  "errNameExists": "“{name}”이(가) 이미 있습니다.",
+  "previewOf": "{total}개 중 {index}번째",
+  "previousImage": "이전 이미지",
+  "nextImage": "다음 이미지",
+  "imageTooLarge": "이미지가 너무 커서 미리 볼 수 없습니다({size}).",
+  "imageFailed": "이 이미지를 표시할 수 없습니다: {detail}",
+  "imageDims": "{width} × {height} · {size}",
+  "closePreview": "미리 보기 닫기",
+  "mcpSection": "MCP",
+  "mcpEnable": "AI 에이전트 연결 허용",
+  "mcpEnableNote": "이 컴퓨터에서 공개 API, MCP 및 스킬을 제공합니다. 에이전트가 그룹과 호스트를 나열하고 SSH 연결을 열고 명령을 실행할 수 있습니다.",
+  "mcpFailed": "시작할 수 없습니다: {detail}",
+  "mcpToken": "액세스 토큰",
+  "mcpTokenNote": "암호화된 로컬 자격 증명 저장소와 주입한 스킬에 보관합니다. 에이전트는 Bearer 토큰으로 전송합니다.",
+  "mcpCopyURL": "MCP 엔드포인트 복사",
+  "mcpCopyToken": "액세스 토큰 복사",
+  "mcpNewToken": "새 토큰 생성",
+  "mcpNewTokenDone": "새 토큰을 생성했습니다. 이전 토큰을 사용하는 에이전트의 연결을 끊고 주입된 스킬을 업데이트했습니다.",
+  "mcpCopyConfig": "클라이언트 설정 복사",
+  "mcpSessions": "에이전트 연결",
+  "mcpNoSessions": "SSH 연결을 연 에이전트가 없습니다.",
+  "mcpDisconnect": "에이전트 연결 끊기",
+  "mcpOnBanner": "에이전트 접근이 켜져 있습니다. 토큰이 있는 에이전트는 확인 없이 호스트에서 명령을 실행할 수 있습니다.",
+  "mcpRiskTitle": "AI 에이전트 접근을 켜시겠습니까?",
+  "mcpRiskIntro": "켜기 전에 다음 위험을 읽어보세요:",
+  "mcpRiskCommands": "이 컴퓨터에서 액세스 토큰을 가진 모든 프로그램은 호스트를 나열하고 데이터 삭제나 서버 종료를 포함한 모든 명령을 실행할 수 있습니다.",
+  "mcpRiskNoAsk": "공개 API, MCP 또는 스킬의 명령은 AI 권한 모드를 거치지 않습니다. 사용자에게 묻지 않고 실행하며 AI 감사 로그에만 기록됩니다.",
+  "mcpRiskInjection": "에이전트는 웹 페이지, 파일 또는 명령 출력의 프롬프트 인젝션으로 인해 요청하지 않은 명령을 실행하도록 유도될 수 있습니다.",
+  "mcpRiskSecrets": "비밀번호, 키 및 암호문을 에이전트에 보내지 않습니다. 직접 입력이 필요한 호스트는 거부됩니다.",
+  "mcpRiskLocal": "서버는 127.0.0.1에서만 수신 대기합니다. 토큰을 비밀로 유지하고 유출되면 새로 생성하며 필요 없을 때는 서버를 끄세요.",
+  "mcpConfirmWait": "켜기({seconds})",
+  "mcpConfirm": "이해했습니다, 켜기",
+  "agentsPage": "MCP / 스킬",
+  "agentsDesc": "이 컴퓨터의 AI 에이전트가 공개 API, MCP 또는 스킬을 통해 호스트를 사용하도록 허용합니다.",
+  "agentsOffNote": "사용하려면 위에서 에이전트 접근을 켜세요.",
+  "apiSection": "공개 API",
+  "apiAddress": "API 주소",
+  "apiCopyURL": "API 주소 복사",
+  "apiCopyCurl": "curl 예제 복사",
+  "mcpAddress": "MCP 엔드포인트",
+  "mcpRiskSkill": "주입된 스킬은 에이전트 폴더의 파일에 토큰을 보관하므로 사용자 권한으로 실행되는 프로그램이 읽을 수 있습니다. 더 이상 필요하지 않으면 제거하세요.",
+  "skillSection": "스킬",
+  "skillAbout": "SSHYard 스킬",
+  "skillAboutNote": "토큰을 포함하여 공개 API로 호스트를 사용하는 방법을 에이전트에게 알려줍니다. 프롬프트를 복사하여 에이전트가 이 서버에서 설치하게 하거나 아래에서 주입하세요.",
+  "skillCopyPrompt": "설치 프롬프트 복사",
+  "skillNoAgent": "찾을 수 없음",
+  "skillMissing": "설치되지 않음",
+  "skillCurrent": "설치됨",
+  "skillStale": "최신 버전 아님",
+  "skillInstallTo": "{name}에 주입",
+  "skillUpdateIn": "{name}에서 업데이트",
+  "skillRemoveFrom": "{name}에서 제거",
+  "skillInstallAll": "찾은 모든 에이전트에 주입",
+  "skillInstalled": "{name}에 스킬을 주입했습니다.",
+  "skillInstalledAll": "에이전트 {count}개에 스킬을 주입했습니다.",
+  "skillRemoved": "{name}에서 스킬을 제거했습니다.",
+  "secretsLockedTitle": "저장된 비밀 정보가 잠겨 있습니다",
+  "secretsLockedBody": "비밀 정보가 필요한 작업을 선택하기 전까지 암호화된 상태로 유지됩니다. 호스트, 설정 및 로컬 터미널은 계속 사용할 수 있습니다.",
+  "secretsRetry": "저장된 비밀 정보 잠금 해제",
+  "secretsAuthorizing": "승인 대기 중…",
+  "secretsUnlockFailed": "자격 증명의 잠금을 해제할 수 없습니다",
+  "secretsUnlockSafety": "저장된 비밀 정보는 암호화된 상태로 유지됩니다. 취소하면 잠금을 해제하지 않고 앱을 계속 사용할 수 있습니다.",
+  "secretsReasonSystem": "작업을 완료할 수 없습니다. 시스템 승인 및 로컬 저장소 권한을 확인하세요.",
+  "secretsReasonBusy": "다른 SSHYard 프로세스가 이 자격 증명 저장소를 사용 중입니다. 닫고 다시 시도하세요.",
+  "secretsReasonMasterMissing": "암호화된 자격 증명은 있지만 시스템 마스터 키가 없습니다. 데이터 손실을 방지하려면 원래 키를 복원하세요.",
+  "secretsReasonMasterInvalid": "시스템 마스터 키가 올바르지 않습니다. 기존 암호화된 자격 증명은 보존되었습니다.",
+  "secretsReasonCorrupt": "암호화된 자격 증명 검증에 실패했습니다. 파일이 손상되었거나 다른 마스터 키에 속할 수 있습니다.",
+  "secretsReasonVersion": "이 암호화된 자격 증명 저장소는 지원되지 않는 형식 버전을 사용합니다.",
+  "secretsReasonUnavailable": "시스템 자격 증명 서비스를 사용할 수 없습니다. 활성화하고 다시 승인하세요.",
+  "secretsReasonCancelled": "시스템 승인이 취소되었습니다.",
+  "secretsReasonAuthentication": "시스템 인증에 실패했습니다. 키체인 접근 권한을 확인하세요.",
+  "secretsReasonInteraction": "현재 세션에서는 시스템이 승인 상호작용을 허용하지 않습니다.",
+  "secretsSystemCode": "{reason} (OSStatus {code})",
+  "secretsStageOpen": "암호화된 자격 증명 여는 중",
+  "secretsStageLock": "자격 증명 저장소 잠금 획득 중",
+  "secretsStageReadMaster": "시스템 마스터 키 읽는 중",
+  "secretsStageWriteMaster": "새 시스템 마스터 키 저장 중",
+  "secretsStageVerifyMaster": "저장된 시스템 마스터 키 검증 중",
+  "secretsStageReadFile": "로컬 앱 데이터 읽는 중",
+  "secretsStageDecrypt": "암호화된 자격 증명 검증 중",
+  "secretsStageWriteFile": "암호화된 자격 증명 저장 중",
+  "secretsFailureDetail": "{stage}: {reason}",
+  "secretsReasonPermission": "로컬 앱 데이터 접근이 거부되었습니다. 폴더 및 파일 권한을 확인하세요.",
+  "secretsReasonNotFound": "필요한 로컬 파일이나 폴더가 없습니다. 앱 데이터 위치를 확인하세요.",
+  "secretsReasonDiskFull": "암호화된 자격 증명을 저장할 디스크 여유 공간이 부족합니다.",
+  "skillConflict": "같은 이름의 파일을 사용자가 관리하고 있어 변경하지 않았습니다",
+  "skillUnavailable": "스킬 파일을 읽을 수 없습니다",
+  "skillRefreshFailed": "스킬 업데이트 실패: {detail}",
+  "mcpTokenRotatedSkillFailed": "토큰을 교체했지만 일부 스킬 업데이트에 실패했습니다: {detail}",
+  "skillOperationFailed": "{agent}: 작업에 실패했습니다. 디렉터리 권한을 확인하세요",
+  "aiSettingsSaveFailed": "AI 설정을 저장할 수 없어 변경 사항을 적용하지 않았습니다",
+  "aiHTTPFailed": "제공자 응답 실패(HTTP {status})",
+  "aiFailureTimeout": "AI 요청 시간이 초과되었습니다",
+  "aiFailureNetwork": "AI 요청이 제공자에 연결하지 못했습니다",
+  "aiFailureProtocol": "제공자 응답의 프로토콜 형식이 올바르지 않습니다",
+  "aiFailureIncomplete": "제공자 응답이 완료되기 전에 종료되었습니다",
+  "aiFailureSize": "제공자 응답이 크기 제한을 초과했습니다",
+  "aiFailureRequest": "모델 또는 도구 실행 중 AI 요청에 실패했습니다",
+  "skillPermissionDenied": "디렉터리에 접근할 권한이 없습니다",
+  "skillReadFailed": "스킬을 읽을 수 없습니다",
+  "skillWriteFailed": "스킬을 쓸 수 없습니다",
+  "aiSettingsRollbackFailed": "AI 설정을 저장하거나 이전 키를 복원할 수 없어 AI 요청을 중지했습니다. 제공자 키를 확인하세요",
+  "aiBackend": "도우미 백엔드",
+  "aiACP": "외부 ACP",
+  "aiACPConfigure": "ACP 에이전트 설정",
+  "aiACPCommand": "ACP 실행 파일",
+  "aiACPArgs": "인수",
+  "aiACPArgsNote": "한 줄에 인수 하나씩 입력하며 셸 없이 직접 전달합니다",
+  "aiACPConfigNote": "이 컴퓨터에 설치된 ACP 호환 실행 파일을 사용하세요. 메시지를 보내기 전에 해당 프로그램에서 인증하세요",
+  "aiACPCommandRequired": "ACP 실행 파일을 입력하세요. NUL 문자는 허용되지 않습니다",
+  "aiBackendUnavailable": "도우미 백엔드를 사용할 수 없습니다. 내장 또는 외부 ACP를 선택하세요",
+  "aiACPAuthRequired": "ACP 에이전트에 로그인이 필요합니다. 외부 프로그램에서 인증한 후 메시지를 다시 보내세요",
+  "aiACPStartFailed": "ACP를 시작할 수 없습니다. 실행 파일과 인수를 확인하세요",
+  "aiACPProtocolFailed": "ACP 초기화 또는 프로토콜 협상에 실패했습니다. 프로그램이 ACP 버전 1을 지원하는지 확인하세요",
+  "aiACPSessionFailed": "ACP 세션에 실패했습니다. 외부 프로그램을 확인하고 다시 시도하세요",
+  "aiACPIncomplete": "응답을 완료하기 전에 ACP 에이전트가 중지되었습니다",
+  "aiACPSafetyWarning": "ACP 에이전트가 안전하지 않은 승인 모드를 요청하여 SSHYard가 세션을 제한하거나 중지했습니다",
+  "aiACPHostFailed": "이 호스트에 연결할 수 없습니다. 자격 증명과 호스트 키 신뢰 여부를 확인하세요",
+  "aiACPFilesFailed": "원격 파일을 준비할 수 없습니다. 이 호스트의 SFTP 접근을 확인하세요",
+  "aiACPCloseFailed": "ACP 세션이 중지되었지만 정리 중 오류가 보고되었습니다. 다시 시도하기 전에 외부 프로그램을 확인하세요",
+  "snippets": "스니펫",
+  "snippetNew": "새 스니펫",
+  "snippetEdit": "스니펫 편집",
+  "snippetContent": "내용",
+  "snippetImmediate": "즉시 보내기(Enter 누르기)",
+  "snippetInsert": "삽입만",
+  "snippetSendEnter": "보내기 + Enter",
+  "snippetNoTarget": "보내려면 연결된 터미널에 포커스를 두세요",
+  "snippetTarget": "대상: {host} · 터미널 {number}",
+  "snippetSearch": "이름, 내용 또는 그룹 검색",
+  "snippetDefaultGroup": "기본",
+  "snippetGroupName": "새 그룹 이름",
+  "snippetAddGroup": "그룹 추가",
+  "snippetCancelGroup": "새 그룹 취소",
+  "snippetAll": "전체",
+  "snippetEmptyTitle": "아직 스니펫이 없습니다",
+  "snippetEmptyHint": "자주 사용하는 명령을 저장한 뒤 한 번의 클릭으로 포커스된 터미널에 삽입하거나 보내세요.",
+  "snippetFilterGroup": "그룹별 스니펫 필터링",
+  "snippetEmpty": "일치하는 스니펫 없음",
+  "snippetPreview": "{name} 미리 보기",
+  "snippetMore": "{name}의 추가 작업",
+  "snippetDuplicate": "복제",
+  "snippetSent": "터미널로 보냈습니다",
+  "snippetDelete": "스니펫 삭제",
+  "snippetDeleteConfirm": "{name}을(를) 삭제하시겠습니까? 저장된 내용도 제거됩니다.",
+  "snippetMissing": "내용 없음 — 편집하여 완성하세요",
+  "snippetReadFailed": "읽기 실패: {reason}",
+  "snippetSaveFailed": "저장 실패: {reason}",
+  "snippetDeleteFailed": "삭제 실패: {reason}",
+  "snippetTooLong": "{field}이(가) 크기 제한을 초과합니다",
+  "snippetInvalid": "{field}에 올바르지 않은 텍스트가 있습니다",
+  "snippetDisconnected": "터미널 연결이 끊겼습니다",
+  "snippetUnsafe": "이 터미널에서는 이 내용을 안전하게 삽입할 수 없습니다. 브래킷 붙여넣기를 지원하는 셸을 사용하거나 내용을 수정하세요",
+  "snippetSendFailed": "터미널 입력에 실패했습니다",
+  "snippetBusy": "스니펫을 보내는 중입니다. 완료된 후 다시 시도하세요",
+  "snippetStorageFailed": "로컬 저장소 작업에 실패했습니다",
+  "snippetStageRead": "암호화된 내용 읽기",
+  "snippetStageWrite": "암호화된 내용 쓰기",
+  "snippetStageMetadata": "메타데이터 저장",
+  "snippetStageRollback": "이전 데이터 복원",
+  "snippetFailureDetail": "{stage}: {reason}",
+  "snippetInsertAction": "{name} 삽입만",
+  "snippetSendAction": "{name} 보내고 Enter 누르기",
+  "aiFormat": "API 형식",
+  "aiFormatChat": "Chat Completions",
+  "aiFormatResponses": "Responses",
+  "aiFormatAnthropic": "Anthropic Messages",
+  "aiAPIKeyKeep": "저장되었습니다. 비워 두면 유지합니다.",
+  "aiAPIKeyPlaceholder": "API 키를 붙여넣으세요",
+  "aiDefaultModel": "기본 모델",
+  "aiDefaultModelNote": "제공자의 채팅 모델을 가져와 선택하거나 모델 이름을 입력하세요. 각 창에서 다른 모델로 전환할 수 있습니다.",
+  "aiFetchModels": "모델 가져오기",
+  "aiFetchingModels": "모델을 가져오는 중…",
+  "aiFetchedModels": "{count, plural, other {채팅 모델 #개 찾음}}",
+  "aiFetchModelsFailed": "모델을 가져올 수 없습니다: {detail}",
+  "aiAdvanced": "고급",
+  "aiParamsNote": "선택한 매개변수만 전송합니다. 선택하지 않으면 제공자의 기본값을 적용합니다.",
+  "aiProviderTopP": "Top P",
+  "aiLegacyTokens": "제한을 max_tokens로 전송(이전 엔드포인트)",
+  "aiAnthropicTokensNote": "Anthropic 형식에는 제한이 필요합니다. 선택하지 않으면 {limit}을(를) 전송합니다.",
+  "aiThinkingLevel": "추론 수준",
+  "aiEffortAuto": "자동",
+  "aiEffortAutoNote": "제공자 기본값",
+  "aiEffortNone": "끔",
+  "aiEffortLow": "낮음",
+  "aiEffortMedium": "중간",
+  "aiEffortHigh": "높음",
+  "aiEffortXHigh": "매우 높음",
+  "aiSearchModels": "모델 검색",
+  "aiUseModel": "“{model}” 사용",
+  "aiNoModels": "일치하는 모델 없음",
+  "aiAttach": "파일 첨부",
+  "aiPreviewAttachment": "{name} 미리 보기",
+  "aiRemoveAttachment": "{name} 제거",
+  "aiAttachUnsupported": "“{name}”을(를) 첨부할 수 없습니다. 이미지, PDF 및 텍스트 파일만 첨부할 수 있습니다.",
+  "aiAttachTextOnly": "“{name}”을(를) 첨부할 수 없습니다. 이 에이전트는 텍스트 파일만 읽습니다.",
+  "aiAttachReadFailed": "“{name}”을(를) 읽을 수 없습니다.",
+  "aiAttachTooLarge": "“{name}”의 크기가 {limit}을(를) 초과합니다.",
+  "aiAttachTooMany": "질문 하나에 최대 {count}개 파일을 첨부할 수 있습니다.",
+  "aiAttachTotal": "첨부 파일의 총 크기는 최대 {limit}입니다.",
+  "aiDropFiles": "첨부할 파일을 놓으세요",
+  "aiHTTPFailedDetail": "제공자 응답 실패(HTTP {status}): {detail}",
+  "aiReviewProviderNote": "검토 모드에서는 선택한 모델이 모든 작업을 확인합니다. 명시적으로 승인된 작업만 실행하고 그렇지 않으면 사용자에게 묻습니다.",
+  "aiReviewCustom": "사용자 지정…",
+  "aiReviewWith": "검토 제공자",
+  "aiReviewKind": "검토 방식",
+  "aiReviewChat": "채팅 모델",
+  "aiReviewDecisions": "OpenAI Decisions",
+  "aiReviewJev": "Jev",
+  "aiReviewModelName": "검토 모델 ID",
+  "aiReviewModelNote": "비워 두면 제공자의 기본 모델을 사용합니다.",
+  "aiReviewStrictness": "엄격도",
+  "aiReviewStrictnessNote": "작업이 안전하다고 판단하는 데 필요한 확신 수준입니다. 느슨함 80%, 표준 90%, 엄격함 97%입니다.",
+  "aiReviewLoose": "느슨함",
+  "aiReviewStandard": "표준",
+  "aiReviewStrict": "엄격함",
+  "aiReviewTimedOut": "검토 시간이 초과되었습니다",
+  "aiReviewFailed": "검토에 실패했습니다",
+  "aiReviewDecision": "{kind}: 안전할 확률 {percent}% · {risk}",
+  "aiReviewRiskNone": "발견된 위험 없음",
+  "aiReviewRiskDestructive": "데이터 손상 가능성",
+  "aiReviewRiskExfiltration": "데이터 외부 전송 가능성",
+  "aiReviewRiskPrivilege": "권한 상승",
+  "aiReviewRiskPersistence": "지속적인 변경을 남김",
+  "aiReviewRiskScope": "요청 범위 초과",
+  "aiReviewRiskUnclear": "영향이 불명확함",
+  "aiFormatTypeSafe": "TypeSafe",
+  "aiTypeSafeNote": "TypeSafe 제공자는 검토 판단만 수행하며 창에서는 선택할 수 없습니다.",
+  "aiToolExpand": "작업 상세 정보 표시",
+  "aiToolCollapse": "작업 상세 정보 숨기기",
+  "aiToolCommand": "명령 실행",
+  "aiToolHostInfo": "호스트 정보 읽기",
+  "aiToolPaneOutput": "터미널 출력 읽기",
+  "aiToolListDir": "디렉터리 나열",
+  "aiToolReadFile": "파일 읽기",
+  "aiToolSearchFiles": "파일 검색",
+  "aiToolWriteFile": "파일 쓰기",
+  "aiToolAction": "도구 작업",
+  "aiToolRunning": "실행 중",
+  "aiToolSucceeded": "성공",
+  "aiToolApproved": "승인됨 · {source}",
+  "aiToolFailed": "실패",
+  "aiReviewDeclined": "검토 모델이 이 작업의 판단을 거절했습니다",
+  "aiPermissionSection": "권한 승인",
+  "closeFilesPane": "파일 닫기",
+  "closeAIPane": "AI 닫기",
+  "filesPaneBusy": "이 탭의 파일 창에서 전송이 진행 중입니다. 먼저 전송을 완료하거나 취소하세요.",
+  "aiPaneBusy": "이 탭의 AI 도우미가 작업 중입니다. 먼저 중지하세요.",
+  "aiChipValue": "{name}: {value}",
+  "aiNewChat": "새 채팅",
+  "aiChatHistory": "채팅 기록",
+  "aiClearChat": "채팅 지우기",
+  "aiClearChatTitle": "이 채팅을 지우시겠습니까?",
+  "aiClearChatBody": "이 창과 이 호스트의 채팅 기록에서 메시지를 제거합니다. 되돌릴 수 없습니다.",
+  "aiClear": "지우기",
+  "aiHistoryEmpty": "아직 이 호스트에 저장된 채팅이 없습니다",
+  "aiNoChats": "일치하는 채팅 없음",
+  "aiSearchChats": "채팅 검색",
+  "aiDeleteChat": "채팅 삭제",
+  "aiUntitled": "제목 없는 채팅",
+  "aiRecentChats": "최근 채팅",
+  "aiAgentForgot": "에이전트는 위의 채팅을 기억하지 않습니다. 다음 질문은 새 세션을 시작합니다.",
+  "aiHistorySaveFailed": "이 호스트의 기록에 채팅을 저장할 수 없습니다",
+  "aiHistoryLoadFailed": "이 채팅을 열 수 없습니다",
+  "aiHistoryBusy": "먼저 진행 중인 응답을 중지하세요",
+  "aiDeleteChatTitle": "이 채팅을 삭제하시겠습니까?",
+  "aiDeleteChatBody": "이 호스트의 채팅 기록에서 제거합니다. 되돌릴 수 없습니다.",
+  "mygo.previousMonth": "이전 달",
+  "@mygo.previousMonth": {
+    "description": "Labels the button of a calendar that shows the previous month."
+  },
+  "mygo.nextMonth": "다음 달",
+  "@mygo.nextMonth": {
+    "description": "Labels the button of a calendar that shows the next month."
+  },
+  "mygo.undo": "실행 취소",
+  "@mygo.undo": {
+    "description": "An item of the menu of a text field."
+  },
+  "mygo.cut": "잘라내기",
+  "@mygo.cut": {
+    "description": "An item of the menu of a text field."
+  },
+  "mygo.copy": "복사",
+  "@mygo.copy": {
+    "description": "An item of the menu of a text field."
+  },
+  "mygo.paste": "붙여넣기",
+  "@mygo.paste": {
+    "description": "An item of the menu of a text field."
+  },
+  "mygo.delete": "삭제",
+  "@mygo.delete": {
+    "description": "An item of the menu of a text field."
+  },
+  "mygo.selectAll": "모두 선택",
+  "@mygo.selectAll": {
+    "description": "An item of the menu of a text field."
+  },
+  "mygo.find": "찾기",
+  "@mygo.find": {
+    "description": "Labels the bar that searches text, and is what its empty field shows."
+  },
+  "mygo.search": "검색",
+  "@mygo.search": {
+    "description": "What an empty search field shows."
+  },
+  "mygo.clear": "지우기",
+  "@mygo.clear": {
+    "description": "Labels the button that clears a search field."
+  },
+  "mygo.removeToken": "{token} 제거",
+  "@mygo.removeToken": {
+    "description": "Labels the button that removes a token of a token field, as in \"Remove Ada\".",
+    "placeholders": {
+      "token": {
+        "type": "String"
+      }
+    }
+  },
+  "mygo.saturation": "채도 및 밝기",
+  "@mygo.saturation": {
+    "description": "Labels the area of a color picker that sets the saturation and the brightness."
+  },
+  "mygo.hex": "16진수",
+  "@mygo.hex": {
+    "description": "Labels the field of a color picker that holds the color as hexadecimal."
+  },
+  "mygo.divider": "구분선",
+  "@mygo.divider": {
+    "description": "Labels the line between the panes of a split view."
+  },
+  "mygo.developerTools": "개발자 도구",
+  "@mygo.developerTools": {
+    "description": "Labels the inspector of native UI."
+  },
+  "mygo.elements": "요소",
+  "@mygo.elements": {
+    "description": "Labels the inspector's list of the elements of the window."
+  },
+  "mygo.more": "더 보기",
+  "@mygo.more": {
+    "description": "Labels the button of a toolbar that opens what the toolbar hides."
+  },
+  "mygo.codeEditor": "코드 편집기",
+  "@mygo.codeEditor": {
+    "description": "Names the code editor to assistive technology when the app gives it no label."
+  },
+  "mygo.goToDefinition": "정의로 이동",
+  "@mygo.goToDefinition": {
+    "description": "An item of the code editor's menu."
+  },
+  "mygo.toggleComment": "주석 전환",
+  "@mygo.toggleComment": {
+    "description": "An item of the code editor's menu, which comments out the selection or its lines."
+  },
+  "mygo.selection": "선택 영역",
+  "@mygo.selection": {
+    "description": "A submenu of the code editor's menu."
+  },
+  "mygo.transform": "변환",
+  "@mygo.transform": {
+    "description": "A submenu of the code editor's menu."
+  },
+  "mygo.folding": "접기",
+  "@mygo.folding": {
+    "description": "A submenu of the code editor's menu."
+  },
+  "mygo.selectNextOccurrence": "다음 일치 항목 선택",
+  "@mygo.selectNextOccurrence": {
+    "description": "An item of the code editor's Selection menu."
+  },
+  "mygo.selectAllOccurrences": "모든 일치 항목 선택",
+  "@mygo.selectAllOccurrences": {
+    "description": "An item of the code editor's Selection menu."
+  },
+  "mygo.expandSelection": "선택 영역 확장",
+  "@mygo.expandSelection": {
+    "description": "An item of the code editor's Selection menu."
+  },
+  "mygo.splitIntoLines": "여러 줄로 분할",
+  "@mygo.splitIntoLines": {
+    "description": "An item of the code editor's Selection menu, which splits a selection of several lines into one selection a line."
+  },
+  "mygo.upperCase": "대문자",
+  "@mygo.upperCase": {
+    "description": "An item of the code editor's Transform menu."
+  },
+  "mygo.lowerCase": "소문자",
+  "@mygo.lowerCase": {
+    "description": "An item of the code editor's Transform menu."
+  },
+  "mygo.titleCase": "각 단어 첫 글자 대문자",
+  "@mygo.titleCase": {
+    "description": "An item of the code editor's Transform menu."
+  },
+  "mygo.snakeCase": "스네이크 표기법",
+  "@mygo.snakeCase": {
+    "description": "An item of the code editor's Transform menu."
+  },
+  "mygo.kebabCase": "케밥 표기법",
+  "@mygo.kebabCase": {
+    "description": "An item of the code editor's Transform menu."
+  },
+  "mygo.camelCase": "카멜 표기법",
+  "@mygo.camelCase": {
+    "description": "An item of the code editor's Transform menu."
+  },
+  "mygo.pascalCase": "파스칼 표기법",
+  "@mygo.pascalCase": {
+    "description": "An item of the code editor's Transform menu."
+  },
+  "mygo.sortLines": "줄 정렬",
+  "@mygo.sortLines": {
+    "description": "An item of the code editor's Transform menu."
+  },
+  "mygo.reverseLines": "줄 순서 뒤집기",
+  "@mygo.reverseLines": {
+    "description": "An item of the code editor's Transform menu."
+  },
+  "mygo.uniqueLines": "중복 줄 제거",
+  "@mygo.uniqueLines": {
+    "description": "An item of the code editor's Transform menu, which removes repeated lines."
+  },
+  "mygo.joinLines": "줄 합치기",
+  "@mygo.joinLines": {
+    "description": "An item of the code editor's Transform menu."
+  },
+  "mygo.trimTrailingWhitespace": "줄 끝 공백 제거",
+  "@mygo.trimTrailingWhitespace": {
+    "description": "An item of the code editor's Transform menu."
+  },
+  "mygo.fold": "접기",
+  "@mygo.fold": {
+    "description": "An item of the code editor's Folding menu."
+  },
+  "mygo.unfold": "펼치기",
+  "@mygo.unfold": {
+    "description": "An item of the code editor's Folding menu."
+  },
+  "mygo.foldAll": "모두 접기",
+  "@mygo.foldAll": {
+    "description": "An item of the code editor's Folding menu."
+  },
+  "mygo.unfoldAll": "모두 펼치기",
+  "@mygo.unfoldAll": {
+    "description": "An item of the code editor's Folding menu."
+  },
+  "mygo.expandUp": "위로 확장",
+  "@mygo.expandUp": {
+    "description": "Labels the button of a diff viewer that shows the unchanged lines above a change."
+  },
+  "mygo.expandDown": "아래로 확장",
+  "@mygo.expandDown": {
+    "description": "Labels the button of a diff viewer that shows the unchanged lines below a change."
+  },
+  "mygo.expandAll": "모두 확장",
+  "@mygo.expandAll": {
+    "description": "Labels the button of a diff viewer that shows all the unchanged lines."
+  },
+  "mygo.expand": "{what} 확장",
+  "@mygo.expand": {
+    "description": "What assistive technology calls a button of a diff viewer that shows unchanged lines, as in \"Expand 4 unmodified lines\".",
+    "placeholders": {
+      "what": {
+        "type": "String"
+      }
+    }
+  },
+  "mygo.unmodifiedLines": "{n, plural, other {변경되지 않은 줄 #개}}",
+  "@mygo.unmodifiedLines": {
+    "description": "The unchanged lines a separator of a diff viewer collapses.",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "mygo.revert": "되돌리기",
+  "@mygo.revert": {
+    "description": "An action of a diff viewer on a change."
+  },
+  "mygo.keep": "유지",
+  "@mygo.keep": {
+    "description": "An action of a diff viewer on a change."
+  },
+  "mygo.hunkAction": "변경 사항 {action}",
+  "@mygo.hunkAction": {
+    "description": "What assistive technology calls a button that takes an action on a change, as in \"Revert change\".",
+    "placeholders": {
+      "action": {
+        "type": "String"
+      }
+    }
+  },
+  "mygo.line": "{n, number, ::group-off}행",
+  "@mygo.line": {
+    "description": "The line a gutter button of a diff viewer adds a line at, as assistive technology reads it.",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "mygo.newText": "새 텍스트",
+  "@mygo.newText": {
+    "description": "Names the side of a diff viewer with the text as it is."
+  },
+  "mygo.oldText": "이전 텍스트",
+  "@mygo.oldText": {
+    "description": "Names the side of a diff viewer with the text as it was."
+  },
+  "mygo.invalid": "올바르지 않음",
+  "@mygo.invalid": {
+    "description": "What a find bar says of a query that is not a valid regular expression."
+  },
+  "mygo.noResults": "결과 없음",
+  "@mygo.noResults": {
+    "description": "What a find bar says of a query that matches nothing."
+  },
+  "mygo.matches": "{total}개 중 {current}번째",
+  "@mygo.matches": {
+    "description": "Which of the matches a find bar is at, as \"3 of 12\".",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mygo.matchesMore": "{total}개 이상 중 {current}번째",
+  "@mygo.matchesMore": {
+    "description": "Which of the matches a find bar is at, when it stopped counting them, as \"3 of 1000+\".",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "mygo.matchCase": "대소문자 구분",
+  "@mygo.matchCase": {
+    "description": "An option of a find bar."
+  },
+  "mygo.matchWholeWord": "단어 단위로 일치",
+  "@mygo.matchWholeWord": {
+    "description": "An option of a find bar."
+  },
+  "mygo.useRegularExpression": "정규식 사용",
+  "@mygo.useRegularExpression": {
+    "description": "An option of a find bar."
+  },
+  "mygo.findInSelection": "선택 영역에서 찾기",
+  "@mygo.findInSelection": {
+    "description": "An option of a find bar."
+  },
+  "mygo.previousMatch": "이전 일치 항목",
+  "@mygo.previousMatch": {
+    "description": "Labels the button of a find bar that goes to the previous match."
+  },
+  "mygo.nextMatch": "다음 일치 항목",
+  "@mygo.nextMatch": {
+    "description": "Labels the button of a find bar that goes to the next match."
+  },
+  "mygo.replace": "바꾸기",
+  "@mygo.replace": {
+    "description": "Labels the button of a find bar that replaces the match it is at, and is what the empty replacement field shows."
+  },
+  "mygo.replaceAll": "모두 바꾸기",
+  "@mygo.replaceAll": {
+    "description": "Labels the button of a find bar that replaces every match."
+  },
+  "mygo.close": "닫기",
+  "@mygo.close": {
+    "description": "Labels the button that closes a find bar."
+  },
+  "mygo.goToLine": "줄로 이동",
+  "@mygo.goToLine": {
+    "description": "Labels the bar that goes to a line."
+  },
+  "mygo.lineRange": "1~{lines, number, ::group-off}행, 뒤에 :열 번호",
+  "@mygo.lineRange": {
+    "description": "What the empty field of the go to line bar shows.",
+    "placeholders": {
+      "lines": {
+        "type": "int"
+      }
+    }
+  },
+  "mygo.currentLine": "전체 {lines, number, ::group-off}행 중 현재 {line, number, ::group-off}행, {column, number, ::group-off}열",
+  "@mygo.currentLine": {
+    "description": "Where the caret is, which the go to line bar says.",
+    "placeholders": {
+      "line": {
+        "type": "int"
+      },
+      "lines": {
+        "type": "int"
+      },
+      "column": {
+        "type": "int"
+      }
+    }
+  },
+  "mygo.completions": "자동 완성",
+  "@mygo.completions": {
+    "description": "Labels the code editor's list of completions."
+  },
+  "mygo.menuUndo": "실행 취소",
+  "@mygo.menuUndo": {
+    "description": "The label of the menu items of the role undo (MenuItem.Role)."
+  },
+  "mygo.menuRedo": "다시 실행",
+  "@mygo.menuRedo": {
+    "description": "The label of the menu items of the role redo (MenuItem.Role)."
+  },
+  "mygo.menuCut": "잘라내기",
+  "@mygo.menuCut": {
+    "description": "The label of the menu items of the role cut (MenuItem.Role)."
+  },
+  "mygo.menuCopy": "복사",
+  "@mygo.menuCopy": {
+    "description": "The label of the menu items of the role copy (MenuItem.Role)."
+  },
+  "mygo.menuPaste": "붙여넣기",
+  "@mygo.menuPaste": {
+    "description": "The label of the menu items of the role paste (MenuItem.Role)."
+  },
+  "mygo.menuPasteAndMatchStyle": "스타일에 맞춰 붙여넣기",
+  "@mygo.menuPasteAndMatchStyle": {
+    "description": "The label of the menu items of the role pasteAndMatchStyle (MenuItem.Role)."
+  },
+  "mygo.menuDelete": "삭제",
+  "@mygo.menuDelete": {
+    "description": "The label of the menu items of the role delete (MenuItem.Role)."
+  },
+  "mygo.menuSelectAll": "모두 선택",
+  "@mygo.menuSelectAll": {
+    "description": "The label of the menu items of the role selectAll (MenuItem.Role)."
+  },
+  "mygo.menuReload": "다시 불러오기",
+  "@mygo.menuReload": {
+    "description": "The label of the menu items of the role reload (MenuItem.Role)."
+  },
+  "mygo.menuForceReload": "강제로 다시 불러오기",
+  "@mygo.menuForceReload": {
+    "description": "The label of the menu items of the role forceReload (MenuItem.Role)."
+  },
+  "mygo.menuToggleDevTools": "개발자 도구 전환",
+  "@mygo.menuToggleDevTools": {
+    "description": "The label of the menu items of the role toggleDevTools (MenuItem.Role)."
+  },
+  "mygo.menuActualSize": "실제 크기",
+  "@mygo.menuActualSize": {
+    "description": "The label of the menu items of the role resetZoom (MenuItem.Role)."
+  },
+  "mygo.menuZoomIn": "확대",
+  "@mygo.menuZoomIn": {
+    "description": "The label of the menu items of the role zoomIn (MenuItem.Role)."
+  },
+  "mygo.menuZoomOut": "축소",
+  "@mygo.menuZoomOut": {
+    "description": "The label of the menu items of the role zoomOut (MenuItem.Role)."
+  },
+  "mygo.menuToggleFullScreen": "전체 화면 전환",
+  "@mygo.menuToggleFullScreen": {
+    "description": "The label of the menu items of the role togglefullscreen (MenuItem.Role)."
+  },
+  "mygo.menuMinimize": "최소화",
+  "@mygo.menuMinimize": {
+    "description": "The label of the menu items of the role minimize (MenuItem.Role)."
+  },
+  "mygo.menuZoom": "확대/축소",
+  "@mygo.menuZoom": {
+    "description": "The label of the menu items of the role zoom (MenuItem.Role)."
+  },
+  "mygo.menuBringAllToFront": "모두 앞으로 가져오기",
+  "@mygo.menuBringAllToFront": {
+    "description": "The label of the menu items of the role front (MenuItem.Role)."
+  },
+  "mygo.menuClose": "닫기",
+  "@mygo.menuClose": {
+    "description": "The item that closes a document's window."
+  },
+  "mygo.menuCloseWindow": "윈도우 닫기",
+  "@mygo.menuCloseWindow": {
+    "description": "The item that closes a window."
+  },
+  "mygo.menuNew": "새로 만들기",
+  "@mygo.menuNew": {
+    "description": "The label of the menu items of the role new (MenuItem.Role)."
+  },
+  "mygo.menuOpen": "열기…",
+  "@mygo.menuOpen": {
+    "description": "The label of the menu items of the role open (MenuItem.Role)."
+  },
+  "mygo.menuOpenRecent": "최근 항목 열기",
+  "@mygo.menuOpenRecent": {
+    "description": "The label of the menu items of the role openRecent (MenuItem.Role)."
+  },
+  "mygo.menuSave": "저장",
+  "@mygo.menuSave": {
+    "description": "The label of the menu items of the role save (MenuItem.Role)."
+  },
+  "mygo.menuSaveAs": "다른 이름으로 저장…",
+  "@mygo.menuSaveAs": {
+    "description": "The label of the menu items of the role saveAs (MenuItem.Role)."
+  },
+  "mygo.menuDuplicate": "복제",
+  "@mygo.menuDuplicate": {
+    "description": "The label of the menu items of the role duplicate (MenuItem.Role)."
+  },
+  "mygo.menuRename": "이름 변경…",
+  "@mygo.menuRename": {
+    "description": "The label of the menu items of the role rename (MenuItem.Role)."
+  },
+  "mygo.menuMoveTo": "다음으로 이동…",
+  "@mygo.menuMoveTo": {
+    "description": "The label of the menu items of the role moveTo (MenuItem.Role)."
+  },
+  "mygo.menuRevert": "되돌리기",
+  "@mygo.menuRevert": {
+    "description": "The item that reverts a document to its saved version."
+  },
+  "mygo.menuRevertToSaved": "저장된 상태로 되돌리기",
+  "@mygo.menuRevertToSaved": {
+    "description": "macOS's item that reverts a document to its saved version."
+  },
+  "mygo.menuQuitApp": "{app} 종료",
+  "@mygo.menuQuitApp": {
+    "description": "The item of macOS's app menu that quits the app, with the app's name.",
+    "placeholders": {
+      "app": {
+        "type": "String"
+      }
+    }
+  },
+  "mygo.menuAbout": "{app} 정보",
+  "@mygo.menuAbout": {
+    "description": "The item of macOS's app menu that shows the app's about panel, with the app's name.",
+    "placeholders": {
+      "app": {
+        "type": "String"
+      }
+    }
+  },
+  "mygo.menuHide": "{app} 가리기",
+  "@mygo.menuHide": {
+    "description": "The item of macOS's app menu that hides the app, with the app's name.",
+    "placeholders": {
+      "app": {
+        "type": "String"
+      }
+    }
+  },
+  "mygo.menuQuit": "종료",
+  "@mygo.menuQuit": {
+    "description": "The item that quits the app on Linux."
+  },
+  "mygo.menuExit": "종료",
+  "@mygo.menuExit": {
+    "description": "The item that quits the app on Windows."
+  },
+  "mygo.menuHideOthers": "다른 항목 가리기",
+  "@mygo.menuHideOthers": {
+    "description": "The label of the menu items of the role hideOthers (MenuItem.Role)."
+  },
+  "mygo.menuShowAll": "모두 표시",
+  "@mygo.menuShowAll": {
+    "description": "The label of the menu items of the role unhide (MenuItem.Role)."
+  },
+  "mygo.menuServices": "서비스",
+  "@mygo.menuServices": {
+    "description": "The label of the menu items of the role services (MenuItem.Role)."
+  },
+  "mygo.menuStartSpeaking": "말하기 시작",
+  "@mygo.menuStartSpeaking": {
+    "description": "The label of the menu items of the role startSpeaking (MenuItem.Role)."
+  },
+  "mygo.menuStopSpeaking": "말하기 중지",
+  "@mygo.menuStopSpeaking": {
+    "description": "The label of the menu items of the role stopSpeaking (MenuItem.Role)."
+  },
+  "mygo.menuFile": "파일",
+  "@mygo.menuFile": {
+    "description": "A menu of the menu bar."
+  },
+  "mygo.menuEdit": "편집",
+  "@mygo.menuEdit": {
+    "description": "A menu of the menu bar."
+  },
+  "mygo.menuView": "보기",
+  "@mygo.menuView": {
+    "description": "A menu of the menu bar."
+  },
+  "mygo.menuFormat": "서식",
+  "@mygo.menuFormat": {
+    "description": "A menu of the menu bar."
+  },
+  "mygo.menuWindow": "윈도우",
+  "@mygo.menuWindow": {
+    "description": "A menu of the menu bar."
+  },
+  "mygo.menuHelp": "도움말",
+  "@mygo.menuHelp": {
+    "description": "A menu of the menu bar."
+  },
+  "mygo.menuBold": "굵게",
+  "@mygo.menuBold": {
+    "description": "The label of the menu items of the role bold (MenuItem.Role)."
+  },
+  "mygo.menuItalic": "기울임꼴",
+  "@mygo.menuItalic": {
+    "description": "The label of the menu items of the role italic (MenuItem.Role)."
+  },
+  "mygo.menuUnderline": "밑줄",
+  "@mygo.menuUnderline": {
+    "description": "The label of the menu items of the role underline (MenuItem.Role)."
+  },
+  "mygo.menuStrikethrough": "취소선",
+  "@mygo.menuStrikethrough": {
+    "description": "The label of the menu items of the role strikethrough (MenuItem.Role)."
+  },
+  "mygo.menuAlignLeft": "왼쪽 정렬",
+  "@mygo.menuAlignLeft": {
+    "description": "The label of the menu items of the role alignLeft (MenuItem.Role)."
+  },
+  "mygo.menuCenter": "가운데 정렬",
+  "@mygo.menuCenter": {
+    "description": "The label of the menu items of the role alignCenter (MenuItem.Role)."
+  },
+  "mygo.menuAlignRight": "오른쪽 정렬",
+  "@mygo.menuAlignRight": {
+    "description": "The label of the menu items of the role alignRight (MenuItem.Role)."
+  },
+  "mygo.noMatches": "일치 항목 없음",
+  "@mygo.noMatches": {
+    "description": "What a find bar says of a query that matches nothing."
+  },
+  "mygo.previous": "이전",
+  "@mygo.previous": {
+    "description": "Labels the button of a find bar that goes to the previous match."
+  },
+  "mygo.next": "다음",
+  "@mygo.next": {
+    "description": "Labels the button of a find bar that goes to the next match."
+  },
+  "mygo.done": "완료",
+  "@mygo.done": {
+    "description": "The button that closes a find bar."
+  },
+  "mygo.colorValue": "채도 {saturation, number, percent}, 밝기 {brightness, number, percent}",
+  "@mygo.colorValue": {
+    "description": "What assistive technology reads of the area of a color picker that sets the saturation and the brightness, as \"40% saturation, 75% brightness\".",
+    "placeholders": {
+      "saturation": {
+        "type": "double"
+      },
+      "brightness": {
+        "type": "double"
+      }
+    }
+  },
+  "mygo.hours": "시",
+  "@mygo.hours": {
+    "description": "Names the hours of a time field to assistive technology, after the field's label."
+  },
+  "mygo.minutes": "분",
+  "@mygo.minutes": {
+    "description": "Names the minutes of a time field to assistive technology, after the field's label."
+  },
+  "mygo.dayPeriod": "오전/오후",
+  "@mygo.dayPeriod": {
+    "description": "Names the part of a time field that says AM or PM to assistive technology, after the field's label."
+  },
+  "mygo.richText": "서식 있는 텍스트",
+  "@mygo.richText": {
+    "description": "Names a rich text editor to assistive technology when the app gives it no label."
+  },
+  "mygo.copyCode": "코드 복사",
+  "@mygo.copyCode": {
+    "description": "Labels the button of a code block of Markdown that copies its code."
+  },
+  "mygo.copied": "복사됨",
+  "@mygo.copied": {
+    "description": "What the copy button of a code block of Markdown says once it copied the code."
+  },
+  "mygo.copyAsMarkdown": "Markdown으로 복사",
+  "@mygo.copyAsMarkdown": {
+    "description": "An item of the menu of a view of Markdown."
+  },
+  "mygo.image": "이미지",
+  "@mygo.image": {
+    "description": "Names an image of Markdown without a description to assistive technology."
+  },
+  "mygo.menuSpeech": "말하기",
+  "@mygo.menuSpeech": {
+    "description": "The submenu of macOS's Edit menu with the items that speak the selection."
+  },
+  "mygo.menuClearRecent": "메뉴 지우기",
+  "@mygo.menuClearRecent": {
+    "description": "The last item of the menu of recent documents, which empties it."
+  },
+  "mygo.untitled": "제목 없음",
+  "@mygo.untitled": {
+    "description": "The name of a new document before it is saved."
+  },
+  "mygo.untitledNumbered": "제목 없음 {n, number, ::group-off}",
+  "@mygo.untitledNumbered": {
+    "description": "The name of the second and later new documents before they are saved, as \"Untitled 2\".",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "mygo.cancel": "취소",
+  "@mygo.cancel": {
+    "description": "A button of a dialog that cancels what it asks about."
+  },
+  "mygo.save": "저장",
+  "@mygo.save": {
+    "description": "A button of a dialog that saves a document."
+  },
+  "mygo.saveEllipsis": "저장…",
+  "@mygo.saveEllipsis": {
+    "description": "A button of a dialog that saves a new document, after asking where."
+  },
+  "mygo.saveAs": "다른 이름으로 저장…",
+  "@mygo.saveAs": {
+    "description": "A button of a dialog that saves a document as another file."
+  },
+  "mygo.saveAnyway": "그래도 저장",
+  "@mygo.saveAnyway": {
+    "description": "A button of a dialog that saves a document whose file another app changed."
+  },
+  "mygo.saveAll": "모두 저장",
+  "@mygo.saveAll": {
+    "description": "A button of a dialog that saves every document with changes."
+  },
+  "mygo.dontSave": "저장 안 함",
+  "@mygo.dontSave": {
+    "description": "A button of a dialog that closes a document without saving its changes."
+  },
+  "mygo.deleteDocument": "삭제",
+  "@mygo.deleteDocument": {
+    "description": "A button of a dialog that deletes a new document instead of saving it."
+  },
+  "mygo.revertDocument": "되돌리기",
+  "@mygo.revertDocument": {
+    "description": "A button of a dialog that reverts a document to its file."
+  },
+  "mygo.replaceFile": "교체",
+  "@mygo.replaceFile": {
+    "description": "A button of a dialog that replaces a file with a document."
+  },
+  "mygo.rename": "이름 변경",
+  "@mygo.rename": {
+    "description": "The title and the button of the dialog that renames a document."
+  },
+  "mygo.renameTo": "새 이름:",
+  "@mygo.renameTo": {
+    "description": "Labels the field of the name of the dialog that renames a document."
+  },
+  "mygo.moveTo": "다음으로 이동",
+  "@mygo.moveTo": {
+    "description": "The title of the dialog that moves a document to another folder."
+  },
+  "mygo.move": "이동",
+  "@mygo.move": {
+    "description": "The button of the dialog that moves a document to another folder."
+  },
+  "mygo.reviewChanges": "변경 사항 검토…",
+  "@mygo.reviewChanges": {
+    "description": "A button of the dialog asking about the documents with changes as the app quits."
+  },
+  "mygo.discardChanges": "변경 사항 버리기",
+  "@mygo.discardChanges": {
+    "description": "A button of the dialog asking about the documents with changes as the app quits."
+  },
+  "mygo.keepNewDocument": "새 문서 “{name}”을(를) 유지하시겠습니까?",
+  "@mygo.keepNewDocument": {
+    "description": "Asks, as a new document closes, whether to keep it.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mygo.keepNewDocumentDetail": "변경 사항을 저장하거나 이 문서를 즉시 삭제할 수 있습니다. 이 작업은 되돌릴 수 없습니다.",
+  "@mygo.keepNewDocumentDetail": {
+    "description": "Explains the question of keepNewDocument."
+  },
+  "mygo.saveChanges": "“{name}” 문서의 변경 사항을 저장하시겠습니까?",
+  "@mygo.saveChanges": {
+    "description": "Asks, as a document with changes closes, whether to save them.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mygo.changesLost": "저장하지 않으면 변경 사항이 손실됩니다.",
+  "@mygo.changesLost": {
+    "description": "Explains the question of saveChanges."
+  },
+  "mygo.readOnly": "“{name}” 문서의 파일이 읽기 전용이므로 저장할 수 없습니다.",
+  "@mygo.readOnly": {
+    "description": "Says a document cannot be saved in its file.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mygo.readOnlyDetail": "변경 사항을 유지하려면 다른 파일로 저장하세요.",
+  "@mygo.readOnlyDetail": {
+    "description": "Explains readOnly."
+  },
+  "mygo.changedOnDisk": "다른 앱에서 “{name}” 파일을 변경했습니다.",
+  "@mygo.changedOnDisk": {
+    "description": "Says another app changed the file of a document being saved.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mygo.changedOnDiskDetail": "그래도 저장을 선택하면 현재 버전으로 교체합니다. 되돌리기를 선택하면 변경 사항을 버리고 디스크에 저장된 버전을 표시합니다.",
+  "@mygo.changedOnDiskDetail": {
+    "description": "Explains the buttons saveAnyway and revertDocument."
+  },
+  "mygo.alreadyExists": "이 위치에 “{name}” 항목이 이미 있습니다. 교체하시겠습니까?",
+  "@mygo.alreadyExists": {
+    "description": "Asks whether to replace a file as a document moves.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mygo.alreadyExistsDetail": "교체하면 현재 내용을 덮어씁니다.",
+  "@mygo.alreadyExistsDetail": {
+    "description": "Explains alreadyExists."
+  },
+  "mygo.revertQuestion": "“{name}”을(를) 마지막으로 저장한 버전으로 되돌리시겠습니까?",
+  "@mygo.revertQuestion": {
+    "description": "Asks whether to revert a document to its file.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mygo.revertDetail": "현재 변경 사항이 손실됩니다.",
+  "@mygo.revertDetail": {
+    "description": "Explains revertQuestion."
+  },
+  "mygo.reviewBeforeQuitting": "저장하지 않은 변경 사항이 있는 {app} 문서가 {n}개 있습니다. 종료하기 전에 변경 사항을 검토하시겠습니까?",
+  "@mygo.reviewBeforeQuitting": {
+    "description": "Asks on macOS, as the app quits, about its documents with changes, two or more.",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "app": {
+        "type": "String"
+      }
+    }
+  },
+  "mygo.reviewBeforeQuittingDetail": "문서를 검토하지 않으면 모든 변경 사항이 손실됩니다.",
+  "@mygo.reviewBeforeQuittingDetail": {
+    "description": "Explains reviewBeforeQuitting."
+  },
+  "mygo.saveManyChanges": "다음 문서 {n}개의 변경 사항을 저장하시겠습니까?",
+  "@mygo.saveManyChanges": {
+    "description": "Asks, as the app quits, about its documents with changes, two or more, which the dialog lists.",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "mygo.documentFailed": "{action, select, opened {“{name}” 문서를 열 수 없습니다.} renamed {“{name}” 문서의 이름을 변경할 수 없습니다.} moved {“{name}” 문서를 이동할 수 없습니다.} reverted {“{name}” 문서를 되돌릴 수 없습니다.} other {“{name}” 문서를 저장할 수 없습니다.}}",
+  "@mygo.documentFailed": {
+    "description": "Says what failed of a document: opened, renamed, moved, reverted, or saved (other).",
+    "placeholders": {
+      "action": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mygo.colorName": "{color, select, red {빨간색} orange {주황색} yellow {노란색} green {초록색} teal {청록색} blue {파란색} indigo {남색} purple {보라색} pink {분홍색} brown {갈색} gray {회색} black {검은색} other {{color}}}",
+  "@mygo.colorName": {
+    "description": "The name of a swatch of a color picker, by its color: red, orange, yellow, green, teal, blue, indigo, purple, pink, brown, gray or black.",
+    "placeholders": {
+      "color": {
+        "type": "String"
+      }
+    }
+  },
+  "mygo.ok": "확인",
+  "@mygo.ok": {
+    "description": "The button of a dialog that only tells something, and of a page's alert, confirm and prompt."
+  },
+  "mygo.open": "열기",
+  "@mygo.open": {
+    "description": "The title and the button of the dialog that opens files."
+  },
+  "mygo.selectFolder": "폴더 선택",
+  "@mygo.selectFolder": {
+    "description": "The title of the dialog that chooses a folder."
+  },
+  "mygo.clearTerminal": "지우기",
+  "@mygo.clearTerminal": {
+    "description": "An item of a terminal's menu, which clears the lines scrolled out of view and the screen above the prompt, as Command-K does."
+  },
+  "mygo.clipboardRead": "프로그램이 클립보드를 읽으려고 합니다",
+  "@mygo.clipboardRead": {
+    "description": "The title of the terminal's prompt about a program's read of the clipboard."
+  },
+  "mygo.clipboardReadAllow": "허용",
+  "@mygo.clipboardReadAllow": {
+    "description": "The button of the terminal's clipboard prompt that lets the program read."
+  },
+  "mygo.clipboardReadDeny": "거부",
+  "@mygo.clipboardReadDeny": {
+    "description": "The button of the terminal's clipboard prompt that refuses the program."
+  },
+  "mygo.clipboardReadEmpty": "클립보드가 비어 있습니다.",
+  "@mygo.clipboardReadEmpty": {
+    "description": "What the terminal's clipboard prompt shows when the clipboard holds no text."
+  },
+  "mygo.decimalInvalid": "숫자를 입력하세요",
+  "@mygo.decimalInvalid": {
+    "description": "What a decimal input says of text that is not a number, as \"1,2x\"."
+  },
+  "mygo.decimalWhole": "정수를 입력하세요",
+  "@mygo.decimalWhole": {
+    "description": "What a decimal input whose step has no decimals says of a number with some."
+  },
+  "mygo.decimalPlaces": "{n, plural, other {소수점 이하 최대 #자리까지 입력하세요}}",
+  "@mygo.decimalPlaces": {
+    "description": "What a decimal input says of a number with more decimals than its step has, which it does not round.",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "mygo.decimalAtLeast": "{min} 이상 입력하세요",
+  "@mygo.decimalAtLeast": {
+    "description": "What a decimal input says of a number below its lowest, as \"Enter 0.00 or more\".",
+    "placeholders": {
+      "min": {
+        "type": "String"
+      }
+    }
+  },
+  "mygo.decimalAtMost": "{max} 이하 입력하세요",
+  "@mygo.decimalAtMost": {
+    "description": "What a decimal input says of a number above its highest, as \"Enter 100.00 or less\".",
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "mygo.desktopShortcut": "바탕 화면 바로 가기 만들기",
+  "@mygo.desktopShortcut": {
+    "description": "Labels the check box on the finish page of an app's Windows installer, which puts a shortcut to the app on the desktop."
+  }
+}
