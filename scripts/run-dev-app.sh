@@ -5,7 +5,7 @@
 # using the same certificate does not guarantee access across rebuilds.
 # macOS keychain policy may still require authorization with either identity.
 #
-# SSHYARD_DEV_IDENTITY picks another identity. Arguments go to `mygo dev`.
+# MACOS_DEV_IDENTITY picks another identity. Arguments go to `mygo dev`.
 set -eu
 
 cd "$(dirname "$0")/.."
@@ -15,7 +15,7 @@ if [ "$(uname -s)" != Darwin ]; then
 fi
 
 identities="$(security find-identity -v -p codesigning)"
-identity="${SSHYARD_DEV_IDENTITY:-}"
+identity="${MACOS_DEV_IDENTITY:-}"
 if [ -z "$identity" ]; then
 	identity="$(printf '%s\n' "$identities" | sed -n 's/^ *[0-9]*) [0-9A-F]* "\(Apple Development: [^"]*\)"$/\1/p' | head -n 1)"
 fi
