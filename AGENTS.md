@@ -12,13 +12,14 @@ Global rules for anyone (human or agent) changing SSHYard. Read this before you 
 - **Never commit key files** (`*.key` is ignored; the updater signing key stays outside the repo).
 - **The version lives only in `mygo.json`.**
 
-## Icons: Remix Icon for actions, LobeHub for AI brands
+## Icons: Remix Icon for actions, LobeHub for AI brands, Material Icon Theme for file content
 
-- All interface/action icons come from [Remix Icon](https://remixicon.com/) **v4.8.0**, vendored in `internal/icons/svg/` (Apache-2.0; `internal/icons/LICENSE` and `NOTICE` must stay). Do not upgrade past 4.8.0 without checking the licence: 4.9+ uses the "Remix Icon License v1.0".
+- All interface/action icons, excluding file/folder content artwork below, come from [Remix Icon](https://remixicon.com/) **v4.8.0**, vendored in `internal/icons/svg/` (Apache-2.0; `internal/icons/LICENSE` and `NOTICE` must stay). Do not upgrade past 4.8.0 without checking the licence: 4.9+ uses the "Remix Icon License v1.0".
 - AI provider and model brand icons come exclusively from [LobeHub Icons](https://icons.lobehub.com/), vendored in `internal/aibrands/png/` with a pinned upstream version, `LICENSE` and `NOTICE`. Use the official `-color` variant whenever available; brands without one retain the official light/dark artwork. Render native bitmaps without theme tinting, never fetch artwork at runtime.
 - Use `aibrands.Model(modelID, provider)` for models, matching their names before falling back to `aibrands.Provider(provider)` for unknown models. Select `Light`/`Dark` for the current theme; matching must never rewrite the model ID sent to the API. Add new brands and model families to this shared package with tests, never per-view matching.
+- File and folder content icons come exclusively from [Material Icon Theme](https://github.com/material-extensions/vscode-material-icon-theme) **v5.40.0**, vendored unchanged in `internal/fileicons/svg/` with local embedding; lookup uses `fileicons.Lookup(basename, isDir)`, with upstream defaults for unknown entries. Render its `Light`/`Dark` SVG using `ui.Image` to preserve original colors, never theme-tint or download artwork at runtime. This exception applies only to file/folder content, not interface actions. Keep all MIT, applicable Apache-2.0, Pictogrammers and provenance notices in `resources/licenses/material-icon-theme/`, which ships with the app.
 - No other icon set, no icon fonts, no hand-drawn SVG paths in views.
-- Use the `-line` style. Use the matching `-fill` only for an active state, passed as `IconButton.On`.
+- For Remix action icons, use the `-line` style. Use the matching `-fill` only for an active state, passed as `IconButton.On`.
 - To add an icon:
   1. Copy `icons/<Category>/<name>.svg` from the RemixIcon `v4.8.0` tag into `internal/icons/svg/`, unchanged.
   2. Add a variable in `internal/icons/icons.go` named by meaning, not by shape: `Upload = load("upload-2-line")`.

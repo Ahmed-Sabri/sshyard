@@ -683,11 +683,7 @@ func (a *App) fileTable(c *ui.Context, cn *conn, remote bool, m locales.Messages
 		case 0:
 			ui.Row(c).Grow(1).MinWidth(0).AlignItems(ui.Center).Children(func() {
 				name := ui.Row(c).Gap(6).Shrink(1).MinWidth(0).AlignItems(ui.Center).Children(func() {
-					ic, col := entryIcon(e), muted
-					if e.IsDir && !on {
-						col = tok.Accent
-					}
-					ui.Icon(c, ic.SVG).Width(15).Height(15).Shrink(0).TextColor(col)
+					fileImage(c, entryIcon(e), 16)
 					ui.Text(c, e.Name).SingleLine().Shrink(1)
 				})
 				nb := name.Bounds()
@@ -789,20 +785,6 @@ func (a *App) fileKeys(c *ui.Context, cn *conn, remote bool, tb ui.Element, entr
 		b := tb.Bounds()
 		a.openContext(b.X+theme.Space(6), b.Y+theme.Space(8), entries)
 	}
-}
-
-// entryIcon is the icon of an entry's row: a folder, an image, an archive
-// or another file.
-func entryIcon(e sftpsvc.Entry) *icons.Icon {
-	switch {
-	case e.IsDir:
-		return icons.Folder
-	case isImage(e):
-		return icons.Image
-	case sftpsvc.IsArchive(e.Name, true):
-		return icons.Compress
-	}
-	return icons.File
 }
 
 // sideHeader is the title row of one side of a files pane: an icon, the

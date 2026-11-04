@@ -1,0 +1,54 @@
+Material Icon Theme — bundled file and folder artwork
+
+Upstream: https://github.com/material-extensions/vscode-material-icon-theme
+Release: v5.40.0
+Release URL: https://github.com/material-extensions/vscode-material-icon-theme/releases/tag/v5.40.0
+Annotated tag object: 0d17360506c477b4ccb065d8acdbd056331af1fb
+Source commit: 045291ff033062a25441dd297fd51546326866f2
+Copyright (c) 2025 Material Extensions
+License: MIT, complete upstream text in LICENSE-MIT
+
+Asset distribution: material-icon-theme npm package 5.40.0
+https://registry.npmjs.org/material-icon-theme/-/material-icon-theme-5.40.0.tgz
+npm gitHead matches the source commit above
+Verified registry integrity:
+sha512-IrvgusbwtqxhUtVgUy0nToJcfN7CYVRdbBxKMfbo0vab9flVBHA5INZ9UiE5SgRj+PM6opCl5nn5TZdpm2UaxA==
+Archive SHA-256:
+6ea13a2dece7ca953c0315b1e93348660c02bb235706275d215be69f09d98efb
+
+SSHYard bundles 73 selected icons as 74 unchanged original SVG files,
+including the upstream toml_light.svg variant; SHA256SUMS records each
+vendored asset. Other themes share the same original SVG where upstream
+has no light variant. The selection and basename associations are local
+SSHYard code, not the complete upstream VS Code association manifest.
+No JavaScript, npm dependency, icon font, or network download is used at runtime.
+
+The upstream package README credits these icon sources:
+- Material Design Icons, Pictogrammers: https://pictogrammers.com/library/mdi/
+- Material Symbols, Google: https://fonts.google.com/icons
+Upstream does not identify a source-library version or per-icon derivation
+for the selected artwork; no such attribution mapping is inferred here.
+Applicable Apache License 2.0 terms are included in LICENSE-APACHE-2.0,
+and the Pictogrammers Free License notice in LICENSE-PICTOGRAMMERS.
+These supplementary texts retain the upstream source-library terms,
+without replacing Material Icon Theme's MIT license.
+
+Supplementary license sources (license text only, not asset versions):
+Pictogrammers/MaterialDesign commit 2424e748e0cc63ab7b9c095a099b9fe239b737c0
+https://github.com/Templarian/MaterialDesign/blob/2424e748e0cc63ab7b9c095a099b9fe239b737c0/LICENSE
+Google material-design-icons commit 10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7
+https://github.com/google/material-design-icons/blob/10ecc14790612ca8fd164e3f4ffe9c16fc50d5b7/LICENSE
+
+Product names, logos, and marks in artwork remain the property of their
+respective owners. Copyright licenses do not grant trademark rights,
+and inclusion does not imply endorsement by Material Extensions,
+Pictogrammers, Google, or any represented brand.
+
+All files in this directory are distributed with SSHYard through its
+resources directory, including the native macOS application bundle.
+
+LICENSE-MIT SHA-256: cdab3014d4f69b49dde2b85e81792208c72de613aa6aed7f7a9b5c6609b89670
+
+LICENSE-APACHE-2.0 SHA-256: 58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd
+
+LICENSE-PICTOGRAMMERS SHA-256: 3bae6305bcaa6d10219b999f65c342034c2d40b1c0e8567fa08605e73ccba829

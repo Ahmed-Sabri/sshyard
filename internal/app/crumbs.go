@@ -142,7 +142,8 @@ func (a *App) crumbsBar(c *ui.Context, cn *conn, remote bool, tok theme.Tokens, 
 					out := make([]menuEntry, len(hidden))
 					for j, h := range hidden {
 						p := cs[h].path
-						out[j] = menuEntry{Icon: icons.Folder, Label: shownName(cs[h].name), Do: func() { a.goTo(cn, remote, p) }}
+						out[j] = fileMenuEntry(cs[h].name, true)
+						out[j].Do = func() { a.goTo(cn, remote, p) }
 					}
 					return out
 				})
@@ -321,7 +322,8 @@ func (a *App) crumbEntries(cn *conn, remote bool, dir, next string, m locales.Me
 			break
 		}
 		p, name := sidePath(remote, dir, e.Name), e.Name
-		en := menuEntry{Icon: entryIcon(e), Label: shownName(name), Checked: e.IsDir && name == next}
+		en := fileMenuEntry(name, e.IsDir)
+		en.Checked = e.IsDir && name == next
 		if e.IsDir {
 			en.Do = func() { a.goTo(cn, remote, p) }
 		} else {

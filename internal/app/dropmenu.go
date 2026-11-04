@@ -16,6 +16,8 @@ import (
 // (menuButton) and context menus (contextMenu), drawn with its icon.
 type menuEntry struct {
 	Icon *icons.Icon
+	// Image keeps a content icon's original colors; DarkImage is its dark-theme variant.
+	Image, DarkImage ui.ImageSource
 	// Lead, when set, builds what shows in place of the icon, 16 DIPs
 	// square, as a host's tile.
 	Lead  func()
@@ -268,6 +270,12 @@ func (a *App) menuRow(c *ui.Context, tok theme.Tokens, e menuEntry, i, level int
 		switch {
 		case e.Lead != nil:
 			ic.Children(e.Lead)
+		case e.Image != nil:
+			src := e.Image
+			if tok.Dark && e.DarkImage != nil {
+				src = e.DarkImage
+			}
+			ic.Children(func() { ui.Image(c, src).Size(16, 16) })
 		case e.Icon != nil:
 			ic.Children(func() { ui.Icon(c, e.Icon.SVG).Size(16, 16).TextColor(tint) })
 		}

@@ -387,14 +387,18 @@ func (a *App) infoView(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Mess
 		return
 	}
 	es, one := info.es, len(info.es) == 1
-	title, ic := m.ItemsCount(len(es)), icons.Info
+	title := m.ItemsCount(len(es))
 	if one {
-		title, ic = shownName(es[0].Name), entryIcon(es[0])
+		title = shownName(es[0].Name)
 	}
 	sheet(ui.Modal(c.Key("info"), &fs.infoOpen, func() {
 		ui.Column(c).Gap(14).Width(400).Children(func() {
 			ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
-				softTile(c, ic, tok.Accent, 30)
+				if one {
+					fileImage(c, entryIcon(es[0]), 30)
+				} else {
+					softTile(c, icons.Info, tok.Accent, 30)
+				}
 				ui.Text(c, title).FontSize(theme.Title3).FontWeight(600).Shrink(1).MinWidth(0).SingleLine()
 			})
 			ui.Column(c).Gap(8).FillWidth().Children(func() {
