@@ -243,7 +243,7 @@ func (a *App) terminalPage(c *ui.Context, m locales.Messages, tok theme.Tokens) 
 	if t == nil {
 		a.finding = false
 		ui.Column(c).Fill().Center().Gap(12).Children(func() {
-			tile(c, icons.Terminal, theme.Brand, 64)
+			ui.Image(c, a.logo).Size(64, 64).Shrink(0).Radius(theme.RadiusSheet).Label(m.AppName())
 			ui.Text(c, m.WelcomeTitle()).FontWeight(600).FontSize(theme.Title1).MarginY(4)
 			ui.Text(c, m.WelcomeHint()).FontSize(theme.Body).TextColor(tok.TextMuted)
 			if a.store.Len() == 0 {

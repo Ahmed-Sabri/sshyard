@@ -591,7 +591,7 @@ func (a *App) aboutPage(c *ui.Context, m locales.Messages, tok theme.Tokens, s *
 	// The app itself: its tile, name, version and what it is.
 	card(c, tok).FillWidth().Padding(theme.Space(5)).Children(func() {
 		ui.Row(c).Gap(16).AlignItems(ui.Center).FillWidth().Children(func() {
-			tile(c, icons.Terminal, theme.Brand, 60)
+			ui.Image(c, a.logo).Size(60, 60).Shrink(0).Radius(theme.RadiusSheet).Label(m.AppName())
 			ui.Column(c).Gap(3).Grow(1).Shrink(1).Children(func() {
 				ui.Text(c, m.AppName()).FontSize(theme.Title2).FontWeight(700)
 				ui.Text(c, m.CurrentVersion(v)).FontSize(theme.Footnote).TextColor(tok.TextMuted)

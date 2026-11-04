@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	appicon "github.com/Licoy/sshyard/icon"
 	"github.com/Licoy/sshyard/internal/ai/agent"
 	"github.com/Licoy/sshyard/internal/ai/audit"
 	"github.com/Licoy/sshyard/internal/ai/policy"
@@ -168,6 +169,7 @@ func (t sessTarget) Resize(cols, rows int)       { t.s.Resize(cols, rows) }
 // the background posts its results with post.
 type App struct {
 	p          Platform
+	logo       *ui.Bitmap
 	settings   settings.Settings
 	store      *assets.Store
 	kc         *keychain.Keychain
@@ -375,6 +377,7 @@ type App struct {
 // New opens the app's data.
 func New(p Platform) (*App, error) {
 	a := &App{p: p, ws: layout.New(), conns: map[int]*conn{}, pool: session.NewPool(), typed: map[string]string{}, typedGen: map[string]int{}, sections: map[string]*bool{}, temps: map[string]assets.Host{}, pct: map[int]*float32{}, fwds: map[string]*fwdRun{}, fwdOpen: map[string]bool{}, paneBounds: map[int]ui.Rect{}, metrics: map[string]*session.Collector{}, aiRecent: map[string]int{}}
+	a.logo = appicon.Bitmap()
 	a.settings = settings.Default()
 	a.kdf = vault.DefaultParams
 	err := a.resolveStorage()
