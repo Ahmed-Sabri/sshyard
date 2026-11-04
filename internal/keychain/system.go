@@ -37,3 +37,10 @@ func (System) Get(key string) ([]byte, error) {
 	v, err := mygo.Secrets.Get(key)
 	return v, mapErr(err)
 }
+
+// GetSilently reads key without any system authorization prompt: where one
+// would be needed, the read fails.
+func (System) GetSilently(key string) ([]byte, error) {
+	v, err := silently(func() ([]byte, error) { return mygo.Secrets.Get(key) })
+	return v, mapErr(err)
+}

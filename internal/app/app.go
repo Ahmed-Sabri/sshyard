@@ -550,6 +550,7 @@ func (a *App) Start() {
 		return
 	}
 	a.startIndependent()
+	a.probeUnlock()
 }
 
 func (a *App) applyWindowSettings() {

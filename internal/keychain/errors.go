@@ -11,6 +11,8 @@ var (
 	ErrMasterInvalid = errors.New("keychain: invalid master key")
 	ErrCorrupt       = errors.New("keychain: encrypted store damaged or key mismatched")
 	ErrVersion       = errors.New("keychain: unsupported encrypted store version")
+	// ErrInteractionRequired is a silent unlock that needs system authorization.
+	ErrInteractionRequired = errors.New("keychain: system authorization required")
 )
 
 // OpError identifies the failed stage without requiring UI to render raw errors.

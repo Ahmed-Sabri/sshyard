@@ -19,6 +19,7 @@ type unlockState struct {
 	ready           atomic.Bool
 	secretsReady    atomic.Bool
 	busy            bool
+	probing         bool
 	completed       bool
 	err             error
 	closeErr        error
@@ -125,6 +126,26 @@ func (a *App) retryUnlock() {
 	}()
 }
 
+// probeUnlock unlocks at startup only when the system keychain needs no
+// authorization, as after the user always allowed SSHYard; otherwise the
+// store stays locked for an explicit unlock, and nothing is shown.
+func (a *App) probeUnlock() {
+	if !a.ready() || a.unlocked() || !a.unlock.stored {
+		return
+	}
+	kc := a.kc
+	a.unlock.probing = true
+	go func() {
+		err := kc.TryUnlock()
+		a.post(func() {
+			a.unlock.probing = false
+			if err == nil && !a.unlock.busy {
+				a.acceptUnlock(nil)
+			}
+		})
+	}()
+}
+
 func (a *App) openSecrets() (*keychain.Keychain, error) {
 	lock := a.p.SecretLockPath
 	if lock == "" {
@@ -198,7 +219,7 @@ func (a *App) closeSecrets(kc *keychain.Keychain) {
 
 // A compact status appears only when saved data or pending services need it.
 func (a *App) showSecretsStatus() bool {
-	if a.unlocked() {
+	if a.unlocked() || a.unlock.probing && !a.unlock.busy {
 		return false
 	}
 	if a.unlock.stored || a.unlock.busy || a.unlock.err != nil || a.settings.MCPEnabled {

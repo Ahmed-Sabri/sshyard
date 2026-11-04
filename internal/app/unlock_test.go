@@ -468,3 +468,82 @@ func TestLockedChatCloseAndReplacementPreserveContent(t *testing.T) {
 		t.Fatal("empty locked pane could not close")
 	}
 }
+
+// silentBackend hands over the master key without asking only when the user
+// has always allowed SSHYard; Get is the read that would ask.
+type silentBackend struct {
+	authorizationBackend
+	allowed atomic.Bool
+	silent  atomic.Int32
+}
+
+func (b *silentBackend) GetSilently(k string) ([]byte, error) {
+	b.silent.Add(1)
+	if !b.allowed.Load() {
+		return nil, &keychain.SystemError{Code: -25293, Err: errors.New("private raw system diagnostic")}
+	}
+	return b.Memory.Get(k)
+}
+
+func storedSilentApp(t *testing.T, allowed bool) (*App, *ui.Tester, *silentBackend) {
+	t.Helper()
+	dir := t.TempDir()
+	b := &silentBackend{authorizationBackend: authorizationBackend{Memory: keychain.NewMemory()}}
+	b.allowed.Store(allowed)
+	kc, err := keychain.Open(keychain.OpenOptions{Path: filepath.Join(dir, "secrets.enc"), LockPath: filepath.Join(dir, "secrets.lock"), Scope: "sshyard", System: b.Memory})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := kc.Set("secret", []byte("value")); err != nil {
+		t.Fatal(err)
+	}
+	if err := kc.Close(); err != nil {
+		t.Fatal(err)
+	}
+	a, err := New(Platform{DataDir: dir, Secrets: b, HomeDir: dir, CacheDir: filepath.Join(dir, "cache")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(a.Close)
+	a.Start()
+	tt := ui.NewTester(a.View, 1200, 760)
+	tt.SetLocale("en")
+	tt.Frame()
+	return a, tt, b
+}
+
+func TestStartupUnlocksSilentlyWhenAlwaysAllowed(t *testing.T) {
+	a, tt, b := storedSilentApp(t, true)
+	m := locales.In("en")
+	waitFor(t, tt, "silent unlock", func() bool {
+		if tt.HasText(m.SecretsRetry()) || a.unlock.modal {
+			t.Fatalf("unlock prompt shown during silent unlock: %q", tt.Texts())
+		}
+		return a.unlocked()
+	})
+	tt.Frame()
+	if b.calls.Load() != 0 || b.silent.Load() != 1 || tt.HasText(m.SecretsRetry()) || tt.HasText(m.SecretsLockedTitle()) {
+		t.Fatalf("asking reads %d, silent reads %d, texts %q", b.calls.Load(), b.silent.Load(), tt.Texts())
+	}
+	if v, err := a.kc.Get("secret"); err != nil || string(v) != "value" {
+		t.Fatalf("secret: %q %v", v, err)
+	}
+}
+
+func TestStartupStaysLockedQuietlyWithoutPermission(t *testing.T) {
+	a, tt, b := storedSilentApp(t, false)
+	m := locales.In("en")
+	waitFor(t, tt, "silent attempt", func() bool { return b.silent.Load() == 1 && !a.unlock.probing })
+	tt.Frame()
+	if a.unlocked() || a.unlock.modal || a.unlock.err != nil || b.calls.Load() != 0 {
+		t.Fatalf("silent failure: unlocked %v modal %v err %v asking reads %d", a.unlocked(), a.unlock.modal, a.unlock.err, b.calls.Load())
+	}
+	if !tt.HasText(m.SecretsRetry()) || strings.Contains(strings.Join(tt.Texts(), " "), "private raw") {
+		t.Fatalf("locked status: %q", tt.Texts())
+	}
+	a.withSecrets(nil)
+	waitFor(t, tt, "explicit unlock", a.unlocked)
+	if b.calls.Load() != 1 {
+		t.Fatalf("explicit unlock asking reads: %d", b.calls.Load())
+	}
+}
