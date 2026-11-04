@@ -1,11 +1,8 @@
 package app
 
 import (
-	"context"
-
 	"github.com/Licoy/sshyard/internal/icons"
 	"github.com/Licoy/sshyard/internal/theme"
-	"github.com/Licoy/sshyard/internal/updater"
 	"github.com/Licoy/sshyard/locales"
 	"github.com/egoist/mygo/ui"
 )
@@ -51,23 +48,17 @@ func (a *App) titleBar(c *ui.Context, m locales.Messages, tok theme.Tokens, clea
 }
 
 // appButtons are the app's own IconButtons in the title bar: updates, its
-// source on GitHub and the settings. Updates show in the accent while one
-// is to install; a click checks again, unless one is under way or found,
-// and shows where the settings tell of it.
+// source on GitHub and the settings. Updates show in the accent while a
+// newer version is out; a click checks, and the update window shows what
+// it found with the release notes.
 func (a *App) appButtons(c *ui.Context, m locales.Messages) {
-	st := a.upd.Status()
-	found := st.State == updater.Available || st.State == updater.Ready
+	v := a.upd.Available()
 	label := m.CheckForUpdates()
-	if found || st.State == updater.Checking || st.State == updater.Downloading {
-		label = updateText(m, st)
+	if v != "" {
+		label = m.UpdateAvailable(v)
 	}
-	if (IconButton{Icon: icons.Update, Label: label, Active: found}).Clicked(c, "update") {
-		switch st.State {
-		case updater.Disabled, updater.Checking, updater.Downloading, updater.Available, updater.Ready:
-		default:
-			go a.upd.Check(context.Background())
-		}
-		a.openSettings(prefAbout)
+	if (IconButton{Icon: icons.Update, Label: label, Active: v != ""}).Clicked(c, "update") {
+		a.upd.Check()
 	}
 	if iconButton(c, "github", icons.GitHub, m.GitHubRepo()) {
 		c.OpenURL(repoURL)

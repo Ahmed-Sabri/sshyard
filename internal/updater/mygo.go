@@ -1,36 +1,29 @@
 package updater
 
 import (
-	"context"
-	"errors"
+	"time"
 
 	"github.com/egoist/mygo"
+	"github.com/egoist/mygo/plugins/updater"
+	"github.com/egoist/mygo/plugins/updater/native"
 )
 
-// MygoBackend is the Backend of the app: mygo.Updater, which reads the
+// Plugin is MyGo's updater plugin drawn in native UI, which reads the
 // manifest `mygo build` publishes to the latest release of the repository
 // in mygo.json (updates.github = Licoy/sshyard) and verifies signatures.
+// It checks soon after each launch and every interval after while
+// automatic is on. The interval is read once: a change applies at the
+// next launch.
+func Plugin(interval time.Duration, automatic bool) mygo.Plugin {
+	return native.New(updater.Options{Interval: interval, DisableAutomaticChecks: !automatic})
+}
+
+// MygoBackend is the Backend of the app, over the plugin Plugin returns,
+// which must be used.
 type MygoBackend struct{}
 
-func (MygoBackend) Enabled() bool { return mygo.Updater.Enabled() }
-
-func (MygoBackend) Check(ctx context.Context) (Release, error) {
-	up, err := mygo.Updater.Check(ctx)
-	if errors.Is(err, mygo.ErrUpdatesDisabled) {
-		return nil, ErrDisabled
-	}
-	if err != nil || up == nil {
-		return nil, err
-	}
-	return mygoRelease{up}, nil
-}
-
-func (MygoBackend) Relaunch() { mygo.App.Relaunch() }
-
-type mygoRelease struct{ up *mygo.Update }
-
-func (r mygoRelease) Version() string { return r.up.Version }
-func (r mygoRelease) Notes() string   { return r.up.Notes }
-func (r mygoRelease) Install(ctx context.Context, p func(int64, int64)) error {
-	return r.up.Install(ctx, p)
-}
+func (MygoBackend) Enabled() bool                   { return mygo.Updater.Enabled() }
+func (MygoBackend) Check()                          { updater.CheckForUpdates() }
+func (MygoBackend) SetAutomatic(on bool)            { updater.SetAutomaticChecks(on) }
+func (MygoBackend) Available() string               { return updater.AvailableVersion() }
+func (MygoBackend) OnChange(fn func()) (off func()) { return updater.OnChange(fn) }

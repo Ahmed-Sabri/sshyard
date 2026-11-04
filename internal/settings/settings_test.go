@@ -184,3 +184,16 @@ func TestOSC52ExplicitPoliciesPersist(t *testing.T) {
 		}
 	}
 }
+
+func TestUpdateInterval(t *testing.T) {
+	if d := Default(); d.UpdateIntervalHours != 1 || !d.CheckUpdates {
+		t.Fatalf("default %d %v", d.UpdateIntervalHours, d.CheckUpdates)
+	}
+	path := filepath.Join(t.TempDir(), "settings.json")
+	for in, want := range map[string]int{`{}`: 1, `{"updateIntervalHours":6}`: 6, `{"updateIntervalHours":24}`: 24, `{"updateIntervalHours":3}`: 1, `{"updateIntervalHours":0}`: 1} {
+		os.WriteFile(path, []byte(in), 0o600)
+		if s, err := Load(path); err != nil || s.UpdateIntervalHours != want {
+			t.Errorf("%s: %d %v, want %d", in, s.UpdateIntervalHours, err, want)
+		}
+	}
+}

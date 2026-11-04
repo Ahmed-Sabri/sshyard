@@ -7,10 +7,12 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/Licoy/sshyard/internal/app"
 	"github.com/Licoy/sshyard/internal/gtkfix"
 	"github.com/Licoy/sshyard/internal/keychain"
+	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/internal/updater"
 	_ "github.com/Licoy/sshyard/locales"
@@ -66,6 +68,20 @@ func storagePaths() (app.StoragePaths, error) {
 	return app.StoragePaths{DataDir: dir, LockPath: filepath.Join(canonical, "secrets.lock"), Scope: mygo.App.Name()}, nil
 }
 
+// updatePlugin is the update window, which checks soon after launch and
+// at the interval of the saved settings while their automatic checks are
+// on. It reads them before the app runs, so a new interval applies at the
+// next launch; the app keeps the automatic checks in step after.
+func updatePlugin() mygo.Plugin {
+	s := settings.Default()
+	if p, err := storagePaths(); err == nil {
+		if saved, err := settings.Load(filepath.Join(p.DataDir, "settings.json")); err == nil {
+			s = saved
+		}
+	}
+	return updater.Plugin(time.Duration(s.UpdateIntervalHours)*time.Hour, s.CheckUpdates)
+}
+
 // windowVibrancy is the material behind the window: the sidebar material
 // on macOS only (on Windows a material window loses its menu bar, and
 // Linux has none).
@@ -81,6 +97,7 @@ func windowVibrancy() mygo.Vibrancy {
 func ownWindowButtons() bool { return runtime.GOOS != "darwin" }
 
 func main() {
+	mygo.Use(updatePlugin())
 	mygo.App.WhenReady(func() {
 		// Linux: size the window buttons' bar to its buttons (see gtkfix).
 		gtkfix.Apply()

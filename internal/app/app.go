@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -194,7 +195,7 @@ type App struct {
 	typed map[string]string
 	// typedGen counts the answers to the prompt for each key. Under mu.
 	typedGen map[string]int
-	upd      *updater.Service
+	upd      updater.Backend
 
 	mu    sync.Mutex
 	queue []func()
@@ -285,9 +286,11 @@ type App struct {
 	win         *WindowControls
 	maximized   bool
 	updateCheck bool
-	themeIdx    int
-	autoRecon   bool
-	fonts       fontState
+	// updEvery is the index of the update interval in its control.
+	updEvery  int
+	themeIdx  int
+	autoRecon bool
+	fonts     fontState
 	// paneBounds are where the panes were last frame, by session
 	paneBounds map[int]ui.Rect
 	// dropPreview is where a drag in progress would land, nil for none
@@ -393,13 +396,13 @@ func New(p Platform) (*App, error) {
 	a.settings = settings.Default()
 	a.kdf = vault.DefaultParams
 	a.kc = keychain.New(lockedSecrets{})
+	a.upd = p.Updates
+	if a.upd == nil {
+		a.upd = disabledUpdates{}
+	}
+	a.upd.OnChange(a.invalidate)
 	err := a.prepareStorage()
 	a.unlock.err = err
-	backend := p.Updates
-	if backend == nil {
-		backend = disabledUpdates{}
-	}
-	a.upd = updater.New(backend, a.invalidate)
 	a.syncChoices()
 	a.resolveFonts(false, false)
 	a.updateCheck = a.settings.CheckUpdates
@@ -443,11 +446,11 @@ func (a *App) loadData() error {
 
 type disabledUpdates struct{}
 
-func (disabledUpdates) Enabled() bool { return false }
-func (disabledUpdates) Check(context.Context) (updater.Release, error) {
-	return nil, updater.ErrDisabled
-}
-func (disabledUpdates) Relaunch() {}
+func (disabledUpdates) Enabled() bool                { return false }
+func (disabledUpdates) Check()                       {}
+func (disabledUpdates) SetAutomatic(bool)            {}
+func (disabledUpdates) Available() string            { return "" }
+func (disabledUpdates) OnChange(func()) (off func()) { return func() {} }
 
 func (a *App) syncChoices() {
 	a.langChoice = a.settings.Language
@@ -459,6 +462,7 @@ func (a *App) syncChoices() {
 	a.sbWidth = float32(a.settings.SidebarWidth)
 	a.metOn = a.settings.MetricsEnabled
 	a.metEvery = intervalIndex(a.settings.MetricsInterval)
+	a.updEvery = max(slices.Index(settings.UpdateIntervals, a.settings.UpdateIntervalHours), 0)
 	a.metMount = a.settings.MetricsMount
 	a.aiLines = float64(a.settings.AIContextLines)
 	a.aiDays = float64(a.settings.AIAuditRetentionDays)
@@ -532,6 +536,9 @@ func (a *App) ApplySettings(s settings.Settings) error {
 	if s.MCPEnabled != old.MCPEnabled || s.MCPPort != old.MCPPort {
 		a.syncMCP()
 	}
+	if s.CheckUpdates != old.CheckUpdates {
+		a.upd.SetAutomatic(s.CheckUpdates)
+	}
 	a.syncChoices()
 	return nil
 }
@@ -568,9 +575,6 @@ func (a *App) startIndependent() {
 		return
 	}
 	a.unlock.started = true
-	if a.settings.CheckUpdates && a.p.Updates != nil {
-		go a.upd.Check(context.Background())
-	}
 	// Start with an empty workspace; saved AI layouts contain no session content.
 	if root, err := a.cacheDir(); err == nil {
 		go cleanCache(root)

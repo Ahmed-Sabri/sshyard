@@ -5,7 +5,6 @@ import (
 	"github.com/Licoy/sshyard/internal/layout"
 	"github.com/Licoy/sshyard/internal/session"
 	"github.com/Licoy/sshyard/internal/theme"
-	"github.com/Licoy/sshyard/internal/updater"
 	"github.com/Licoy/sshyard/locales"
 	"github.com/egoist/mygo/ui"
 )
@@ -89,8 +88,8 @@ func (a *App) statusCounts(c *ui.Context, m locales.Messages, tok theme.Tokens) 
 		s := m.StatusForwards(f)
 		statusItem(c, "forwards", icons.Forward, s, s, tok.TextMuted)
 	}
-	if st := a.upd.Status(); st.State == updater.Available || st.State == updater.Ready {
-		tip := updateText(m, st)
+	if v := a.upd.Available(); v != "" {
+		tip := m.UpdateAvailable(v)
 		b := ui.ButtonBase(c.Key("update")).Label(tip).Tooltip(tip).Shrink(0).Padding(1, 8).Radius(theme.Capsule).
 			Background(tok.Accent.Alpha(0.14)).Cursor(ui.CursorPointer)
 		if b.Hovered() {
@@ -100,7 +99,7 @@ func (a *App) statusCounts(c *ui.Context, m locales.Messages, tok theme.Tokens) 
 			ui.Text(c, m.StatusUpdate()).FontSize(theme.Caption).FontWeight(600).TextColor(tok.Accent).SingleLine()
 		})
 		if b.Clicked() {
-			a.openSettings(prefAbout)
+			a.upd.Check()
 		}
 	}
 }

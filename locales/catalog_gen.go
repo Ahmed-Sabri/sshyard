@@ -900,16 +900,6 @@ func (msgs Messages) CheckForUpdates() string {
 	return Catalog.Format(msgs.locale, "checkForUpdates", nil)
 }
 
-// UpToDate says "SSHYard is up to date."
-// in the language the app shows.
-func UpToDate() string { return In(i18n.Locale()).UpToDate() }
-
-// UpToDate says "SSHYard is up to date."
-// in the language of msgs.
-func (msgs Messages) UpToDate() string {
-	return Catalog.Format(msgs.locale, "upToDate", nil)
-}
-
 // UpdateAvailable says "Version {version} is available."
 // in the language the app shows.
 func UpdateAvailable(version string) string { return In(i18n.Locale()).UpdateAvailable(version) }
@@ -920,16 +910,6 @@ func (msgs Messages) UpdateAvailable(version string) string {
 	return Catalog.Format(msgs.locale, "updateAvailable", map[string]any{"version": version})
 }
 
-// InstallUpdate says "Install and Relaunch"
-// in the language the app shows.
-func InstallUpdate() string { return In(i18n.Locale()).InstallUpdate() }
-
-// InstallUpdate says "Install and Relaunch"
-// in the language of msgs.
-func (msgs Messages) InstallUpdate() string {
-	return Catalog.Format(msgs.locale, "installUpdate", nil)
-}
-
 // UpdatesDisabled says "Updates are not enabled for this build."
 // in the language the app shows.
 func UpdatesDisabled() string { return In(i18n.Locale()).UpdatesDisabled() }
@@ -938,56 +918,6 @@ func UpdatesDisabled() string { return In(i18n.Locale()).UpdatesDisabled() }
 // in the language of msgs.
 func (msgs Messages) UpdatesDisabled() string {
 	return Catalog.Format(msgs.locale, "updatesDisabled", nil)
-}
-
-// Checking says "Checking…"
-// in the language the app shows.
-func Checking() string { return In(i18n.Locale()).Checking() }
-
-// Checking says "Checking…"
-// in the language of msgs.
-func (msgs Messages) Checking() string {
-	return Catalog.Format(msgs.locale, "checking", nil)
-}
-
-// Downloading says "Downloading… {percent}%"
-// in the language the app shows.
-func Downloading(percent string) string { return In(i18n.Locale()).Downloading(percent) }
-
-// Downloading says "Downloading… {percent}%"
-// in the language of msgs.
-func (msgs Messages) Downloading(percent string) string {
-	return Catalog.Format(msgs.locale, "downloading", map[string]any{"percent": percent})
-}
-
-// UpdateReady says "Update installed. Relaunch to finish."
-// in the language the app shows.
-func UpdateReady() string { return In(i18n.Locale()).UpdateReady() }
-
-// UpdateReady says "Update installed. Relaunch to finish."
-// in the language of msgs.
-func (msgs Messages) UpdateReady() string {
-	return Catalog.Format(msgs.locale, "updateReady", nil)
-}
-
-// Relaunch says "Relaunch"
-// in the language the app shows.
-func Relaunch() string { return In(i18n.Locale()).Relaunch() }
-
-// Relaunch says "Relaunch"
-// in the language of msgs.
-func (msgs Messages) Relaunch() string {
-	return Catalog.Format(msgs.locale, "relaunch", nil)
-}
-
-// UpdateFailed says "Update failed: {detail}"
-// in the language the app shows.
-func UpdateFailed(detail string) string { return In(i18n.Locale()).UpdateFailed(detail) }
-
-// UpdateFailed says "Update failed: {detail}"
-// in the language of msgs.
-func (msgs Messages) UpdateFailed(detail string) string {
-	return Catalog.Format(msgs.locale, "updateFailed", map[string]any{"detail": detail})
 }
 
 // CurrentVersion says "Version {version}"
@@ -1008,6 +938,36 @@ func CheckAutomatically() string { return In(i18n.Locale()).CheckAutomatically()
 // in the language of msgs.
 func (msgs Messages) CheckAutomatically() string {
 	return Catalog.Format(msgs.locale, "checkAutomatically", nil)
+}
+
+// UpdateInterval says "Check every"
+// in the language the app shows.
+func UpdateInterval() string { return In(i18n.Locale()).UpdateInterval() }
+
+// UpdateInterval says "Check every"
+// in the language of msgs.
+func (msgs Messages) UpdateInterval() string {
+	return Catalog.Format(msgs.locale, "updateInterval", nil)
+}
+
+// UpdateIntervalNote says "Takes effect after SSHYard relaunches."
+// in the language the app shows.
+func UpdateIntervalNote() string { return In(i18n.Locale()).UpdateIntervalNote() }
+
+// UpdateIntervalNote says "Takes effect after SSHYard relaunches."
+// in the language of msgs.
+func (msgs Messages) UpdateIntervalNote() string {
+	return Catalog.Format(msgs.locale, "updateIntervalNote", nil)
+}
+
+// ViewUpdate says "View Update"
+// in the language the app shows.
+func ViewUpdate() string { return In(i18n.Locale()).ViewUpdate() }
+
+// ViewUpdate says "View Update"
+// in the language of msgs.
+func (msgs Messages) ViewUpdate() string {
+	return Catalog.Format(msgs.locale, "viewUpdate", nil)
 }
 
 // FontSize says "Font size"
@@ -1310,6 +1270,16 @@ func Seconds(n string) string { return In(i18n.Locale()).Seconds(n) }
 // in the language of msgs.
 func (msgs Messages) Seconds(n string) string {
 	return Catalog.Format(msgs.locale, "seconds", map[string]any{"n": n})
+}
+
+// Hours says "{n} h"
+// in the language the app shows.
+func Hours(n string) string { return In(i18n.Locale()).Hours(n) }
+
+// Hours says "{n} h"
+// in the language of msgs.
+func (msgs Messages) Hours(n string) string {
+	return Catalog.Format(msgs.locale, "hours", map[string]any{"n": n})
 }
 
 // OpenFiles says "Open Files"

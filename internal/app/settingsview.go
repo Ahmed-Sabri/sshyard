@@ -1,7 +1,6 @@
 package app
 
 import (
-	"context"
 	"runtime"
 	"slices"
 	"strconv"
@@ -10,7 +9,6 @@ import (
 	"github.com/Licoy/sshyard/internal/icons"
 	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/internal/theme"
-	"github.com/Licoy/sshyard/internal/updater"
 	"github.com/Licoy/sshyard/locales"
 	"github.com/egoist/mygo/ui"
 )
@@ -20,27 +18,6 @@ var languageNames = map[string]string{"en": "English", "zh-Hans": "简体中文"
 
 // repoURL is where SSHYard's source and issues live.
 const repoURL = "https://github.com/Licoy/sshyard"
-
-// updateText says where the update client is.
-func updateText(m locales.Messages, st updater.Status) string {
-	switch st.State {
-	case updater.Disabled:
-		return m.UpdatesDisabled()
-	case updater.Checking:
-		return m.Checking()
-	case updater.UpToDate:
-		return m.UpToDate()
-	case updater.Available:
-		return m.UpdateAvailable(st.Version)
-	case updater.Downloading:
-		return m.Downloading(strconv.Itoa(st.Percent()))
-	case updater.Ready:
-		return m.UpdateReady()
-	case updater.Failed:
-		return m.UpdateFailed(errString(st.Err))
-	}
-	return ""
-}
 
 // prefPage is a page of the settings, chosen in their sidebar.
 type prefPage string
@@ -588,12 +565,10 @@ func keyCap(c *ui.Context, tok theme.Tokens, s string) {
 }
 
 func (a *App) aboutPage(c *ui.Context, m locales.Messages, tok theme.Tokens, s *settings.Settings, changed *bool) {
-	st := a.upd.Status()
 	v := a.p.Version
 	if v == "" {
 		v = "dev"
 	}
-	busy := st.State == updater.Checking || st.State == updater.Downloading
 	// The app itself: its tile, name, version and what it is.
 	card(c, tok).FillWidth().Padding(theme.Space(5)).Children(func() {
 		ui.Row(c).Gap(16).AlignItems(ui.Center).FillWidth().Children(func() {
@@ -603,8 +578,8 @@ func (a *App) aboutPage(c *ui.Context, m locales.Messages, tok theme.Tokens, s *
 				ui.Text(c, m.CurrentVersion(v)).FontSize(theme.Footnote).TextColor(tok.TextMuted)
 				ui.Text(c, m.AboutTagline()).FontSize(theme.Body).TextColor(tok.TextMuted)
 			})
-			if pill(c, m.CheckForUpdates(), true, false, busy) {
-				go a.upd.Check(context.Background())
+			if pill(c, m.CheckForUpdates(), true, false, false) {
+				a.upd.Check()
 			}
 		})
 	})
@@ -616,17 +591,25 @@ func (a *App) aboutPage(c *ui.Context, m locales.Messages, tok theme.Tokens, s *
 				*changed = true
 			}
 		})
-		if txt := updateText(m, st); txt != "" {
-			g.row(txt, "", func() {
-				if st.State == updater.Downloading {
-					ui.Progress(c, float64(st.Percent())/100).Width(180)
-				}
-				if st.State == updater.Available && pill(c, m.InstallUpdate(), true, false, false) {
-					go a.upd.Install(context.Background())
-				}
-				if st.State == updater.Ready && pill(c, m.Relaunch(), true, false, false) {
-					a.Close()
-					a.upd.Relaunch()
+		// The updater reads the interval at launch.
+		g.row(m.UpdateInterval(), m.UpdateIntervalNote(), func() {
+			a.updEvery = max(slices.Index(settings.UpdateIntervals, s.UpdateIntervalHours), 0)
+			labels := make([]string, len(settings.UpdateIntervals))
+			for i, h := range settings.UpdateIntervals {
+				labels[i] = m.Hours(strconv.Itoa(h))
+			}
+			if ui.Segmented(c.Key("updevery"), &a.updEvery, labels...).Label(m.UpdateInterval()).Changed() {
+				s.UpdateIntervalHours = settings.UpdateIntervals[a.updEvery]
+				*changed = true
+			}
+		})
+		switch nv := a.upd.Available(); {
+		case !a.upd.Enabled():
+			g.row(m.UpdatesDisabled(), "", func() {})
+		case nv != "":
+			g.row(m.UpdateAvailable(nv), "", func() {
+				if pill(c, m.ViewUpdate(), true, false, false) {
+					a.upd.Check()
 				}
 			})
 		}

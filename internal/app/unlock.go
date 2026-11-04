@@ -80,6 +80,8 @@ func (a *App) prepareStorage() error {
 	a.syncChoices()
 	a.resolveFonts(false, false)
 	a.updateCheck = a.settings.CheckUpdates
+	// The updater keeps its own choice: follow the settings.
+	a.upd.SetAutomatic(a.settings.CheckUpdates)
 	return nil
 }
 

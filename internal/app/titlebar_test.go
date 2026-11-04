@@ -44,10 +44,14 @@ func TestTitleBar(t *testing.T) {
 	if got := tt.OpenedURLs(); !slices.Equal(got, []string{repoURL}) {
 		t.Errorf("GitHub opened %q", got)
 	}
+	upd := &fakeUpdates{enabled: true}
+	a.upd = upd
 	mustClick(t, tt, "Check for Updates")
-	if a.page != pageSettings || a.prefNow() != prefAbout {
-		t.Errorf("updates show %v %v, not the about page", a.page, a.prefNow())
+	if upd.checks != 1 || a.page == pageSettings {
+		t.Errorf("updates: %d checks, page %v", upd.checks, a.page)
 	}
+	a.openSettings(prefAbout)
+	tt.Frame()
 	if !in("Settings") {
 		t.Error("no settings button in the settings")
 	}

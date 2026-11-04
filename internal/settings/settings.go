@@ -20,12 +20,15 @@ import (
 type Settings struct {
 	Theme theme.Mode `json:"theme"`
 	// Language is "" to follow the system, else "en" or "zh-Hans".
-	Language         string  `json:"language"`
-	CheckUpdates     bool    `json:"checkUpdates"`
-	TerminalFontSize int     `json:"terminalFontSize"`
-	KeepAliveSeconds int     `json:"keepAliveSeconds"`
-	AutoReconnect    bool    `json:"autoReconnect"`
-	SidebarWidth     float32 `json:"sidebarWidth"`
+	Language     string `json:"language"`
+	CheckUpdates bool   `json:"checkUpdates"`
+	// UpdateIntervalHours is the time between automatic checks for
+	// updates, one of UpdateIntervals. The updater reads it at launch.
+	UpdateIntervalHours int     `json:"updateIntervalHours"`
+	TerminalFontSize    int     `json:"terminalFontSize"`
+	KeepAliveSeconds    int     `json:"keepAliveSeconds"`
+	AutoReconnect       bool    `json:"autoReconnect"`
+	SidebarWidth        float32 `json:"sidebarWidth"`
 	// Privacy masks the IP addresses the app shows, for a screen share
 	// or a recording. What is typed in a form is shown as it is.
 	Privacy bool `json:"privacy,omitempty"`
@@ -222,12 +225,16 @@ func materialOK(s string) bool { return s == MaterialTranslucent || s == Materia
 // MCPPortDefault is the MCP endpoint's port unless the user picks one.
 const MCPPortDefault = 47320
 
+// UpdateIntervals are the hours between automatic checks for updates the
+// user can choose.
+var UpdateIntervals = []int{1, 2, 6, 12, 24}
+
 // Languages are the languages SSHYard ships, besides following the system.
 var Languages = []string{"en", "zh-Hans"}
 
 // Default returns the defaults.
 func Default() Settings {
-	return Settings{Theme: theme.Auto, CheckUpdates: true, TerminalFontSize: 13, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, OSC52Write: OSC52Ask, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
+	return Settings{Theme: theme.Auto, CheckUpdates: true, UpdateIntervalHours: 1, TerminalFontSize: 13, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, OSC52Write: OSC52Ask, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
 		AIDefaultAgent: "builtin", AIDefaultMode: "ask", AIReviewStrictness: AIReviewStandard, AIContextLines: 200, AIAuditRetentionDays: 90, AIRedact: true, MCPPort: MCPPortDefault}
 }
 
@@ -258,6 +265,9 @@ func (s *Settings) Normalize() {
 	}
 	if !ok {
 		s.Language = ""
+	}
+	if !slices.Contains(UpdateIntervals, s.UpdateIntervalHours) {
+		s.UpdateIntervalHours = d.UpdateIntervalHours
 	}
 	if s.TerminalFontSize < 8 || s.TerminalFontSize > 32 {
 		s.TerminalFontSize = d.TerminalFontSize

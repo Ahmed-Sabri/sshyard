@@ -1,8 +1,6 @@
 package updater
 
 import (
-	"context"
-	"errors"
 	"strings"
 	"testing"
 )
@@ -80,68 +78,5 @@ func TestManifestURL(t *testing.T) {
 	}
 	if ManifestName("windows", "amd64") != "update-windows-amd64.json" {
 		t.Error("ManifestName")
-	}
-}
-
-type fakeRelease struct {
-	v   string
-	err error
-}
-
-func (r *fakeRelease) Version() string { return r.v }
-func (r *fakeRelease) Notes() string   { return "notes" }
-func (r *fakeRelease) Install(_ context.Context, p func(int64, int64)) error {
-	p(50, 100)
-	p(100, 100)
-	return r.err
-}
-
-type fakeBackend struct {
-	enabled    bool
-	rel        Release
-	err        error
-	relaunched bool
-}
-
-func (b *fakeBackend) Enabled() bool                          { return b.enabled }
-func (b *fakeBackend) Check(context.Context) (Release, error) { return b.rel, b.err }
-func (b *fakeBackend) Relaunch()                              { b.relaunched = true }
-
-func TestService(t *testing.T) {
-	ctx := context.Background()
-	changes := 0
-	b := &fakeBackend{enabled: true}
-	s := New(b, func() { changes++ })
-	if st := s.Check(ctx); st.State != UpToDate {
-		t.Fatalf("no release: %v", st.State)
-	}
-	b.rel = &fakeRelease{v: "9.9.9"}
-	if st := s.Check(ctx); st.State != Available || st.Version != "9.9.9" {
-		t.Fatalf("release: %+v", st)
-	}
-	s.Relaunch()
-	if b.relaunched {
-		t.Fatal("relaunched before installing")
-	}
-	if st := s.Install(ctx); st.State != Ready || st.Percent() != 100 {
-		t.Fatalf("install: %+v", st)
-	}
-	s.Relaunch()
-	if !b.relaunched || changes == 0 {
-		t.Error("relaunch / onChange")
-	}
-
-	b2 := &fakeBackend{enabled: true, rel: &fakeRelease{v: "2.0.0", err: errors.New("bad signature")}}
-	s2 := New(b2, nil)
-	s2.Check(ctx)
-	if st := s2.Install(ctx); st.State != Failed || st.Err == nil {
-		t.Errorf("failed install: %+v", st)
-	}
-	b3 := &fakeBackend{enabled: true, err: errors.New("offline")}
-	if st := New(b3, nil).Check(ctx); st.State != Failed {
-		t.Errorf("failed check: %+v", st)
-	}
-	if st := New(&fakeBackend{}, nil).Check(ctx); st.State != Disabled || !errors.Is(st.Err, ErrDisabled) {
-		t.Errorf("disabled: %+v", st)
 	}
 }
