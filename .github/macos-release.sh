@@ -28,7 +28,7 @@ case "${1:-}" in
     password="$(openssl rand -base64 32)"
     echo "::add-mask::$password"
     printf '%s' "$MACOS_CERTIFICATE_P12_BASE64" | base64 --decode > "$credential_dir/certificate.p12"
-    printf '%s' "$APPLE_API_KEY_P8" > "$credential_dir/AuthKey.p8"
+    printf '%s' "$APPLE_API_KEY_P8" | base64 --decode > "$credential_dir/AuthKey.p8"
     security create-keychain -p "$password" "$keychain"
     security set-keychain-settings -lut 21600 "$keychain"
     security unlock-keychain -p "$password" "$keychain"

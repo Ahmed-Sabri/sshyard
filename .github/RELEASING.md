@@ -7,7 +7,7 @@
 | `MYGO_UPDATER_PRIVATE_KEY` | `/Users/licoy/Documents/mac-cert/sshyard/mygo-update.key` 的完整内容，与 `mygo.json` 的 `updates.publicKey` 配对；同目录 `.pub` 是公钥 |
 | `MACOS_CERTIFICATE_P12_BASE64` | Developer ID Application 证书及其私钥导出的 `.p12` 文件，整体 Base64 编码 |
 | `MACOS_CERTIFICATE_PASSWORD` | 导出 `.p12` 时设置的密码，这是证书导出密码，与 Mac 登录密码无关 |
-| `APPLE_API_KEY_P8` | `/Users/licoy/Documents/mac-cert/AuthKey_2N46T35DQ8.p8` 的完整文本，包括 BEGIN/END 行与换行 |
+| `APPLE_API_KEY_P8` | `/Users/licoy/Documents/mac-cert/AuthKey_2N46T35DQ8.p8` 文件整体 Base64 编码，包含 BEGIN/END 行与换行；Secret 名称保持不变 |
 | `APPLE_API_KEY_ID` | `2N46T35DQ8` |
 | `APPLE_API_ISSUER_ID` | 对应 App Store Connect 团队 API 密钥的 Issuer ID，UUID 格式，不是 Team ID `395QP35ZGC` |
 
@@ -17,10 +17,10 @@
 base64 -i /Users/licoy/Documents/mac-cert/mac-sing.p12 | pbcopy
 ```
 
-复制 Apple API 私钥原文到剪贴板，然后粘贴到 `APPLE_API_KEY_P8`
+将 Apple API 私钥文件整体 Base64 编码并复制到剪贴板，然后粘贴到 `APPLE_API_KEY_P8`
 
 ```sh
-pbcopy < /Users/licoy/Documents/mac-cert/AuthKey_2N46T35DQ8.p8
+base64 -i /Users/licoy/Documents/mac-cert/AuthKey_2N46T35DQ8.p8 | pbcopy
 ```
 
 Issuer ID 从 [App Store Connect](https://appstoreconnect.apple.com/access/integrations/api) → Users and Access → Integrations → App Store Connect API → Team Keys 页面获取；这里使用团队 API 密钥，该密钥必须有提交公证的权限；个人 API 密钥不适用于此工作流
@@ -28,7 +28,7 @@ Issuer ID 从 [App Store Connect](https://appstoreconnect.apple.com/access/integ
 ## 工作流行为
 
 1. `release.yml` 在创建草稿前检查六项 Secrets 是否非空，已有正式发布会拒绝覆盖
-2. macOS runner 导入证书到临时钥匙串，自动选择其中唯一有效的 Developer ID Application 签名身份；找不到或存在多个身份时直接失败，无需单独配置签名身份；然后设置无人值守签名权限，并通过 `notarytool store-credentials` 校验、保存 Apple API 凭据
+2. macOS runner 先解码 Base64 格式的证书和 Apple API 私钥，再导入证书到临时钥匙串，自动选择其中唯一有效的 Developer ID Application 签名身份；解码失败、找不到或存在多个身份时直接失败，无需单独配置签名身份；然后设置无人值守签名权限，并通过 `notarytool store-credentials` 校验、保存 Apple API 凭据
 3. 仅在 runner 工作目录中改写 `mygo.json` 的 `macos.signingIdentity` 和 `macos.notarize`；仓库配置与 beta CI 不变
 4. `go tool mygo build` 签署 App、DMG，向 Apple 提交公证并等待通过，再给 DMG 和用于更新的 App 装订公证票据
 5. 上传前验证更新清单有签名，并在 macOS 上执行 `codesign`、`stapler validate` 和 Gatekeeper `spctl` 验收；安装包、更新归档、delta 与附加 ZIP 先上传，更新清单最后上传
