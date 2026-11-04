@@ -42,7 +42,7 @@ func TestSkillOwnershipAllOperations(t *testing.T) {
 			tt.SetSize(1100, 2600)
 			a.openSettings(prefAgents)
 			tt.Frame()
-			if !tt.HasText("~/.claude/skills/sshyard · A file with this name is managed by the user and was not changed") {
+			if !tt.HasText(filepath.FromSlash("~/.claude/skills/sshyard · A file with this name is managed by the user and was not changed")) {
 				t.Fatalf("conflict hidden: %q", tt.Texts())
 			}
 		})

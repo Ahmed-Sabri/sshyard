@@ -20,8 +20,17 @@ func fakeDocker(t *testing.T, script string) []string {
 	if err := os.WriteFile(filepath.Join(dir, "docker"), []byte("#!/bin/sh\n"+script), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	// sudo must not be found, so that a refusal is not tried again with it.
-	return []string{"PATH=" + dir + ":/usr/bin:/bin"}
+	// sudo must not be found, so that a refusal is not tried again with it:
+	// PATH has only the fake docker and grep, as /usr/bin holds sudo, which
+	// needs no password on CI runners.
+	grep, err := exec.LookPath("grep")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(grep, filepath.Join(dir, "grep")); err != nil {
+		t.Fatal(err)
+	}
+	return []string{"PATH=" + dir}
 }
 
 // TestDockerListScript runs the list script on a fake docker and reads

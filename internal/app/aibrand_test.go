@@ -159,8 +159,8 @@ func TestBrandControlsMouseChoices(t *testing.T) {
 	if value != models[1] {
 		t.Fatalf("second model picked %q", value)
 	}
-	tt.Key(ui.Super, ui.KeyA)
-	tt.Key(ui.Super, ui.KeyC)
+	tt.Key(ui.Cmd, ui.KeyA)
+	tt.Key(ui.Cmd, ui.KeyC)
 	if tt.Clipboard() != value {
 		t.Fatalf("editor %q differs from selected %q", tt.Clipboard(), value)
 	}
@@ -172,7 +172,7 @@ func TestBrandControlsMouseChoices(t *testing.T) {
 		t.Fatalf("third model picked %q", value)
 	}
 	mustClick(t, tt, "Model ID")
-	tt.Key(ui.Super, ui.KeyA)
+	tt.Key(ui.Cmd, ui.KeyA)
 	tt.Type("custom-model-id")
 	tt.Key(0, ui.KeyEnter)
 	tt.Frame()

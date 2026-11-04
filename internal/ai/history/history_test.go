@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -73,7 +74,7 @@ func TestSaveLoadListDelete(t *testing.T) {
 		if b, _ := os.ReadFile(p); bytes.Contains(b, []byte("hunter2")) || bytes.Contains(b, []byte("first")) {
 			t.Errorf("%s is plain text", p)
 		}
-		if info.Mode().Perm() != 0o600 {
+		if runtime.GOOS != "windows" && info.Mode().Perm() != 0o600 { // Windows has no Unix modes
 			t.Errorf("%s mode %v", p, info.Mode())
 		}
 		return nil

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -83,7 +84,7 @@ func TestBackupRoundTrip(t *testing.T) {
 			t.Fatalf("%q readable in the backup file", secret)
 		}
 	}
-	if st, _ := os.Stat(path); st.Mode().Perm() != 0o600 {
+	if st, _ := os.Stat(path); runtime.GOOS != "windows" && st.Mode().Perm() != 0o600 { // Windows has no Unix modes
 		t.Fatalf("backup mode %v", st.Mode())
 	}
 

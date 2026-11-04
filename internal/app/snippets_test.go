@@ -116,19 +116,19 @@ func TestSnippetUISearchGroupMissingAndLanguages(t *testing.T) {
 	if !tt.HasText("alpha") || tt.HasText("beta") {
 		t.Fatal("body search", tt.Texts())
 	}
-	tt.Key(ui.Super, ui.KeyA)
+	tt.Key(ui.Cmd, ui.KeyA)
 	tt.Type("Ops")
 	tt.Frame()
 	if !tt.HasText("alpha") || tt.HasText("beta") {
 		t.Fatal("group search", tt.Texts())
 	}
-	tt.Key(ui.Super, ui.KeyA)
+	tt.Key(ui.Cmd, ui.KeyA)
 	tt.Type("ALPHA")
 	tt.Frame()
 	if !tt.HasText("alpha") || tt.HasText("beta") {
 		t.Fatal("name search", tt.Texts())
 	}
-	tt.Key(ui.Super, ui.KeyA)
+	tt.Key(ui.Cmd, ui.KeyA)
 	tt.Type("")
 	tt.Key(0, ui.KeyBackspace)
 	tt.Frame()

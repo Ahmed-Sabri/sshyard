@@ -43,8 +43,8 @@ func TestSkillInject(t *testing.T) {
 	// Off: what is found shows, but nothing can be injected.
 	a.openSettings(prefAgents)
 	tt.Frame()
-	if !tt.HasText("~/.codex/skills/sshyard · Not found") || !tt.HasText("~/.claude/skills/sshyard · Not installed") ||
-		!tt.HasText("~/.agents/skills/sshyard · Not installed") {
+	if !tt.HasText(filepath.FromSlash("~/.codex/skills/sshyard · Not found")) || !tt.HasText(filepath.FromSlash("~/.claude/skills/sshyard · Not installed")) ||
+		!tt.HasText(filepath.FromSlash("~/.agents/skills/sshyard · Not installed")) {
 		t.Fatalf("off: %q", tt.Texts())
 	}
 	mustClick(t, tt, "Inject into All Found Agents")
@@ -76,7 +76,7 @@ func TestSkillInject(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(home, ".codex")); err == nil {
 		t.Fatal("made a folder for an agent that is not there")
 	}
-	if !tt.HasText("~/.claude/skills/sshyard · Installed") || !tt.HasText("Skill injected into 2 agents.") {
+	if !tt.HasText(filepath.FromSlash("~/.claude/skills/sshyard · Installed")) || !tt.HasText("Skill injected into 2 agents.") {
 		t.Fatalf("installed: %q", tt.Texts())
 	}
 
@@ -100,7 +100,7 @@ func TestSkillInject(t *testing.T) {
 		t.Fatalf("overwrote another skill: %q", b)
 	}
 	tt.Frame()
-	if !tt.HasText("~/.codex/skills/sshyard · A file with this name is managed by the user and was not changed") {
+	if !tt.HasText(filepath.FromSlash("~/.codex/skills/sshyard · A file with this name is managed by the user and was not changed")) {
 		t.Fatalf("stale: %q", tt.Texts())
 	}
 

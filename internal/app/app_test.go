@@ -326,6 +326,7 @@ func TestFindShortcut(t *testing.T) {
 }
 
 func TestFilesPaneInSplit(t *testing.T) {
+	skipWindowsSFTP(t)
 	srv, err := sshtest.Start("127.0.0.1:0", "demo", "secret")
 	if err != nil {
 		t.Fatal(err)

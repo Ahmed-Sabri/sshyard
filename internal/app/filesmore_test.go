@@ -208,6 +208,7 @@ func TestFilesCompressExtractLocal(t *testing.T) {
 
 // On the server, the archive is made by a command; its error shows.
 func TestFilesCompressRemote(t *testing.T) {
+	skipWindowsSFTP(t)
 	cmds := make(chan string, 4)
 	a, tt, fc, root := filesPaneOn(t, func(srv *sshtest.Server) {
 		srv.Exec = func(ch ssh.Channel, cmd string) int {
@@ -348,6 +349,7 @@ func TestCrumbFit(t *testing.T) {
 // to go into a folder or to a file there; folders that do not fit hide
 // behind an ellipsis, which lists them.
 func TestFilesBreadcrumbs(t *testing.T) {
+	skipWindowsSFTP(t)
 	a, tt, fc, root := filesPane(t)
 	write(t, filepath.Join(root, "sub", "deep", "x.txt"), "x")
 	write(t, filepath.Join(root, "sub", "other.txt"), "o")

@@ -1,0 +1,2 @@
+# Checksums of vendored bytes: a CRLF checkout would no longer match.
+resources/licenses/material-icon-theme/SHA256SUMS text eol=lf

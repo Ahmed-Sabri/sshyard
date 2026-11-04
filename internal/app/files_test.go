@@ -50,6 +50,17 @@ func filesPaneOn(t *testing.T, setup func(*sshtest.Server)) (*App, *ui.Tester, *
 	return a, tt, fc, root
 }
 
+// skipWindowsSFTP skips a test that moves files through the test server's
+// remote side: pkg/sftp serving this machine's disk, which on Windows
+// mangles absolute paths ("/C:/...") and reports every folder as writable
+// by others. Real remotes are POSIX servers; Linux and macOS cover these.
+func skipWindowsSFTP(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("sftp test server does not support Windows paths")
+	}
+}
+
 func write(t *testing.T, p, s string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
@@ -85,6 +96,7 @@ func nameAt(t *testing.T, tt *ui.Tester, name string) (float32, float32) {
 }
 
 func TestFilesContextMenu(t *testing.T) {
+	skipWindowsSFTP(t)
 	a, tt, fc, root := filesPane(t)
 	write(t, filepath.Join(root, "a.txt"), "hello")
 	a.refreshSides(fc)
@@ -196,6 +208,7 @@ func TestFilesContextMenu(t *testing.T) {
 }
 
 func TestFilesConflicts(t *testing.T) {
+	skipWindowsSFTP(t)
 	a, tt, fc, root := filesPane(t)
 	local := fc.fs.local.dir
 	for _, n := range []string{"a.txt", "c.txt", "d.txt"} {
@@ -249,6 +262,7 @@ func TestFilesConflicts(t *testing.T) {
 }
 
 func TestFilesDragDropAndQueue(t *testing.T) {
+	skipWindowsSFTP(t)
 	a, tt, fc, root := filesPane(t)
 	local := fc.fs.local.dir
 	write(t, filepath.Join(local, "drag.txt"), "dragged")

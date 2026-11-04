@@ -65,6 +65,11 @@ func TestFirstOpenFailuresAndRetry(t *testing.T) {
 					t.Fatal(err)
 				}
 				wantOp = "file-read"
+				if runtime.GOOS == "windows" {
+					// Windows reads a path under a file as not found, so
+					// the store is new and making its folder fails.
+					wantOp = "file-write"
+				}
 			}
 			got, err := Open(o)
 			var oe *OpError
