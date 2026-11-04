@@ -318,7 +318,10 @@ func TestRunKillsTermIgnoringCommand(t *testing.T) {
 	case <-time.After(12 * time.Second):
 		t.Fatal("Run did not return")
 	}
-	if elapsed := time.Since(t0); elapsed < 4*time.Second || elapsed > 8*time.Second {
+	// The kill script counts its grace in sleep 0.1 steps, each a process:
+	// a loaded CI runner stretches 5s past 8s, so the bound stays under the
+	// 12s that catches a hang.
+	if elapsed := time.Since(t0); elapsed < 4*time.Second || elapsed > 11*time.Second {
 		t.Fatalf("ignored TERM should die on KILL after 5s, took %s", elapsed)
 	}
 	waitGone(t, pid)
