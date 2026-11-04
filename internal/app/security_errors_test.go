@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/Licoy/sshyard/internal/ai/agent"
+	"github.com/Licoy/sshyard/internal/ai/llm"
 	"github.com/Licoy/sshyard/internal/assets"
 	"github.com/Licoy/sshyard/internal/netproxy"
 	"github.com/Licoy/sshyard/internal/session"
@@ -117,5 +118,18 @@ func TestSecurityErrorsNativeViewsBothLanguages(t *testing.T) {
 				t.Errorf("%s raw error visible: %q", locale, raw)
 			}
 		}
+	}
+}
+
+// TestAIHTTPErrorShowsDetail checks that a refused request says what the
+// provider refused.
+func TestAIHTTPErrorShowsDetail(t *testing.T) {
+	m := locales.In("en")
+	code := aiErrText(fmt.Errorf("stream: %w", &llm.APIError{Status: 400, Message: "tools: not supported"}))
+	if got := aiErrLine(m, code); got != "Provider response failed (HTTP 400): tools: not supported" {
+		t.Fatalf("line %q", got)
+	}
+	if got := aiErrLine(m, aiErrText(&llm.APIError{Status: 502})); got != "Provider response failed (HTTP 502)" {
+		t.Fatalf("empty detail %q", got)
 	}
 }

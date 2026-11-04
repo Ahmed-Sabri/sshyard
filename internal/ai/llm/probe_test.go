@@ -1,4 +1,4 @@
-package openai
+package llm
 
 import (
 	"encoding/json"
@@ -31,13 +31,14 @@ func TestConnectionProbeAcceptsOnlyExplicitTextTokenLimit(t *testing.T) {
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				defer r.Body.Close()
 				var req struct {
-					MaxTokens int               `json:"max_tokens"`
+					MaxTokens *int              `json:"max_tokens"`
+					MaxComp   *int              `json:"max_completion_tokens"`
 					Tools     []json.RawMessage `json:"tools"`
 				}
 				if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 					t.Error(err)
 				}
-				if req.MaxTokens != 1 || len(req.Tools) != 0 {
+				if req.MaxTokens != nil || req.MaxComp != nil || len(req.Tools) != 0 {
 					t.Errorf("probe request %+v", req)
 				}
 				io.WriteString(w, tc.body)

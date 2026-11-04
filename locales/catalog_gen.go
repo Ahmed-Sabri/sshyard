@@ -5160,11 +5160,11 @@ func (msgs Messages) AiProviderTemp() string {
 	return Catalog.Format(msgs.locale, "aiProviderTemp", nil)
 }
 
-// AiProviderTokens says "Max tokens"
+// AiProviderTokens says "Max output tokens"
 // in the language the app shows.
 func AiProviderTokens() string { return In(i18n.Locale()).AiProviderTokens() }
 
-// AiProviderTokens says "Max tokens"
+// AiProviderTokens says "Max output tokens"
 // in the language of msgs.
 func (msgs Messages) AiProviderTokens() string {
 	return Catalog.Format(msgs.locale, "aiProviderTokens", nil)
@@ -5292,11 +5292,11 @@ func (msgs Messages) AiBadURL() string {
 	return Catalog.Format(msgs.locale, "aiBadURL", nil)
 }
 
-// AiBadHeader says "A header is empty, has a line break, or is Authorization. Put the API key in the key field."
+// AiBadHeader says "A header is empty, has a line break, or carries the API key (Authorization, X-Api-Key). Put the API key in the key fi…"
 // in the language the app shows.
 func AiBadHeader() string { return In(i18n.Locale()).AiBadHeader() }
 
-// AiBadHeader says "A header is empty, has a line break, or is Authorization. Put the API key in the key field."
+// AiBadHeader says "A header is empty, has a line break, or carries the API key (Authorization, X-Api-Key). Put the API key in the key fi…"
 // in the language of msgs.
 func (msgs Messages) AiBadHeader() string {
 	return Catalog.Format(msgs.locale, "aiBadHeader", nil)
@@ -9940,4 +9940,652 @@ func SnippetSendAction(name string) string { return In(i18n.Locale()).SnippetSen
 // in the language of msgs.
 func (msgs Messages) SnippetSendAction(name string) string {
 	return Catalog.Format(msgs.locale, "snippetSendAction", map[string]any{"name": name})
+}
+
+// AiFormat says "API format"
+// in the language the app shows.
+func AiFormat() string { return In(i18n.Locale()).AiFormat() }
+
+// AiFormat says "API format"
+// in the language of msgs.
+func (msgs Messages) AiFormat() string {
+	return Catalog.Format(msgs.locale, "aiFormat", nil)
+}
+
+// AiFormatChat says "Chat Completions"
+// in the language the app shows.
+func AiFormatChat() string { return In(i18n.Locale()).AiFormatChat() }
+
+// AiFormatChat says "Chat Completions"
+// in the language of msgs.
+func (msgs Messages) AiFormatChat() string {
+	return Catalog.Format(msgs.locale, "aiFormatChat", nil)
+}
+
+// AiFormatResponses says "Responses"
+// in the language the app shows.
+func AiFormatResponses() string { return In(i18n.Locale()).AiFormatResponses() }
+
+// AiFormatResponses says "Responses"
+// in the language of msgs.
+func (msgs Messages) AiFormatResponses() string {
+	return Catalog.Format(msgs.locale, "aiFormatResponses", nil)
+}
+
+// AiFormatAnthropic says "Anthropic Messages"
+// in the language the app shows.
+func AiFormatAnthropic() string { return In(i18n.Locale()).AiFormatAnthropic() }
+
+// AiFormatAnthropic says "Anthropic Messages"
+// in the language of msgs.
+func (msgs Messages) AiFormatAnthropic() string {
+	return Catalog.Format(msgs.locale, "aiFormatAnthropic", nil)
+}
+
+// AiAPIKeyKeep says "Saved. Leave blank to keep it."
+// in the language the app shows.
+func AiAPIKeyKeep() string { return In(i18n.Locale()).AiAPIKeyKeep() }
+
+// AiAPIKeyKeep says "Saved. Leave blank to keep it."
+// in the language of msgs.
+func (msgs Messages) AiAPIKeyKeep() string {
+	return Catalog.Format(msgs.locale, "aiAPIKeyKeep", nil)
+}
+
+// AiAPIKeyPlaceholder says "Paste the API key"
+// in the language the app shows.
+func AiAPIKeyPlaceholder() string { return In(i18n.Locale()).AiAPIKeyPlaceholder() }
+
+// AiAPIKeyPlaceholder says "Paste the API key"
+// in the language of msgs.
+func (msgs Messages) AiAPIKeyPlaceholder() string {
+	return Catalog.Format(msgs.locale, "aiAPIKeyPlaceholder", nil)
+}
+
+// AiDefaultModel says "Default model"
+// in the language the app shows.
+func AiDefaultModel() string { return In(i18n.Locale()).AiDefaultModel() }
+
+// AiDefaultModel says "Default model"
+// in the language of msgs.
+func (msgs Messages) AiDefaultModel() string {
+	return Catalog.Format(msgs.locale, "aiDefaultModel", nil)
+}
+
+// AiDefaultModelNote says "Fetch the provider’s chat models to choose from, or type a model name. Each pane can switch to another model."
+// in the language the app shows.
+func AiDefaultModelNote() string { return In(i18n.Locale()).AiDefaultModelNote() }
+
+// AiDefaultModelNote says "Fetch the provider’s chat models to choose from, or type a model name. Each pane can switch to another model."
+// in the language of msgs.
+func (msgs Messages) AiDefaultModelNote() string {
+	return Catalog.Format(msgs.locale, "aiDefaultModelNote", nil)
+}
+
+// AiFetchModels says "Fetch Models"
+// in the language the app shows.
+func AiFetchModels() string { return In(i18n.Locale()).AiFetchModels() }
+
+// AiFetchModels says "Fetch Models"
+// in the language of msgs.
+func (msgs Messages) AiFetchModels() string {
+	return Catalog.Format(msgs.locale, "aiFetchModels", nil)
+}
+
+// AiFetchingModels says "Fetching models…"
+// in the language the app shows.
+func AiFetchingModels() string { return In(i18n.Locale()).AiFetchingModels() }
+
+// AiFetchingModels says "Fetching models…"
+// in the language of msgs.
+func (msgs Messages) AiFetchingModels() string {
+	return Catalog.Format(msgs.locale, "aiFetchingModels", nil)
+}
+
+// AiFetchedModels says "{count, plural, one {Found # chat model} other {Found # chat models}}"
+// in the language the app shows.
+func AiFetchedModels(count int) string { return In(i18n.Locale()).AiFetchedModels(count) }
+
+// AiFetchedModels says "{count, plural, one {Found # chat model} other {Found # chat models}}"
+// in the language of msgs.
+func (msgs Messages) AiFetchedModels(count int) string {
+	return Catalog.Format(msgs.locale, "aiFetchedModels", map[string]any{"count": count})
+}
+
+// AiFetchModelsFailed says "Couldn’t fetch models: {detail}"
+// in the language the app shows.
+func AiFetchModelsFailed(detail string) string { return In(i18n.Locale()).AiFetchModelsFailed(detail) }
+
+// AiFetchModelsFailed says "Couldn’t fetch models: {detail}"
+// in the language of msgs.
+func (msgs Messages) AiFetchModelsFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "aiFetchModelsFailed", map[string]any{"detail": detail})
+}
+
+// AiAdvanced says "Advanced"
+// in the language the app shows.
+func AiAdvanced() string { return In(i18n.Locale()).AiAdvanced() }
+
+// AiAdvanced says "Advanced"
+// in the language of msgs.
+func (msgs Messages) AiAdvanced() string {
+	return Catalog.Format(msgs.locale, "aiAdvanced", nil)
+}
+
+// AiParamsNote says "A parameter is sent only while it is ticked. Otherwise the provider’s default applies."
+// in the language the app shows.
+func AiParamsNote() string { return In(i18n.Locale()).AiParamsNote() }
+
+// AiParamsNote says "A parameter is sent only while it is ticked. Otherwise the provider’s default applies."
+// in the language of msgs.
+func (msgs Messages) AiParamsNote() string {
+	return Catalog.Format(msgs.locale, "aiParamsNote", nil)
+}
+
+// AiProviderTopP says "Top P"
+// in the language the app shows.
+func AiProviderTopP() string { return In(i18n.Locale()).AiProviderTopP() }
+
+// AiProviderTopP says "Top P"
+// in the language of msgs.
+func (msgs Messages) AiProviderTopP() string {
+	return Catalog.Format(msgs.locale, "aiProviderTopP", nil)
+}
+
+// AiLegacyTokens says "Send the limit as max_tokens (older endpoints)"
+// in the language the app shows.
+func AiLegacyTokens() string { return In(i18n.Locale()).AiLegacyTokens() }
+
+// AiLegacyTokens says "Send the limit as max_tokens (older endpoints)"
+// in the language of msgs.
+func (msgs Messages) AiLegacyTokens() string {
+	return Catalog.Format(msgs.locale, "aiLegacyTokens", nil)
+}
+
+// AiAnthropicTokensNote says "The Anthropic format requires a limit. {limit} is sent while it is unticked."
+// in the language the app shows.
+func AiAnthropicTokensNote(limit string) string {
+	return In(i18n.Locale()).AiAnthropicTokensNote(limit)
+}
+
+// AiAnthropicTokensNote says "The Anthropic format requires a limit. {limit} is sent while it is unticked."
+// in the language of msgs.
+func (msgs Messages) AiAnthropicTokensNote(limit string) string {
+	return Catalog.Format(msgs.locale, "aiAnthropicTokensNote", map[string]any{"limit": limit})
+}
+
+// AiThinkingLevel says "Thinking level"
+// in the language the app shows.
+func AiThinkingLevel() string { return In(i18n.Locale()).AiThinkingLevel() }
+
+// AiThinkingLevel says "Thinking level"
+// in the language of msgs.
+func (msgs Messages) AiThinkingLevel() string {
+	return Catalog.Format(msgs.locale, "aiThinkingLevel", nil)
+}
+
+// AiEffortAuto says "Auto"
+// in the language the app shows.
+func AiEffortAuto() string { return In(i18n.Locale()).AiEffortAuto() }
+
+// AiEffortAuto says "Auto"
+// in the language of msgs.
+func (msgs Messages) AiEffortAuto() string {
+	return Catalog.Format(msgs.locale, "aiEffortAuto", nil)
+}
+
+// AiEffortAutoNote says "Provider default"
+// in the language the app shows.
+func AiEffortAutoNote() string { return In(i18n.Locale()).AiEffortAutoNote() }
+
+// AiEffortAutoNote says "Provider default"
+// in the language of msgs.
+func (msgs Messages) AiEffortAutoNote() string {
+	return Catalog.Format(msgs.locale, "aiEffortAutoNote", nil)
+}
+
+// AiEffortNone says "Off"
+// in the language the app shows.
+func AiEffortNone() string { return In(i18n.Locale()).AiEffortNone() }
+
+// AiEffortNone says "Off"
+// in the language of msgs.
+func (msgs Messages) AiEffortNone() string {
+	return Catalog.Format(msgs.locale, "aiEffortNone", nil)
+}
+
+// AiEffortLow says "Low"
+// in the language the app shows.
+func AiEffortLow() string { return In(i18n.Locale()).AiEffortLow() }
+
+// AiEffortLow says "Low"
+// in the language of msgs.
+func (msgs Messages) AiEffortLow() string {
+	return Catalog.Format(msgs.locale, "aiEffortLow", nil)
+}
+
+// AiEffortMedium says "Medium"
+// in the language the app shows.
+func AiEffortMedium() string { return In(i18n.Locale()).AiEffortMedium() }
+
+// AiEffortMedium says "Medium"
+// in the language of msgs.
+func (msgs Messages) AiEffortMedium() string {
+	return Catalog.Format(msgs.locale, "aiEffortMedium", nil)
+}
+
+// AiEffortHigh says "High"
+// in the language the app shows.
+func AiEffortHigh() string { return In(i18n.Locale()).AiEffortHigh() }
+
+// AiEffortHigh says "High"
+// in the language of msgs.
+func (msgs Messages) AiEffortHigh() string {
+	return Catalog.Format(msgs.locale, "aiEffortHigh", nil)
+}
+
+// AiEffortXHigh says "Extra high"
+// in the language the app shows.
+func AiEffortXHigh() string { return In(i18n.Locale()).AiEffortXHigh() }
+
+// AiEffortXHigh says "Extra high"
+// in the language of msgs.
+func (msgs Messages) AiEffortXHigh() string {
+	return Catalog.Format(msgs.locale, "aiEffortXHigh", nil)
+}
+
+// AiSearchModels says "Search models"
+// in the language the app shows.
+func AiSearchModels() string { return In(i18n.Locale()).AiSearchModels() }
+
+// AiSearchModels says "Search models"
+// in the language of msgs.
+func (msgs Messages) AiSearchModels() string {
+	return Catalog.Format(msgs.locale, "aiSearchModels", nil)
+}
+
+// AiUseModel says "Use “{model}”"
+// in the language the app shows.
+func AiUseModel(model string) string { return In(i18n.Locale()).AiUseModel(model) }
+
+// AiUseModel says "Use “{model}”"
+// in the language of msgs.
+func (msgs Messages) AiUseModel(model string) string {
+	return Catalog.Format(msgs.locale, "aiUseModel", map[string]any{"model": model})
+}
+
+// AiNoModels says "No matching models"
+// in the language the app shows.
+func AiNoModels() string { return In(i18n.Locale()).AiNoModels() }
+
+// AiNoModels says "No matching models"
+// in the language of msgs.
+func (msgs Messages) AiNoModels() string {
+	return Catalog.Format(msgs.locale, "aiNoModels", nil)
+}
+
+// AiAttach says "Attach Files"
+// in the language the app shows.
+func AiAttach() string { return In(i18n.Locale()).AiAttach() }
+
+// AiAttach says "Attach Files"
+// in the language of msgs.
+func (msgs Messages) AiAttach() string {
+	return Catalog.Format(msgs.locale, "aiAttach", nil)
+}
+
+// AiRemoveAttachment says "Remove {name}"
+// in the language the app shows.
+func AiRemoveAttachment(name string) string { return In(i18n.Locale()).AiRemoveAttachment(name) }
+
+// AiRemoveAttachment says "Remove {name}"
+// in the language of msgs.
+func (msgs Messages) AiRemoveAttachment(name string) string {
+	return Catalog.Format(msgs.locale, "aiRemoveAttachment", map[string]any{"name": name})
+}
+
+// AiAttachUnsupported says "“{name}” can’t be attached: only images, PDFs and text files can."
+// in the language the app shows.
+func AiAttachUnsupported(name string) string { return In(i18n.Locale()).AiAttachUnsupported(name) }
+
+// AiAttachUnsupported says "“{name}” can’t be attached: only images, PDFs and text files can."
+// in the language of msgs.
+func (msgs Messages) AiAttachUnsupported(name string) string {
+	return Catalog.Format(msgs.locale, "aiAttachUnsupported", map[string]any{"name": name})
+}
+
+// AiAttachTextOnly says "“{name}” can’t be attached: this agent reads text files only."
+// in the language the app shows.
+func AiAttachTextOnly(name string) string { return In(i18n.Locale()).AiAttachTextOnly(name) }
+
+// AiAttachTextOnly says "“{name}” can’t be attached: this agent reads text files only."
+// in the language of msgs.
+func (msgs Messages) AiAttachTextOnly(name string) string {
+	return Catalog.Format(msgs.locale, "aiAttachTextOnly", map[string]any{"name": name})
+}
+
+// AiAttachReadFailed says "Couldn’t read “{name}”."
+// in the language the app shows.
+func AiAttachReadFailed(name string) string { return In(i18n.Locale()).AiAttachReadFailed(name) }
+
+// AiAttachReadFailed says "Couldn’t read “{name}”."
+// in the language of msgs.
+func (msgs Messages) AiAttachReadFailed(name string) string {
+	return Catalog.Format(msgs.locale, "aiAttachReadFailed", map[string]any{"name": name})
+}
+
+// AiAttachTooLarge says "“{name}” is larger than {limit}."
+// in the language the app shows.
+func AiAttachTooLarge(name string, limit string) string {
+	return In(i18n.Locale()).AiAttachTooLarge(name, limit)
+}
+
+// AiAttachTooLarge says "“{name}” is larger than {limit}."
+// in the language of msgs.
+func (msgs Messages) AiAttachTooLarge(name string, limit string) string {
+	return Catalog.Format(msgs.locale, "aiAttachTooLarge", map[string]any{"name": name, "limit": limit})
+}
+
+// AiAttachTooMany says "A question can carry at most {count} files."
+// in the language the app shows.
+func AiAttachTooMany(count string) string { return In(i18n.Locale()).AiAttachTooMany(count) }
+
+// AiAttachTooMany says "A question can carry at most {count} files."
+// in the language of msgs.
+func (msgs Messages) AiAttachTooMany(count string) string {
+	return Catalog.Format(msgs.locale, "aiAttachTooMany", map[string]any{"count": count})
+}
+
+// AiAttachTotal says "Attachments can total at most {limit}."
+// in the language the app shows.
+func AiAttachTotal(limit string) string { return In(i18n.Locale()).AiAttachTotal(limit) }
+
+// AiAttachTotal says "Attachments can total at most {limit}."
+// in the language of msgs.
+func (msgs Messages) AiAttachTotal(limit string) string {
+	return Catalog.Format(msgs.locale, "aiAttachTotal", map[string]any{"limit": limit})
+}
+
+// AiDropFiles says "Drop files to attach them"
+// in the language the app shows.
+func AiDropFiles() string { return In(i18n.Locale()).AiDropFiles() }
+
+// AiDropFiles says "Drop files to attach them"
+// in the language of msgs.
+func (msgs Messages) AiDropFiles() string {
+	return Catalog.Format(msgs.locale, "aiDropFiles", nil)
+}
+
+// AiHTTPFailedDetail says "Provider response failed (HTTP {status}): {detail}"
+// in the language the app shows.
+func AiHTTPFailedDetail(status string, detail string) string {
+	return In(i18n.Locale()).AiHTTPFailedDetail(status, detail)
+}
+
+// AiHTTPFailedDetail says "Provider response failed (HTTP {status}): {detail}"
+// in the language of msgs.
+func (msgs Messages) AiHTTPFailedDetail(status string, detail string) string {
+	return Catalog.Format(msgs.locale, "aiHTTPFailedDetail", map[string]any{"status": status, "detail": detail})
+}
+
+// AiReviewProviderNote says "Checks medium-risk actions in Auto Review mode. High-risk actions always ask you."
+// in the language the app shows.
+func AiReviewProviderNote() string { return In(i18n.Locale()).AiReviewProviderNote() }
+
+// AiReviewProviderNote says "Checks medium-risk actions in Auto Review mode. High-risk actions always ask you."
+// in the language of msgs.
+func (msgs Messages) AiReviewProviderNote() string {
+	return Catalog.Format(msgs.locale, "aiReviewProviderNote", nil)
+}
+
+// AiReviewCustom says "Custom…"
+// in the language the app shows.
+func AiReviewCustom() string { return In(i18n.Locale()).AiReviewCustom() }
+
+// AiReviewCustom says "Custom…"
+// in the language of msgs.
+func (msgs Messages) AiReviewCustom() string {
+	return Catalog.Format(msgs.locale, "aiReviewCustom", nil)
+}
+
+// AiReviewWith says "Review provider"
+// in the language the app shows.
+func AiReviewWith() string { return In(i18n.Locale()).AiReviewWith() }
+
+// AiReviewWith says "Review provider"
+// in the language of msgs.
+func (msgs Messages) AiReviewWith() string {
+	return Catalog.Format(msgs.locale, "aiReviewWith", nil)
+}
+
+// AiReviewKind says "Review method"
+// in the language the app shows.
+func AiReviewKind() string { return In(i18n.Locale()).AiReviewKind() }
+
+// AiReviewKind says "Review method"
+// in the language of msgs.
+func (msgs Messages) AiReviewKind() string {
+	return Catalog.Format(msgs.locale, "aiReviewKind", nil)
+}
+
+// AiReviewChat says "Chat model"
+// in the language the app shows.
+func AiReviewChat() string { return In(i18n.Locale()).AiReviewChat() }
+
+// AiReviewChat says "Chat model"
+// in the language of msgs.
+func (msgs Messages) AiReviewChat() string {
+	return Catalog.Format(msgs.locale, "aiReviewChat", nil)
+}
+
+// AiReviewDecisions says "OpenAI Decisions"
+// in the language the app shows.
+func AiReviewDecisions() string { return In(i18n.Locale()).AiReviewDecisions() }
+
+// AiReviewDecisions says "OpenAI Decisions"
+// in the language of msgs.
+func (msgs Messages) AiReviewDecisions() string {
+	return Catalog.Format(msgs.locale, "aiReviewDecisions", nil)
+}
+
+// AiReviewJev says "Jev"
+// in the language the app shows.
+func AiReviewJev() string { return In(i18n.Locale()).AiReviewJev() }
+
+// AiReviewJev says "Jev"
+// in the language of msgs.
+func (msgs Messages) AiReviewJev() string {
+	return Catalog.Format(msgs.locale, "aiReviewJev", nil)
+}
+
+// AiReviewModelName says "Review model ID"
+// in the language the app shows.
+func AiReviewModelName() string { return In(i18n.Locale()).AiReviewModelName() }
+
+// AiReviewModelName says "Review model ID"
+// in the language of msgs.
+func (msgs Messages) AiReviewModelName() string {
+	return Catalog.Format(msgs.locale, "aiReviewModelName", nil)
+}
+
+// AiReviewModelNote says "Leave empty to use the provider's default model."
+// in the language the app shows.
+func AiReviewModelNote() string { return In(i18n.Locale()).AiReviewModelNote() }
+
+// AiReviewModelNote says "Leave empty to use the provider's default model."
+// in the language of msgs.
+func (msgs Messages) AiReviewModelNote() string {
+	return Catalog.Format(msgs.locale, "aiReviewModelNote", nil)
+}
+
+// AiReviewStrictness says "Strictness"
+// in the language the app shows.
+func AiReviewStrictness() string { return In(i18n.Locale()).AiReviewStrictness() }
+
+// AiReviewStrictness says "Strictness"
+// in the language of msgs.
+func (msgs Messages) AiReviewStrictness() string {
+	return Catalog.Format(msgs.locale, "aiReviewStrictness", nil)
+}
+
+// AiReviewStrictnessNote says "How sure the decision model must be that an action is safe: loose 80%, standard 90%, strict 97%."
+// in the language the app shows.
+func AiReviewStrictnessNote() string { return In(i18n.Locale()).AiReviewStrictnessNote() }
+
+// AiReviewStrictnessNote says "How sure the decision model must be that an action is safe: loose 80%, standard 90%, strict 97%."
+// in the language of msgs.
+func (msgs Messages) AiReviewStrictnessNote() string {
+	return Catalog.Format(msgs.locale, "aiReviewStrictnessNote", nil)
+}
+
+// AiReviewLoose says "Loose"
+// in the language the app shows.
+func AiReviewLoose() string { return In(i18n.Locale()).AiReviewLoose() }
+
+// AiReviewLoose says "Loose"
+// in the language of msgs.
+func (msgs Messages) AiReviewLoose() string {
+	return Catalog.Format(msgs.locale, "aiReviewLoose", nil)
+}
+
+// AiReviewStandard says "Standard"
+// in the language the app shows.
+func AiReviewStandard() string { return In(i18n.Locale()).AiReviewStandard() }
+
+// AiReviewStandard says "Standard"
+// in the language of msgs.
+func (msgs Messages) AiReviewStandard() string {
+	return Catalog.Format(msgs.locale, "aiReviewStandard", nil)
+}
+
+// AiReviewStrict says "Strict"
+// in the language the app shows.
+func AiReviewStrict() string { return In(i18n.Locale()).AiReviewStrict() }
+
+// AiReviewStrict says "Strict"
+// in the language of msgs.
+func (msgs Messages) AiReviewStrict() string {
+	return Catalog.Format(msgs.locale, "aiReviewStrict", nil)
+}
+
+// AiReviewTimedOut says "The review timed out"
+// in the language the app shows.
+func AiReviewTimedOut() string { return In(i18n.Locale()).AiReviewTimedOut() }
+
+// AiReviewTimedOut says "The review timed out"
+// in the language of msgs.
+func (msgs Messages) AiReviewTimedOut() string {
+	return Catalog.Format(msgs.locale, "aiReviewTimedOut", nil)
+}
+
+// AiReviewFailed says "The review failed"
+// in the language the app shows.
+func AiReviewFailed() string { return In(i18n.Locale()).AiReviewFailed() }
+
+// AiReviewFailed says "The review failed"
+// in the language of msgs.
+func (msgs Messages) AiReviewFailed() string {
+	return Catalog.Format(msgs.locale, "aiReviewFailed", nil)
+}
+
+// AiReviewDecision says "{kind}: {percent}% likely safe · {risk}"
+// in the language the app shows.
+func AiReviewDecision(kind string, percent string, risk string) string {
+	return In(i18n.Locale()).AiReviewDecision(kind, percent, risk)
+}
+
+// AiReviewDecision says "{kind}: {percent}% likely safe · {risk}"
+// in the language of msgs.
+func (msgs Messages) AiReviewDecision(kind string, percent string, risk string) string {
+	return Catalog.Format(msgs.locale, "aiReviewDecision", map[string]any{"kind": kind, "percent": percent, "risk": risk})
+}
+
+// AiReviewRiskNone says "no risk found"
+// in the language the app shows.
+func AiReviewRiskNone() string { return In(i18n.Locale()).AiReviewRiskNone() }
+
+// AiReviewRiskNone says "no risk found"
+// in the language of msgs.
+func (msgs Messages) AiReviewRiskNone() string {
+	return Catalog.Format(msgs.locale, "aiReviewRiskNone", nil)
+}
+
+// AiReviewRiskDestructive says "may destroy data"
+// in the language the app shows.
+func AiReviewRiskDestructive() string { return In(i18n.Locale()).AiReviewRiskDestructive() }
+
+// AiReviewRiskDestructive says "may destroy data"
+// in the language of msgs.
+func (msgs Messages) AiReviewRiskDestructive() string {
+	return Catalog.Format(msgs.locale, "aiReviewRiskDestructive", nil)
+}
+
+// AiReviewRiskExfiltration says "may send data out"
+// in the language the app shows.
+func AiReviewRiskExfiltration() string { return In(i18n.Locale()).AiReviewRiskExfiltration() }
+
+// AiReviewRiskExfiltration says "may send data out"
+// in the language of msgs.
+func (msgs Messages) AiReviewRiskExfiltration() string {
+	return Catalog.Format(msgs.locale, "aiReviewRiskExfiltration", nil)
+}
+
+// AiReviewRiskPrivilege says "raises privileges"
+// in the language the app shows.
+func AiReviewRiskPrivilege() string { return In(i18n.Locale()).AiReviewRiskPrivilege() }
+
+// AiReviewRiskPrivilege says "raises privileges"
+// in the language of msgs.
+func (msgs Messages) AiReviewRiskPrivilege() string {
+	return Catalog.Format(msgs.locale, "aiReviewRiskPrivilege", nil)
+}
+
+// AiReviewRiskPersistence says "leaves lasting changes"
+// in the language the app shows.
+func AiReviewRiskPersistence() string { return In(i18n.Locale()).AiReviewRiskPersistence() }
+
+// AiReviewRiskPersistence says "leaves lasting changes"
+// in the language of msgs.
+func (msgs Messages) AiReviewRiskPersistence() string {
+	return Catalog.Format(msgs.locale, "aiReviewRiskPersistence", nil)
+}
+
+// AiReviewRiskScope says "beyond the request"
+// in the language the app shows.
+func AiReviewRiskScope() string { return In(i18n.Locale()).AiReviewRiskScope() }
+
+// AiReviewRiskScope says "beyond the request"
+// in the language of msgs.
+func (msgs Messages) AiReviewRiskScope() string {
+	return Catalog.Format(msgs.locale, "aiReviewRiskScope", nil)
+}
+
+// AiReviewRiskUnclear says "unclear effect"
+// in the language the app shows.
+func AiReviewRiskUnclear() string { return In(i18n.Locale()).AiReviewRiskUnclear() }
+
+// AiReviewRiskUnclear says "unclear effect"
+// in the language of msgs.
+func (msgs Messages) AiReviewRiskUnclear() string {
+	return Catalog.Format(msgs.locale, "aiReviewRiskUnclear", nil)
+}
+
+// AiFormatTypeSafe says "TypeSafe"
+// in the language the app shows.
+func AiFormatTypeSafe() string { return In(i18n.Locale()).AiFormatTypeSafe() }
+
+// AiFormatTypeSafe says "TypeSafe"
+// in the language of msgs.
+func (msgs Messages) AiFormatTypeSafe() string {
+	return Catalog.Format(msgs.locale, "aiFormatTypeSafe", nil)
+}
+
+// AiTypeSafeNote says "TypeSafe providers make review decisions only and are not offered in panes."
+// in the language the app shows.
+func AiTypeSafeNote() string { return In(i18n.Locale()).AiTypeSafeNote() }
+
+// AiTypeSafeNote says "TypeSafe providers make review decisions only and are not offered in panes."
+// in the language of msgs.
+func (msgs Messages) AiTypeSafeNote() string {
+	return Catalog.Format(msgs.locale, "aiTypeSafeNote", nil)
 }

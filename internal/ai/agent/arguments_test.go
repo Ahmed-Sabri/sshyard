@@ -1,7 +1,7 @@
 package agent
 
 import (
-	"github.com/Licoy/sshyard/internal/ai/openai"
+	"github.com/Licoy/sshyard/internal/ai/llm"
 	"testing"
 )
 
@@ -12,7 +12,7 @@ func TestInvalidToolArgumentsDoNotAuthorizeOrRead(t *testing.T) {
 			gate := &recordGate{allow: true}
 			session := New(Config{Tools: tools, Gate: gate})
 			var events []Event
-			if err := session.execOne(t.Context(), openai.ToolCall{ID: "w", Name: "write_file", Arguments: raw}, collect(&events)); err != nil {
+			if err := session.execOne(t.Context(), llm.ToolCall{ID: "w", Name: "write_file", Arguments: raw}, collect(&events)); err != nil {
 				t.Fatal(err)
 			}
 			if len(tools.calls) != 0 || tools.readPath != "" || len(gate.actions) != 0 || len(events) != 1 || events[0].Tool.Run || events[0].Tool.Exit != 1 {
@@ -27,7 +27,7 @@ func TestInvalidToolArgumentsDoNotAuthorizeOrRead(t *testing.T) {
 
 func TestConfigureRedactsExistingHistory(t *testing.T) {
 	const secret = "AKIA0000000000000000"
-	model := &scriptModel{replies: []openai.Message{{Content: "ok"}, {Content: "ok"}}}
+	model := &scriptModel{replies: []llm.Message{{Content: "ok"}, {Content: "ok"}}}
 	session := New(Config{Model: model, Gate: &recordGate{allow: true}})
 	if err := session.Turn(t.Context(), secret, HostMeta{}, "", nil); err != nil {
 		t.Fatal(err)

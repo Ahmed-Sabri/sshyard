@@ -1,8 +1,10 @@
 package policy
 
 import (
+	"context"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestParseReview(t *testing.T) {
@@ -88,4 +90,36 @@ func itoa(n int) string {
 		n /= 10
 	}
 	return string(b[i:])
+}
+
+// TestReviewSeesTheTask checks that the reviewer is told what the user
+// asked for, redacted and on one line, ahead of the action.
+func TestReviewSeesTheTask(t *testing.T) {
+	r := &scriptReview{raw: `{"decision":"allow","reason":"asked for"}`}
+	g := NewGate(GateConfig{
+		Mode:          func() Mode { return ModeReview },
+		Scope:         Scope{Home: "/home/user"},
+		Prompter:      &scriptPrompt{answers: []Answer{Reject}},
+		Reviewer:      r,
+		Task:          func() string { return "restart nginx\nplease, password=fake-password-value" },
+		ReviewTimeout: time.Second,
+		PromptTimeout: time.Second,
+	})
+	v, err := g.Authorize(context.Background(), cmdAction("systemctl restart nginx"), "")
+	if err != nil || !v.Run || v.By != ByReviewer {
+		t.Fatalf("%+v %v", v, err)
+	}
+	r.mu.Lock()
+	in := r.last
+	r.mu.Unlock()
+	if !strings.Contains(in.Task, "restart nginx") || strings.Contains(in.Task, "fake-password-value") {
+		t.Fatalf("task %q", in.Task)
+	}
+	prompt := BuildReviewPrompt(in)
+	if !strings.HasPrefix(prompt, "user request: restart nginx please, ") || strings.Index(prompt, "user request") > strings.Index(prompt, "command:") {
+		t.Fatalf("prompt %q", prompt)
+	}
+	if !strings.Contains(ReviewInstructions, `"decision":"allow"|"ask"`) {
+		t.Fatal("instructions lack the reply shape")
+	}
 }

@@ -8,13 +8,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Licoy/sshyard/internal/ai/openai"
+	"github.com/Licoy/sshyard/internal/ai/llm"
 	"github.com/Licoy/sshyard/internal/ai/policy"
 )
 
 func TestTurnRunsCommandAndShowsOutput(t *testing.T) {
-	model := &scriptModel{replies: []openai.Message{
-		{Role: "assistant", ToolCalls: []openai.ToolCall{{ID: "c1", Name: "run_command", Arguments: `{"command":"df -h","reason":"disk"}`}}},
+	model := &scriptModel{replies: []llm.Message{
+		{Role: "assistant", ToolCalls: []llm.ToolCall{{ID: "c1", Name: "run_command", Arguments: `{"command":"df -h","reason":"disk"}`}}},
 		{Role: "assistant", Content: "About half full."},
 	}}
 	tools := &fakeTools{output: "Filesystem Size Used\n/dev/sda 10G 4G", exit: 3}
@@ -49,8 +49,8 @@ func TestTurnRunsCommandAndShowsOutput(t *testing.T) {
 }
 
 func TestRefusalIsTheToolResult(t *testing.T) {
-	model := &scriptModel{replies: []openai.Message{
-		{Role: "assistant", ToolCalls: []openai.ToolCall{{ID: "w1", Name: "write_file", Arguments: `{"path":"/etc/x","content":"nope"}`}}},
+	model := &scriptModel{replies: []llm.Message{
+		{Role: "assistant", ToolCalls: []llm.ToolCall{{ID: "w1", Name: "write_file", Arguments: `{"path":"/etc/x","content":"nope"}`}}},
 		{Role: "assistant", Content: "I will not write it."},
 	}}
 	tools := &fakeTools{output: "wrote"}
@@ -73,11 +73,11 @@ func TestRefusalIsTheToolResult(t *testing.T) {
 }
 
 func TestPauseAfter25AndContinue(t *testing.T) {
-	calls := make([]openai.ToolCall, 26)
+	calls := make([]llm.ToolCall, 26)
 	for i := range calls {
-		calls[i] = openai.ToolCall{ID: fmt.Sprintf("c%d", i), Name: "run_command", Arguments: fmt.Sprintf(`{"command":"c%d"}`, i)}
+		calls[i] = llm.ToolCall{ID: fmt.Sprintf("c%d", i), Name: "run_command", Arguments: fmt.Sprintf(`{"command":"c%d"}`, i)}
 	}
-	model := &scriptModel{replies: []openai.Message{
+	model := &scriptModel{replies: []llm.Message{
 		{Role: "assistant", ToolCalls: calls},
 		{Role: "assistant", Content: "enough"},
 	}}
@@ -114,8 +114,8 @@ func TestPauseAfter25AndContinue(t *testing.T) {
 
 func TestRedactBeforeSendKeepsTimeline(t *testing.T) {
 	const secret = "AKIA0000000000000000"
-	model := &scriptModel{replies: []openai.Message{
-		{Role: "assistant", ToolCalls: []openai.ToolCall{{ID: "c1", Name: "run_command", Arguments: `{"command":"echo secret"}`}}},
+	model := &scriptModel{replies: []llm.Message{
+		{Role: "assistant", ToolCalls: []llm.ToolCall{{ID: "c1", Name: "run_command", Arguments: `{"command":"echo secret"}`}}},
 		{Role: "assistant", Content: "done"},
 	}}
 	tools := &fakeTools{output: "key " + secret + "\n"}
@@ -140,7 +140,7 @@ func TestRedactBeforeSendKeepsTimeline(t *testing.T) {
 }
 
 func TestTerminalIsUntrustedAndHostOnce(t *testing.T) {
-	model := &scriptModel{replies: []openai.Message{
+	model := &scriptModel{replies: []llm.Message{
 		{Role: "assistant", Content: "first"},
 		{Role: "assistant", Content: "second"},
 	}}
@@ -171,8 +171,8 @@ func TestTerminalIsUntrustedAndHostOnce(t *testing.T) {
 
 func TestWriteDiffAndNewFile(t *testing.T) {
 	t.Run("change", func(t *testing.T) {
-		model := &scriptModel{replies: []openai.Message{
-			{Role: "assistant", ToolCalls: []openai.ToolCall{{ID: "w", Name: "write_file", Arguments: `{"path":"/etc/nginx/nginx.conf","content":"new\n"}`}}},
+		model := &scriptModel{replies: []llm.Message{
+			{Role: "assistant", ToolCalls: []llm.ToolCall{{ID: "w", Name: "write_file", Arguments: `{"path":"/etc/nginx/nginx.conf","content":"new\n"}`}}},
 			{Role: "assistant", Content: "wrote"},
 		}}
 		tools := &fakeTools{read: "old\n", readOK: true, output: "ok"}
@@ -189,8 +189,8 @@ func TestWriteDiffAndNewFile(t *testing.T) {
 		}
 	})
 	t.Run("new", func(t *testing.T) {
-		model := &scriptModel{replies: []openai.Message{
-			{Role: "assistant", ToolCalls: []openai.ToolCall{{ID: "w", Name: "write_file", Arguments: `{"path":"/tmp/new.txt","content":"brand new\n"}`}}},
+		model := &scriptModel{replies: []llm.Message{
+			{Role: "assistant", ToolCalls: []llm.ToolCall{{ID: "w", Name: "write_file", Arguments: `{"path":"/tmp/new.txt","content":"brand new\n"}`}}},
 			{Role: "assistant", Content: "wrote"},
 		}}
 		gate := &recordGate{allow: true}
@@ -203,8 +203,8 @@ func TestWriteDiffAndNewFile(t *testing.T) {
 		}
 	})
 	t.Run("read error", func(t *testing.T) {
-		model := &scriptModel{replies: []openai.Message{
-			{Role: "assistant", ToolCalls: []openai.ToolCall{{ID: "w", Name: "write_file", Arguments: `{"path":"/tmp/x","content":"body"}`}}},
+		model := &scriptModel{replies: []llm.Message{
+			{Role: "assistant", ToolCalls: []llm.ToolCall{{ID: "w", Name: "write_file", Arguments: `{"path":"/tmp/x","content":"body"}`}}},
 			{Role: "assistant", Content: "wrote"},
 		}}
 		gate := &recordGate{allow: true}
@@ -238,8 +238,8 @@ func TestCancelStopsStream(t *testing.T) {
 
 func TestCancelStopsTool(t *testing.T) {
 	started := make(chan struct{})
-	model := &scriptModel{replies: []openai.Message{
-		{Role: "assistant", ToolCalls: []openai.ToolCall{
+	model := &scriptModel{replies: []llm.Message{
+		{Role: "assistant", ToolCalls: []llm.ToolCall{
 			{ID: "c1", Name: "run_command", Arguments: `{"command":"sleep 600"}`},
 			{ID: "c2", Name: "run_command", Arguments: `{"command":"next"}`},
 		}},
@@ -275,8 +275,8 @@ func TestCancelStopsTool(t *testing.T) {
 
 func TestTrimDropsOldestToolOutput(t *testing.T) {
 	big := strings.Repeat("x", 2000)
-	model := &scriptModel{replies: []openai.Message{
-		{Role: "assistant", ToolCalls: []openai.ToolCall{{ID: "c1", Name: "run_command", Arguments: `{"command":"cat"}`}}},
+	model := &scriptModel{replies: []llm.Message{
+		{Role: "assistant", ToolCalls: []llm.ToolCall{{ID: "c1", Name: "run_command", Arguments: `{"command":"cat"}`}}},
 		{Role: "assistant", Content: "ok"},
 	}}
 	s := New(Config{Model: model, Gate: &recordGate{allow: true}, Tools: &fakeTools{output: big}, MaxChars: 500})
@@ -294,8 +294,8 @@ func TestTrimDropsOldestToolOutput(t *testing.T) {
 
 func TestOutputTruncatedToOneMegabyte(t *testing.T) {
 	tools := &fakeTools{output: strings.Repeat("y", (1<<20)+50)}
-	model := &scriptModel{replies: []openai.Message{
-		{Role: "assistant", ToolCalls: []openai.ToolCall{{ID: "c1", Name: "run_command", Arguments: `{"command":"cat"}`}}},
+	model := &scriptModel{replies: []llm.Message{
+		{Role: "assistant", ToolCalls: []llm.ToolCall{{ID: "c1", Name: "run_command", Arguments: `{"command":"cat"}`}}},
 		{Role: "assistant", Content: "ok"},
 	}}
 	s := New(Config{Model: model, Gate: &recordGate{allow: true}, Tools: tools})
@@ -315,7 +315,7 @@ func TestOutputTruncatedToOneMegabyte(t *testing.T) {
 }
 
 func TestThinkingIsAnEvent(t *testing.T) {
-	model := &scriptModel{think: "checking disk", replies: []openai.Message{{Role: "assistant", Content: "ok"}}}
+	model := &scriptModel{think: "checking disk", replies: []llm.Message{{Role: "assistant", Content: "ok"}}}
 	s := New(Config{Model: model, Gate: &recordGate{allow: true}, Tools: &fakeTools{}})
 	var ev []Event
 	if err := s.Turn(t.Context(), "hi", HostMeta{Name: "web"}, "", collect(&ev)); err != nil {
@@ -327,8 +327,8 @@ func TestThinkingIsAnEvent(t *testing.T) {
 }
 
 func TestToolErrorContinuesTheTurn(t *testing.T) {
-	model := &scriptModel{replies: []openai.Message{
-		{Role: "assistant", ToolCalls: []openai.ToolCall{{ID: "c1", Name: "run_command", Arguments: `{"command":"df"}`}}},
+	model := &scriptModel{replies: []llm.Message{
+		{Role: "assistant", ToolCalls: []llm.ToolCall{{ID: "c1", Name: "run_command", Arguments: `{"command":"df"}`}}},
 		{Role: "assistant", Content: "handled"},
 	}}
 	tools := &fakeTools{err: errors.New("connection reset")}
@@ -343,8 +343,8 @@ func TestToolErrorContinuesTheTurn(t *testing.T) {
 }
 
 func TestInvalidArgsNeverAuthorized(t *testing.T) {
-	model := &scriptModel{replies: []openai.Message{
-		{Role: "assistant", ToolCalls: []openai.ToolCall{{ID: "c1", Name: "run_command", Arguments: "not-json"}}},
+	model := &scriptModel{replies: []llm.Message{
+		{Role: "assistant", ToolCalls: []llm.ToolCall{{ID: "c1", Name: "run_command", Arguments: "not-json"}}},
 		{Role: "assistant", Content: "ok"},
 	}}
 	gate := &recordGate{allow: true}
@@ -376,8 +376,8 @@ func TestVerdictCodes(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			model := &scriptModel{replies: []openai.Message{
-				{Role: "assistant", ToolCalls: []openai.ToolCall{{ID: "c1", Name: "run_command", Arguments: `{"command":"true"}`}}},
+			model := &scriptModel{replies: []llm.Message{
+				{Role: "assistant", ToolCalls: []llm.ToolCall{{ID: "c1", Name: "run_command", Arguments: `{"command":"true"}`}}},
 				{Role: "assistant", Content: "after"},
 			}}
 			s := New(Config{Model: model, Gate: &tc.gate, Tools: &fakeTools{output: "ok"}})
@@ -405,32 +405,32 @@ func TestNilGateRefusesToRun(t *testing.T) {
 }
 
 type scriptModel struct {
-	replies []openai.Message
+	replies []llm.Message
 	think   string
-	reqs    []openai.Request
+	reqs    []llm.Request
 }
 
-func (m *scriptModel) Stream(_ context.Context, req openai.Request, emit func(openai.Event)) (openai.Message, error) {
-	cp := make([]openai.Message, len(req.Messages))
+func (m *scriptModel) Stream(_ context.Context, req llm.Request, emit func(llm.Event)) (llm.Message, error) {
+	cp := make([]llm.Message, len(req.Messages))
 	copy(cp, req.Messages)
 	for i := range cp {
 		if len(req.Messages[i].ToolCalls) > 0 {
-			cp[i].ToolCalls = append([]openai.ToolCall(nil), req.Messages[i].ToolCalls...)
+			cp[i].ToolCalls = append([]llm.ToolCall(nil), req.Messages[i].ToolCalls...)
 		}
 	}
-	m.reqs = append(m.reqs, openai.Request{Messages: cp, Tools: append([]openai.Tool(nil), req.Tools...)})
+	m.reqs = append(m.reqs, llm.Request{Messages: cp, Tools: append([]llm.Tool(nil), req.Tools...)})
 	if len(m.replies) == 0 {
-		return openai.Message{Role: "assistant", Content: "done"}, nil
+		return llm.Message{Role: "assistant", Content: "done"}, nil
 	}
 	msg := m.replies[0]
 	m.replies = m.replies[1:]
 	if emit != nil {
 		if m.think != "" {
-			emit(openai.Event{Thinking: m.think})
+			emit(llm.Event{Thinking: m.think})
 			m.think = ""
 		}
 		if msg.Content != "" {
-			emit(openai.Event{Content: msg.Content})
+			emit(llm.Event{Content: msg.Content})
 		}
 	}
 	if msg.Role == "" {
@@ -443,10 +443,10 @@ type blockModel struct {
 	started chan struct{}
 }
 
-func (m *blockModel) Stream(ctx context.Context, _ openai.Request, _ func(openai.Event)) (openai.Message, error) {
+func (m *blockModel) Stream(ctx context.Context, _ llm.Request, _ func(llm.Event)) (llm.Message, error) {
 	close(m.started)
 	<-ctx.Done()
-	return openai.Message{}, ctx.Err()
+	return llm.Message{}, ctx.Err()
 }
 
 type fakeTools struct {
@@ -554,7 +554,7 @@ func hasText(ev []Event, k Kind, text string) bool {
 	return false
 }
 
-func messageHas(msgs []openai.Message, role, sub string) bool {
+func messageHas(msgs []llm.Message, role, sub string) bool {
 	for _, m := range msgs {
 		if m.Role == role && strings.Contains(m.Content, sub) {
 			return true
@@ -563,7 +563,7 @@ func messageHas(msgs []openai.Message, role, sub string) bool {
 	return false
 }
 
-func countSub(msgs []openai.Message, sub string) int {
+func countSub(msgs []llm.Message, sub string) int {
 	n := 0
 	for _, m := range msgs {
 		if strings.Contains(m.Content, sub) {
@@ -573,7 +573,7 @@ func countSub(msgs []openai.Message, sub string) int {
 	return n
 }
 
-func countRole(msgs []openai.Message, role string) int {
+func countRole(msgs []llm.Message, role string) int {
 	n := 0
 	for _, m := range msgs {
 		if m.Role == role {
@@ -583,7 +583,7 @@ func countRole(msgs []openai.Message, role string) int {
 	return n
 }
 
-func userContent(msgs []openai.Message) string {
+func userContent(msgs []llm.Message) string {
 	var b strings.Builder
 	for _, m := range msgs {
 		if m.Role == "user" {
@@ -593,7 +593,7 @@ func userContent(msgs []openai.Message) string {
 	return b.String()
 }
 
-func lastUser(msgs []openai.Message) string {
+func lastUser(msgs []llm.Message) string {
 	last := ""
 	for _, m := range msgs {
 		if m.Role == "user" {
@@ -603,7 +603,7 @@ func lastUser(msgs []openai.Message) string {
 	return last
 }
 
-func toolContent(msgs []openai.Message) string {
+func toolContent(msgs []llm.Message) string {
 	for _, m := range msgs {
 		if m.Role == "tool" {
 			return m.Content
@@ -612,10 +612,42 @@ func toolContent(msgs []openai.Message) string {
 	return ""
 }
 
-func toolArgs(m openai.Message) string {
+func toolArgs(m llm.Message) string {
 	var b strings.Builder
 	for _, c := range m.ToolCalls {
 		b.WriteString(c.Arguments)
 	}
 	return b.String()
+}
+
+// TestTurnWithParts checks that files go with their question, and that
+// the oldest give way once all of them weigh too much.
+func TestTurnWithParts(t *testing.T) {
+	model := &scriptModel{replies: []llm.Message{
+		{Role: "assistant", Content: "A cat."},
+		{Role: "assistant", Content: "A dog."},
+	}}
+	s := New(Config{Model: model, Gate: &recordGate{allow: true}, Tools: &fakeTools{}})
+	big := make([]byte, MaxPartBytes/2+1)
+	cat := llm.Part{Name: "cat.png", MIME: "image/png", Data: big}
+	if err := s.TurnWith(t.Context(), "what is this", []llm.Part{cat}, HostMeta{Name: "web"}, "", nil); err != nil {
+		t.Fatal(err)
+	}
+	last := model.reqs[0].Messages[len(model.reqs[0].Messages)-1]
+	if last.Role != "user" || len(last.Parts) != 1 || last.Parts[0].Name != "cat.png" {
+		t.Fatalf("first question %+v", last)
+	}
+	dog := llm.Part{Name: "dog.png", MIME: "image/png", Data: big}
+	if err := s.TurnWith(t.Context(), "and this", []llm.Part{dog}, HostMeta{Name: "web"}, "", nil); err != nil {
+		t.Fatal(err)
+	}
+	var parts []string
+	for _, m := range model.reqs[1].Messages {
+		for _, p := range m.Parts {
+			parts = append(parts, p.Name)
+		}
+	}
+	if strings.Join(parts, ",") != "dog.png" || !messageHas(model.reqs[1].Messages, "user", "[attachments omitted: cat.png]") {
+		t.Fatalf("parts %q messages %+v", parts, model.reqs[1].Messages)
+	}
 }

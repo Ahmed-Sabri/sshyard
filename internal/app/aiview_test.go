@@ -12,15 +12,16 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
-// TestAIPaneLayout checks the pane's controls: the provider in its
-// header alongside the selected backend, with permission first on the composer row.
+// TestAIPaneLayout checks the pane's controls: the backend in its header,
+// and the composer's text on top with, under it, permission on the left
+// and the model, thinking level and send button on the right.
 func TestAIPaneLayout(t *testing.T) {
 	a, tt := newTestApp(t)
 	h := savedHost(t, a, "web", "10.0.0.8")
 	s := a.Settings()
 	s.AIProviders = []settings.AIProvider{
 		{ID: "p1", Name: "Alpha", Model: "alpha-1", BaseURL: "https://alpha.test/v1"},
-		{ID: "p2", Name: "Beta", Model: "beta-2", BaseURL: "https://beta.test/v1"},
+		{ID: "p2", Name: "Beta", Model: "beta-2", Models: []string{"beta-1", "beta-2", "beta-mini"}, BaseURL: "https://beta.test/v1"},
 	}
 	if err := a.ApplySettings(s); err != nil {
 		t.Fatal(err)
@@ -30,7 +31,7 @@ func TestAIPaneLayout(t *testing.T) {
 		t.Fatal(err)
 	}
 	tt.Frame()
-	for _, gone := range []string{"Linked terminal", "No terminal", "Agent"} {
+	for _, gone := range []string{"Linked terminal", "No terminal", "Agent", "Alpha"} {
 		if tt.HasText(gone) {
 			t.Fatalf("%q still shows", gone)
 		}
@@ -40,32 +41,75 @@ func TestAIPaneLayout(t *testing.T) {
 	if backend.Y > head.Y+head.H || backend.Y+backend.H < head.Y {
 		t.Fatal("backend not in header")
 	}
-	prov := mustFind(t, tt, "Alpha")
-	if prov.Y > head.Y+head.H || prov.Y+prov.H < head.Y {
-		t.Fatalf("provider %v not in the header row %v", prov, head)
-	}
 	perm := mustFind(t, tt, "Permission")
 	input := mustFind(t, tt, "Ask about this host")
+	model := mustFind(t, tt, "Model")
+	effort := mustFind(t, tt, "Thinking level")
 	send := mustFind(t, tt, "Send")
-	mid := perm.Y + perm.H/2
-	if mid < input.Y || mid > input.Y+input.H || perm.X >= input.X || send.X <= input.X {
-		t.Fatalf("permission %v input %v send %v not one row in order", perm, input, send)
+	for name, r := range map[string]ui.Rect{"permission": perm, "model": model, "thinking": effort, "send": send} {
+		if r.Y < input.Y+input.H {
+			t.Fatalf("%s %v not under the input %v", name, r, input)
+		}
+	}
+	if !(perm.X < model.X && model.X < effort.X && effort.X < send.X) || send.X+send.W > input.X+input.W+8 {
+		t.Fatalf("permission %v model %v thinking %v send %v not in order", perm, model, effort, send)
+	}
+	if !tt.HasText("alpha-1") || !tt.HasText("Auto") {
+		t.Fatalf("chips lack the model or level: %q", tt.Texts())
 	}
 
-	mustClick(t, tt, "Provider")
+	mustClick(t, tt, "Model")
 	tt.Frame()
-	for _, s := range []string{"Alpha", "alpha-1", "Beta", "beta-2", "Manage Providers…"} {
+	for _, s := range []string{"Alpha", "alpha-1", "Beta", "beta-1", "beta-2", "beta-mini", "Manage Providers…"} {
 		if !tt.HasText(s) {
-			t.Fatalf("provider menu lacks %q: %q", s, tt.Texts())
+			t.Fatalf("model menu lacks %q: %q", s, tt.Texts())
 		}
 	}
 	if a.conns[id].ai.provider != "p1" {
 		t.Fatalf("with several providers the pane starts on %q, not the first", a.conns[id].ai.provider)
 	}
-	mustClick(t, tt, "Beta")
+	tt.Type("mini")
 	tt.Frame()
-	if a.conns[id].ai.provider != "p2" || a.menu.key != "" || !tt.HasText("Beta") {
-		t.Fatalf("provider %q menu %q", a.conns[id].ai.provider, a.menu.key)
+	// alpha-1 stays on the chip, but not in the menu.
+	if countExact(tt, "alpha-1") != 1 || tt.HasText("beta-1") || tt.HasText("Alpha") || !tt.HasText("beta-mini") {
+		t.Fatalf("search does not filter: %q", tt.Texts())
+	}
+	tt.Key(0, ui.KeyEnter)
+	tt.Frame()
+	cn := a.conns[id]
+	if cn.ai.provider != "p2" || cn.ai.model != "beta-mini" || a.menu.key != "" || !tt.HasText("beta-mini") {
+		t.Fatalf("provider %q model %q menu %q", cn.ai.provider, cn.ai.model, a.menu.key)
+	}
+
+	mustClick(t, tt, "Model")
+	tt.Frame()
+	mustClick(t, tt, "beta-2")
+	tt.Frame()
+	if cn.ai.provider != "p2" || cn.ai.model != "" {
+		t.Fatalf("the default is kept as %q of %q", cn.ai.model, cn.ai.provider)
+	}
+
+	mustClick(t, tt, "Model")
+	tt.Frame()
+	tt.Type("beta-x")
+	tt.Frame()
+	mustClick(t, tt, "Use “beta-x”")
+	tt.Frame()
+	if cn.ai.provider != "p2" || cn.ai.model != "beta-x" {
+		t.Fatalf("typed model %q of %q", cn.ai.model, cn.ai.provider)
+	}
+
+	mustClick(t, tt, "Thinking level")
+	tt.Frame()
+	for _, s := range []string{"Off", "Low", "Medium", "High", "Extra high"} {
+		if !tt.HasText(s) {
+			t.Fatalf("thinking menu lacks %q: %q", s, tt.Texts())
+		}
+	}
+	mustClick(t, tt, "High")
+	tt.Frame()
+	if cn.ai.effort != "high" || !tt.HasText("High") {
+		t.Fatalf("effort %q", cn.ai.effort)
 	}
 
 	mustClick(t, tt, "Permission")
@@ -77,11 +121,11 @@ func TestAIPaneLayout(t *testing.T) {
 	}
 	mustClick(t, tt, "Review")
 	tt.Frame()
-	if a.conns[id].ai.mode != "review" || a.modeOf(a.conns[id]) != policy.ModeReview || a.full != nil {
-		t.Fatalf("mode %q", a.conns[id].ai.mode)
+	if cn.ai.mode != "review" || a.modeOf(cn) != policy.ModeReview || a.full != nil {
+		t.Fatalf("mode %q", cn.ai.mode)
 	}
 
-	mustClick(t, tt, "Provider")
+	mustClick(t, tt, "Model")
 	tt.Frame()
 	mustClick(t, tt, "Manage Providers…")
 	tt.Frame()
@@ -156,11 +200,16 @@ func TestAIPaneMarkdownAndSend(t *testing.T) {
 	cn.ai.items = nil
 	tt.Frame()
 	mustClick(t, tt, "Ask about this host")
-	tt.Type("how full is the disk")
+	tt.Type("how full")
+	tt.Key(ui.Shift, ui.KeyEnter)
+	tt.Type("is the disk")
 	tt.Frame()
+	if cn.ai.running || cn.ai.input != "how full\nis the disk" {
+		t.Fatalf("Shift+Enter: running %v input %q", cn.ai.running, cn.ai.input)
+	}
 	tt.Key(0, ui.KeyEnter)
 	tt.Frame()
-	if !cn.ai.running || !paneHas(a, id, "how full is the disk") {
+	if !cn.ai.running || !paneHas(a, id, "how full\nis the disk") || cn.ai.input != "" {
 		t.Fatalf("Enter did not send: running %v items %+v", cn.ai.running, cn.ai.items)
 	}
 	if tt.HasText("Send") || !tt.HasText("Stop") || !tt.HasText("Working…") {
@@ -204,7 +253,7 @@ func TestAIDefaultProvider(t *testing.T) {
 		t.Fatal(err)
 	}
 	tt.Frame()
-	if p := a.paneProvider(a.conns[id]); p == nil || p.ID != "p2" || !tt.HasText("Beta") {
+	if p := a.paneProvider(a.conns[id]); p == nil || p.ID != "p2" || !tt.HasText("beta-2") {
 		t.Fatalf("pane provider %+v", p)
 	}
 	if err := a.deleteProvider("p2"); err != nil {

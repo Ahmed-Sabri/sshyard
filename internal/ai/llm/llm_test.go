@@ -1,4 +1,4 @@
-package openai
+package llm
 
 import (
 	"context"
@@ -42,7 +42,7 @@ data: [DONE]
 	defer srv.Close()
 
 	var chunks []Event
-	c := &Client{BaseURL: srv.URL + "/v1", APIKey: key, Model: "fake-model", Headers: map[string]string{"X-Title": "SSHYard", "Authorization": "Bearer other"}, Temperature: 0.2, MaxTokens: 16}
+	c := &Client{BaseURL: srv.URL + "/v1", APIKey: key, Model: "fake-model", Headers: map[string]string{"X-Title": "SSHYard", "Authorization": "Bearer other"}, Temperature: ptr(0.2), MaxTokens: 16}
 	msg, err := c.Stream(context.Background(), Request{Messages: []Message{{Role: "user", Content: "disk?"}}, Tools: []Tool{{Name: "run_command", Description: "run", Parameters: []byte(`{"type":"object"}`)}}}, func(e Event) {
 		chunks = append(chunks, e)
 	})
@@ -55,7 +55,7 @@ data: [DONE]
 	if gotExtra != "SSHYard" {
 		t.Fatalf("extra header %q", gotExtra)
 	}
-	if !strings.Contains(body, `"model":"fake-model"`) || !strings.Contains(body, `"stream":true`) || !strings.Contains(body, `"temperature":0.2`) || !strings.Contains(body, `"max_tokens":16`) {
+	if !strings.Contains(body, `"model":"fake-model"`) || !strings.Contains(body, `"stream":true`) || !strings.Contains(body, `"temperature":0.2`) || !strings.Contains(body, `"max_completion_tokens":16`) {
 		t.Fatalf("body %s", body)
 	}
 	if strings.Contains(body, key) {
@@ -243,7 +243,7 @@ func TestTemperatureOmittedWhenZero(t *testing.T) {
 	if _, err := c.Stream(context.Background(), Request{Messages: []Message{{Role: "user", Content: "ping"}}}, nil); err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(body, "temperature") || strings.Contains(body, "max_tokens") || strings.Contains(body, "tools") {
+	if strings.Contains(body, "temperature") || strings.Contains(body, "max_") || strings.Contains(body, "reasoning") || strings.Contains(body, "tools") {
 		t.Fatalf("body %s", body)
 	}
 }

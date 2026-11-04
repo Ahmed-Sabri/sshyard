@@ -13,7 +13,7 @@ import (
 	"testing"
 
 	"github.com/Licoy/sshyard/internal/ai/agent"
-	"github.com/Licoy/sshyard/internal/ai/openai"
+	"github.com/Licoy/sshyard/internal/ai/llm"
 	"github.com/Licoy/sshyard/internal/ai/policy"
 	"github.com/Licoy/sshyard/internal/keychain"
 	"github.com/Licoy/sshyard/internal/settings"
@@ -115,7 +115,7 @@ func TestAIProviderDeletionInvalidatesCachedClient(t *testing.T) {
 	if c.ai.sess != session {
 		t.Fatal("history session replaced")
 	}
-	if _, err := c.ai.box.Stream(t.Context(), openai.Request{}, nil); !errors.Is(err, errAIProvider) {
+	if _, err := c.ai.box.Stream(t.Context(), llm.Request{}, nil); !errors.Is(err, errAIProvider) {
 		t.Fatalf("cached client survived: %v", err)
 	}
 }
@@ -206,5 +206,78 @@ func TestAIProviderKeyOnlyChangeCancelsAndSaveFailureRollsBack(t *testing.T) {
 	}
 	if a.prov.err != locales.In("en").AiSettingsSaveFailed() {
 		t.Fatal("save failure did not remain visible")
+	}
+}
+
+func TestAIProviderSheetFormatParamsAndModels(t *testing.T) {
+	var gotPath, gotKey string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath, gotKey = r.URL.Path, r.Header.Get("X-Api-Key")
+		io.WriteString(w, `{"data":[{"id":"claude-b"},{"id":"claude-a"},{"id":"text-embedding-x"}],"has_more":false}`)
+	}))
+	defer srv.Close()
+	a, tt := newTestApp(t)
+	tt.SetSize(1200, 3200)
+	a.openSettings(prefAI)
+	tt.Frame()
+	mustClick(t, tt, "Add Provider")
+	tt.Frame()
+	f := a.prov
+	if !tt.HasText("API format") || !tt.HasText("Default model") || !tt.HasText("Advanced") || tt.HasText("Top P") {
+		t.Fatalf("texts %q", tt.Texts())
+	}
+	f.name, f.base, f.key, f.format = "lab", srv.URL+"/v1", "test-key-not-real", 2
+	mustClick(t, tt, "Fetch Models")
+	waitFor(t, tt, "models", func() bool { return !f.fetching })
+	if f.fetchErr != "" || strings.Join(f.models, ",") != "claude-a,claude-b" || f.model != "claude-a" || gotPath != "/v1/models" || gotKey != "test-key-not-real" {
+		t.Fatalf("fetch %q %v %q %s %q", f.fetchErr, f.models, f.model, gotPath, gotKey)
+	}
+	if !tt.HasText("Found 2 chat models") {
+		t.Fatalf("texts %q", tt.Texts())
+	}
+
+	f.advanced = true
+	tt.Frame()
+	if !tt.HasText("Top P") || !tt.HasText("The Anthropic format requires a limit. 32000 is sent while it is unticked.") || tt.HasText("Send the limit as max_tokens (older endpoints)") {
+		t.Fatalf("advanced texts %q", tt.Texts())
+	}
+	f.useTemp, f.temp = true, 0.4
+	if !a.saveProvider(locales.In("en")) {
+		t.Fatal(f.err)
+	}
+	p := a.Settings().AIProviders[0]
+	if p.Format != settings.AIFormatAnthropic || p.Model != "claude-a" || len(p.Models) != 2 || p.Temperature == nil || *p.Temperature != 0.4 || p.TopP != nil || p.MaxTokens != nil {
+		t.Fatalf("saved %+v", p)
+	}
+
+	// Reopened, the ticked parameter stays ticked and the rest stay off.
+	a.openProvider(&p)
+	g := a.prov
+	if g.format != 2 || !g.useTemp || g.useTopP || g.useTokens || !g.advanced || len(g.models) != 2 {
+		t.Fatalf("reopened %+v", g)
+	}
+	cl := llmClient(p, "k")
+	if cl.Format != llm.FormatAnthropic || cl.Temperature == nil || cl.TopP != nil || cl.MaxTokens != 0 {
+		t.Fatalf("client %+v", cl)
+	}
+}
+
+func TestAIProviderTestSendsNoTokenLimit(t *testing.T) {
+	var body string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		body = string(b)
+		io.WriteString(w, `{"choices":[{"message":{"content":"pong"},"finish_reason":"stop"}]}`)
+	}))
+	defer srv.Close()
+	a, tt := newTestApp(t)
+	tt.SetSize(1200, 3200)
+	a.openProvider(nil)
+	f := a.prov
+	f.name, f.base, f.model, f.key = "lab", srv.URL, "gpt-6", "test-key-not-real"
+	a.testProvider()
+	waitFor(t, tt, "test", func() bool { return !f.testing })
+	if f.test != "ok" || strings.Contains(body, "max_") || strings.Contains(body, "temperature") {
+		t.Fatalf("test %q body %s", f.test, body)
 	}
 }

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Licoy/sshyard/internal/ai/openai"
+	"github.com/Licoy/sshyard/internal/ai/llm"
 	"github.com/Licoy/sshyard/internal/ai/policy"
 )
 
@@ -30,9 +30,9 @@ var ErrPaused = errors.New("agent: paused after 25 tool calls")
 
 var errTurnPaused = errors.New("agent: turn is paused")
 
-// Streamer is the OpenAI-compatible completion client.
+// Streamer is the model client: one streamed completion in any of its formats.
 type Streamer interface {
-	Stream(ctx context.Context, req openai.Request, emit func(openai.Event)) (openai.Message, error)
+	Stream(ctx context.Context, req llm.Request, emit func(llm.Event)) (llm.Message, error)
 }
 
 // Config builds a Session. A nil Tools uses Unavailable.
@@ -75,6 +75,7 @@ type ToolCard struct {
 	Path     string
 	Dir      string
 	Verdict  string // full, auto, reviewer, user, reject, timeout, cancel
+	Review   string // the review model's note, when one was asked
 	Refusal  string
 	Output   string
 	Diff     string
@@ -90,12 +91,12 @@ type Session struct {
 	tools    Tools
 	redact   bool
 	maxChars int
-	msgs     []openai.Message
+	msgs     []llm.Message
 	hostSent bool
 	used     int
 	limit    int
 	paused   bool
-	pending  []openai.ToolCall
+	pending  []llm.ToolCall
 }
 
 // New starts a session with the system prompt. The host context is added
@@ -115,7 +116,7 @@ func New(cfg Config) *Session {
 		tools:    tools,
 		redact:   cfg.Redact,
 		maxChars: maxChars,
-		msgs:     []openai.Message{{Role: "system", Content: SystemPrompt}},
+		msgs:     []llm.Message{{Role: "system", Content: SystemPrompt}},
 	}
 }
 
@@ -128,6 +129,12 @@ func (s *Session) Paused() bool { return s.paused }
 // Turn sends one user message. terminal, when set, is attached as untrusted
 // data. A paused session refuses until Continue.
 func (s *Session) Turn(ctx context.Context, user string, meta HostMeta, terminal string, emit func(Event)) error {
+	return s.TurnWith(ctx, user, nil, meta, terminal, emit)
+}
+
+// TurnWith is Turn with files attached to the message: images and
+// documents the model reads.
+func (s *Session) TurnWith(ctx context.Context, user string, parts []llm.Part, meta HostMeta, terminal string, emit func(Event)) error {
 	if s.paused {
 		return errTurnPaused
 	}
@@ -138,7 +145,7 @@ func (s *Session) Turn(ctx context.Context, user string, meta HostMeta, terminal
 		return errors.New("agent: gate is nil")
 	}
 	if !s.hostSent {
-		s.msgs = append(s.msgs, openai.Message{Role: "system", Content: s.mask(hostMessage(meta))})
+		s.msgs = append(s.msgs, llm.Message{Role: "system", Content: s.mask(hostMessage(meta))})
 		s.hostSent = true
 	}
 	text := user
@@ -148,7 +155,7 @@ func (s *Session) Turn(ctx context.Context, user string, meta HostMeta, terminal
 		}
 		text += WrapUntrusted("terminal", terminal)
 	}
-	s.msgs = append(s.msgs, openai.Message{Role: "user", Content: s.mask(text)})
+	s.msgs = append(s.msgs, llm.Message{Role: "user", Content: s.mask(text), Parts: parts})
 	s.used = 0
 	s.limit = MaxToolCalls
 	s.pending = nil
@@ -177,8 +184,8 @@ func (s *Session) loop(ctx context.Context, emit func(Event)) error {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		s.msgs = trimContext(s.msgs, s.maxChars)
-		msg, err := s.model.Stream(ctx, s.request(), func(ev openai.Event) {
+		s.msgs = trimParts(trimContext(s.msgs, s.maxChars), MaxPartBytes)
+		msg, err := s.model.Stream(ctx, s.request(), func(ev llm.Event) {
 			if emit == nil {
 				return
 			}
@@ -202,7 +209,7 @@ func (s *Session) loop(ctx context.Context, emit func(Event)) error {
 			}
 			return nil
 		}
-		s.pending = append([]openai.ToolCall(nil), msg.ToolCalls...)
+		s.pending = append([]llm.ToolCall(nil), msg.ToolCalls...)
 		if err := s.drain(ctx, emit); err != nil {
 			return err
 		}
@@ -232,7 +239,7 @@ func (s *Session) drain(ctx context.Context, emit func(Event)) error {
 	return nil
 }
 
-func (s *Session) execOne(ctx context.Context, call openai.ToolCall, emit func(Event)) error {
+func (s *Session) execOne(ctx context.Context, call llm.ToolCall, emit func(Event)) error {
 	raw := strings.TrimSpace(call.Arguments)
 	fields, err := toolArguments(call.Name, raw)
 	if err != nil {
@@ -317,6 +324,7 @@ func (s *Session) execOne(ctx context.Context, call openai.ToolCall, emit func(E
 		Path:     act.Path,
 		Dir:      act.Dir,
 		Verdict:  verdictCode(verdict),
+		Review:   verdict.ReviewReason,
 		Diff:     diff,
 		Run:      verdict.Run,
 		Exit:     -1,
@@ -397,7 +405,7 @@ func (s *Session) emitTool(emit func(Event), card ToolCard) {
 }
 
 func (s *Session) appendTool(id, content string) {
-	s.msgs = append(s.msgs, openai.Message{Role: "tool", ToolCallID: id, Content: s.mask(content)})
+	s.msgs = append(s.msgs, llm.Message{Role: "tool", ToolCallID: id, Content: s.mask(content)})
 }
 
 func (s *Session) dropCall(id string) {
@@ -419,12 +427,12 @@ func (s *Session) mask(text string) string {
 	return text
 }
 
-func (s *Session) request() openai.Request {
-	msgs := make([]openai.Message, len(s.msgs))
+func (s *Session) request() llm.Request {
+	msgs := make([]llm.Message, len(s.msgs))
 	for i, m := range s.msgs {
 		msgs[i] = m
 		if len(m.ToolCalls) > 0 {
-			msgs[i].ToolCalls = append([]openai.ToolCall(nil), m.ToolCalls...)
+			msgs[i].ToolCalls = append([]llm.ToolCall(nil), m.ToolCalls...)
 		}
 		if s.redact {
 			msgs[i].Content = policy.Redact(m.Content)
@@ -433,7 +441,7 @@ func (s *Session) request() openai.Request {
 			}
 		}
 	}
-	return openai.Request{Messages: msgs, Tools: ToolDefs()}
+	return llm.Request{Messages: msgs, Tools: ToolDefs()}
 }
 
 func actionFor(name string, m map[string]any) policy.Action {
@@ -500,7 +508,7 @@ func truncOut(s string) string {
 	return s[:maxOutput] + "\n…"
 }
 
-func trimContext(msgs []openai.Message, max int) []openai.Message {
+func trimContext(msgs []llm.Message, max int) []llm.Message {
 	if max <= 0 {
 		max = defaultMaxChars
 	}
@@ -525,7 +533,43 @@ func trimContext(msgs []openai.Message, max int) []openai.Message {
 	return msgs
 }
 
-func messageSize(msgs []openai.Message) int {
+// MaxPartBytes is the most the files attached to a conversation weigh
+// together in one request; older ones give way to newer ones.
+const MaxPartBytes = 30 << 20
+
+// trimParts drops the files attached to the oldest messages, never to the
+// last question, until the rest weigh no more than max, and says in their
+// place which were dropped.
+func trimParts(msgs []llm.Message, max int) []llm.Message {
+	total, last := 0, -1
+	for i, m := range msgs {
+		for _, p := range m.Parts {
+			total += len(p.Data)
+		}
+		if m.Role == "user" {
+			last = i
+		}
+	}
+	for i := 0; i < last && total > max; i++ {
+		m := &msgs[i]
+		if len(m.Parts) == 0 {
+			continue
+		}
+		names := make([]string, len(m.Parts))
+		for j, p := range m.Parts {
+			total -= len(p.Data)
+			names[j] = p.Name
+		}
+		note := fmt.Sprintf("[attachments omitted: %s]", strings.Join(names, ", "))
+		if m.Content != "" {
+			note = m.Content + "\n\n" + note
+		}
+		m.Content, m.Parts = note, nil
+	}
+	return msgs
+}
+
+func messageSize(msgs []llm.Message) int {
 	n := 0
 	for _, m := range msgs {
 		n += len(m.Content)

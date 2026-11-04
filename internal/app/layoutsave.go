@@ -33,6 +33,8 @@ type nodeSnap struct {
 	Agent    string    `json:"agent,omitempty"`
 	Mode     string    `json:"mode,omitempty"`
 	Provider string    `json:"provider,omitempty"`
+	Model    string    `json:"model,omitempty"`
+	Effort   string    `json:"effort,omitempty"`
 }
 
 func (a *App) layoutPath() string {
@@ -102,7 +104,7 @@ func (a *App) snapNode(n *layout.Node) *nodeSnap {
 	if !layoutAI(c) {
 		return nil
 	}
-	return &nodeSnap{Kind: "ai", Host: c.host.ID, Agent: c.ai.agent, Mode: c.ai.mode, Provider: c.ai.provider}
+	return &nodeSnap{Kind: "ai", Host: c.host.ID, Agent: c.ai.agent, Mode: c.ai.mode, Provider: c.ai.provider, Model: c.ai.model, Effort: c.ai.effort}
 }
 
 // layoutAI is a pane the layout file keeps: an AI pane on a saved host.
@@ -191,6 +193,6 @@ func (a *App) restoreLeaf(n *nodeSnap) *conn {
 	if n.Mode != "full" {
 		c.ai.mode = n.Mode
 	}
-	c.ai.provider = n.Provider
+	c.ai.provider, c.ai.model, c.ai.effort = n.Provider, n.Model, n.Effort
 	return c
 }

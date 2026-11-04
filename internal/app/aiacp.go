@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -109,7 +111,7 @@ func (r *acpRuntime) start(ctx context.Context, a *App, cfg session.Config, key 
 	return ctx.Err()
 }
 
-func (a *App) sendACP(c *conn, text string) {
+func (a *App) sendACP(c *conn, text string, files []*aiAttach) {
 	if strings.TrimSpace(a.settings.AIACP.Command) == "" {
 		c.ai.items = append(c.ai.items, aiItem{kind: "err", text: "acp-start"})
 		return
@@ -158,8 +160,16 @@ func (a *App) sendACP(c *conn, text string) {
 	if terminal := a.aiTerminal(c); terminal != "" {
 		resources = append(resources, acp.Resource{URI: "sshyard://terminal", Text: agent.WrapUntrusted("terminal", terminal)})
 	}
-	c.ai.items = append(c.ai.items, aiItem{kind: "user", text: text})
+	for i, f := range files {
+		if f.text() {
+			uri := "sshyard://attachment/" + strconv.Itoa(i+1) + "/" + url.PathEscape(f.name)
+			resources = append(resources, acp.Resource{URI: uri, Text: agent.WrapUntrusted("file "+f.name, string(f.data))})
+		}
+	}
+	c.ai.items = append(c.ai.items, aiItem{kind: "user", text: text, files: files})
 	c.ai.input = ""
+	c.ai.attach = nil
+	c.ai.task = text
 	c.ai.gen++
 	c.ai.running = true
 	c.ai.paused = false

@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/Licoy/sshyard/internal/session"
@@ -62,7 +63,7 @@ type Settings struct {
 	// MetricsMount is an extra filesystem shown beside the root. Empty is the root only.
 	MetricsMount string `json:"metricsMount,omitempty"`
 	// AIDefaultAgent is the agent a new AI pane starts with. "builtin"
-	// is the in-process OpenAI-compatible agent.
+	// is the in-process agent, which speaks to the configured providers.
 	AIDefaultAgent string `json:"aiDefaultAgent,omitempty"`
 	// AIACP is a user-supplied ACP executable; arguments are passed directly, without a shell
 	AIACP ACPConfig `json:"aiACP,omitempty"`
@@ -72,6 +73,15 @@ type Settings struct {
 	AIDefaultMode string `json:"aiDefaultMode,omitempty"`
 	// AIReviewProvider is an AIProviders ID, or empty for no review model.
 	AIReviewProvider string `json:"aiReviewProvider,omitempty"`
+	// AIReviewKind is how the review model is asked: AIReviewChat,
+	// AIReviewDecisions or AIReviewJev, as the provider's format allows.
+	AIReviewKind string `json:"aiReviewKind,omitempty"`
+	// AIReviewModel is the model reviewing. Empty is the provider's
+	// default for AIReviewChat, and the kind's default model otherwise.
+	AIReviewModel string `json:"aiReviewModel,omitempty"`
+	// AIReviewStrictness is how sure a decision model must be that an
+	// action is safe to allow it: loose, standard or strict.
+	AIReviewStrictness string `json:"aiReviewStrictness,omitempty"`
 	// AIDefaultProvider is the AIProviders ID a new AI pane asks, or empty
 	// for the first of them.
 	AIDefaultProvider string `json:"aiDefaultProvider,omitempty"`
@@ -104,16 +114,88 @@ type ACPConfig struct {
 }
 
 // AIProvider is one built-in agent profile. Headers are non-secret;
-// the API key is keychain.AIKey(ID).
+// the API key is keychain.AIKey(ID). Model is the default model a pane
+// asks; Models are the endpoint's chat models, as last fetched.
+//
+// A nil Temperature, TopP or MaxTokens is not sent, so the provider's
+// default applies. LegacyMaxTokens sends a Chat Completions limit as
+// max_tokens instead of max_completion_tokens.
 type AIProvider struct {
-	ID          string            `json:"id"`
-	Name        string            `json:"name"`
-	BaseURL     string            `json:"baseUrl"`
-	Model       string            `json:"model"`
-	Headers     map[string]string `json:"headers,omitempty"`
-	Temperature float64           `json:"temperature,omitempty"`
-	MaxTokens   int               `json:"maxTokens,omitempty"`
+	ID              string            `json:"id"`
+	Name            string            `json:"name"`
+	Format          string            `json:"format,omitempty"`
+	BaseURL         string            `json:"baseUrl"`
+	Model           string            `json:"model"`
+	Models          []string          `json:"models,omitempty"`
+	Headers         map[string]string `json:"headers,omitempty"`
+	Temperature     *float64          `json:"temperature,omitempty"`
+	TopP            *float64          `json:"topP,omitempty"`
+	MaxTokens       *int              `json:"maxTokens,omitempty"`
+	LegacyMaxTokens bool              `json:"legacyMaxTokens,omitempty"`
 }
+
+// The wire formats of an AIProvider, as internal/ai/llm names them.
+const (
+	AIFormatChat      = "chat"
+	AIFormatResponses = "responses"
+	AIFormatAnthropic = "anthropic"
+	// AIFormatTypeSafe decides and does not chat: it only reviews.
+	AIFormatTypeSafe = "typesafe"
+)
+
+// CanChat reports whether a pane can ask the provider questions.
+func (p AIProvider) CanChat() bool { return p.Format != AIFormatTypeSafe }
+
+// The ways a review model is asked. AIReviewChat asks a chat model for a
+// JSON verdict; AIReviewDecisions asks OpenAI Decisions and AIReviewJev
+// asks TypeSafe's Jev how likely the action is safe.
+const (
+	AIReviewChat      = "chat"
+	AIReviewDecisions = "decisions"
+	AIReviewJev       = "jev"
+)
+
+// The default models of the decision reviews.
+const (
+	AIDecisionsModel = "gpt-6-luna"
+	AIJevModel       = "jev-latest"
+)
+
+// ReviewKinds are the kinds of review a provider of format can give.
+func ReviewKinds(format string) []string {
+	switch format {
+	case AIFormatTypeSafe:
+		return []string{AIReviewJev}
+	case AIFormatAnthropic:
+		return []string{AIReviewChat}
+	}
+	return []string{AIReviewChat, AIReviewDecisions}
+}
+
+// The strictness of a decision review.
+const (
+	AIReviewLoose    = "loose"
+	AIReviewStandard = "standard"
+	AIReviewStrict   = "strict"
+)
+
+// ReviewThreshold is the least probability that an action is safe for a
+// decision review of strictness s to allow it.
+func ReviewThreshold(s string) float64 {
+	switch s {
+	case AIReviewLoose:
+		return 0.8
+	case AIReviewStrict:
+		return 0.97
+	}
+	return 0.9
+}
+
+// AIMaxTokensMax bounds AIProvider.MaxTokens; AIModelsMax bounds Models.
+const (
+	AIMaxTokensMax = 1_000_000
+	AIModelsMax    = 1000
+)
 
 const (
 	// OSC52Allow lets a remote program copy to the clipboard.
@@ -146,7 +228,7 @@ var Languages = []string{"en", "zh-Hans"}
 // Default returns the defaults.
 func Default() Settings {
 	return Settings{Theme: theme.Auto, CheckUpdates: true, TerminalFontSize: 13, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, OSC52Write: OSC52Ask, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
-		AIDefaultAgent: "builtin", AIDefaultMode: "ask", AIContextLines: 200, AIAuditRetentionDays: 90, AIRedact: true, MCPPort: MCPPortDefault}
+		AIDefaultAgent: "builtin", AIDefaultMode: "ask", AIReviewStrictness: AIReviewStandard, AIContextLines: 200, AIAuditRetentionDays: 90, AIRedact: true, MCPPort: MCPPortDefault}
 }
 
 // ResolveOSC52Write is the write policy in effect. A host value of allow,
@@ -248,12 +330,9 @@ func (s *Settings) normalizeAI(d Settings) {
 			known[id] = true
 		}
 	}
-	s.AIReviewProvider = strings.TrimSpace(s.AIReviewProvider)
-	if s.AIReviewProvider != "" && !known[s.AIReviewProvider] {
-		s.AIReviewProvider = ""
-	}
+	s.normalizeReview()
 	s.AIDefaultProvider = strings.TrimSpace(s.AIDefaultProvider)
-	if s.AIDefaultProvider != "" && !known[s.AIDefaultProvider] {
+	if p := s.provider(s.AIDefaultProvider); p == nil || !p.CanChat() {
 		s.AIDefaultProvider = ""
 	}
 	s.AIConsentHosts = cleanList(s.AIConsentHosts)
@@ -267,14 +346,40 @@ func (p *AIProvider) normalize() {
 	p.Name = strings.TrimSpace(p.Name)
 	p.BaseURL = strings.TrimSpace(p.BaseURL)
 	p.Model = strings.TrimSpace(p.Model)
-	if p.Temperature < 0 || p.Temperature > 2 {
-		p.Temperature = 0
+	switch p.Format {
+	case AIFormatChat, AIFormatResponses, AIFormatAnthropic, AIFormatTypeSafe:
+	case "":
+		// A profile from before formats sent its limit as max_tokens.
+		p.Format = AIFormatChat
+		p.LegacyMaxTokens = p.LegacyMaxTokens || p.MaxTokens != nil
+	default:
+		p.Format = AIFormatChat
 	}
-	if p.MaxTokens < 0 {
-		p.MaxTokens = 0
+	if p.Format != AIFormatChat {
+		p.LegacyMaxTokens = false
 	}
-	if p.MaxTokens > 200000 {
-		p.MaxTokens = 200000
+	if p.Format == AIFormatTypeSafe {
+		// A decision takes no sampling parameters.
+		p.Temperature, p.TopP, p.MaxTokens = nil, nil, nil
+	}
+	if p.Temperature != nil && (*p.Temperature < 0 || *p.Temperature > 2) {
+		p.Temperature = nil
+	}
+	if p.TopP != nil && (*p.TopP < 0 || *p.TopP > 1) {
+		p.TopP = nil
+	}
+	if p.MaxTokens != nil {
+		switch n := *p.MaxTokens; {
+		case n <= 0:
+			p.MaxTokens = nil
+		case n > AIMaxTokensMax:
+			v := AIMaxTokensMax
+			p.MaxTokens = &v
+		}
+	}
+	p.Models = cleanList(p.Models)
+	if len(p.Models) > AIModelsMax {
+		p.Models = p.Models[:AIModelsMax]
 	}
 	p.Headers = cleanHeaders(p.Headers)
 }
@@ -331,11 +436,18 @@ func loopback(host string) bool {
 // and Authorization (any case). The API key is not a header.
 func CheckHeaders(h map[string]string) error {
 	for k, v := range h {
-		if headerBad(k) || headerBad(v) || strings.EqualFold(strings.TrimSpace(k), "Authorization") {
+		if headerBad(k) || headerBad(v) || credentialHeader(k) {
 			return ErrHeader
 		}
 	}
 	return nil
+}
+
+// credentialHeader reports a header that carries the API key, which only
+// the key store may set.
+func credentialHeader(k string) bool {
+	k = strings.TrimSpace(k)
+	return strings.EqualFold(k, "Authorization") || strings.EqualFold(k, "X-Api-Key")
 }
 
 func headerBad(s string) bool {
@@ -352,7 +464,7 @@ func cleanHeaders(h map[string]string) map[string]string {
 	out := map[string]string{}
 	for k, v := range h {
 		k, v = strings.TrimSpace(k), strings.TrimSpace(v)
-		if headerBad(k) || strings.ContainsAny(v, "\r\n\x00") || strings.EqualFold(k, "Authorization") {
+		if headerBad(k) || strings.ContainsAny(v, "\r\n\x00") || credentialHeader(k) {
 			continue
 		}
 		out[k] = v
@@ -424,4 +536,38 @@ func WriteFileAtomic(path string, data []byte, perm os.FileMode) error {
 		return err
 	}
 	return os.Rename(tmp, path)
+}
+
+func (s *Settings) provider(id string) *AIProvider {
+	if id == "" {
+		return nil
+	}
+	for i := range s.AIProviders {
+		if s.AIProviders[i].ID == id {
+			return &s.AIProviders[i]
+		}
+	}
+	return nil
+}
+
+// normalizeReview keeps a review its provider can give: a kind the
+// provider's format allows, its first when none is, and a known strictness.
+// A setting from before kinds asked the provider's chat model.
+func (s *Settings) normalizeReview() {
+	s.AIReviewProvider = strings.TrimSpace(s.AIReviewProvider)
+	s.AIReviewModel = strings.TrimSpace(s.AIReviewModel)
+	p := s.provider(s.AIReviewProvider)
+	if p == nil {
+		s.AIReviewProvider, s.AIReviewKind, s.AIReviewModel = "", "", ""
+	} else if kinds := ReviewKinds(p.Format); !slices.Contains(kinds, s.AIReviewKind) {
+		if s.AIReviewKind != "" {
+			s.AIReviewModel = ""
+		}
+		s.AIReviewKind = kinds[0]
+	}
+	switch s.AIReviewStrictness {
+	case AIReviewLoose, AIReviewStrict:
+	default:
+		s.AIReviewStrictness = AIReviewStandard
+	}
 }

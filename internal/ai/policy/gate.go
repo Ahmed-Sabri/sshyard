@@ -27,7 +27,8 @@ const (
 // A nil Auditor skips the log. PromptTimeout and ReviewTimeout of 0
 // use the defaults (5 minutes and 10 seconds).
 // Output, when set, supplies the recent untrusted terminal text the
-// reviewer may see (the gate keeps the last 20 lines).
+// reviewer may see (the gate keeps the last 20 lines). Task, when set,
+// supplies what the user asked for in the current turn.
 type GateConfig struct {
 	Engine        Engine
 	Mode          func() Mode
@@ -41,6 +42,7 @@ type GateConfig struct {
 	Host          string
 	HostMeta      string
 	Output        func() string
+	Task          func() string
 	Now           func() time.Time
 	PromptTimeout time.Duration
 	ReviewTimeout time.Duration
@@ -59,6 +61,7 @@ type gate struct {
 	host          string
 	hostMeta      string
 	output        func() string
+	task          func() string
 	nowFn         func() time.Time
 	promptTimeout time.Duration
 	reviewTimeout time.Duration
@@ -66,7 +69,18 @@ type gate struct {
 	mu      sync.Mutex
 	grants  []grant
 	pending []pendingRec
+	// reviews are the reviewer's answers in this session, by action, so
+	// the same action is not reviewed twice.
+	reviews map[string]reviewMemo
 }
+
+type reviewMemo struct {
+	allow  bool
+	reason string
+}
+
+// maxReviewMemos bounds the answers a session remembers.
+const maxReviewMemos = 256
 
 type grant struct {
 	cat    Category
@@ -104,6 +118,7 @@ func NewGate(cfg GateConfig) Gate {
 		scope:         cfg.Scope,
 		prompter:      cfg.Prompter,
 		reviewer:      cfg.Reviewer,
+		task:          cfg.Task,
 		auditor:       cfg.Auditor,
 		session:       cfg.SessionID,
 		pane:          cfg.PaneID,
@@ -222,7 +237,17 @@ func (g *gate) Done(a Action, v Verdict, exit int, durMS int64, outBytes int64) 
 	_ = g.write(rec)
 }
 
+// callReview asks the reviewer about in, or answers as it did for the same
+// action earlier in the session. Only answers are remembered: a failure is
+// asked again next time.
 func (g *gate) callReview(ctx context.Context, in ReviewInput) (bool, string, error) {
+	key := reviewKey(in)
+	g.mu.Lock()
+	memo, seen := g.reviews[key]
+	g.mu.Unlock()
+	if seen {
+		return memo.allow, memo.reason, nil
+	}
 	cctx, cancel := context.WithTimeout(ctx, g.reviewTimeout)
 	defer cancel()
 	allow, reason, err := g.reviewer.Review(cctx, in)
@@ -233,7 +258,21 @@ func (g *gate) callReview(ctx context.Context, in ReviewInput) (bool, string, er
 	if cctx.Err() != nil {
 		return false, "", cctx.Err()
 	}
+	if err == nil {
+		g.mu.Lock()
+		if g.reviews == nil || len(g.reviews) >= maxReviewMemos {
+			g.reviews = map[string]reviewMemo{}
+		}
+		g.reviews[key] = reviewMemo{allow, reason}
+		g.mu.Unlock()
+	}
 	return allow, reason, err
+}
+
+// reviewKey is the action a review judged: what it does and where, not
+// the terminal around it or the turn that asked for it.
+func reviewKey(in ReviewInput) string {
+	return strings.Join([]string{string(in.Category), in.Risk.String(), in.Command, in.Path, in.DiffSum}, "\x00")
 }
 
 func (g *gate) callPrompt(ctx context.Context, p Prompt) Answer {
@@ -254,7 +293,12 @@ func (g *gate) reviewInput(a Action, d Decision, diff string) ReviewInput {
 	if g.output != nil {
 		out = lastLines(g.output(), 20)
 	}
+	task := ""
+	if g.task != nil {
+		task = g.task()
+	}
 	return ReviewInput{
+		Task:     Redact(truncRunes(task, maxReviewTask)),
 		Category: d.Category,
 		Risk:     d.Risk,
 		Command:  Redact(a.Command),

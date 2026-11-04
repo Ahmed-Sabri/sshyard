@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/Licoy/sshyard/internal/ai/agent"
-	"github.com/Licoy/sshyard/internal/ai/openai"
+	"github.com/Licoy/sshyard/internal/ai/llm"
 	"github.com/Licoy/sshyard/internal/ai/policy"
 	"github.com/Licoy/sshyard/internal/assets"
 	"github.com/Licoy/sshyard/internal/keychain"
@@ -620,9 +620,9 @@ func TestFullModeUnknownAsksRed(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.newModel = func(*conn) agent.Streamer {
-		return &replyModel{replies: []openai.Message{{
+		return &replyModel{replies: []llm.Message{{
 			Role: "assistant",
-			ToolCalls: []openai.ToolCall{{
+			ToolCalls: []llm.ToolCall{{
 				ID: "c1", Name: "run_command", Arguments: `{"command":"foobar"}`,
 			}},
 		}}}
@@ -1069,7 +1069,7 @@ func TestAIProviderRejectsBadURLAndHeader(t *testing.T) {
 	a.prov.headers = "Authorization: Bearer test-key-not-real"
 	mustClick(t, tt, "Save")
 	tt.Frame()
-	if !tt.HasText("A header is empty, has a line break, or is Authorization.") || len(a.Settings().AIProviders) != 0 {
+	if !tt.HasText("A header is empty, has a line break, or carries the API key (Authorization, X-Api-Key). Put the API key in the key field.") || len(a.Settings().AIProviders) != 0 {
 		t.Fatalf("header accepted, texts %q", tt.Texts())
 	}
 	a.prov.headers = ""
@@ -1082,38 +1082,38 @@ func TestAIProviderRejectsBadURLAndHeader(t *testing.T) {
 
 type echoModel struct{}
 
-func (echoModel) Stream(_ context.Context, req openai.Request, _ func(openai.Event)) (openai.Message, error) {
+func (echoModel) Stream(_ context.Context, req llm.Request, _ func(llm.Event)) (llm.Message, error) {
 	var last string
 	for _, m := range req.Messages {
 		if m.Role == "user" {
 			last = m.Content
 		}
 	}
-	return openai.Message{Role: "assistant", Content: "echo:" + last}, nil
+	return llm.Message{Role: "assistant", Content: "echo:" + last}, nil
 }
 
 // scriptModel's first reply is a tool call; the rest are short text.
 type scriptModel struct{ n int }
 
-func (m *scriptModel) Stream(_ context.Context, _ openai.Request, _ func(openai.Event)) (openai.Message, error) {
+func (m *scriptModel) Stream(_ context.Context, _ llm.Request, _ func(llm.Event)) (llm.Message, error) {
 	m.n++
 	if m.n == 1 {
-		return openai.Message{Role: "assistant", ToolCalls: []openai.ToolCall{{
+		return llm.Message{Role: "assistant", ToolCalls: []llm.ToolCall{{
 			ID: "c1", Name: "write_file", Arguments: `{"path":"/etc/nginx.conf","content":"worker_processes 1;\n","reason":"edit"}`,
 		}}}, nil
 	}
-	return openai.Message{Role: "assistant", Content: "stopped"}, nil
+	return llm.Message{Role: "assistant", Content: "stopped"}, nil
 }
 
 // replyModel returns the scripted messages, then a short close.
 type replyModel struct {
-	replies []openai.Message
+	replies []llm.Message
 	n       int
 }
 
-func (m *replyModel) Stream(_ context.Context, _ openai.Request, _ func(openai.Event)) (openai.Message, error) {
+func (m *replyModel) Stream(_ context.Context, _ llm.Request, _ func(llm.Event)) (llm.Message, error) {
 	if m.n >= len(m.replies) {
-		return openai.Message{Role: "assistant", Content: "done"}, nil
+		return llm.Message{Role: "assistant", Content: "done"}, nil
 	}
 	msg := m.replies[m.n]
 	m.n++
@@ -1125,12 +1125,12 @@ func (m *replyModel) Stream(_ context.Context, _ openai.Request, _ func(openai.E
 
 type blockModel struct{ done chan struct{} }
 
-func (m *blockModel) Stream(ctx context.Context, _ openai.Request, _ func(openai.Event)) (openai.Message, error) {
+func (m *blockModel) Stream(ctx context.Context, _ llm.Request, _ func(llm.Event)) (llm.Message, error) {
 	select {
 	case <-ctx.Done():
-		return openai.Message{}, ctx.Err()
+		return llm.Message{}, ctx.Err()
 	case <-m.done:
-		return openai.Message{Content: "go"}, nil
+		return llm.Message{Content: "go"}, nil
 	}
 }
 

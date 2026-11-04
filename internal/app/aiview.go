@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Licoy/sshyard/internal/ai/agent"
+	"github.com/Licoy/sshyard/internal/ai/llm"
 	"github.com/Licoy/sshyard/internal/ai/policy"
 	"github.com/Licoy/sshyard/internal/icons"
 	"github.com/Licoy/sshyard/internal/layout"
@@ -43,9 +44,6 @@ func (a *App) aiPane(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, tok
 			}
 			ui.Spacer(c).Shrink(1)
 			a.agentChip(c, cn, tok, m)
-			if cn.ai.agent == "builtin" {
-				a.providerChip(c, cn, tok, m)
-			}
 			if (IconButton{Icon: icons.SplitRight, Label: m.SplitRight(), Size: Tiny}).Clicked(c, "splitright") {
 				t.Focus = n.ID
 				a.SplitFocused(layout.Right)
@@ -80,33 +78,201 @@ func providerName(p settings.AIProvider) string {
 	return p.ID
 }
 
-// providerChip shows the pane's provider in its header, and chooses
-// another from a menu. Without one it shows in the warning color.
-func (a *App) providerChip(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages) {
-	ch := chip{Icon: icons.Model, Label: m.AiNoProvider(), Tip: m.AiProvider(), Tint: tok.Warning}
-	cur := ""
-	if p := a.paneProvider(cn); p != nil {
-		ch.Label, ch.Tint, cur = providerName(*p), ui.Color{}, p.ID
+// effortLevels are the thinking levels a pane chooses from, in the order
+// its menu lists them; "" leaves the provider's default.
+var effortLevels = []string{"", llm.EffortNone, llm.EffortLow, llm.EffortMedium, llm.EffortHigh, llm.EffortXHigh}
+
+func effortName(m locales.Messages, e string) string {
+	switch e {
+	case llm.EffortNone:
+		return m.AiEffortNone()
+	case llm.EffortLow:
+		return m.AiEffortLow()
+	case llm.EffortMedium:
+		return m.AiEffortMedium()
+	case llm.EffortHigh:
+		return m.AiEffortHigh()
+	case llm.EffortXHigh:
+		return m.AiEffortXHigh()
 	}
-	a.menuChip(c, "aiprov:"+strconv.Itoa(cn.id), ch, func() []menuEntry {
-		var out []menuEntry
-		for _, p := range a.settings.AIProviders {
-			id := p.ID
-			e := menuEntry{Icon: icons.Model, Label: providerName(p), Checked: id == cur, Do: func() {
-				a.invalidateAI(cn)
-				cn.ai.provider = id
+	return m.AiEffortAuto()
+}
+
+// effortChip shows the pane's thinking level and chooses another. The
+// Anthropic format cannot turn thinking off, so it offers no "off".
+func (a *App) effortChip(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages) {
+	p := a.paneProvider(cn)
+	cur := ""
+	if p != nil {
+		cur = paneEffort(cn, p)
+	}
+	ch := chip{Icon: icons.Thinking, Label: effortName(m, cur), Tip: m.AiThinkingLevel()}
+	a.menuChip(c, "aieffort:"+strconv.Itoa(cn.id), ch, func() []menuEntry {
+		out := make([]menuEntry, 0, len(effortLevels))
+		for _, e := range effortLevels {
+			if e == llm.EffortNone && p != nil && p.Format == settings.AIFormatAnthropic {
+				continue
+			}
+			e := e
+			entry := menuEntry{Label: effortName(m, e), Checked: e == cur, Do: func() {
+				cn.ai.effort = e
 				a.saveLayout()
 			}}
-			if p.Model != "" && p.Model != e.Label {
-				e.Note = p.Model
+			if e == "" {
+				entry.Note = m.AiEffortAutoNote()
 			}
-			out = append(out, e)
+			out = append(out, entry)
 		}
-		if len(out) > 0 {
-			out = append(out, menuSep)
-		}
-		return append(out, menuEntry{Icon: icons.Settings, Label: m.AiManageProviders(), Do: func() { a.openSettings(prefAI) }})
+		return out
 	})
+}
+
+// modelChoice is one model in the model menu, of provider p.
+type modelChoice struct {
+	p     *settings.AIProvider
+	model string
+}
+
+// modelChoices are the models of each provider matching query, the
+// provider's default first, in the order the settings list providers.
+func (a *App) modelChoices(query string) [][]modelChoice {
+	query = strings.ToLower(strings.TrimSpace(query))
+	var out [][]modelChoice
+	for i := range a.settings.AIProviders {
+		p := &a.settings.AIProviders[i]
+		if !p.CanChat() {
+			continue
+		}
+		var group []modelChoice
+		seen := map[string]bool{}
+		for _, id := range append([]string{p.Model}, p.Models...) {
+			if id == "" || seen[id] || !strings.Contains(strings.ToLower(id), query) {
+				continue
+			}
+			seen[id] = true
+			group = append(group, modelChoice{p: p, model: id})
+		}
+		out = append(out, group)
+	}
+	return out
+}
+
+// chooseModel makes the pane ask model of provider p. Another provider
+// starts a new session; another model of the same one keeps it.
+func (a *App) chooseModel(cn *conn, p *settings.AIProvider, model string) {
+	if cn.ai.provider != p.ID && !(cn.ai.provider == "" && a.defaultProvider() == p.ID) {
+		a.invalidateAI(cn)
+	}
+	cn.ai.provider = p.ID
+	cn.ai.model = model
+	if model == p.Model {
+		cn.ai.model = ""
+	}
+	a.saveLayout()
+}
+
+// modelMenuMax is the most models one provider lists before a search.
+const modelMenuMax = 200
+
+// modelChip shows the pane's model and chooses another, of any provider,
+// from a menu with a search field: Enter takes the first match, or the
+// name typed when nothing matches. Without a provider it shows in the
+// warning color.
+func (a *App) modelChip(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages) {
+	key := "aimodel:" + strconv.Itoa(cn.id)
+	p := a.paneProvider(cn)
+	ch := chip{Icon: icons.Model, Label: m.AiNoProvider(), Tip: m.AiModel(), Tint: tok.Warning}
+	cur := ""
+	if p != nil {
+		cur = paneModel(cn, p)
+		ch.Label, ch.Tint = cur, ui.Color{}
+	}
+	ch.open = a.menu.key == key
+	el := ch.show(c, key).Role(ui.RoleMenuButton).Expanded(ch.open)
+	open := ch.open
+	if el.Clicked() {
+		if open {
+			a.menu = dropMenu{}
+		} else {
+			a.menu = dropMenu{key: key, sub: -1, focus: 0}
+			cn.ai.query = ""
+		}
+		open = !open
+	}
+	if !open {
+		return
+	}
+	ui.PopoverBase(c.Key("menu:"+key), el, &open, func(panel ui.Element) {
+		panel.Margin(4, 0, 0, 0).Role(ui.RoleMenu).Width(300).Padding(5).Radius(theme.RadiusCard).Background(tok.Inset).
+			Border(1, tok.GlassEdge).FocusGroup(ui.Vertical)
+		tok.Lift.On(panel)
+		panel.Children(func() {
+			groups := a.modelChoices(cn.ai.query)
+			first := modelChoice{}
+			for _, g := range groups {
+				if len(g) > 0 {
+					first = g[0]
+					break
+				}
+			}
+			in := ui.TextInput(c.Key("q"), &cn.ai.query).Placeholder(m.AiSearchModels()).Label(m.AiSearchModels()).
+				FontSize(theme.Footnote).FillWidth().Margin(0, 0, 4, 0)
+			if a.menu.focus == 0 {
+				in.Focus()
+				a.menu.focus = -1
+			}
+			typed := strings.TrimSpace(cn.ai.query)
+			if in.Submitted() {
+				switch {
+				case first.p != nil:
+					a.chooseModel(cn, first.p, first.model)
+					open = false
+				case typed != "" && p != nil:
+					a.chooseModel(cn, p, typed)
+					open = false
+				}
+			}
+			ui.Scroll(c.Key("scroll")).MaxHeight(menuHeight).FillWidth().Children(func() {
+				ui.Column(c).FillWidth().Children(func() {
+					n := 0
+					for gi, g := range groups {
+						if len(g) == 0 {
+							continue
+						}
+						gp := g[0].p
+						ui.Text(c.Key("h:"+strconv.Itoa(gi)), providerName(*gp)).FontSize(theme.Caption).FontWeight(600).
+							TextColor(tok.TextMuted).SingleLine().Padding(6, 8, 2, 8)
+						for i, mc := range g {
+							if i >= modelMenuMax {
+								break
+							}
+							mc := mc
+							e := menuEntry{Label: mc.model, Checked: p != nil && mc.p.ID == p.ID && mc.model == cur, Do: func() { a.chooseModel(cn, mc.p, mc.model) }}
+							if mc.model == mc.p.Model {
+								e.Note = m.AiDefaultModel()
+							}
+							a.menuRow(c, tok, e, n, 0)
+							n++
+						}
+					}
+					if first.p == nil && typed != "" && p != nil {
+						a.menuRow(c, tok, menuEntry{Icon: icons.Model, Label: m.AiUseModel(typed), Do: func() { a.chooseModel(cn, p, typed) }}, n, 0)
+						n++
+					}
+					if n == 0 && typed != "" {
+						ui.Text(c, m.AiNoModels()).FontSize(theme.Footnote).TextColor(tok.TextMuted).Padding(6, 8)
+					}
+					ui.Box(c.Key("sep")).Height(1).Margin(4, 8).Background(tok.Line)
+					a.menuRow(c, tok, menuEntry{Icon: icons.Settings, Label: m.AiManageProviders(), Do: func() { a.openSettings(prefAI) }}, n, 0)
+				})
+			})
+		})
+	})
+	if !open || a.menu.key != key {
+		if a.menu.key == key {
+			a.menu = dropMenu{}
+		}
+	}
 }
 
 // aiModes are the permissions a pane runs under, in the order its menu
@@ -205,48 +371,90 @@ func (a *App) aiTimeline(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 	})
 }
 
-// aiComposer is the question being written, with the permission before it
-// and the send button after it, which stops the turn while one runs. Full
+// aiComposer is the question being written, on two to eight lines of its
+// own that grow with it, then scroll. Under it, in the same box: the
+// permission and the attachment button, and on the right, for the built-in
+// agent, the model and thinking level, then the send button, which stops
+// the turn while one runs. Enter sends; Shift+Enter breaks the line. Full
 // access shows a banner above it.
 func (a *App) aiComposer(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages) {
 	ui.Column(c.Key("aifoot")).Shrink(0).FillWidth().Padding(0, theme.Space(3), theme.Space(3), theme.Space(3)).Gap(theme.Space(2)).Children(func() {
 		if a.modeOf(cn) == policy.ModeFull {
 			aiBanner(c.Key("fullbar"), tok.Danger, icons.Warning, m.AiFullBar())
 		}
-		box := ui.Row(c.Key("aicompose")).FillWidth().Padding(4).Gap(theme.Space(1)).AlignItems(ui.Center).
+		box := ui.Column(c.Key("aicompose")).FillWidth().Padding(theme.Space(1)).Gap(theme.Space(1)).
 			Radius(theme.RadiusCard).Background(tok.Fill)
 		edge := tok.Line
 		if box.FocusWithin() {
 			edge = tok.Focus
 		}
+		drag := box.FileDragOver()
+		if drag {
+			edge = tok.Accent
+		}
+		if paths := box.DroppedFiles(); len(paths) > 0 {
+			a.attachPaths(cn, paths)
+		}
+		id := cn.id
 		box.Border(1, edge).Children(func() {
-			a.modeChip(c, cn, tok, m)
-			in := ui.TextInputBase(c.Key("aiin:"+strconv.Itoa(cn.id)+":"+strconv.Itoa(cn.ai.gen)), &cn.ai.input).
-				Placeholder(m.AiPlaceholder()).Label(m.AiPlaceholder()).FontSize(theme.Body).Padding(4, 6).Grow(1).Shrink(1).MinWidth(0)
+			if drag {
+				ui.Text(c.Key("aidrop"), m.AiDropFiles()).FontSize(theme.Footnote).TextColor(tok.Accent).Padding(theme.Space(1), theme.Space(2), 0, theme.Space(2))
+			}
+			if len(cn.ai.attach) > 0 {
+				ui.Column(c.Key("aiattach")).FillWidth().Padding(theme.Space(1), theme.Space(1), 0, theme.Space(1)).Children(func() {
+					a.attachStrip(c, tok, m, cn.ai.attach, func(i int) {
+						cn.ai.attach = append(cn.ai.attach[:i:i], cn.ai.attach[i+1:]...)
+					})
+				})
+			}
+			in := ui.TextAreaBase(c.Key("aiin:"+strconv.Itoa(cn.id)+":"+strconv.Itoa(cn.ai.gen)), &cn.ai.input).
+				Placeholder(m.AiPlaceholder()).Label(m.AiPlaceholder()).FontSize(theme.Body).Padding(theme.Space(1), theme.Space(2)).
+				FillWidth().Lines(2, 8).
+				OnTextKey(func(k ui.TextKey) bool {
+					if k.Key != ui.KeyEnter || k.Mods != 0 {
+						return false
+					}
+					text := k.Text()
+					a.post(func() {
+						if cn := a.conns[id]; cn != nil && cn.ai != nil && !cn.ai.running {
+							cn.ai.input = text
+							a.sendAI(cn)
+						}
+					})
+					return true
+				})
 			if a.focusReq == cn.id && a.page == pageWorkspace {
 				in.Focus()
 				a.focusReq = 0
 			}
-			if in.Submitted() {
-				a.sendAI(cn)
-			}
-			if cn.ai.running {
-				if (IconButton{Icon: icons.Stop, Label: m.StopAI(), Size: Small, Danger: true, Active: true}).Clicked(c, "aistop") {
-					a.StopAI(cn.id)
+			ui.Row(c.Key("aitools")).FillWidth().Gap(theme.Space(1)).AlignItems(ui.Center).Children(func() {
+				a.modeChip(c, cn, tok, m)
+				if (IconButton{Icon: icons.Attach, Label: m.AiAttach(), Size: Small, Disabled: a.p.PickFiles == nil}).Clicked(c, "aiattachbtn") {
+					a.pickAttach(cn, m)
 				}
-				return
-			}
-			empty := strings.TrimSpace(cn.ai.input) == ""
-			if (IconButton{Icon: icons.Send, Label: m.AiSend(), Size: Small, Active: !empty, Disabled: empty}).Clicked(c, "aisend") {
-				a.sendAI(cn)
-			}
+				ui.Spacer(c).Shrink(1)
+				if cn.ai.agent == "builtin" {
+					a.modelChip(c, cn, tok, m)
+					a.effortChip(c, cn, tok, m)
+				}
+				if cn.ai.running {
+					if (IconButton{Icon: icons.Stop, Label: m.StopAI(), Size: Small, Danger: true, Active: true}).Clicked(c, "aistop") {
+						a.StopAI(cn.id)
+					}
+					return
+				}
+				empty := strings.TrimSpace(cn.ai.input) == "" && len(cn.ai.attach) == 0
+				if (IconButton{Icon: icons.Send, Label: m.AiSend(), Size: Small, Active: !empty, Disabled: empty}).Clicked(c, "aisend") {
+					a.sendAI(cn)
+				}
+			})
 		})
 	})
 }
 
 // sendAI sends the question written in the pane, and follows the reply.
 func (a *App) sendAI(cn *conn) {
-	if cn.ai.running || strings.TrimSpace(cn.ai.input) == "" {
+	if cn.ai.running || (strings.TrimSpace(cn.ai.input) == "" && len(cn.ai.attach) == 0) {
 		return
 	}
 	cn.ai.scroll.Y = math.MaxFloat32
@@ -320,9 +528,14 @@ func (a *App) aiCard(c *ui.Context, cn *conn, i int, tok theme.Tokens, m locales
 			if tok.Dark {
 				strong = 0.22
 			}
-			ui.Column(c).Shrink(1).MinWidth(0).MarginStart(theme.Space(8)).Padding(7, 12).Radius(theme.RadiusCard).
+			ui.Column(c).Shrink(1).MinWidth(0).MarginStart(theme.Space(8)).Padding(7, 12).Gap(theme.Space(1)).Radius(theme.RadiusCard).
 				Background(tok.Accent.Alpha(strong)).Selectable().Children(func() {
-				ui.Text(c, it.text).FontSize(theme.Body)
+				if len(it.files) > 0 {
+					a.attachStrip(c, tok, m, it.files, nil)
+				}
+				if it.text != "" {
+					ui.Text(c, it.text).FontSize(theme.Body)
+				}
 			})
 		})
 	case "text":
@@ -410,6 +623,9 @@ func (a *App) toolCard(c *ui.Context, cn *conn, it *aiItem, tok theme.Tokens, m 
 			ui.Box(c).FillWidth().Padding(6, 10).Background(tok.Fill).Selectable().Children(func() {
 				ui.Text(c, what).Font("monospace").FontSize(theme.Footnote).TextColor(muted)
 			})
+		}
+		if card.Review != "" {
+			ui.Text(c.Key("review"), m.AiReviewNote()+": "+reviewNoteText(m, card.Review)).FontSize(theme.Caption).TextColor(tok.TextMuted).Padding(6, 10, 0, 10)
 		}
 		if !card.Run && card.Refusal != "" {
 			ui.Text(c, card.Refusal).FontSize(theme.Caption).TextColor(tok.TextMuted).Padding(6, 10, 0, 10)
@@ -540,8 +756,12 @@ func toolOutput(m locales.Messages, s string) string {
 }
 
 func aiErrLine(m locales.Messages, s string) string {
-	if strings.HasPrefix(s, "http:") {
-		return m.AiHTTPFailed(strings.TrimPrefix(s, "http:"))
+	if rest, ok := strings.CutPrefix(s, "http:"); ok {
+		status, detail, _ := strings.Cut(rest, ":")
+		if detail != "" {
+			return m.AiHTTPFailedDetail(status, detail)
+		}
+		return m.AiHTTPFailed(status)
 	}
 	switch s {
 	case "key":
@@ -723,7 +943,7 @@ func (a *App) askSheet(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 				ui.Text(c, m.AiReason()+": "+pr.Action.Reason).FontSize(theme.Footnote).FillWidth()
 			}
 			if pr.ReviewNote != "" {
-				ui.Text(c, m.AiReviewNote()+": "+pr.ReviewNote).FontSize(theme.Footnote).TextColor(tok.TextMuted).FillWidth()
+				ui.Text(c, m.AiReviewNote()+": "+reviewNoteText(m, pr.ReviewNote)).FontSize(theme.Footnote).TextColor(tok.TextMuted).FillWidth()
 			}
 			ui.Row(c).Gap(8).Children(func() {
 				if pill(c, m.AiAllowOnce(), false, pr.Decision.Red, false) {

@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/Licoy/sshyard/internal/ai/agent"
-	"github.com/Licoy/sshyard/internal/ai/openai"
+	"github.com/Licoy/sshyard/internal/ai/llm"
 	"github.com/Licoy/sshyard/internal/ai/policy"
 	"github.com/Licoy/sshyard/internal/assets"
 	"github.com/Licoy/sshyard/internal/layout"
@@ -70,9 +70,9 @@ func TestWriteConfirmAndRefuseChangedFile(t *testing.T) {
 	}
 	a.newModel = scripted(
 		toolCall("w1", "write_file", writeArgs(t, conf, "worker_processes 1;\n")),
-		openai.Message{Role: "assistant", Content: "wrote"},
+		llm.Message{Role: "assistant", Content: "wrote"},
 		toolCall("w2", "write_file", writeArgs(t, conf, "worker_processes 2;\n")),
-		openai.Message{Role: "assistant", Content: "stopped"},
+		llm.Message{Role: "assistant", Content: "stopped"},
 	)
 	id := openAIPane(t, a, h.ID)
 	tt.Frame()
@@ -169,7 +169,7 @@ func TestFullModeAuditDecider(t *testing.T) {
 	}
 	a.newModel = scripted(
 		toolCall("c1", "run_command", `{"command":"echo hi"}`),
-		openai.Message{Role: "assistant", Content: "done"},
+		llm.Message{Role: "assistant", Content: "done"},
 	)
 	id := openAIPane(t, a, h.ID)
 	tt.Frame()
@@ -296,12 +296,12 @@ func openAIPane(t *testing.T, a *App, hostID string) int {
 	return id
 }
 
-func scripted(calls ...openai.Message) func(*conn) agent.Streamer {
+func scripted(calls ...llm.Message) func(*conn) agent.Streamer {
 	return func(*conn) agent.Streamer { return &replyModel{replies: calls} }
 }
 
-func toolCall(id, name, args string) openai.Message {
-	return openai.Message{Role: "assistant", ToolCalls: []openai.ToolCall{{ID: id, Name: name, Arguments: args}}}
+func toolCall(id, name, args string) llm.Message {
+	return llm.Message{Role: "assistant", ToolCalls: []llm.ToolCall{{ID: id, Name: name, Arguments: args}}}
 }
 
 func writeArgs(t *testing.T, path, content string) string {

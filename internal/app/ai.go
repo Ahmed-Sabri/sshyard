@@ -13,7 +13,7 @@ import (
 
 	"github.com/Licoy/sshyard/internal/ai/agent"
 	"github.com/Licoy/sshyard/internal/ai/audit"
-	"github.com/Licoy/sshyard/internal/ai/openai"
+	"github.com/Licoy/sshyard/internal/ai/llm"
 	"github.com/Licoy/sshyard/internal/ai/policy"
 	"github.com/Licoy/sshyard/internal/keychain"
 	"github.com/Licoy/sshyard/internal/layout"
@@ -28,6 +28,11 @@ import (
 type aiState struct {
 	agent    string
 	provider string
+	// model and effort are the pane's choice of model and thinking level,
+	// empty for the provider's default; query filters the model menu.
+	model    string
+	effort   string
+	query    string
 	link     int
 	mode     string // pane override; empty inherits
 	mu       sync.Mutex
@@ -42,6 +47,8 @@ type aiState struct {
 	paused   bool
 	items    []aiItem
 	input    string
+	attach   []*aiAttach // files going with the question being written
+	task     string      // the question of the turn running, for the review
 	gen      int
 	turn     int
 	pending  *aiPend
@@ -60,10 +67,11 @@ type aiState struct {
 }
 
 type aiItem struct {
-	kind string // user, text, think, tool, err
-	text string
-	tool agent.ToolCard
-	open bool // thinking stays folded until the user opens it
+	kind  string // user, text, think, tool, err
+	text  string
+	files []*aiAttach // a question's attached files
+	tool  agent.ToolCard
+	open  bool // thinking stays folded until the user opens it
 }
 
 type aiPend struct {
@@ -85,21 +93,37 @@ type consentAsk struct {
 	open bool
 }
 
-// modelBox is the client the session calls. The UI thread replaces s
-// when the provider changes; Stream reads it under mu.
+// modelBox is the client the session calls, with the pane's model and
+// thinking level. The UI thread replaces them before each turn; Stream
+// reads them under mu.
 type modelBox struct {
-	mu sync.Mutex
-	s  agent.Streamer
+	mu     sync.Mutex
+	s      agent.Streamer
+	model  string
+	effort string
 }
 
-func (b *modelBox) Stream(ctx context.Context, req openai.Request, emit func(openai.Event)) (openai.Message, error) {
+func (b *modelBox) Stream(ctx context.Context, req llm.Request, emit func(llm.Event)) (llm.Message, error) {
 	b.mu.Lock()
-	s := b.s
+	s, model, effort := b.s, b.model, b.effort
 	b.mu.Unlock()
 	if s == nil {
-		return openai.Message{}, errAIProvider
+		return llm.Message{}, errAIProvider
+	}
+	if req.Model == "" {
+		req.Model = model
+	}
+	if req.Effort == "" {
+		req.Effort = effort
 	}
 	return s.Stream(ctx, req, emit)
+}
+
+// set replaces the client and the pane's choices.
+func (b *modelBox) set(s agent.Streamer, model, effort string) {
+	b.mu.Lock()
+	b.s, b.model, b.effort = s, model, effort
+	b.mu.Unlock()
 }
 
 var (
@@ -195,31 +219,59 @@ func (a *App) providerByID(id string) *settings.AIProvider {
 }
 
 // defaultProvider is the provider a pane asks until it is given another:
-// the one set as the default, else the first; "" when there is none.
+// the one set as the default, else the first that can chat; "" when there
+// is none.
 func (a *App) defaultProvider() string {
-	if p := a.providerByID(a.settings.AIDefaultProvider); p != nil {
+	if p := a.providerByID(a.settings.AIDefaultProvider); p != nil && p.CanChat() {
 		return p.ID
 	}
-	if len(a.settings.AIProviders) > 0 {
-		return a.settings.AIProviders[0].ID
+	return firstChat(a.settings.AIProviders)
+}
+
+// firstChat is the first of providers that can chat, "" when none can.
+func firstChat(providers []settings.AIProvider) string {
+	for _, p := range providers {
+		if p.CanChat() {
+			return p.ID
+		}
 	}
 	return ""
 }
 
 // paneProvider keeps an explicitly chosen provider pinned, including after
-// deletion; only a new, unselected pane inherits the default.
+// deletion; only a new, unselected pane inherits the default, as does a
+// pane whose provider was changed to one that cannot chat.
 func (a *App) paneProvider(c *conn) *settings.AIProvider {
 	if c.ai.provider != "" {
-		return a.providerByID(c.ai.provider)
+		if p := a.providerByID(c.ai.provider); p == nil || p.CanChat() {
+			return p
+		}
 	}
 	return a.providerByID(a.defaultProvider())
 }
 
-func (a *App) aiClient(c *conn) (*openai.Client, error) {
+// paneModel is the model the pane asks p: its own choice, else p's default.
+func paneModel(c *conn, p *settings.AIProvider) string {
+	if c.ai.model != "" {
+		return c.ai.model
+	}
+	return p.Model
+}
+
+// paneEffort is the pane's thinking level as p's format takes it: the
+// Anthropic format cannot turn thinking off, so none is its default there.
+func paneEffort(c *conn, p *settings.AIProvider) string {
+	if c.ai.effort == llm.EffortNone && p.Format == settings.AIFormatAnthropic {
+		return ""
+	}
+	return c.ai.effort
+}
+
+func (a *App) aiClient(c *conn) (*llm.Client, error) {
 	return a.providerClient(a.paneProvider(c))
 }
 
-func (a *App) providerClient(p *settings.AIProvider) (*openai.Client, error) {
+func (a *App) providerClient(p *settings.AIProvider) (*llm.Client, error) {
 	if p == nil || p.Model == "" || p.BaseURL == "" {
 		return nil, errAIProvider
 	}
@@ -227,14 +279,7 @@ func (a *App) providerClient(p *settings.AIProvider) (*openai.Client, error) {
 	if err != nil || len(bytes.TrimSpace(b)) == 0 {
 		return nil, errAIKey
 	}
-	hdr := map[string]string{}
-	for k, v := range p.Headers {
-		hdr[k] = v
-	}
-	return &openai.Client{
-		BaseURL: p.BaseURL, APIKey: string(b), Model: p.Model,
-		Headers: hdr, Temperature: p.Temperature, MaxTokens: p.MaxTokens,
-	}, nil
+	return llmClient(*p, string(bytes.TrimSpace(b))), nil
 }
 
 func (a *App) ensureAI(c *conn) error {
@@ -248,15 +293,12 @@ func (a *App) ensureAI(c *conn) error {
 	if c.ai.sess != nil {
 		if c.ai.box != nil && a.newModel == nil {
 			cl, err := a.aiClient(c)
-			c.ai.box.mu.Lock()
-			c.ai.box.s = nil
-			if err == nil {
-				c.ai.box.s = cl
-			}
-			c.ai.box.mu.Unlock()
 			if err != nil {
+				c.ai.box.set(nil, "", "")
 				return err
 			}
+			p := a.paneProvider(c)
+			c.ai.box.set(cl, paneModel(c, p), paneEffort(c, p))
 		}
 		if c.ai.dirty {
 			c.ai.sess.Configure(a.aiGate(c), a.settings.AIRedact)
@@ -275,7 +317,9 @@ func (a *App) ensureAI(c *conn) error {
 		if err != nil {
 			return err
 		}
-		box := &modelBox{s: cl}
+		box := &modelBox{}
+		p := a.paneProvider(c)
+		box.set(cl, paneModel(c, p), paneEffort(c, p))
 		c.ai.box = box
 		streamer = box
 	}
@@ -302,7 +346,7 @@ func (a *App) aiGate(c *conn) policy.Gate {
 	} else {
 		var rev policy.Reviewer
 		if (a.newModel == nil || c.ai.agent == "acp") && a.settings.AIReviewProvider != "" {
-			rev = aiReviewer{ask: a.reviewAsk(c)}
+			rev = a.newReviewer(c)
 		}
 		var aud policy.Auditor
 		if a.p.DataDir != "" {
@@ -323,6 +367,7 @@ func (a *App) aiGate(c *conn) policy.Gate {
 			Host:      c.host.ID,
 			HostMeta:  c.host.Label(),
 			Output:    func() string { return a.aiOutput(c) },
+			Task:      func() string { return a.aiTask(c) },
 		})
 	}
 	return gate
@@ -332,50 +377,6 @@ func (a *App) aiScope(c *conn) policy.Scope {
 	return policy.Scope{
 		WritableRoots: append([]string(nil), c.host.AIPolicy.WritableRoots...),
 		Sensitive:     append([]string(nil), c.host.AIPolicy.Sensitive...),
-	}
-}
-
-// reviewSystem is the review model's instruction. It is not shown in the UI.
-const reviewSystem = "Reply with only a JSON object {\"decision\":\"allow\"|\"ask\",\"reason\":\"short\"}. Do not call tools. Use allow only when the action is clearly safe; otherwise ask."
-
-// aiReviewer is policy.Reviewer. A reply that is not the review JSON is an
-// error, so the gate asks the user instead of treating it as a rejection.
-type aiReviewer struct {
-	ask func(ctx context.Context, prompt string) (string, error)
-}
-
-func (r aiReviewer) Review(ctx context.Context, in policy.ReviewInput) (bool, string, error) {
-	if r.ask == nil {
-		return false, "", errors.New("review is unavailable")
-	}
-	raw, err := r.ask(ctx, policy.BuildReviewPrompt(in))
-	if err != nil {
-		return false, "", err
-	}
-	allow, reason, ok := policy.ParseReview(raw)
-	if !ok {
-		return false, "", errors.New("unparsable review")
-	}
-	return allow, reason, nil
-}
-
-func (a *App) reviewAsk(c *conn) func(context.Context, string) (string, error) {
-	client, clientErr := a.providerClient(a.providerByID(a.settings.AIReviewProvider))
-	return func(ctx context.Context, prompt string) (string, error) {
-		if clientErr != nil {
-			return "", clientErr
-		}
-		msg, err := client.Stream(ctx, openai.Request{
-			MaxTokens: 200,
-			Messages: []openai.Message{
-				{Role: "system", Content: reviewSystem},
-				{Role: "user", Content: prompt},
-			},
-		}, nil)
-		if err != nil {
-			return "", err
-		}
-		return msg.Content, nil
 	}
 }
 
@@ -398,30 +399,34 @@ func (a *App) aiOutput(c *conn) string {
 func (a *App) SendAI(id int, text string) {
 	text = strings.TrimSpace(text)
 	c := a.conns[id]
-	if c == nil || c.ai == nil || text == "" || c.ai.running {
+	if c == nil || c.ai == nil || (text == "" && len(c.ai.attach) == 0) || c.ai.running {
 		return
 	}
 	if !a.consented(c.host.ID) {
 		a.consent = &consentAsk{host: c.host.ID, conn: id, text: text, open: true}
 		return
 	}
+	files := c.ai.attach
 	if c.ai.agent == "acp" {
-		a.sendACP(c, text)
+		a.sendACP(c, text, files)
 		return
 	}
 	if err := a.ensureAI(c); err != nil {
-		c.ai.items = append(c.ai.items, aiItem{kind: "user", text: text}, aiItem{kind: "err", text: aiErrText(err)})
+		c.ai.items = append(c.ai.items, aiItem{kind: "user", text: text, files: files}, aiItem{kind: "err", text: aiErrText(err)})
 		return
 	}
 	a.aiRecent[c.host.ID] = c.id
-	c.ai.items = append(c.ai.items, aiItem{kind: "user", text: text})
+	c.ai.items = append(c.ai.items, aiItem{kind: "user", text: text, files: files})
 	c.ai.input = ""
+	c.ai.attach = nil
+	c.ai.task = text
 	c.ai.gen++
 	meta := a.aiMeta(c)
 	term := a.aiTerminal(c)
 	session := c.ai.sess
+	user, parts := attachTurn(text, files)
 	a.launch(c, func(ctx context.Context, emit func(agent.Event)) error {
-		return session.Turn(ctx, text, meta, term, emit)
+		return session.TurnWith(ctx, user, parts, meta, term, emit)
 	})
 }
 
@@ -539,7 +544,7 @@ func aiErrText(err error) string {
 	if errors.As(err, &acpError) {
 		return acpError.Error()
 	}
-	var api *openai.APIError
+	var api *llm.APIError
 	var network net.Error
 	switch {
 	case errors.Is(err, errAIKey):
@@ -551,12 +556,14 @@ func aiErrText(err error) string {
 	case errors.Is(err, context.DeadlineExceeded):
 		return "timeout"
 	case errors.As(err, &api):
-		return "http:" + strconv.Itoa(api.Status)
-	case errors.Is(err, openai.ErrIncompleteResponse):
+		// The provider's message says what it refused, as a model that
+		// takes no tools or no reasoning level.
+		return "http:" + strconv.Itoa(api.Status) + ":" + api.Detail()
+	case errors.Is(err, llm.ErrIncompleteResponse):
 		return "incomplete"
-	case errors.Is(err, openai.ErrProtocol):
+	case errors.Is(err, llm.ErrProtocol):
 		return "protocol"
-	case errors.Is(err, openai.ErrTooBig):
+	case errors.Is(err, llm.ErrTooBig):
 		return "size"
 	case errors.As(err, &network):
 		if network.Timeout() {

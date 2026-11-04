@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Licoy/sshyard/internal/ai/openai"
+	"github.com/Licoy/sshyard/internal/ai/llm"
 	"github.com/Licoy/sshyard/internal/icons"
 	"github.com/Licoy/sshyard/internal/keychain"
 	"github.com/Licoy/sshyard/internal/settings"
@@ -20,15 +20,75 @@ import (
 )
 
 // providerForm edits one built-in provider. The API key is never written
-// into settings; an empty key on edit keeps the keychain entry.
+// into settings; an empty key on edit keeps the keychain entry. An
+// advanced parameter is sent only while its box is ticked.
 type providerForm struct {
-	id                string
-	name, base, model string
-	key, headers      string
-	temp, tokens      float64
-	isNew             bool
-	err, warn, test   string
-	testing           bool
+	id                 string
+	name, base, model  string
+	key, headers       string
+	format             int
+	models             []string
+	useTemp, useTopP   bool
+	useTokens, legacy  bool
+	temp, topP, tokens float64
+	advanced           bool
+	isNew              bool
+	err, warn, test    string
+	testing, fetching  bool
+	// fetched is how many models the last fetch found, -1 before one;
+	// fetchErr is why it failed.
+	fetched  int
+	fetchErr string
+	hold     focusHold
+}
+
+// providerFormats are the wire formats in the order the sheet lists them.
+var providerFormats = []string{settings.AIFormatChat, settings.AIFormatResponses, settings.AIFormatAnthropic, settings.AIFormatTypeSafe}
+
+// jevModels are TypeSafe's decision models, which its API does not list.
+var jevModels = []string{settings.AIJevModel, "jev-preview"}
+
+func formatIndex(format string) int {
+	for i, f := range providerFormats {
+		if f == format {
+			return i
+		}
+	}
+	return 0
+}
+
+// provider is the profile the form describes, before it is checked.
+func (f *providerForm) provider(id string) settings.AIProvider {
+	p := settings.AIProvider{ID: id, Name: strings.TrimSpace(f.name), Format: providerFormats[f.format],
+		BaseURL: strings.TrimSpace(f.base), Model: strings.TrimSpace(f.model), Models: f.models,
+		LegacyMaxTokens: f.legacy && f.format == 0}
+	if f.useTemp {
+		v := f.temp
+		p.Temperature = &v
+	}
+	if f.useTopP {
+		v := f.topP
+		p.TopP = &v
+	}
+	if f.useTokens {
+		v := int(f.tokens)
+		p.MaxTokens = &v
+	}
+	return p
+}
+
+// llmClient is the client for one profile and its key.
+func llmClient(p settings.AIProvider, key string) *llm.Client {
+	hdr := map[string]string{}
+	for k, v := range p.Headers {
+		hdr[k] = v
+	}
+	cl := &llm.Client{Format: p.Format, BaseURL: p.BaseURL, APIKey: key, Model: p.Model, Headers: hdr,
+		Temperature: p.Temperature, TopP: p.TopP, LegacyMaxTokens: p.LegacyMaxTokens}
+	if p.MaxTokens != nil {
+		cl.MaxTokens = *p.MaxTokens
+	}
+	return cl
 }
 
 func (a *App) aiSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, s *settings.Settings, changed *bool) {
@@ -71,28 +131,7 @@ func (a *App) aiSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, s 
 				}
 			}
 		})
-		g.row(m.AiReviewProvider(), "", func() {
-			opts := []string{m.AiReviewNone()}
-			ids := []string{""}
-			cur := m.AiReviewNone()
-			for _, p := range s.AIProviders {
-				label := providerLabel(p)
-				opts = append(opts, label)
-				ids = append(ids, p.ID)
-				if p.ID == s.AIReviewProvider {
-					cur = label
-				}
-			}
-			if ui.Select(c.Key("aireview"), &cur, opts).Label(m.AiReviewProvider()).Width(180).Changed() {
-				s.AIReviewProvider = ""
-				for i, label := range opts {
-					if label == cur {
-						s.AIReviewProvider = ids[i]
-					}
-				}
-				*changed = true
-			}
-		})
+		a.reviewSettings(c, m, g, s, changed)
 		g.row(m.AiContextLines(), "", func() {
 			if ui.NumberInput(c.Key("ailines"), &a.aiLines, 50, 2000, 10).Changed() {
 				s.AIContextLines = int(a.aiLines)
@@ -139,15 +178,15 @@ func (a *App) aiSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, s 
 			})
 		}
 		def := s.AIDefaultProvider
-		if def == "" && len(s.AIProviders) > 0 {
-			def = s.AIProviders[0].ID
+		if def == "" {
+			def = firstChat(s.AIProviders)
 		}
 		for _, p := range s.AIProviders {
 			p := p
 			g.row(providerLabel(p), p.BaseURL, func() {
 				// The default shows a filled star; a star on another
 				// makes it the default.
-				star := IconButton{Icon: icons.Star, On: icons.StarOn, Label: m.AiSetDefaultProvider(), Active: p.ID == def}
+				star := IconButton{Icon: icons.Star, On: icons.StarOn, Label: m.AiSetDefaultProvider(), Active: p.ID == def, Disabled: !p.CanChat()}
 				if star.Active {
 					star.Label = m.AiDefaultProvider()
 				}
@@ -207,17 +246,38 @@ func providerLabel(p settings.AIProvider) string {
 }
 
 func (a *App) openProvider(p *settings.AIProvider) {
-	f := &providerForm{isNew: p == nil}
+	f := &providerForm{isNew: p == nil, temp: 1, topP: 1, tokens: 8192, fetched: -1}
 	if p != nil {
 		f.id, f.name, f.base, f.model = p.ID, p.Name, p.BaseURL, p.Model
-		f.temp, f.tokens = p.Temperature, float64(p.MaxTokens)
+		f.format, f.models, f.legacy = formatIndex(p.Format), append([]string(nil), p.Models...), p.LegacyMaxTokens
+		if p.Temperature != nil {
+			f.useTemp, f.temp = true, *p.Temperature
+		}
+		if p.TopP != nil {
+			f.useTopP, f.topP = true, *p.TopP
+		}
+		if p.MaxTokens != nil {
+			f.useTokens, f.tokens = true, float64(*p.MaxTokens)
+		}
 		var b strings.Builder
 		for k, v := range p.Headers {
 			fmt.Fprintf(&b, "%s: %s\n", k, v)
 		}
 		f.headers = b.String()
+		f.advanced = f.useTemp || f.useTopP || f.useTokens || f.headers != ""
 	}
 	a.prov, a.provOpen = f, true
+}
+
+// providerURLHint is the base URL a format's placeholder suggests.
+func providerURLHint(format int) string {
+	switch providerFormats[format] {
+	case settings.AIFormatAnthropic:
+		return "https://api.anthropic.com/v1"
+	case settings.AIFormatTypeSafe:
+		return "https://api.typesafe.ai/v1"
+	}
+	return "https://api.openai.com/v1"
 }
 
 func (a *App) providerSheet(c *ui.Context, m locales.Messages, tok theme.Tokens) {
@@ -229,64 +289,126 @@ func (a *App) providerSheet(c *ui.Context, m locales.Messages, tok theme.Tokens)
 	if !f.isNew {
 		title = m.AiEditProvider()
 	}
+	note := func(s string) { ui.Text(c, s).FontSize(theme.Caption).FillWidth().TextColor(tok.TextMuted) }
 	sheet(ui.Modal(c.Key("aiprov"), &a.provOpen, func() {
-		ui.Column(c).Gap(12).Width(440).Children(func() {
-			sheetTitle(c, title)
-			ui.Field(c, m.FieldName(), func() {
-				ui.TextInput(c.Key("ap:name"), &f.name).Placeholder("openai")
-			})
-			ui.Field(c, m.AiProviderURL(), func() {
-				ui.TextInput(c.Key("ap:url"), &f.base).Placeholder("https://api.example.test/v1")
-			})
-			ui.Field(c, m.AiProviderModel(), func() {
-				ui.TextInput(c.Key("ap:model"), &f.model).Placeholder("fake-model")
-			})
-			ui.Row(c).Gap(12).Children(func() {
-				ui.Field(c, m.AiProviderTemp(), func() {
-					ui.NumberInput(c.Key("ap:temp"), &f.temp, 0, 2, 0.1)
+		ui.Scroll(c.Key("ap:scroll")).MaxHeight(640).Children(func() {
+			ui.Column(c).Gap(theme.Space(3)).Width(460).Children(func() {
+				sheetTitle(c, title)
+				ui.Field(c, m.FieldName(), func() {
+					in := ui.TextInput(c.Key("ap:name"), &f.name).Label(m.FieldName()).Placeholder("OpenAI").AutoFocus()
+					f.hold.apply(c, f, in)
 				})
-				ui.Field(c, m.AiProviderTokens(), func() {
-					ui.NumberInput(c.Key("ap:tok"), &f.tokens, 0, 200000, 1)
+				ui.Field(c, m.AiFormat(), func() {
+					ui.Segmented(c.Key("ap:format"), &f.format, m.AiFormatChat(), m.AiFormatResponses(), m.AiFormatAnthropic(), m.AiFormatTypeSafe()).Label(m.AiFormat())
 				})
-			})
-			ui.Field(c, m.AiAPIKey(), func() {
-				ui.TextInput(c.Key("ap:key"), &f.key).Password().Placeholder(m.AiAPIKeyNote())
-			})
-			ui.Text(c, m.AiAPIKeyNote()).FontSize(theme.Caption).TextColor(tok.TextMuted)
-			ui.Field(c, m.AiHeaders(), func() {
-				ui.TextArea(c.Key("ap:hdr"), &f.headers).FillWidth().Height(72).Placeholder("X-Title: SSHYard")
-			})
-			ui.Text(c, m.AiHeadersNote()).FontSize(theme.Caption).TextColor(tok.TextMuted)
-			if f.warn != "" {
-				ui.Text(c, f.warn).FontSize(theme.Footnote).TextColor(tok.Warning)
-			}
-			if f.err != "" {
-				ui.Text(c, f.err).FontSize(theme.Footnote).TextColor(tok.Danger)
-			}
-			if f.test == "ok" {
-				ui.Text(c, m.AiTestOK()).FontSize(theme.Footnote).TextColor(tok.Success)
-			} else if f.test == "key" {
-				ui.Text(c, m.AiNoKey()).FontSize(theme.Footnote).TextColor(tok.Danger)
-			} else if f.test != "" {
-				ui.Text(c, m.AiTestFail(f.test)).FontSize(theme.Footnote).TextColor(tok.Danger)
-			}
-			ui.Row(c).Gap(8).Children(func() {
-				if pill(c, m.AiTestConnection(), false, false, f.testing) {
-					a.testProvider()
+				typesafe := providerFormats[f.format] == settings.AIFormatTypeSafe
+				if typesafe {
+					note(m.AiTypeSafeNote())
 				}
-				ui.Spacer(c)
-				if pill(c, m.Cancel(), false, false, false) {
-					a.provOpen = false
+				ui.Field(c, m.AiProviderURL(), func() {
+					ui.TextInput(c.Key("ap:url"), &f.base).Label(m.AiProviderURL()).Placeholder(providerURLHint(f.format))
+				})
+				ui.Field(c, m.AiAPIKey(), func() {
+					hint := m.AiAPIKeyKeep()
+					if f.isNew {
+						hint = m.AiAPIKeyPlaceholder()
+					}
+					ui.TextInput(c.Key("ap:key"), &f.key).Password().Label(m.AiAPIKey()).Placeholder(hint)
+				})
+				note(m.AiAPIKeyNote())
+				ui.Field(c, m.AiDefaultModel(), func() {
+					ui.Row(c).Gap(theme.Space(2)).AlignItems(ui.Center).FillWidth().Children(func() {
+						models, hint := f.models, "gpt-5.1"
+						if typesafe {
+							models, hint = jevModels, settings.AIJevModel
+						}
+						ui.Autocomplete(c.Key("ap:model"), &f.model, models).Label(m.AiDefaultModel()).Placeholder(hint).Grow(1).MinWidth(0)
+						if (IconButton{Icon: icons.Refresh, Label: m.AiFetchModels(), Disabled: f.fetching}).Clicked(c, "ap:fetch") {
+							a.fetchModels()
+						}
+					})
+				})
+				switch {
+				case f.fetching:
+					note(m.AiFetchingModels())
+				case f.fetchErr == "key":
+					ui.Text(c, m.AiNoKey()).FontSize(theme.Caption).TextColor(tok.Danger)
+				case f.fetchErr != "":
+					ui.Text(c, m.AiFetchModelsFailed(f.fetchErr)).FontSize(theme.Caption).FillWidth().TextColor(tok.Danger)
+				case f.fetched >= 0:
+					note(m.AiFetchedModels(f.fetched))
+				default:
+					note(m.AiDefaultModelNote())
 				}
-				if pill(c, m.Save(), true, false, false) {
-					a.saveProvider(m)
+				ui.Collapsible(c.Key("ap:adv"), m.AiAdvanced(), &f.advanced, func() {
+					a.providerAdvanced(c, m, tok, f)
+				})
+				if f.warn != "" {
+					ui.Text(c, f.warn).FontSize(theme.Footnote).FillWidth().TextColor(tok.Warning)
 				}
+				if f.err != "" {
+					ui.Text(c, f.err).FontSize(theme.Footnote).FillWidth().TextColor(tok.Danger)
+				}
+				if f.test == "ok" {
+					ui.Text(c, m.AiTestOK()).FontSize(theme.Footnote).TextColor(tok.Success)
+				} else if f.test == "key" {
+					ui.Text(c, m.AiNoKey()).FontSize(theme.Footnote).TextColor(tok.Danger)
+				} else if f.test != "" {
+					ui.Text(c, m.AiTestFail(f.test)).FontSize(theme.Footnote).FillWidth().TextColor(tok.Danger)
+				}
+				ui.Row(c).Gap(theme.Space(2)).Children(func() {
+					if pill(c, m.AiTestConnection(), false, false, f.testing) {
+						a.testProvider()
+					}
+					ui.Spacer(c)
+					if pill(c, m.Cancel(), false, false, false) {
+						a.provOpen = false
+					}
+					if pill(c, m.Save(), true, false, false) {
+						a.saveProvider(m)
+					}
+				})
 			})
 		})
 	}), tok)
 	if !a.provOpen {
 		a.prov = nil
 	}
+}
+
+// providerAdvanced is the optional request parameters, each sent only
+// while ticked, and the custom headers.
+func (a *App) providerAdvanced(c *ui.Context, m locales.Messages, tok theme.Tokens, f *providerForm) {
+	anthropic := providerFormats[f.format] == settings.AIFormatAnthropic
+	param := func(key, label string, on *bool, v *float64, lo, hi, step float64) {
+		ui.Row(c.Key(key)).Gap(theme.Space(3)).AlignItems(ui.Center).FillWidth().Children(func() {
+			ui.Checkbox(c.Key("on"), on, label).Width(180)
+			ui.NumberInput(c.Key("v"), v, lo, hi, step).Label(label).Disabled(!*on)
+		})
+	}
+	ui.Column(c).Gap(theme.Space(2)).FillWidth().Padding(theme.Space(2), 0, 0, 0).Children(func() {
+		// A decision model takes no sampling parameters.
+		if providerFormats[f.format] != settings.AIFormatTypeSafe {
+			ui.Text(c, m.AiParamsNote()).FontSize(theme.Caption).FillWidth().TextColor(tok.TextMuted)
+			hi := 2.0
+			if anthropic {
+				hi = 1
+			}
+			param("ap:temp", m.AiProviderTemp(), &f.useTemp, &f.temp, 0, hi, 0.1)
+			param("ap:topp", m.AiProviderTopP(), &f.useTopP, &f.topP, 0, 1, 0.05)
+			param("ap:tok", m.AiProviderTokens(), &f.useTokens, &f.tokens, 1, settings.AIMaxTokensMax, 256)
+		}
+		switch providerFormats[f.format] {
+		case settings.AIFormatChat:
+			ui.Checkbox(c.Key("ap:legacy"), &f.legacy, m.AiLegacyTokens())
+		case settings.AIFormatAnthropic:
+			ui.Text(c, m.AiAnthropicTokensNote(strconv.Itoa(llm.AnthropicMaxTokens))).FontSize(theme.Caption).FillWidth().TextColor(tok.TextMuted)
+		}
+		ui.Field(c, m.AiHeaders(), func() {
+			ui.TextArea(c.Key("ap:hdr"), &f.headers).Label(m.AiHeaders()).FillWidth().Height(72).Placeholder("X-Title: SSHYard")
+		})
+		ui.Text(c, m.AiHeadersNote()).FontSize(theme.Caption).FillWidth().TextColor(tok.TextMuted)
+	})
 }
 
 func (a *App) providerDelete(c *ui.Context, m locales.Messages) {
@@ -312,8 +434,15 @@ func (a *App) saveProvider(m locales.Messages) bool {
 	}
 	f.err, f.warn = "", ""
 	name, base, model := strings.TrimSpace(f.name), strings.TrimSpace(f.base), strings.TrimSpace(f.model)
-	if name == "" || base == "" || model == "" {
+	switch {
+	case name == "":
 		f.err = m.RequiredField(m.FieldName())
+		return false
+	case base == "":
+		f.err = m.RequiredField(m.AiProviderURL())
+		return false
+	case model == "":
+		f.err = m.RequiredField(m.AiDefaultModel())
 		return false
 	}
 	warn, err := settings.CheckBaseURL(base)
@@ -351,7 +480,8 @@ func (a *App) saveProvider(m locales.Messages) bool {
 		f.err = m.AiNoKey()
 		return false
 	}
-	p := settings.AIProvider{ID: id, Name: name, BaseURL: base, Model: model, Headers: hdr, Temperature: f.temp, MaxTokens: int(f.tokens)}
+	p := f.provider(id)
+	p.Headers = hdr
 	s := a.settings
 	next := append([]settings.AIProvider{}, s.AIProviders...)
 	found := false
@@ -412,38 +542,87 @@ func (a *App) deleteProvider(id string) error {
 	return a.ApplySettings(s)
 }
 
+// formKey is the key the form's requests use: the one typed, else the saved one.
+func (a *App) formKey(f *providerForm) string {
+	if key := strings.TrimSpace(f.key); key != "" {
+		return key
+	}
+	if f.id != "" {
+		if b, err := a.kc.Get(keychain.AIKey(f.id)); err == nil {
+			return strings.TrimSpace(string(b))
+		}
+	}
+	return ""
+}
+
 func (a *App) testProvider() {
 	f := a.prov
 	if f == nil || f.testing {
 		return
 	}
-	key := strings.TrimSpace(f.key)
-	if key == "" && f.id != "" {
-		if b, err := a.kc.Get(keychain.AIKey(f.id)); err == nil {
-			key = string(b)
-		}
-	}
+	key := a.formKey(f)
 	if key == "" {
 		f.test = "key"
 		return
 	}
-	cl := &openai.Client{BaseURL: strings.TrimSpace(f.base), APIKey: key, Model: strings.TrimSpace(f.model)}
+	hdr, _ := parseHeaders(f.headers)
+	p := f.provider(f.id)
+	p.Headers = hdr
+	cl := llmClient(p, key)
 	f.testing = true
 	f.test = ""
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 		err := cl.Test(ctx)
 		a.post(func() {
-			if a.prov == nil {
+			if a.prov != f {
 				return
 			}
-			a.prov.testing = false
+			f.testing = false
 			if err != nil {
-				a.prov.test = strings.ReplaceAll(err.Error(), key, "[redacted]")
+				f.test = strings.ReplaceAll(err.Error(), key, "[redacted]")
 				return
 			}
-			a.prov.test = "ok"
+			f.test = "ok"
+		})
+	}()
+}
+
+// fetchModels lists the endpoint's chat models for the model field and
+// the panes' model menu; they are kept when the profile is saved.
+func (a *App) fetchModels() {
+	f := a.prov
+	if f == nil || f.fetching {
+		return
+	}
+	key := a.formKey(f)
+	if key == "" {
+		f.fetchErr = "key"
+		return
+	}
+	hdr, _ := parseHeaders(f.headers)
+	p := f.provider(f.id)
+	p.Headers = hdr
+	cl := llmClient(p, key)
+	f.fetching, f.fetchErr = true, ""
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		ids, err := cl.ListModels(ctx)
+		a.post(func() {
+			if a.prov != f {
+				return
+			}
+			f.fetching = false
+			if err != nil {
+				f.fetchErr = strings.ReplaceAll(err.Error(), key, "[redacted]")
+				return
+			}
+			f.models, f.fetched = ids, len(ids)
+			if strings.TrimSpace(f.model) == "" && len(ids) > 0 {
+				f.model = ids[0]
+			}
 		})
 	}()
 }

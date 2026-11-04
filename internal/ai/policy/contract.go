@@ -152,6 +152,9 @@ type Prompter interface {
 // ReviewInput is all the review model may see: no credentials, remote output
 // only as bounded, marked untrusted data (last 20 lines).
 type ReviewInput struct {
+	// Task is what the user asked for in this turn, against which the
+	// reviewer judges whether the action belongs.
+	Task     string
 	Category Category
 	Risk     Risk
 	Command  string

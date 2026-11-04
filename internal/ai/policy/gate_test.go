@@ -504,8 +504,32 @@ func TestGateFlows(t *testing.T) {
 		if _, err := g.Authorize(ctx, cmdAction("systemctl restart nginx"), ""); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := g.Authorize(ctx, cmdAction("systemctl restart nginx"), ""); err != nil {
+		// The same action again keeps the review's answer, which a grant
+		// does not skip: it is still the reviewer's verdict that is noted.
+		v, err := g.Authorize(ctx, cmdAction("systemctl restart nginx"), "")
+		if err != nil || v.ReviewReason != "again" {
+			t.Fatalf("%+v %v", v, err)
+		}
+		if r.n() != 1 {
+			t.Fatalf("reviewer calls %d", r.n())
+		}
+		if _, err := g.Authorize(ctx, cmdAction("systemctl restart redis"), ""); err != nil {
 			t.Fatal(err)
+		}
+		if r.n() != 2 {
+			t.Fatalf("another action was not reviewed: %d", r.n())
+		}
+	})
+
+	t.Run("review failure is not remembered", func(t *testing.T) {
+		p := &scriptPrompt{answers: []Answer{Reject, Reject}}
+		r := &scriptReview{raw: "not json"}
+		g := testGate(ModeReview, p, r, nil)
+		for i := 0; i < 2; i++ {
+			v, err := g.Authorize(ctx, cmdAction("systemctl restart nginx"), "")
+			if err != nil || v.Run || v.ReviewReason != "review failed" {
+				t.Fatalf("%+v %v", v, err)
+			}
 		}
 		if r.n() != 2 {
 			t.Fatalf("reviewer calls %d", r.n())

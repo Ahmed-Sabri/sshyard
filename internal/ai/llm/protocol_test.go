@@ -1,4 +1,4 @@
-package openai
+package llm
 
 import (
 	"errors"
@@ -18,7 +18,7 @@ func TestRejectIncompleteAndInvalidResponses(t *testing.T) {
 		"missing id":          `{"choices":[{"message":{"tool_calls":[{"function":{"name":"run","arguments":"{}"}}]},"finish_reason":"tool_calls"}]}`,
 	} {
 		t.Run(name, func(t *testing.T) {
-			if _, err := (&Client{}).readStream(strings.NewReader(body), nil); err == nil {
+			if _, err := readChatBody(body); err == nil {
 				t.Fatal("accepted invalid response")
 			}
 		})
@@ -31,13 +31,24 @@ func TestCompleteResponses(t *testing.T) {
 		"data: {\"choices\":[{\"delta\":{\"content\":\"ok\"},\"finish_reason\":\"stop\"}]}\n\n",
 		" \n" + `{"choices":[{"message":{"content":"ok"},"finish_reason":"stop"}]}`,
 	} {
-		msg, err := (&Client{}).readStream(strings.NewReader(body), nil)
+		msg, err := readChatBody(body)
 		if err != nil || msg.Content != "ok" {
 			t.Fatalf("%+v %v", msg, err)
 		}
 	}
-	_, err := (&Client{}).readStream(strings.NewReader("data: [DONE]\n\n"), nil)
+	_, err := readChatBody("data: [DONE]\n\n")
 	if !errors.Is(err, ErrIncompleteResponse) {
 		t.Fatal(err)
 	}
 }
+
+func readChatBody(body string) (Message, error) {
+	c := &Client{}
+	br, err := c.body(strings.NewReader(body))
+	if err != nil {
+		return Message{}, err
+	}
+	return c.readChat(br, nil)
+}
+
+func ptr[T any](v T) *T { return &v }

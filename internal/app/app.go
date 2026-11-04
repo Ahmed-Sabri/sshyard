@@ -61,6 +61,8 @@ type Platform struct {
 	SetLocale func(tag string)
 	// PickFile shows the system's open dialog; it may block.
 	PickFile func(title string) (string, error)
+	// PickFiles is PickFile choosing several files.
+	PickFiles func(title string) ([]string, error)
 	// SaveFile shows the system's save dialog, at path to begin with; it
 	// may block. "" with no error is a cancel.
 	SaveFile func(title, path string) (string, error)
@@ -330,15 +332,17 @@ type App struct {
 	aiLines   float64
 	aiDays    float64
 	aiModeIdx int
-	aiHold    focusHold
-	fullHold  focusHold
-	full      *fullAsk
-	consent   *consentAsk
-	prov      *providerForm
-	provOpen  bool
-	acpForm   *acpForm
-	acpOpen   bool
-	acpWG     sync.WaitGroup
+	// review is the review model's settings controls.
+	review   reviewControls
+	aiHold   focusHold
+	fullHold focusHold
+	full     *fullAsk
+	consent  *consentAsk
+	prov     *providerForm
+	provOpen bool
+	acpForm  *acpForm
+	acpOpen  bool
+	acpWG    sync.WaitGroup
 	// provDelete asks before removing a provider and its keychain key.
 	provDeleting bool
 	provDeleteID string

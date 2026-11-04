@@ -45,6 +45,9 @@ func platform() app.Platform {
 			}
 			return paths[0], nil
 		},
+		PickFiles: func(title string) ([]string, error) {
+			return mygo.Dialog.Open(mygo.OpenDialogOptions{Title: title, Multiple: true, ShowHiddenFiles: true})
+		},
 		SaveFile: func(title, path string) (string, error) {
 			return mygo.Dialog.Save(mygo.SaveDialogOptions{Title: title, DefaultPath: path, CreateDirectories: true})
 		},

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Licoy/sshyard/internal/ai/openai"
+	"github.com/Licoy/sshyard/internal/ai/llm"
 	"github.com/Licoy/sshyard/internal/ai/policy"
 )
 
@@ -21,8 +21,8 @@ func (t *resolvingTools) ResolvePath(context.Context, string) (string, error) {
 }
 
 func securityModel(name, args string) *scriptModel {
-	return &scriptModel{replies: []openai.Message{
-		{Role: "assistant", ToolCalls: []openai.ToolCall{{ID: "call", Name: name, Arguments: args}}},
+	return &scriptModel{replies: []llm.Message{
+		{Role: "assistant", ToolCalls: []llm.ToolCall{{ID: "call", Name: name, Arguments: args}}},
 		{Role: "assistant", Content: "done"},
 	}}
 }

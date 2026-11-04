@@ -75,7 +75,8 @@ func TestAIProviderRoundTrip(t *testing.T) {
 	s.AIConsentHosts = []string{"h1"}
 	s.AIProviders = []AIProvider{{
 		ID: "p1", Name: "lab", BaseURL: "https://models.example.test/v1", Model: "fake-model",
-		Headers: map[string]string{"X-Title": "SSHYard"}, Temperature: 0.2, MaxTokens: 400,
+		Headers: map[string]string{"X-Title": "SSHYard"}, Temperature: ptr(0.2), MaxTokens: ptr(400),
+		Format: AIFormatAnthropic, Models: []string{"fake-model", "other"},
 	}}
 	if err := Save(p, s); err != nil {
 		t.Fatal(err)
@@ -86,6 +87,9 @@ func TestAIProviderRoundTrip(t *testing.T) {
 	}
 	if len(got.AIProviders) != 1 || got.AIProviders[0].Headers["X-Title"] != "SSHYard" || got.AIProviders[0].Model != "fake-model" {
 		t.Fatalf("provider %+v", got.AIProviders)
+	}
+	if gp := got.AIProviders[0]; gp.Format != AIFormatAnthropic || *gp.Temperature != 0.2 || *gp.MaxTokens != 400 || gp.TopP != nil || len(gp.Models) != 2 || gp.LegacyMaxTokens {
+		t.Fatalf("provider %+v", gp)
 	}
 	if len(got.AIConsentHosts) != 1 || got.AIConsentHosts[0] != "h1" {
 		t.Fatalf("consent %+v", got.AIConsentHosts)
@@ -140,5 +144,82 @@ func TestProviderURLAndHeaders(t *testing.T) {
 	}
 	if _, ok := h["X-Bad"]; ok || h["X-Ok"] != "v" {
 		t.Fatalf("headers %+v", h)
+	}
+}
+
+func ptr[T any](v T) *T { return &v }
+
+func TestAIProviderFormatAndParams(t *testing.T) {
+	// A profile saved before formats: its limit went out as max_tokens,
+	// and a zero temperature was never written.
+	p := filepath.Join(t.TempDir(), "s.json")
+	os.WriteFile(p, []byte(`{"aiProviders":[{"id":"a","name":"a","baseUrl":"https://x.test/v1","model":"m","maxTokens":4096},{"id":"b","name":"b","baseUrl":"https://x.test/v1","model":"m","temperature":0.7}]}`), 0o600)
+	got, err := Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a, b := got.AIProviders[0], got.AIProviders[1]
+	if a.Format != AIFormatChat || !a.LegacyMaxTokens || a.MaxTokens == nil || *a.MaxTokens != 4096 || a.Temperature != nil {
+		t.Fatalf("legacy a %+v", a)
+	}
+	if b.Format != AIFormatChat || b.LegacyMaxTokens || b.MaxTokens != nil || b.Temperature == nil || *b.Temperature != 0.7 {
+		t.Fatalf("legacy b %+v", b)
+	}
+
+	s := Default()
+	s.AIProviders = []AIProvider{{ID: "p", Format: "nope", Temperature: ptr(3.0), TopP: ptr(-1.0), MaxTokens: ptr(0), LegacyMaxTokens: true,
+		Models: []string{" a ", "a", "", "b"}, Headers: map[string]string{"x-api-key": "k", "X-Ok": "v"}},
+		{ID: "q", Format: AIFormatResponses, MaxTokens: ptr(AIMaxTokensMax + 1), LegacyMaxTokens: true}}
+	s.Normalize()
+	pp, q := s.AIProviders[0], s.AIProviders[1]
+	if pp.Format != AIFormatChat || pp.Temperature != nil || pp.TopP != nil || pp.MaxTokens != nil || !pp.LegacyMaxTokens {
+		t.Fatalf("normalized %+v", pp)
+	}
+	if strings.Join(pp.Models, ",") != "a,b" || len(pp.Headers) != 1 || pp.Headers["X-Ok"] != "v" {
+		t.Fatalf("models %v headers %v", pp.Models, pp.Headers)
+	}
+	if q.LegacyMaxTokens || *q.MaxTokens != AIMaxTokensMax {
+		t.Fatalf("responses %+v", q)
+	}
+	if err := CheckHeaders(map[string]string{"X-API-Key": "k"}); err == nil {
+		t.Fatal("x-api-key header accepted")
+	}
+}
+
+// TestAIReviewSettings checks that a review keeps a kind its provider can
+// give, that an old review setting asks the chat model, and that a
+// provider that only decides is never the default for panes.
+func TestAIReviewSettings(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "s.json")
+	os.WriteFile(p, []byte(`{"aiReviewProvider":"oa","aiDefaultProvider":"ts","aiProviders":[
+		{"id":"oa","name":"OpenAI","format":"responses","baseUrl":"https://api.openai.com/v1","model":"gpt-5"},
+		{"id":"ts","name":"TypeSafe","format":"typesafe","baseUrl":"https://api.typesafe.ai/v1","model":"jev-latest","temperature":0.5}]}`), 0o600)
+	got, err := Load(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.AIReviewKind != AIReviewChat || got.AIReviewStrictness != AIReviewStandard || got.AIDefaultProvider != "" {
+		t.Fatalf("review %q %q default %q", got.AIReviewKind, got.AIReviewStrictness, got.AIDefaultProvider)
+	}
+	ts := got.AIProviders[1]
+	if ts.Format != AIFormatTypeSafe || ts.Temperature != nil || ts.CanChat() {
+		t.Fatalf("typesafe %+v", ts)
+	}
+	for _, c := range []struct{ provider, kind, model, wantKind, wantModel string }{
+		{"ts", AIReviewChat, "gpt-5", AIReviewJev, ""},
+		{"ts", AIReviewJev, "jev-preview", AIReviewJev, "jev-preview"},
+		{"oa", AIReviewDecisions, "gpt-6-luna", AIReviewDecisions, "gpt-6-luna"},
+		{"oa", AIReviewJev, "jev-latest", AIReviewChat, ""},
+		{"gone", AIReviewChat, "m", "", ""},
+	} {
+		s := got
+		s.AIReviewProvider, s.AIReviewKind, s.AIReviewModel, s.AIReviewStrictness = c.provider, c.kind, c.model, "bogus"
+		s.Normalize()
+		if s.AIReviewKind != c.wantKind || s.AIReviewModel != c.wantModel || s.AIReviewStrictness != AIReviewStandard {
+			t.Fatalf("%+v: kind %q model %q strictness %q", c, s.AIReviewKind, s.AIReviewModel, s.AIReviewStrictness)
+		}
+	}
+	if ReviewThreshold(AIReviewLoose) >= ReviewThreshold(AIReviewStandard) || ReviewThreshold(AIReviewStandard) >= ReviewThreshold(AIReviewStrict) {
+		t.Fatal("thresholds out of order")
 	}
 }
