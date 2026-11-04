@@ -35,6 +35,10 @@ Issuer ID 从 [App Store Connect](https://appstoreconnect.apple.com/access/integ
 6. macOS job 无论成功或失败都执行凭据清理；签名或公证失败时该平台没有产物，不生成未签名替代包
 7. 所有平台构建成功且 CI 通过后，汇总全部安装包、更新归档、delta 与更新清单，生成 `SHA256SUMS`，在发布说明后追加各平台下载链接，先建草稿上传全部资产，再自动发布为 latest
 
+Windows 的普通 CI、beta 与正式 Release 都额外提供 `sshyard-<版本>-windows-amd64-portable.zip`；ZIP 直接归档 MyGo 构建的程序及完整资源，排除安装器、安装脚本和更新产物；正式 Release 将其纳入 `SHA256SUMS` 并提供下载链接，解压到可写目录后运行 `SSHYard.exe` 即可，无需安装；应用数据仍保存在 `%APPDATA%\SSHYard`，已保存凭据仍绑定当前 Windows 用户，不代表数据可随 ZIP 跨设备迁移
+
+本地可运行 `python3 .github/windows-portable-test.py` 验证 ZIP 内容、无签名 beta 产物及下载链接，Windows CI 在归档前也会执行这些检查
+
 任一平台构建或 CI 失败时不会创建 Release；修复或重跑 CI 的失败 job 后，重跑本工作流的失败 job 即可；之前运行留下的草稿会被替换，已发布的版本不会被覆盖
 
 发布用 `./bump.sh -v <x.y.z> -p`：只修改 `mygo.json` 的版本，提交 `chore(release): bump version to <x.y.z>`（不进入发布说明），创建 `v<x.y.z>` 标签并推送分支与标签；不加 `-p` 只在本地提交和打标签；`v<version>-beta-<yyyymmddhhmmss>` 继续只运行 `ci.yml`，不会触发正式签名发布

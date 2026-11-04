@@ -197,6 +197,9 @@ jobs:
           m="build/${{ matrix.goos }}-${{ matrix.goarch }}/update-${{ matrix.goos }}-${{ matrix.goarch }}.json"
           jq -e '.signature | length > 0' "$m" > /dev/null || { echo "::error::$m is not signed"; exit 1; }
           jq -e '.notes | length > 0' "$m" > /dev/null || { echo "::error::$m has no release notes"; exit 1; }
+      - name: Package Windows portable ZIP
+        if: runner.os == 'Windows'
+        run: python .github/windows-portable.py "build/${{ matrix.goos }}-${{ matrix.goarch }}"
       - name: Verify macOS signature and notarization tickets
         if: runner.os == 'macOS'
         run: bash .github/macos-release.sh verify "${{ matrix.goarch }}"
@@ -205,7 +208,7 @@ jobs:
           shopt -s nullglob
           dir="build/${{ matrix.goos }}-${{ matrix.goarch }}"
           mkdir -p dist
-          files=("$dir"/*.tar.gz "$dir"/*.deb "$dir"/*.dmg "$dir"/*-setup-*.exe "$dir"/*.delta "$dir"/update-*.json)
+          files=("$dir"/*.tar.gz "$dir"/*.deb "$dir"/*.dmg "$dir"/*-setup-*.exe "$dir"/*-portable.zip "$dir"/*.delta "$dir"/update-*.json)
           # install.sh is the same script for every target (macOS makes one
           # too): the release takes Linux's, so merged assets never clash
           if [ "${{ matrix.goos }}" = linux ]; then files+=("$dir"/install.sh); fi

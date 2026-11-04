@@ -29,6 +29,7 @@ link() {
 mac_arm_dmg="$(link DMG 'sshyard-*-arm64.dmg')"
 mac_x64_dmg="$(link DMG 'sshyard-*-amd64.dmg')"
 win_x64_setup="$(link Installer 'sshyard-setup-*-amd64.exe')"
+win_x64_portable="$(link 'Portable ZIP' 'sshyard-*-windows-amd64-portable.zip')"
 linux_x64_deb="$(link .deb 'sshyard_*_amd64.deb')"
 linux_x64_tar="$(link .tar.gz 'sshyard-*-linux-amd64.tar.gz')"
 install_sh="$(link install.sh 'install.sh')"
@@ -53,9 +54,11 @@ macOS 12 or later, signed and notarized.
 
 | Architecture | Download |
 | --- | --- |
-| x64 | $win_x64_setup |
+| x64 | $win_x64_setup · $win_x64_portable |
 
 The installer installs for the current user into \`%LOCALAPPDATA%\\Programs\` and supports in-app updates; no administrator rights needed.
+
+For the portable version, extract the ZIP into a writable folder and run \`SSHYard.exe\`; no installation needed. App data is stored in \`%APPDATA%\\SSHYard\`, and saved credentials remain tied to the Windows user account.
 
 ### Linux
 

@@ -120,6 +120,11 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
       - name: Build (unsigned updates; no MYGO_UPDATER_PRIVATE_KEY in CI)
         run: go tool mygo build -platform "${{ matrix.goos }}/${{ matrix.goarch }}"
+      - name: Package Windows portable ZIP
+        if: runner.os == 'Windows'
+        run: |
+          python .github/windows-portable-test.py
+          python .github/windows-portable.py "build/${{ matrix.goos }}-${{ matrix.goarch }}"
       - name: List outputs
         run: ls -la "build/${{ matrix.goos }}-${{ matrix.goarch }}"
       - uses: actions/upload-artifact@v7
@@ -131,5 +136,6 @@ jobs:
             build/*/*.deb
             build/*/*.dmg
             build/*/*-setup-*.exe
+            build/*/*-portable.zip
             build/*/install.sh
             build/*/update-*.json
