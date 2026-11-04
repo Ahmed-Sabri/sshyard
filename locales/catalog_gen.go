@@ -10799,3 +10799,13 @@ func AiPaneBusy() string { return In(i18n.Locale()).AiPaneBusy() }
 func (msgs Messages) AiPaneBusy() string {
 	return Catalog.Format(msgs.locale, "aiPaneBusy", nil)
 }
+
+// AiChipValue says "{name}: {value}"
+// in the language the app shows.
+func AiChipValue(name string, value string) string { return In(i18n.Locale()).AiChipValue(name, value) }
+
+// AiChipValue says "{name}: {value}"
+// in the language of msgs.
+func (msgs Messages) AiChipValue(name string, value string) string {
+	return Catalog.Format(msgs.locale, "aiChipValue", map[string]any{"name": name, "value": value})
+}

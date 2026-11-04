@@ -76,7 +76,7 @@ func (a *App) acpSheet(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	}
 }
 
-func (a *App) agentChip(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages) {
+func (a *App) agentChip(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages, fit aiFit) {
 	label := m.AiBackendUnavailable()
 	tint := tok.Warning
 	if cn.ai.agent == "builtin" {
@@ -87,7 +87,7 @@ func (a *App) agentChip(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Mes
 		label = m.AiACP()
 		tint = ui.Color{}
 	}
-	a.menuChip(c, "aiagent:"+strconv.Itoa(cn.id), chip{Icon: icons.Robot, Label: label, Tip: m.AiBackend(), Tint: tint}, func() []menuEntry {
+	a.menuChip(c, "aiagent:"+strconv.Itoa(cn.id), chip{Icon: icons.Robot, Label: label, Tip: m.AiBackend(), Tint: tint}.fit(m, fit, 0), func() []menuEntry {
 		return []menuEntry{
 			{Icon: icons.Robot, Label: m.AiBuiltin(), Checked: cn.ai.agent == "builtin", Do: func() { a.setAIAgent(cn, "builtin") }},
 			{Icon: icons.Robot, Label: m.AiACP(), Checked: cn.ai.agent == "acp", Do: func() { a.setAIAgent(cn, "acp") }},

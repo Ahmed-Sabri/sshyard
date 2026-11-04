@@ -1,6 +1,7 @@
 package app
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -265,5 +266,52 @@ func TestAIDefaultProvider(t *testing.T) {
 	}
 	if p := a.paneProvider(a.conns[id]); p != nil {
 		t.Fatalf("after delete %+v", p)
+	}
+}
+
+// TestAIPaneNarrow: in a narrow AI pane the choices show as their icons,
+// each naming what is chosen in its tooltip, and the split buttons go
+// into a menu; a wide one labels them.
+func TestAIPaneNarrow(t *testing.T) {
+	a, tt := newTestApp(t)
+	s := a.Settings()
+	s.AIProviders = []settings.AIProvider{{ID: "p", Name: "Lab", BaseURL: "http://127.0.0.1:1", Model: "lab-model"}}
+	s.AIDefaultMode = "review"
+	if err := a.ApplySettings(s); err != nil {
+		t.Fatal(err)
+	}
+	h := savedHost(t, a, "web", "10.0.0.8")
+	if _, err := a.OpenAI(h.ID, openAt{}, 0); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	tt.Frame()
+	for _, s := range []string{"Review", "lab-model", "Built-in", "Split Right"} {
+		if !tt.HasText(s) {
+			t.Errorf("wide pane misses %q: %q", s, tt.Texts())
+		}
+	}
+	tt.SetSize(540, 600) // a pane under aiHeadMenuWidth
+	tt.Frame()
+	tt.Frame()
+	if w := a.paneBounds[a.focused().id].W; w >= aiHeadMenuWidth {
+		t.Fatalf("pane %v wide", w)
+	}
+	for _, s := range []string{"Review", "lab-model", "Built-in", "Split Right"} {
+		if slices.Contains(tt.Texts(), s) {
+			t.Errorf("narrow pane shows %q: %q", s, tt.Texts())
+		}
+	}
+	for _, s := range []string{"Permission: Review", "Model: lab-model", "Thinking level: Auto", "Assistant backend: Built-in", "More Actions"} {
+		if !tt.HasText(s) {
+			t.Errorf("narrow pane misses %q: %q", s, tt.Texts())
+		}
+	}
+	mustClick(t, tt, "More Actions")
+	tt.Frame()
+	mustClick(t, tt, "Split Right")
+	tt.Frame()
+	if n := a.ws.ActiveTab().Count(layout.Terminal); n != 1 {
+		t.Fatalf("split from the menu opened %d terminals", n)
 	}
 }

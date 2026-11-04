@@ -1067,5 +1067,6 @@
   "closeFilesPane": "Close Files",
   "closeAIPane": "Close AI",
   "filesPaneBusy": "The files pane of this tab is still transferring. Finish or cancel its transfers first.",
-  "aiPaneBusy": "The AI assistant of this tab is still working. Stop it first."
+  "aiPaneBusy": "The AI assistant of this tab is still working. Stop it first.",
+  "aiChipValue": "{name}: {value}"
 }

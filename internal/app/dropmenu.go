@@ -8,6 +8,7 @@ import (
 	"github.com/Licoy/sshyard/internal/aibrands"
 	"github.com/Licoy/sshyard/internal/icons"
 	"github.com/Licoy/sshyard/internal/theme"
+	"github.com/Licoy/sshyard/locales"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -348,7 +349,25 @@ type chip struct {
 	Tip string
 	// Tint colors it; zero is the muted text color.
 	Tint ui.Color
-	open bool
+	// Bare shows the icon alone, where there is no room for the label;
+	// LabelMax narrows the label, 0 for chipLabelWidth.
+	Bare     bool
+	LabelMax float32
+	open     bool
+}
+
+// fit is ch at fit, in a pane of controls: bare at aiIcons, its label
+// at most short wide at aiShort when it shows bare otherwise. A bare
+// chip names what is chosen in its tooltip.
+func (ch chip) fit(m locales.Messages, fit aiFit, short float32) chip {
+	switch {
+	case fit == aiIcons || fit == aiShort && short == 0:
+		ch.Bare = true
+		ch.Tip = m.AiChipValue(ch.Tip, ch.Label)
+	case fit == aiShort:
+		ch.LabelMax = short
+	}
+	return ch
 }
 
 // chipLabelWidth is the widest a chip's label grows; a longer one is cut.
@@ -363,6 +382,9 @@ func (ch chip) show(c *ui.Context, key string) ui.Element {
 	}
 	el := ui.ButtonBase(c.Key("chip:"+key)).Label(ch.Tip).Tooltip(ch.Tip).Padding(3, 6, 3, 8).Gap(4).
 		AlignItems(ui.Center).Radius(theme.Capsule).Shrink(0).Cursor(ui.CursorPointer)
+	if ch.Bare {
+		el.Padding(3, 4, 3, 6).Gap(2)
+	}
 	switch {
 	case el.Pressed():
 		wash *= 2.4
@@ -376,7 +398,13 @@ func (ch chip) show(c *ui.Context, key string) ui.Element {
 		} else {
 			ui.Icon(c, ch.Icon.SVG).Size(14, 14).Shrink(0).TextColor(tint)
 		}
-		ui.Text(c, ch.Label).FontSize(theme.Footnote).FontWeight(500).TextColor(tint).SingleLine().MaxWidth(chipLabelWidth)
+		if !ch.Bare {
+			w := ch.LabelMax
+			if w == 0 {
+				w = chipLabelWidth
+			}
+			ui.Text(c, ch.Label).FontSize(theme.Footnote).FontWeight(500).TextColor(tint).SingleLine().MaxWidth(w)
+		}
 		ui.Icon(c, icons.Collapse.SVG).Size(12, 12).Shrink(0).TextColor(tint)
 	})
 	return el

@@ -31,6 +31,13 @@ func (a *App) aiPane(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, tok
 	if cn.ai.md == nil {
 		cn.ai.md = a.aiMarkdown(cn)
 	}
+	// The pane's width as last laid out, 0 before: its controls give way
+	// to it, labels first.
+	w := a.paneBounds[cn.id].W
+	headFit := aiFull
+	if w > 0 && w < aiHeadWidth {
+		headFit = aiIcons
+	}
 	head := ui.Column(c.Key("aihead")).Shrink(0).FillWidth()
 	head.Children(func() {
 		row := ui.Row(c.Key("head")).Height(paneHeadHeight).Shrink(0).Padding(0, 6, 0, 10).Gap(8).AlignItems(ui.Center).Drag(dragSession{cn.id}).Label(m.PaneActions())
@@ -44,14 +51,27 @@ func (a *App) aiPane(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, tok
 				tempBadge(c, m, tok)
 			}
 			ui.Spacer(c).Shrink(1)
-			a.agentChip(c, cn, tok, m)
-			if (IconButton{Icon: icons.SplitRight, Label: m.SplitRight(), Size: Tiny}).Clicked(c, "splitright") {
-				t.Focus = n.ID
-				a.SplitFocused(layout.Right)
+			a.agentChip(c, cn, tok, m, headFit)
+			split := func(edge layout.Edge) func() {
+				return func() {
+					t.Focus = n.ID
+					a.SplitFocused(edge)
+				}
 			}
-			if (IconButton{Icon: icons.SplitDown, Label: m.SplitDown(), Size: Tiny}).Clicked(c, "splitdown") {
-				t.Focus = n.ID
-				a.SplitFocused(layout.Bottom)
+			if w > 0 && w < aiHeadMenuWidth {
+				a.menuButton(c, "aimore:"+strconv.Itoa(cn.id), IconButton{Icon: icons.More, Label: m.MoreActions(), Size: Tiny}, func() []menuEntry {
+					return []menuEntry{
+						{Icon: icons.SplitRight, Label: m.SplitRight(), Do: split(layout.Right)},
+						{Icon: icons.SplitDown, Label: m.SplitDown(), Do: split(layout.Bottom)},
+					}
+				})
+			} else {
+				if (IconButton{Icon: icons.SplitRight, Label: m.SplitRight(), Size: Tiny}).Clicked(c, "splitright") {
+					split(layout.Right)()
+				}
+				if (IconButton{Icon: icons.SplitDown, Label: m.SplitDown(), Size: Tiny}).Clicked(c, "splitdown") {
+					split(layout.Bottom)()
+				}
 			}
 			if (IconButton{Icon: icons.Close, Label: m.ClosePane(), Size: Tiny, Danger: true}).Clicked(c, "close") {
 				a.closeSoon(cn.id)
@@ -65,8 +85,45 @@ func (a *App) aiPane(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, tok
 		ui.Box(c).Height(1).Shrink(0).FillWidth().Background(tok.Line)
 	})
 	a.aiTimeline(c, cn, tok, m)
-	a.aiComposer(c, cn, tok, m)
+	a.aiComposer(c, cn, tok, m, composerFit(w))
 }
+
+// aiFit is how much of an AI pane's controls show at its width: all of
+// them labelled; the model's name cut short and the other choices as
+// their icons; or every choice as its icon alone.
+type aiFit int
+
+const (
+	aiFull aiFit = iota
+	aiShort
+	aiIcons
+)
+
+// Widths of an AI pane: from aiFullWidth its composer's choices all show
+// their labels, from aiShortWidth the model's; under aiHeadWidth its
+// header shows the backend as an icon, under aiHeadMenuWidth its split
+// buttons go into a menu.
+const (
+	aiFullWidth     = 472
+	aiShortWidth    = 342
+	aiHeadWidth     = 360
+	aiHeadMenuWidth = 300
+)
+
+// composerFit is how much of the composer's controls show in a pane w
+// wide, 0 for not laid out yet.
+func composerFit(w float32) aiFit {
+	switch {
+	case w == 0 || w >= aiFullWidth:
+		return aiFull
+	case w >= aiShortWidth:
+		return aiShort
+	}
+	return aiIcons
+}
+
+// aiModelShort is the widest the model's name shows at aiShort.
+const aiModelShort = 110
 
 // providerName is the short name of a provider: its name, else its model.
 func providerName(p settings.AIProvider) string {
@@ -101,13 +158,13 @@ func effortName(m locales.Messages, e string) string {
 
 // effortChip shows the pane's thinking level and chooses another. The
 // Anthropic format cannot turn thinking off, so it offers no "off".
-func (a *App) effortChip(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages) {
+func (a *App) effortChip(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages, fit aiFit) {
 	p := a.paneProvider(cn)
 	cur := ""
 	if p != nil {
 		cur = paneEffort(cn, p)
 	}
-	ch := chip{Icon: icons.Thinking, Label: effortName(m, cur), Tip: m.AiThinkingLevel()}
+	ch := chip{Icon: icons.Thinking, Label: effortName(m, cur), Tip: m.AiThinkingLevel()}.fit(m, fit, 0)
 	a.menuChip(c, "aieffort:"+strconv.Itoa(cn.id), ch, func() []menuEntry {
 		out := make([]menuEntry, 0, len(effortLevels))
 		for _, e := range effortLevels {
@@ -179,7 +236,7 @@ const modelMenuMax = 200
 // from a menu with a search field: Enter takes the first match, or the
 // name typed when nothing matches. Without a provider it shows in the
 // warning color.
-func (a *App) modelChip(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages) {
+func (a *App) modelChip(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages, fit aiFit) {
 	key := "aimodel:" + strconv.Itoa(cn.id)
 	p := a.paneProvider(cn)
 	ch := chip{Icon: icons.Model, Label: m.AiNoProvider(), Tip: m.AiModel(), Tint: tok.Warning}
@@ -189,6 +246,7 @@ func (a *App) modelChip(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Mes
 		ch.Label, ch.Tint = cur, ui.Color{}
 		ch.Brand = aibrands.Model(cur, *p)
 	}
+	ch = ch.fit(m, fit, aiModelShort)
 	ch.open = a.menu.key == key
 	el := ch.show(c, key).Role(ui.RoleMenuButton).Expanded(ch.open)
 	open := ch.open
@@ -314,7 +372,7 @@ func modeName(m locales.Messages, mode policy.Mode) (name, note string) {
 
 // modeChip shows the permission the pane runs under, in its color, and
 // chooses another from a menu. Full access asks to be confirmed first.
-func (a *App) modeChip(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages) {
+func (a *App) modeChip(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages, fit aiFit) {
 	cur := a.modeOf(cn)
 	ch := chip{Icon: icons.ModeAsk, Tip: m.AiPermission(), Tint: modeTint(tok, cur)}
 	for _, md := range aiModes {
@@ -323,6 +381,7 @@ func (a *App) modeChip(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Mess
 		}
 	}
 	ch.Label, _ = modeName(m, cur)
+	ch = ch.fit(m, fit, 0)
 	a.menuChip(c, "aimode:"+strconv.Itoa(cn.id), ch, func() []menuEntry {
 		out := make([]menuEntry, 0, len(aiModes))
 		for _, md := range aiModes {
@@ -380,8 +439,8 @@ func (a *App) aiTimeline(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 // permission and the attachment button, and on the right, for the built-in
 // agent, the model and thinking level, then the send button, which stops
 // the turn while one runs. Enter sends; Shift+Enter breaks the line. Full
-// access shows a banner above it.
-func (a *App) aiComposer(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages) {
+// access shows a banner above it. The choices show as fit allows.
+func (a *App) aiComposer(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages, fit aiFit) {
 	ui.Column(c.Key("aifoot")).Shrink(0).FillWidth().Padding(0, theme.Space(3), theme.Space(3), theme.Space(3)).Gap(theme.Space(2)).Children(func() {
 		if a.modeOf(cn) == policy.ModeFull {
 			aiBanner(c.Key("fullbar"), tok.Danger, icons.Warning, m.AiFullBar())
@@ -432,14 +491,14 @@ func (a *App) aiComposer(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 				a.focusReq = 0
 			}
 			ui.Row(c.Key("aitools")).FillWidth().Gap(theme.Space(1)).AlignItems(ui.Center).Children(func() {
-				a.modeChip(c, cn, tok, m)
+				a.modeChip(c, cn, tok, m, fit)
 				if (IconButton{Icon: icons.Attach, Label: m.AiAttach(), Size: Small, Disabled: a.p.PickFiles == nil}).Clicked(c, "aiattachbtn") {
 					a.pickAttach(cn, m)
 				}
 				ui.Spacer(c).Shrink(1)
 				if cn.ai.agent == "builtin" {
-					a.modelChip(c, cn, tok, m)
-					a.effortChip(c, cn, tok, m)
+					a.modelChip(c, cn, tok, m, fit)
+					a.effortChip(c, cn, tok, m, fit)
 				}
 				if cn.ai.running {
 					if (IconButton{Icon: icons.Stop, Label: m.StopAI(), Size: Small, Danger: true, Active: true}).Clicked(c, "aistop") {
