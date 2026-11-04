@@ -5,10 +5,23 @@
 # using the same certificate does not guarantee access across rebuilds.
 # macOS keychain policy may still require authorization with either identity.
 #
+# `mygo dev` rebuilds and relaunches the app whenever a source file changes.
+# Unless DEV_WATCH=1, it builds a snapshot of the working tree instead, so
+# editing files leaves the running app alone; run the script again to pick
+# the changes up.
+#
 # MACOS_DEV_IDENTITY picks another identity. Arguments go to `mygo dev`.
 set -eu
 
 cd "$(dirname "$0")/.."
+
+if [ "${DEV_WATCH:-}" != 1 ]; then
+	snapshot="${TMPDIR:-/tmp}/sshyard-dev"
+	rm -rf "$snapshot"
+	mkdir -p "$snapshot"
+	git ls-files -z -co --exclude-standard | tar -cf - --null -T - | tar -xf - -C "$snapshot"
+	cd "$snapshot"
+fi
 
 if [ "$(uname -s)" != Darwin ]; then
 	exec go tool mygo dev "$@"
