@@ -1061,5 +1061,6 @@
   "aiToolSucceeded": "执行成功",
   "aiToolApproved": "已批准 · {source}",
   "aiToolFailed": "执行失败",
-  "aiReviewDeclined": "审核模型拒绝判断此操作"
+  "aiReviewDeclined": "审核模型拒绝判断此操作",
+  "aiPermissionSection": "权限审批"
 }

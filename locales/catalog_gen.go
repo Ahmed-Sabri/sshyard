@@ -10739,3 +10739,13 @@ func AiReviewDeclined() string { return In(i18n.Locale()).AiReviewDeclined() }
 func (msgs Messages) AiReviewDeclined() string {
 	return Catalog.Format(msgs.locale, "aiReviewDeclined", nil)
 }
+
+// AiPermissionSection says "Permission approval"
+// in the language the app shows.
+func AiPermissionSection() string { return In(i18n.Locale()).AiPermissionSection() }
+
+// AiPermissionSection says "Permission approval"
+// in the language of msgs.
+func (msgs Messages) AiPermissionSection() string {
+	return Catalog.Format(msgs.locale, "aiPermissionSection", nil)
+}

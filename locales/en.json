@@ -1061,5 +1061,6 @@
   "aiToolSucceeded": "Succeeded",
   "aiToolApproved": "Approved · {source}",
   "aiToolFailed": "Failed",
-  "aiReviewDeclined": "The review model declined to judge this action"
+  "aiReviewDeclined": "The review model declined to judge this action",
+  "aiPermissionSection": "Permission approval"
 }

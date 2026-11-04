@@ -119,19 +119,6 @@ func (a *App) aiSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, s 
 				a.openACP()
 			}
 		})
-		g.row(m.AiDefaultMode(), "", func() {
-			a.aiModeIdx = modeIndex(s.AIDefaultMode)
-			if ui.Segmented(c.Key("aimodedef"), &a.aiModeIdx, m.AiModeAsk(), m.AiModeReview(), m.AiModeFull()).Label(m.AiDefaultMode()).Changed() {
-				mode := []string{"ask", "review", "full"}[a.aiModeIdx]
-				if mode == "full" && a.settings.AIDefaultMode != "full" {
-					a.openFull("settings", 0)
-				} else {
-					s.AIDefaultMode = mode
-					*changed = true
-				}
-			}
-		})
-		a.reviewSettings(c, m, g, s, changed)
 		g.row(m.AiContextLines(), "", func() {
 			if ui.NumberInput(c.Key("ailines"), &a.aiLines, 50, 2000, 10).Changed() {
 				s.AIContextLines = int(a.aiLines)
@@ -170,6 +157,21 @@ func (a *App) aiSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, s 
 				}
 			})
 		}
+	})
+	settingsSection(c, tok, icons.ModeAsk, tok.TintAt(1), m.AiPermissionSection(), func(g *settingsGroup) {
+		g.row(m.AiDefaultMode(), "", func() {
+			a.aiModeIdx = modeIndex(s.AIDefaultMode)
+			if ui.Segmented(c.Key("aimodedef"), &a.aiModeIdx, m.AiModeAsk(), m.AiModeReview(), m.AiModeFull()).Label(m.AiDefaultMode()).Changed() {
+				mode := []string{"ask", "review", "full"}[a.aiModeIdx]
+				if mode == "full" && a.settings.AIDefaultMode != "full" {
+					a.openFull("settings", 0)
+				} else {
+					s.AIDefaultMode = mode
+					*changed = true
+				}
+			}
+		})
+		a.reviewSettings(c, m, g, s, changed)
 	})
 	settingsSection(c, tok, icons.Robot, tok.TintAt(3), m.AiProvidersSection(), func(g *settingsGroup) {
 		if len(s.AIProviders) == 0 {
