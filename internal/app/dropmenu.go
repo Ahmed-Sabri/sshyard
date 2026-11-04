@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Licoy/sshyard/internal/aibrands"
 	"github.com/Licoy/sshyard/internal/icons"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/egoist/mygo/ui"
@@ -22,7 +23,8 @@ type menuEntry struct {
 	Mods ui.Modifiers
 	Key  ui.Key
 	// Note is a line below the label that says more of it; "" for none.
-	Note string
+	Note       string
+	InlineNote string
 	// Tint colors its icon; zero is the muted text color.
 	Tint ui.Color
 	// Checked marks the entry with a check, Danger tints it red.
@@ -277,6 +279,9 @@ func (a *App) menuRow(c *ui.Context, tok theme.Tokens, e menuEntry, i, level int
 				ui.Text(c, e.Note).FontSize(theme.Caption).TextColor(muted).SingleLine()
 			})
 		}
+		if e.InlineNote != "" {
+			ui.Text(c, e.InlineNote).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine().Shrink(0)
+		}
 		if e.Key != 0 {
 			ui.Text(c, shortcutText(runtime.GOOS, e.Mods, e.Key)).FontSize(theme.Footnote).TextColor(muted).SingleLine().
 				Shrink(0).MarginStart(theme.Space(4))
@@ -336,6 +341,7 @@ func shortcutText(goos string, mods ui.Modifiers, key ui.Key) string {
 // the choices (menuChip), as a permission or a model.
 type chip struct {
 	Icon  *icons.Icon
+	Brand *aibrands.Icon
 	Label string
 	// Tip names what it chooses, from the locale catalog: its tooltip
 	// and accessible label.
@@ -365,7 +371,11 @@ func (ch chip) show(c *ui.Context, key string) ui.Element {
 	}
 	el.Background(tint.Alpha(wash))
 	el.Children(func() {
-		ui.Icon(c, ch.Icon.SVG).Size(14, 14).Shrink(0).TextColor(tint)
+		if ch.Brand != nil {
+			brandImage(c, ch.Brand, 14)
+		} else {
+			ui.Icon(c, ch.Icon.SVG).Size(14, 14).Shrink(0).TextColor(tint)
+		}
 		ui.Text(c, ch.Label).FontSize(theme.Footnote).FontWeight(500).TextColor(tint).SingleLine().MaxWidth(chipLabelWidth)
 		ui.Icon(c, icons.Collapse.SVG).Size(12, 12).Shrink(0).TextColor(tint)
 	})

@@ -1,0 +1,24 @@
+LobeHub Icons — https://icons.lobehub.com/
+Copyright (c) 2023 LobeHub; MIT license, reproduced in LICENSE.
+Repository: https://github.com/lobehub/lobe-icons
+Package: @lobehub/icons-static-png 2.6.0
+Published gitHead: 6e2e41d2968d15755e3d4a75046483a34b9f7bf7
+License source: https://raw.githubusercontent.com/lobehub/lobe-icons/6e2e41d2968d15755e3d4a75046483a34b9f7bf7/LICENSE
+Archive: https://registry.npmjs.org/@lobehub/icons-static-png/-/icons-static-png-2.6.0.tgz
+Archive SHA-256: d24d8ab7c6aae72ffc7a494380c9b417d4cf76821ca1bcce77a3fe5769246ade
+
+The 27 selected brands are copied byte-for-byte from the archive's light/
+and dark/ directories into png/light/ and png/dark/, keeping upstream names.
+Use the -color variant when the package provides it; never tint the artwork.
+OpenAI, Anthropic, Grok, Groq, Moonshot, Ollama and TypeSafe AI have no -color
+file in either directory's complete archive manifest; their official default
+artwork is retained, including light/dark contrast differences.
+Other selected brands: Azure, ChatGLM, Claude, Cohere, DeepSeek, Doubao,
+Gemini, Gemma, Google, Kimi, Meta, MiniMax, Mistral, OpenRouter, Perplexity, Qwen,
+SiliconCloud, Together, Volcengine and Zhipu.
+
+To update, download an explicitly versioned archive from the npm registry,
+verify its registry integrity and SHA-256, copy only the selected light/dark
+PNG pairs unchanged, and update this notice and the upstream license.
+Run go test ./internal/aibrands after changing resources or matching rules.
+Brand names and marks remain the property of their respective owners.

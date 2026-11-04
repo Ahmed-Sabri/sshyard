@@ -190,13 +190,16 @@ type settingsGroup struct {
 
 // row adds one setting: its label (and a muted note) on the left, its
 // control on the right.
-func (g *settingsGroup) row(label, note string, control func()) {
+func (g *settingsGroup) row(label, note string, control func(), lead ...func()) {
 	c, tok := g.c, g.tok
 	if g.rows > 0 {
 		ui.Box(c).FillWidth().Padding(0, 0, 0, 14).Children(func() { ui.Box(c).Height(1).FillWidth().Background(tok.Line) })
 	}
 	g.rows++
 	ui.Row(c).MinHeight(48).Padding(8, 14).Gap(16).AlignItems(ui.Center).FillWidth().Children(func() {
+		if len(lead) > 0 {
+			lead[0]()
+		}
 		ui.Column(c).Grow(1).Shrink(1).Gap(2).Children(func() {
 			ui.Text(c, label).FontSize(theme.Body).FontWeight(500)
 			if note != "" {

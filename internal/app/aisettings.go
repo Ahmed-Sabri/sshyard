@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Licoy/sshyard/internal/ai/llm"
+	"github.com/Licoy/sshyard/internal/aibrands"
 	"github.com/Licoy/sshyard/internal/icons"
 	"github.com/Licoy/sshyard/internal/keychain"
 	"github.com/Licoy/sshyard/internal/settings"
@@ -203,7 +204,7 @@ func (a *App) aiSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, s 
 				if iconButton(c, "prov:del:"+p.ID, icons.Delete, m.Delete()) {
 					a.provDeleteID, a.provDeleting = p.ID, true
 				}
-			})
+			}, func() { brandImage(c, aibrands.Provider(p), 20) })
 		}
 		g.divider()
 		ui.Row(c).Padding(8, 14).Children(func() {
@@ -248,7 +249,7 @@ func providerLabel(p settings.AIProvider) string {
 }
 
 func (a *App) openProvider(p *settings.AIProvider) {
-	f := &providerForm{isNew: p == nil, temp: 1, topP: 1, tokens: 8192, fetched: -1}
+	f := &providerForm{base: providerURLHint(0), isNew: p == nil, temp: 1, topP: 1, tokens: 8192, fetched: -1}
 	if p != nil {
 		f.id, f.name, f.base, f.model = p.ID, p.Name, p.BaseURL, p.Model
 		f.format, f.models, f.legacy = formatIndex(p.Format), append([]string(nil), p.Models...), p.LegacyMaxTokens
@@ -271,7 +272,7 @@ func (a *App) openProvider(p *settings.AIProvider) {
 	a.prov, a.provOpen = f, true
 }
 
-// providerURLHint is the base URL a format's placeholder suggests.
+// providerURLHint is the official default base URL for a wire format.
 func providerURLHint(format int) string {
 	switch providerFormats[format] {
 	case settings.AIFormatAnthropic:
@@ -301,7 +302,12 @@ func (a *App) providerSheet(c *ui.Context, m locales.Messages, tok theme.Tokens)
 					f.hold.apply(c, f, in)
 				})
 				ui.Field(c, m.AiFormat(), func() {
-					ui.Segmented(c.Key("ap:format"), &f.format, m.AiFormatChat(), m.AiFormatResponses(), m.AiFormatAnthropic(), m.AiFormatTypeSafe()).Label(m.AiFormat())
+					oldFormat := f.format
+					if providerFormatControl(c.Key("ap:format"), m, &f.format).Changed() {
+						if strings.TrimSpace(f.base) == "" || strings.TrimSpace(f.base) == providerURLHint(oldFormat) {
+							f.base = providerURLHint(f.format)
+						}
+					}
 				})
 				typesafe := providerFormats[f.format] == settings.AIFormatTypeSafe
 				if typesafe {
@@ -324,7 +330,8 @@ func (a *App) providerSheet(c *ui.Context, m locales.Messages, tok theme.Tokens)
 						if typesafe {
 							models, hint = jevModels, settings.AIJevModel
 						}
-						ui.Autocomplete(c.Key("ap:model"), &f.model, models).Label(m.AiDefaultModel()).Placeholder(hint).Grow(1).MinWidth(0)
+						brandImage(c, aibrands.Model(f.model, f.provider(f.id)), 16)
+						brandAutocomplete(c.Key("ap:model"), &f.model, models, f.provider(f.id)).Label(m.AiDefaultModel()).Placeholder(hint).Grow(1).MinWidth(0)
 						if (IconButton{Icon: icons.Refresh, Label: m.AiFetchModels(), Disabled: f.fetching}).Clicked(c, "ap:fetch") {
 							a.fetchModels()
 						}

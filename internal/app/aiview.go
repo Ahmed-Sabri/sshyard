@@ -9,6 +9,7 @@ import (
 	"github.com/Licoy/sshyard/internal/ai/agent"
 	"github.com/Licoy/sshyard/internal/ai/llm"
 	"github.com/Licoy/sshyard/internal/ai/policy"
+	"github.com/Licoy/sshyard/internal/aibrands"
 	"github.com/Licoy/sshyard/internal/icons"
 	"github.com/Licoy/sshyard/internal/layout"
 	"github.com/Licoy/sshyard/internal/settings"
@@ -186,6 +187,7 @@ func (a *App) modelChip(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Mes
 	if p != nil {
 		cur = paneModel(cn, p)
 		ch.Label, ch.Tint = cur, ui.Color{}
+		ch.Brand = aibrands.Model(cur, *p)
 	}
 	ch.open = a.menu.key == key
 	el := ch.show(c, key).Role(ui.RoleMenuButton).Expanded(ch.open)
@@ -240,23 +242,25 @@ func (a *App) modelChip(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Mes
 							continue
 						}
 						gp := g[0].p
-						ui.Text(c.Key("h:"+strconv.Itoa(gi)), providerName(*gp)).FontSize(theme.Caption).FontWeight(600).
-							TextColor(tok.TextMuted).SingleLine().Padding(6, 8, 2, 8)
+						ui.Row(c.Key("h:"+strconv.Itoa(gi))).AlignItems(ui.Center).Gap(theme.Space(2.5)).Padding(theme.Space(1.5), theme.Space(2), theme.Space(0.5), theme.Space(2)).Children(func() {
+							brandImage(c, aibrands.Provider(*gp), 16)
+							ui.Text(c, providerName(*gp)).FontSize(theme.Caption).FontWeight(600).TextColor(tok.TextMuted).SingleLine()
+						})
 						for i, mc := range g {
 							if i >= modelMenuMax {
 								break
 							}
 							mc := mc
-							e := menuEntry{Label: mc.model, Checked: p != nil && mc.p.ID == p.ID && mc.model == cur, Do: func() { a.chooseModel(cn, mc.p, mc.model) }}
+							e := menuEntry{Lead: func() { brandImage(c, aibrands.Model(mc.model, *mc.p), 16) }, Label: mc.model, Checked: p != nil && mc.p.ID == p.ID && mc.model == cur, Do: func() { a.chooseModel(cn, mc.p, mc.model) }}
 							if mc.model == mc.p.Model {
-								e.Note = m.AiDefaultModel()
+								e.InlineNote = m.AiDefaultModel()
 							}
 							a.menuRow(c, tok, e, n, 0)
 							n++
 						}
 					}
 					if first.p == nil && typed != "" && p != nil {
-						a.menuRow(c, tok, menuEntry{Icon: icons.Model, Label: m.AiUseModel(typed), Do: func() { a.chooseModel(cn, p, typed) }}, n, 0)
+						a.menuRow(c, tok, menuEntry{Lead: func() { brandImage(c, aibrands.Model(typed, *p), 16) }, Label: m.AiUseModel(typed), Do: func() { a.chooseModel(cn, p, typed) }}, n, 0)
 						n++
 					}
 					if n == 0 && typed != "" {

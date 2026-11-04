@@ -14,6 +14,7 @@ import (
 
 	"github.com/Licoy/sshyard/internal/ai/llm"
 	"github.com/Licoy/sshyard/internal/ai/policy"
+	"github.com/Licoy/sshyard/internal/aibrands"
 	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/locales"
 	"github.com/egoist/mygo/ui"
@@ -319,7 +320,16 @@ func (a *App) reviewSettings(c *ui.Context, m locales.Messages, g *settingsGroup
 		cur = m.AiReviewCustom()
 	}
 	g.row(m.AiReviewProvider(), m.AiReviewProviderNote(), func() {
-		if !ui.Select(c.Key("aireview"), &cur, opts).Label(m.AiReviewProvider()).Width(240).Changed() {
+		if !brandSelect(c.Key("aireview"), &cur, opts, func(label string) *aibrands.Icon {
+			for _, pr := range presets {
+				if pr.label == label {
+					if q := a.providerByID(pr.provider); q != nil {
+						return aibrands.Model(pr.model, *q)
+					}
+				}
+			}
+			return nil
+		}).Label(m.AiReviewProvider()).Width(240).Changed() {
 			return
 		}
 		*changed = true
@@ -368,7 +378,14 @@ func (a *App) reviewCustom(c *ui.Context, m locales.Messages, g *settingsGroup, 
 				cur = names[i]
 			}
 		}
-		if ui.Select(c.Key("aireviewp"), &cur, names).Label(m.AiReviewWith()).Width(240).Changed() {
+		if brandSelect(c.Key("aireviewp"), &cur, names, func(label string) *aibrands.Icon {
+			for _, q := range s.AIProviders {
+				if providerName(q) == label {
+					return aibrands.Provider(q)
+				}
+			}
+			return nil
+		}).Label(m.AiReviewWith()).Width(240).Changed() {
 			if i := slices.Index(names, cur); i >= 0 {
 				q := s.AIProviders[i]
 				s.AIReviewProvider, s.AIReviewKind, s.AIReviewModel = q.ID, settings.ReviewKinds(q.Format)[0], ""
@@ -406,7 +423,8 @@ func (a *App) reviewCustom(c *ui.Context, m locales.Messages, g *settingsGroup, 
 		if !rc.modelFocus {
 			rc.model = reviewModel(*s, p)
 		}
-		in := ui.Autocomplete(c.Key("aireviewm"), &rc.model, suggest).Label(m.AiReviewModelName()).Width(240)
+		brandImage(c, aibrands.Model(rc.model, *p), 16)
+		in := brandAutocomplete(c.Key("aireviewm"), &rc.model, suggest, *p).Label(m.AiReviewModelName()).Width(240)
 		focused := in.Focused()
 		// Enter, the caret leaving the field, or a suggestion picked.
 		if in.Submitted() || in.Changed() && !focused || (rc.modelFocus && !focused) {

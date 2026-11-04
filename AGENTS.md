@@ -12,9 +12,11 @@ Global rules for anyone (human or agent) changing SSHYard. Read this before you 
 - **Never commit key files** (`*.key` is ignored; the updater signing key stays outside the repo).
 - **The version lives only in `mygo.json`.**
 
-## Icons: Remix Icon only
+## Icons: Remix Icon for actions, LobeHub for AI brands
 
-- All icons come from [Remix Icon](https://remixicon.com/) **v4.8.0**, vendored in `internal/icons/svg/` (Apache-2.0; `internal/icons/LICENSE` and `NOTICE` must stay). Do not upgrade past 4.8.0 without checking the licence: 4.9+ uses the "Remix Icon License v1.0".
+- All interface/action icons come from [Remix Icon](https://remixicon.com/) **v4.8.0**, vendored in `internal/icons/svg/` (Apache-2.0; `internal/icons/LICENSE` and `NOTICE` must stay). Do not upgrade past 4.8.0 without checking the licence: 4.9+ uses the "Remix Icon License v1.0".
+- AI provider and model brand icons come exclusively from [LobeHub Icons](https://icons.lobehub.com/), vendored in `internal/aibrands/png/` with a pinned upstream version, `LICENSE` and `NOTICE`. Use the official `-color` variant whenever available; brands without one retain the official light/dark artwork. Render native bitmaps without theme tinting, never fetch artwork at runtime.
+- Use `aibrands.Model(modelID, provider)` for models, matching their names before falling back to `aibrands.Provider(provider)` for unknown models. Select `Light`/`Dark` for the current theme; matching must never rewrite the model ID sent to the API. Add new brands and model families to this shared package with tests, never per-view matching.
 - No other icon set, no icon fonts, no hand-drawn SVG paths in views.
 - Use the `-line` style. Use the matching `-fill` only for an active state, passed as `IconButton.On`.
 - To add an icon:

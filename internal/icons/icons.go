@@ -4,7 +4,8 @@
 // in the binary and drawn natively by MyGo's ui (ui.Icon), in the color of
 // the text around them. No font, no webview.
 //
-// Every icon of the app comes from here. The "-line" style is the default;
+// Interface/action icons come from here; AI brands use internal/aibrands.
+// The "-line" style is the default;
 // a "-fill" variant is used only for an active state (the settings button
 // while the settings show, a favorite host, the active tab's kind). To add
 // one, copy icons/<Category>/<name>.svg from the Remix Icon v4.8.0 tag into
