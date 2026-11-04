@@ -353,6 +353,9 @@ func TestFilesTransfersBadge(t *testing.T) {
 	if !badge() || tt.HasText("a.bin") {
 		t.Fatalf("no failure badge, or the queue in the pane: %q", tt.Texts())
 	}
+	// Canceled transfers stay until their part files are removed, which
+	// CancelAll leaves to goroutines.
+	trs.Wait()
 	trs.ClearFinished()
 	tt.Frame()
 	if badge() {
