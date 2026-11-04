@@ -33,7 +33,7 @@ Issuer ID 从 [App Store Connect](https://appstoreconnect.apple.com/access/integ
 4. `go tool mygo build` 签署 App、DMG，向 Apple 提交公证并等待通过，再给 DMG 和用于更新的 App 装订公证票据
 5. 构建时把发布说明写入更新清单，供应用内更新窗口显示；验证更新清单有签名且带说明，并在 macOS 上执行 `codesign`、`stapler validate` 和 Gatekeeper `spctl` 验收
 6. macOS job 无论成功或失败都执行凭据清理；签名或公证失败时该平台没有产物，不生成未签名替代包
-7. 所有平台构建成功且 CI 通过后，汇总全部安装包、更新归档、delta、附加 ZIP 与更新清单，生成 `SHA256SUMS`，在发布说明后追加各平台下载链接，先建草稿上传全部资产，再自动发布为 latest
+7. 所有平台构建成功且 CI 通过后，汇总全部安装包、更新归档、delta 与更新清单，生成 `SHA256SUMS`，在发布说明后追加各平台下载链接，先建草稿上传全部资产，再自动发布为 latest
 
 任一平台构建或 CI 失败时不会创建 Release；修复或重跑 CI 的失败 job 后，重跑本工作流的失败 job 即可；之前运行留下的草稿会被替换，已发布的版本不会被覆盖
 

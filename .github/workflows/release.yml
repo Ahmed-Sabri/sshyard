@@ -158,8 +158,6 @@ jobs:
     defaults:
       run:
         shell: bash
-    env:
-      VERSION: ${{ needs.preflight.outputs.version }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
@@ -202,14 +200,12 @@ jobs:
       - name: Verify macOS signature and notarization tickets
         if: runner.os == 'macOS'
         run: bash .github/macos-release.sh verify "${{ matrix.goarch }}"
-      - name: Package extras
-        run: bash .github/package-extras.sh "${{ matrix.goos }}" "${{ matrix.goarch }}" "$VERSION"
       - name: Collect release assets
         run: |
           shopt -s nullglob
           dir="build/${{ matrix.goos }}-${{ matrix.goarch }}"
           mkdir -p dist
-          files=("$dir"/*.tar.gz "$dir"/*.deb "$dir"/*.dmg "$dir"/*.zip "$dir"/*-setup-*.exe "$dir"/*.delta "$dir"/update-*.json)
+          files=("$dir"/*.tar.gz "$dir"/*.deb "$dir"/*.dmg "$dir"/*-setup-*.exe "$dir"/*.delta "$dir"/update-*.json)
           # install.sh is the same script for every target (macOS makes one
           # too): the release takes Linux's, so merged assets never clash
           if [ "${{ matrix.goos }}" = linux ]; then files+=("$dir"/install.sh); fi

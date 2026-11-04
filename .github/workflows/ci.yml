@@ -120,8 +120,6 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
       - name: Build (unsigned updates; no MYGO_UPDATER_PRIVATE_KEY in CI)
         run: go tool mygo build -platform "${{ matrix.goos }}/${{ matrix.goarch }}"
-      - name: Package extras
-        run: bash .github/package-extras.sh "${{ matrix.goos }}" "${{ matrix.goarch }}" "${{ steps.v.outputs.version }}"
       - name: List outputs
         run: ls -la "build/${{ matrix.goos }}-${{ matrix.goarch }}"
       - uses: actions/upload-artifact@v7
@@ -132,7 +130,6 @@ jobs:
             build/*/*.tar.gz
             build/*/*.deb
             build/*/*.dmg
-            build/*/*.zip
             build/*/*-setup-*.exe
             build/*/install.sh
             build/*/update-*.json
