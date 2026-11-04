@@ -312,21 +312,20 @@ func TestSnippetUIWelcomeActionsStayInsideContent(t *testing.T) {
 	tt.Frame()
 	left := a.sbWidth + 1
 	right := float32(820 - railWidth - 360 - 2)
-	for _, label := range []string{m.ImportSSHConfig(), m.QuickConnect(), m.NewHost()} {
+	for _, label := range []string{m.QuickMigration(), m.QuickConnect(), m.NewHost()} {
 		r := mustFind(t, tt, label)
 		if r.W <= 0 || r.H <= 0 || r.X < left || r.X+r.W > right || r.Y < 40 || r.Y+r.H > 520-statusBarHeight {
 			t.Fatalf("welcome action %q outside content [%v,%v]: %+v", label, left, right, r)
 		}
 	}
-	for _, label := range []string{m.ImportSSHConfig(), m.QuickConnect(), m.NewHost()} {
+	for _, label := range []string{m.QuickMigration(), m.QuickConnect(), m.NewHost()} {
 		mustClick(t, tt, label)
 		tt.Frame()
-		if label == m.ImportSSHConfig() {
-			if !a.importing {
-				t.Fatal("import unavailable")
+		if label == m.QuickMigration() {
+			if a.page != pageSettings || a.prefNow() != prefMigration || a.importing {
+				t.Fatal("migration settings unavailable")
 			}
-			a.importing = false
-			a.imp = nil
+			mustClick(t, tt, m.Back())
 		}
 		if label == m.QuickConnect() {
 			if !a.quicking {

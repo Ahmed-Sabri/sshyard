@@ -12854,3 +12854,13 @@ func MigrationEncryptedSource() string { return In(i18n.Locale()).MigrationEncry
 func (msgs Messages) MigrationEncryptedSource() string {
 	return Catalog.Format(msgs.locale, "migrationEncryptedSource", nil)
 }
+
+// QuickMigration says "Quick Migration"
+// in the language the app shows.
+func QuickMigration() string { return In(i18n.Locale()).QuickMigration() }
+
+// QuickMigration says "Quick Migration"
+// in the language of msgs.
+func (msgs Messages) QuickMigration() string {
+	return Catalog.Format(msgs.locale, "quickMigration", nil)
+}

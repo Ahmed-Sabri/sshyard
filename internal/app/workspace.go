@@ -207,20 +207,17 @@ func (a *App) terminalPage(c *ui.Context, m locales.Messages, tok theme.Tokens) 
 			ui.Image(c, a.logo).Size(64, 64).Shrink(0).Radius(theme.RadiusSheet).Label(m.AppName())
 			ui.Text(c, m.WelcomeTitle()).FontWeight(600).FontSize(theme.Title1).MarginY(4)
 			ui.Text(c, m.WelcomeHint()).FontSize(theme.Body).TextColor(tok.TextMuted)
-			if a.store.Len() == 0 {
-				// No host yet: start from the ones ssh already knows.
-				ui.Row(c.Key("start")).FillWidth().Wrap().Justify(ui.Center).Gap(theme.Space(2)).MarginY(theme.Space(2)).Children(func() {
-					if pill(c, m.ImportSSHConfig(), true, false, false) {
-						a.OpenImport(m, "")
-					}
-					if pill(c, m.QuickConnect(), false, false, false) {
-						a.OpenQuickConnect()
-					}
-					if pill(c, m.NewHost(), false, false, false) {
-						a.openEditor(nil)
-					}
-				})
-			}
+			ui.Row(c.Key("start")).FillWidth().Wrap().Justify(ui.Center).Gap(theme.Space(2)).MarginY(theme.Space(2)).Children(func() {
+				if pill(c, m.QuickMigration(), true, false, false) {
+					a.openSettings(prefMigration)
+				}
+				if pill(c, m.QuickConnect(), false, false, false) {
+					a.OpenQuickConnect()
+				}
+				if pill(c, m.NewHost(), false, false, false) {
+					a.openEditor(nil)
+				}
+			})
 		})
 		return
 	}

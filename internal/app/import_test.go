@@ -67,8 +67,13 @@ func TestImportSSHConfig(t *testing.T) {
 	db.AuthorizedKey = k.Public
 	kc := a.kc
 
-	// The welcome page offers the import.
-	mustClick(t, tt, "Import from SSH Config")
+	// The welcome action opens migration settings, where OpenSSH keeps its import.
+	mustClick(t, tt, m.QuickMigration())
+	tt.Frame()
+	if a.page != pageSettings || a.prefNow() != prefMigration || a.importing {
+		t.Fatal("welcome did not open migration settings")
+	}
+	mustClick(t, tt, m.ImportSSHConfig())
 	if a.imp == nil || !a.importing {
 		t.Fatal("import sheet not open")
 	}

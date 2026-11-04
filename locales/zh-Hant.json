@@ -1459,5 +1459,6 @@
   "migrationChooseSourceFolder": "選擇 {source} 設定資料夾",
   "migrationFormatError": "匯出格式不支援或檔案損毀；請選擇對應來源與匯出格式",
   "migrationTooLarge": "來源超過 32 MiB 或 1,024 個檔案限制；請選擇較小批次",
-  "migrationEncryptedSource": "此匯出檔案已加密；請匯出未加密的連線設定後重試"
+  "migrationEncryptedSource": "此匯出檔案已加密；請匯出未加密的連線設定後重試",
+  "quickMigration": "快速遷移"
 }

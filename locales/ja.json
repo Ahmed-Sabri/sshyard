@@ -1459,5 +1459,6 @@
   "migrationChooseSourceFolder": "{source} の設定フォルダーを選択",
   "migrationFormatError": "未対応または破損したエクスポートです；対応する移行元と形式を選択してください",
   "migrationTooLarge": "32 MiB または 1,024 ファイルの上限を超えています；小さな単位で選択してください",
-  "migrationEncryptedSource": "エクスポートが暗号化されています；暗号化されていない接続設定をエクスポートして再試行してください"
+  "migrationEncryptedSource": "エクスポートが暗号化されています；暗号化されていない接続設定をエクスポートして再試行してください",
+  "quickMigration": "クイック移行"
 }

@@ -2182,5 +2182,6 @@
   "migrationChooseSourceFolder": "Choose {source} configuration folder",
   "migrationFormatError": "Unsupported or damaged export; choose the matching source and export format",
   "migrationTooLarge": "Source exceeds the limit of 32 MiB or 1,024 files; select a smaller batch",
-  "migrationEncryptedSource": "This export is encrypted; export an unencrypted connection configuration and try again"
+  "migrationEncryptedSource": "This export is encrypted; export an unencrypted connection configuration and try again",
+  "quickMigration": "Quick Migration"
 }
