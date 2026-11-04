@@ -554,8 +554,9 @@ func (a *App) editorWindowView(c *ui.Context, cn *conn) {
 			w.SetEdited(edited)
 		}()
 	}
+	saveKey := a.keyOf(actSaveFile)
 	switch {
-	case c.Shortcut(saveMods, ui.KeyS):
+	case c.Shortcut(saveKey.Mods, saveKey.Key):
 		a.saveTab(cn, ed, false)
 	case c.Shortcut(saveMods, ui.KeyW):
 		if ed != nil {

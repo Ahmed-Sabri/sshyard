@@ -18,7 +18,7 @@ func (a *App) addEntries(m locales.Messages) []menuEntry {
 	return []menuEntry{
 		{Icon: icons.Host, Label: m.NewHost(), Do: func() { a.openEditor(nil) }},
 		{Icon: icons.NewFolder, Label: m.NewGroup(), Do: func() { a.openGroupForm("", "") }},
-		{Icon: icons.Quick, Label: m.QuickConnectMenu(), Mods: appMods, Key: ui.KeyK, Do: a.OpenQuickConnect},
+		a.bound(actQuickConnect, menuEntry{Icon: icons.Quick, Label: m.QuickConnectMenu(), Do: a.OpenQuickConnect}),
 		{Icon: icons.Forward, Label: m.NewForwardMenu(), Disabled: a.store.Len() == 0, Do: func() { a.openFwdForm(m, nil, a.selectedHost()) }},
 		{Icon: icons.LocalShell, Label: m.LocalTerminal(), Do: func() { a.OpenLocalTerminal() }},
 		menuSep,

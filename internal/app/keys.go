@@ -224,37 +224,12 @@ var stopAllMods = func() ui.Modifiers {
 	return ui.Ctrl | ui.Shift
 }()
 
-// aiMods opens an AI pane: ⌘⇧A on macOS, Ctrl+Shift+A elsewhere.
-// Not appMods: on macOS that is ⌘A, which is Select All in a text field.
+// aiMods opens an AI pane and the command palette: ⌘⇧A and ⌘⇧P on
+// macOS, Ctrl+Shift+A and Ctrl+Shift+P elsewhere. Not appMods: on macOS
+// that is ⌘A, which is Select All in a text field.
 var aiMods = func() ui.Modifiers {
 	if runtime.GOOS == "darwin" {
 		return ui.Super | ui.Shift
 	}
 	return ui.Ctrl | ui.Shift
 }()
-
-// appKeys are the keys of the app's shortcuts with appMods: find, new tab,
-// close pane, split right, split down, open files on the right, quick
-// connect. A is aiMods. Period is stopMods and stopAllMods, not appKeys:
-// on other systems appMods is Ctrl+Shift, and a period in appKeys would
-// be the only thing that distinguishes stop-all from typing.
-var appKeys = []ui.Key{ui.KeyF, ui.KeyT, ui.KeyW, ui.KeyD, ui.KeyE, ui.KeyO, ui.KeyK}
-
-// isAppShortcut reports a key the terminal leaves to the app.
-func isAppShortcut(k ui.Key, mods ui.Modifiers) bool {
-	if k == ui.KeyPeriod && (mods == stopMods || mods == stopAllMods) {
-		return true
-	}
-	if k == ui.KeyA && mods == aiMods {
-		return true
-	}
-	if mods != appMods {
-		return false
-	}
-	for _, a := range appKeys {
-		if a == k {
-			return true
-		}
-	}
-	return false
-}

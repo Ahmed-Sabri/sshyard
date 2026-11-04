@@ -164,45 +164,6 @@ func scpBadge(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	})
 }
 
-func (a *App) shortcuts(c *ui.Context) {
-	if c.Shortcut(appMods, ui.KeyK) {
-		a.OpenQuickConnect()
-	}
-	if c.Shortcut(appMods, ui.KeyF) && a.page == pageWorkspace {
-		if cn := a.focused(); cn != nil && cn.kind == layout.Terminal {
-			a.finding = true
-		}
-	}
-	if c.Shortcut(appMods, ui.KeyT) {
-		if cn := a.focused(); cn != nil {
-			a.Connect(cn.host.ID, openAt{})
-		} else if id := a.selectedHost(); id != "" {
-			a.Connect(id, openAt{})
-		}
-	}
-	if c.Shortcut(appMods, ui.KeyW) {
-		a.CloseFocused()
-	}
-	if c.Shortcut(appMods, ui.KeyD) {
-		a.SplitFocused(layout.Right)
-	}
-	if c.Shortcut(appMods, ui.KeyE) {
-		a.SplitFocused(layout.Bottom)
-	}
-	if c.Shortcut(appMods, ui.KeyO) {
-		a.ToggleFiles()
-	}
-	if c.Shortcut(aiMods, ui.KeyA) && a.page == pageWorkspace {
-		a.ToggleAI()
-	}
-	if c.Shortcut(stopMods, ui.KeyPeriod) {
-		a.stopShortcut()
-	}
-	if c.Shortcut(stopAllMods, ui.KeyPeriod) {
-		a.StopAllAI()
-	}
-}
-
 // toolbarTrail is the toolbar's right padding: a small gap before the
 // window buttons where they sit on the right (Windows, Linux), and the
 // toolbar's own margin where they do not (macOS, on the left).
@@ -544,6 +505,7 @@ func (a *App) termElement(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn
 				a.focusReq = cn.id
 			}
 		}
+		tv.shortcuts = a.settings.Shortcuts
 		// A program reading the mouse takes the right click too.
 		return tv.input(ev, svc) || a.contextPress(tb, ev, entries)
 	})
@@ -568,21 +530,21 @@ func (a *App) termEntries(t *layout.Tab, n *layout.Node, cn *conn, tv *termView,
 	return []menuEntry{
 		{Icon: icons.Copy, Label: m.Copy(), Disabled: sel == "", Do: func() { svc.WriteClipboard(sel) }},
 		{Icon: icons.Paste, Label: m.Paste(), Do: func() { tv.Paste(svc.ReadClipboard()) }},
-		{Icon: icons.Search, Label: m.Find(), Mods: appMods, Key: ui.KeyF, Do: focus(func() { a.finding = true })},
+		a.bound(actFind, menuEntry{Icon: icons.Search, Label: m.Find(), Do: focus(func() { a.finding = true })}),
 		{Icon: icons.Clear, Label: m.ClearScreen(), Do: func() { tv.send([]byte{0x0c}) }},
 		menuSep,
-		{Icon: icons.SplitRight, Label: m.SplitRight(), Mods: appMods, Key: ui.KeyD, Do: focus(func() { a.SplitFocused(layout.Right) })},
-		{Icon: icons.SplitDown, Label: m.SplitDown(), Mods: appMods, Key: ui.KeyE, Do: focus(func() { a.SplitFocused(layout.Bottom) })},
-		{Icon: icons.Folder, Label: m.OpenFilesBeside(), Mods: appMods, Key: ui.KeyO, Disabled: noAI, Do: focus(a.OpenFilesBeside)},
-		{Icon: icons.Robot, Label: m.OpenAIRight(), Mods: aiMods, Key: ui.KeyA, Disabled: noAI, Do: focus(func() {
+		a.bound(actSplitRight, menuEntry{Icon: icons.SplitRight, Label: m.SplitRight(), Do: focus(func() { a.SplitFocused(layout.Right) })}),
+		a.bound(actSplitDown, menuEntry{Icon: icons.SplitDown, Label: m.SplitDown(), Do: focus(func() { a.SplitFocused(layout.Bottom) })}),
+		a.bound(actOpenFiles, menuEntry{Icon: icons.Folder, Label: m.OpenFilesBeside(), Disabled: noAI, Do: focus(a.OpenFilesBeside)}),
+		a.bound(actOpenAI, menuEntry{Icon: icons.Robot, Label: m.OpenAIRight(), Disabled: noAI, Do: focus(func() {
 			a.OpenAI(cn.host.ID, openAt{pane: n.ID, edge: layout.Right}, cn.id)
-		})},
+		})}),
 		{Label: m.OpenAIBelow(), Disabled: noAI, Do: focus(func() {
 			a.OpenAI(cn.host.ID, openAt{pane: n.ID, edge: layout.Bottom}, cn.id)
 		})},
 		{Icon: icons.Robot, Label: m.AskAI(), Disabled: sel == "" || noAI, Do: func() { a.AskAI(cn, sel) }},
 		menuSep,
-		{Icon: icons.Close, Label: m.ClosePane(), Mods: appMods, Key: ui.KeyW, Do: func() { a.closeSoon(cn.id) }},
+		a.bound(actClosePane, menuEntry{Icon: icons.Close, Label: m.ClosePane(), Do: func() { a.closeSoon(cn.id) }}),
 	}
 }
 

@@ -6443,11 +6443,11 @@ func (msgs Messages) ProxiesDesc() string {
 	return Catalog.Format(msgs.locale, "proxiesDesc", nil)
 }
 
-// ShortcutsDesc says "SSHYard's own shortcuts. Every other key goes to the shell."
+// ShortcutsDesc says "SSHYard's own shortcuts: record a new one for any action. Every other key goes to the shell."
 // in the language the app shows.
 func ShortcutsDesc() string { return In(i18n.Locale()).ShortcutsDesc() }
 
-// ShortcutsDesc says "SSHYard's own shortcuts. Every other key goes to the shell."
+// ShortcutsDesc says "SSHYard's own shortcuts: record a new one for any action. Every other key goes to the shell."
 // in the language of msgs.
 func (msgs Messages) ShortcutsDesc() string {
 	return Catalog.Format(msgs.locale, "shortcutsDesc", nil)
@@ -12317,4 +12317,146 @@ func ErrSchemeImport(name string) string { return In(i18n.Locale()).ErrSchemeImp
 // in the language of msgs.
 func (msgs Messages) ErrSchemeImport(name string) string {
 	return Catalog.Format(msgs.locale, "errSchemeImport", map[string]any{"name": name})
+}
+
+// CommandPalette says "Command Palette"
+// in the language the app shows.
+func CommandPalette() string { return In(i18n.Locale()).CommandPalette() }
+
+// CommandPalette says "Command Palette"
+// in the language of msgs.
+func (msgs Messages) CommandPalette() string {
+	return Catalog.Format(msgs.locale, "commandPalette", nil)
+}
+
+// PalettePlaceholder says "Search commands, settings, hosts and snippets…"
+// in the language the app shows.
+func PalettePlaceholder() string { return In(i18n.Locale()).PalettePlaceholder() }
+
+// PalettePlaceholder says "Search commands, settings, hosts and snippets…"
+// in the language of msgs.
+func (msgs Messages) PalettePlaceholder() string {
+	return Catalog.Format(msgs.locale, "palettePlaceholder", nil)
+}
+
+// PaletteNoResults says "No matches"
+// in the language the app shows.
+func PaletteNoResults() string { return In(i18n.Locale()).PaletteNoResults() }
+
+// PaletteNoResults says "No matches"
+// in the language of msgs.
+func (msgs Messages) PaletteNoResults() string {
+	return Catalog.Format(msgs.locale, "paletteNoResults", nil)
+}
+
+// PaletteCommand says "Command"
+// in the language the app shows.
+func PaletteCommand() string { return In(i18n.Locale()).PaletteCommand() }
+
+// PaletteCommand says "Command"
+// in the language of msgs.
+func (msgs Messages) PaletteCommand() string {
+	return Catalog.Format(msgs.locale, "paletteCommand", nil)
+}
+
+// PaletteInSettings says "Settings › {page}"
+// in the language the app shows.
+func PaletteInSettings(page string) string { return In(i18n.Locale()).PaletteInSettings(page) }
+
+// PaletteInSettings says "Settings › {page}"
+// in the language of msgs.
+func (msgs Messages) PaletteInSettings(page string) string {
+	return Catalog.Format(msgs.locale, "paletteInSettings", map[string]any{"page": page})
+}
+
+// ShortcutRecord says "Record a shortcut for “{action}”"
+// in the language the app shows.
+func ShortcutRecord(action string) string { return In(i18n.Locale()).ShortcutRecord(action) }
+
+// ShortcutRecord says "Record a shortcut for “{action}”"
+// in the language of msgs.
+func (msgs Messages) ShortcutRecord(action string) string {
+	return Catalog.Format(msgs.locale, "shortcutRecord", map[string]any{"action": action})
+}
+
+// ShortcutReset says "Restore the default shortcut of “{action}”"
+// in the language the app shows.
+func ShortcutReset(action string) string { return In(i18n.Locale()).ShortcutReset(action) }
+
+// ShortcutReset says "Restore the default shortcut of “{action}”"
+// in the language of msgs.
+func (msgs Messages) ShortcutReset(action string) string {
+	return Catalog.Format(msgs.locale, "shortcutReset", map[string]any{"action": action})
+}
+
+// ShortcutRecordHint says "Press the new shortcut. Esc cancels."
+// in the language the app shows.
+func ShortcutRecordHint() string { return In(i18n.Locale()).ShortcutRecordHint() }
+
+// ShortcutRecordHint says "Press the new shortcut. Esc cancels."
+// in the language of msgs.
+func (msgs Messages) ShortcutRecordHint() string {
+	return Catalog.Format(msgs.locale, "shortcutRecordHint", nil)
+}
+
+// ShortcutPressKeys says "Press keys…"
+// in the language the app shows.
+func ShortcutPressKeys() string { return In(i18n.Locale()).ShortcutPressKeys() }
+
+// ShortcutPressKeys says "Press keys…"
+// in the language of msgs.
+func (msgs Messages) ShortcutPressKeys() string {
+	return Catalog.Format(msgs.locale, "shortcutPressKeys", nil)
+}
+
+// ShortcutsResetAll says "Restore All Defaults"
+// in the language the app shows.
+func ShortcutsResetAll() string { return In(i18n.Locale()).ShortcutsResetAll() }
+
+// ShortcutsResetAll says "Restore All Defaults"
+// in the language of msgs.
+func (msgs Messages) ShortcutsResetAll() string {
+	return Catalog.Format(msgs.locale, "shortcutsResetAll", nil)
+}
+
+// ShortcutKeyInvalid says "Use a letter, digit, punctuation or function key."
+// in the language the app shows.
+func ShortcutKeyInvalid() string { return In(i18n.Locale()).ShortcutKeyInvalid() }
+
+// ShortcutKeyInvalid says "Use a letter, digit, punctuation or function key."
+// in the language of msgs.
+func (msgs Messages) ShortcutKeyInvalid() string {
+	return Catalog.Format(msgs.locale, "shortcutKeyInvalid", nil)
+}
+
+// ShortcutNeedsMods says "The shortcut must hold {mods}, so other keys reach the shell."
+// in the language the app shows.
+func ShortcutNeedsMods(mods string) string { return In(i18n.Locale()).ShortcutNeedsMods(mods) }
+
+// ShortcutNeedsMods says "The shortcut must hold {mods}, so other keys reach the shell."
+// in the language of msgs.
+func (msgs Messages) ShortcutNeedsMods(mods string) string {
+	return Catalog.Format(msgs.locale, "shortcutNeedsMods", map[string]any{"mods": mods})
+}
+
+// ShortcutReserved says "{keys} belongs to the system or to editing text."
+// in the language the app shows.
+func ShortcutReserved(keys string) string { return In(i18n.Locale()).ShortcutReserved(keys) }
+
+// ShortcutReserved says "{keys} belongs to the system or to editing text."
+// in the language of msgs.
+func (msgs Messages) ShortcutReserved(keys string) string {
+	return Catalog.Format(msgs.locale, "shortcutReserved", map[string]any{"keys": keys})
+}
+
+// ShortcutTaken says "{keys} is already the shortcut of “{action}”."
+// in the language the app shows.
+func ShortcutTaken(keys string, action string) string {
+	return In(i18n.Locale()).ShortcutTaken(keys, action)
+}
+
+// ShortcutTaken says "{keys} is already the shortcut of “{action}”."
+// in the language of msgs.
+func (msgs Messages) ShortcutTaken(keys string, action string) string {
+	return Catalog.Format(msgs.locale, "shortcutTaken", map[string]any{"keys": keys, "action": action})
 }

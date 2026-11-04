@@ -132,12 +132,12 @@ func (a *App) newTabButton(c *ui.Context, m locales.Messages) {
 			}
 		}
 		return []menuEntry{
-			{Icon: icons.Add, Label: m.NewTab(), Mods: appMods, Key: ui.KeyT, Do: func() { a.Connect(cn.host.ID, openAt{}) }},
+			a.bound(actNewTab, menuEntry{Icon: icons.Add, Label: m.NewTab(), Do: func() { a.Connect(cn.host.ID, openAt{}) }}),
 			{Icon: icons.Robot, Label: m.OpenAI(), Disabled: noAI, Do: func() { a.OpenAI(cn.host.ID, openAt{}, 0) }},
 			{Icon: icons.SplitRight, Label: m.OpenAIRight(), Disabled: noAI, Do: beside(layout.Right)},
 			{Icon: icons.SplitDown, Label: m.OpenAIBelow(), Disabled: noAI, Do: beside(layout.Bottom)},
 			menuSep,
-			{Icon: icons.Stop, Label: m.StopAllAI(), Mods: stopAllMods, Key: ui.KeyPeriod, Do: a.StopAllAI},
+			a.bound(actStopAllAI, menuEntry{Icon: icons.Stop, Label: m.StopAllAI(), Do: a.StopAllAI}),
 		}
 	})
 }
@@ -147,7 +147,7 @@ func (a *App) newTabButton(c *ui.Context, m locales.Messages) {
 func (a *App) newTabEntries(c *ui.Context, m locales.Messages) []menuEntry {
 	tok := currentTokens(c)
 	entries := []menuEntry{
-		{Icon: icons.Quick, Label: m.QuickConnectMenu(), Mods: appMods, Key: ui.KeyK, Do: a.OpenQuickConnect},
+		a.bound(actQuickConnect, menuEntry{Icon: icons.Quick, Label: m.QuickConnectMenu(), Do: a.OpenQuickConnect}),
 		{Icon: icons.Host, Label: m.NewHost(), Do: func() { a.openEditor(nil) }},
 		{Icon: icons.LocalShell, Label: m.LocalTerminal(), Do: func() {
 			if _, err := a.OpenLocalTerminal(); err != nil {

@@ -73,10 +73,10 @@ func aiPaneOf(a *App, id int) *conn {
 }
 
 func TestAIShortcutMods(t *testing.T) {
-	if isAppShortcut(ui.KeyA, ui.Ctrl) || isAppShortcut(ui.KeyB, ui.Ctrl) {
+	if isAppShortcut(nil, ui.KeyA, ui.Ctrl) || isAppShortcut(nil, ui.KeyB, ui.Ctrl) {
 		t.Fatal("plain Ctrl+letter must reach the shell")
 	}
-	if isAppShortcut(ui.KeyC, ui.Ctrl|ui.Shift) || isAppShortcut(ui.KeyI, ui.Ctrl|ui.Shift) {
+	if isAppShortcut(nil, ui.KeyC, ui.Ctrl|ui.Shift) || isAppShortcut(nil, ui.KeyI, ui.Ctrl|ui.Shift) {
 		t.Fatal("Ctrl+Shift+C and Ctrl+Shift+I belong to copy or the inspector")
 	}
 	if runtime.GOOS == "darwin" {
@@ -86,13 +86,13 @@ func TestAIShortcutMods(t *testing.T) {
 		if stopAllMods != ui.Super|ui.Shift {
 			t.Fatalf("stopAllMods = %v, want ⌘⇧", stopAllMods)
 		}
-		if isAppShortcut(ui.KeyA, ui.Super) {
+		if isAppShortcut(nil, ui.KeyA, ui.Super) {
 			t.Fatal("⌘A is Select All and must reach the text field")
 		}
-		if !isAppShortcut(ui.KeyA, ui.Super|ui.Shift) {
+		if !isAppShortcut(nil, ui.KeyA, ui.Super|ui.Shift) {
 			t.Fatal("⌘⇧A must reach the app")
 		}
-		if !isAppShortcut(ui.KeyPeriod, ui.Super) || !isAppShortcut(ui.KeyPeriod, ui.Super|ui.Shift) {
+		if !isAppShortcut(nil, ui.KeyPeriod, ui.Super) || !isAppShortcut(nil, ui.KeyPeriod, ui.Super|ui.Shift) {
 			t.Fatal("⌘. and ⌘⇧. must reach the app")
 		}
 		return
@@ -103,10 +103,10 @@ func TestAIShortcutMods(t *testing.T) {
 	if stopAllMods != ui.Ctrl|ui.Shift {
 		t.Fatalf("stopAllMods = %v, want Ctrl+Shift", stopAllMods)
 	}
-	if !isAppShortcut(ui.KeyA, ui.Ctrl|ui.Shift) {
+	if !isAppShortcut(nil, ui.KeyA, ui.Ctrl|ui.Shift) {
 		t.Fatal("Ctrl+Shift+A must reach the app")
 	}
-	if !isAppShortcut(ui.KeyPeriod, ui.Ctrl) || !isAppShortcut(ui.KeyPeriod, ui.Ctrl|ui.Shift) {
+	if !isAppShortcut(nil, ui.KeyPeriod, ui.Ctrl) || !isAppShortcut(nil, ui.KeyPeriod, ui.Ctrl|ui.Shift) {
 		t.Fatal("Ctrl+. and Ctrl+Shift+. must reach the app")
 	}
 }

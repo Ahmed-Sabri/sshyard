@@ -343,9 +343,14 @@ type App struct {
 	quick     *quickForm
 	quicking  bool
 	quickHold focusHold
-	imp       *importForm
-	importing bool
-	impHold   focusHold
+	// palette is the command palette, open while palette.open
+	palette paletteState
+	// recording is the action whose shortcut is being recorded, and
+	// recordErr why the last key pressed for it could not be its shortcut
+	recording, recordErr string
+	imp                  *importForm
+	importing            bool
+	impHold              focusHold
 	// fwds are the port forwards running, by forward ID
 	fwds       map[string]*fwdRun
 	fwdForm    *fwdForm

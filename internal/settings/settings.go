@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Licoy/sshyard/internal/keymap"
 	"github.com/Licoy/sshyard/internal/session"
 	"github.com/Licoy/sshyard/internal/theme"
 )
@@ -49,6 +50,9 @@ type Settings struct {
 	TerminalScheme string `json:"terminalScheme,omitempty"`
 	// TerminalSchemes are the color schemes the user imported.
 	TerminalSchemes []theme.Scheme `json:"terminalSchemes,omitempty"`
+	// Shortcuts are the shortcuts the user recorded, by the ID of the
+	// app's action, as keymap writes them; the others keep their default.
+	Shortcuts map[string]string `json:"shortcuts,omitempty"`
 	// MonospacedOnly limits the terminal font choice to monospaced
 	// families.
 	MonospacedOnly bool `json:"monospacedOnly"`
@@ -436,6 +440,17 @@ func (s *Settings) Normalize() {
 		s.MetricsMount = ""
 	}
 	s.normalizeSchemes()
+	// A new map: the one held may be shared with the settings in force.
+	var keys map[string]string
+	for id, k := range s.Shortcuts {
+		if _, ok := keymap.Parse(k); ok && id != "" {
+			if keys == nil {
+				keys = map[string]string{}
+			}
+			keys[id] = k
+		}
+	}
+	s.Shortcuts = keys
 	s.normalizeAI(d)
 	s.normalizeBackups()
 }
