@@ -280,6 +280,12 @@ func isReset(err error) bool {
 // ends with a connection reset rather than io.EOF. Bytes already in the
 // client's own receive buffer may still be returned before that error.
 // A graceful close delivers what was queued and then io.EOF.
+//
+// The client has not read while the relay filled its buffer, so the reset
+// can reach it with its receive window shut, and its TCP may drop it: it
+// then learns of the abort only when it next sends. So when the data
+// stops, it sends a byte, which the closed socket answers with a reset;
+// a graceful close would have ended in io.EOF before the data stopped.
 func TestRegistryCloseResetsSlowReader(t *testing.T) {
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -326,13 +332,22 @@ func TestRegistryCloseResetsSlowReader(t *testing.T) {
 	if !reg.Close(id) {
 		t.Fatal("close")
 	}
-	c.SetReadDeadline(time.Now().Add(5 * time.Second))
+	deadline = time.Now().Add(5 * time.Second)
 	buf := make([]byte, 32<<10)
 	for {
+		next := time.Now().Add(200 * time.Millisecond)
+		if next.After(deadline) {
+			next = deadline
+		}
+		c.SetReadDeadline(next)
 		_, err = c.Read(buf)
-		if err != nil {
+		if err == nil {
+			continue
+		}
+		if !isTimeout(err) || time.Now().After(deadline) {
 			break
 		}
+		c.Write([]byte{0})
 	}
 	if isTimeout(err) {
 		t.Fatalf("still open after disconnect: %v", err)
