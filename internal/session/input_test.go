@@ -128,3 +128,66 @@ func TestCapturedInputPreservesTerminalReplies(t *testing.T) {
 		t.Fatalf("reply moved connections: old=%q new=%q", old.String(), next.String())
 	}
 }
+
+// TestSendDoesNotWait: typed input returns at once while the connection
+// is stalled, reaches the shell in order once it moves, and is refused
+// while a whole write is in progress.
+func TestSendDoesNotWait(t *testing.T) {
+	in := &gatedInput{entered: make(chan struct{}), release: make(chan struct{}), written: make(chan string, 8)}
+	s := &Session{stdin: &serializedInput{WriteCloser: in}, status: Status{State: Connected}}
+	sent := make(chan error, 1)
+	go func() {
+		for _, k := range []string{"l", "s", "\r"} {
+			if err := s.Send([]byte(k)); err != nil {
+				sent <- err
+				return
+			}
+		}
+		sent <- nil
+	}()
+	select {
+	case err := <-sent:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		close(in.release)
+		t.Fatal("typed input waited for a stalled connection")
+	}
+	<-in.entered
+	// A whole write cannot start while keys are still being written.
+	w, _ := s.CaptureInput()
+	if _, err := w.Write([]byte("paste")); !errors.Is(err, ErrInputBusy) {
+		t.Fatalf("whole write during typed input: %v", err)
+	}
+	close(in.release)
+	deadline := time.After(time.Second)
+	var got string
+	for got != "ls\r" {
+		select {
+		case p := <-in.written:
+			got += p
+		case <-deadline:
+			t.Fatalf("written %q", got)
+		}
+	}
+	// Then the lock is free for a whole write, and typing waits on it.
+	gate := &gatedInput{entered: make(chan struct{}), release: make(chan struct{})}
+	s.mu.Lock()
+	s.stdin = &serializedInput{WriteCloser: gate}
+	s.mu.Unlock()
+	w, _ = s.CaptureInput()
+	done := make(chan error, 1)
+	go func() { _, err := w.Write([]byte("paste")); done <- err }()
+	<-gate.entered
+	if err := s.Send([]byte("k")); !errors.Is(err, ErrInputBusy) {
+		t.Fatalf("typed input during a whole write: %v", err)
+	}
+	close(gate.release)
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Send([]byte("k")); err != nil {
+		t.Fatal(err)
+	}
+}

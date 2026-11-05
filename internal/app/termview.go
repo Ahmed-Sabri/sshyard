@@ -4,7 +4,11 @@ import (
 	"errors"
 	"math"
 	"runtime"
+	"slices"
+	"sort"
 	"strings"
+	"time"
+	"unicode/utf8"
 
 	"github.com/Licoy/sshyard/internal/session"
 	"github.com/Licoy/sshyard/internal/theme"
@@ -28,12 +32,6 @@ type ptyTarget interface {
 
 const termPad = 10 // DIPs around the grid, inside the pane card
 
-type shapeKey struct {
-	text   string
-	bold   bool
-	italic bool
-}
-
 type termView struct {
 	target         ptyTarget
 	snippetSending bool // UI-thread state, cleared when the captured write returns
@@ -51,7 +49,8 @@ type termView struct {
 	scale               float32
 	cellW, cellH, base  float32 // DIPs, whole device pixels
 	fonts               [4]ui.Font
-	shaped              map[shapeKey][]ui.Glyph
+	shaped              [4]map[string][]ui.Glyph // by font, as fonts
+	nshaped             int
 	cols, rows          int
 	sized               bool
 	first               int // absolute line of the top row last drawn
@@ -69,6 +68,14 @@ type termView struct {
 	wheelAcc  float32
 	focusSeen int8 // 0 unknown, 1 focused, -1 not
 
+	// what paint reuses from frame to frame, so that a frame of a
+	// terminal allocates nothing once warm
+	snap   vt.Snapshot
+	run    []byte
+	colOf  []int
+	placed []ui.Glyph
+	marks  []uint8 // the matches on a row, as rowMatches marks them
+
 	// find
 	query      string
 	matches    []vt.Match
@@ -76,10 +83,11 @@ type termView struct {
 	findGen    uint64
 	findQuery  string
 	findActive bool
+	findAt     time.Time // when the matches were found
 }
 
 func newTermView(t ptyTarget, fontSize float32) *termView {
-	return &termView{target: t, fontSize: fontSize, shaped: map[shapeKey][]ui.Glyph{}}
+	return &termView{target: t, fontSize: fontSize}
 }
 
 // metrics measures the cells of the terminal font at a scale, again
@@ -121,7 +129,7 @@ func (v *termView) metrics(scale float32) {
 	ch := max(float32(math.Ceil(float64(h*scale-0.05))), 1)
 	v.cellW, v.cellH = cw/scale, ch/scale
 	v.base = float32(math.Round(float64((ch-(m.Ascent+m.Descent)*scale)/2+m.Ascent*scale))) / scale
-	clear(v.shaped)
+	v.shaped, v.nshaped = [4]map[string][]ui.Glyph{}, 0
 }
 
 const asciiPrintable = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
@@ -149,13 +157,11 @@ func (v *termView) cellAt(x, y float32) vt.Pos {
 }
 
 func (v *termView) shape(text string, bold, italic bool) []ui.Glyph {
-	k := shapeKey{text, bold, italic}
-	if g, ok := v.shaped[k]; ok {
-		return g
-	}
-	if len(v.shaped) > 4096 {
-		clear(v.shaped)
-	}
+	return v.shapeBytes([]byte(text), fontIndex(bold, italic))
+}
+
+// fontIndex is the index of the font of a style in fonts.
+func fontIndex(bold, italic bool) int {
 	i := 0
 	if bold {
 		i |= 1
@@ -163,8 +169,24 @@ func (v *termView) shape(text string, bold, italic bool) []ui.Glyph {
 	if italic {
 		i |= 2
 	}
-	g := ui.Shape(text, v.fonts[i])
-	v.shaped[k] = g
+	return i
+}
+
+// shapeBytes shapes text in font i, the same text once: looking a text
+// up does not allocate.
+func (v *termView) shapeBytes(text []byte, i int) []ui.Glyph {
+	if g, ok := v.shaped[i][string(text)]; ok {
+		return g
+	}
+	if v.nshaped > 4096 {
+		v.shaped, v.nshaped = [4]map[string][]ui.Glyph{}, 0
+	}
+	if v.shaped[i] == nil {
+		v.shaped[i] = map[string][]ui.Glyph{}
+	}
+	g := ui.Shape(string(text), v.fonts[i])
+	v.shaped[i][string(text)] = g
+	v.nshaped++
 	return g
 }
 
@@ -180,13 +202,21 @@ func (v *termView) selection() (vt.Pos, vt.Pos, bool) {
 	return a, b, true
 }
 
-func (v *termView) inSelection(line, col int) bool {
+// selectedCols is the columns of line the selection takes, from to to
+// inclusive; from > to when it takes none.
+func (v *termView) selectedCols(line int) (from, to int) {
 	a, b, ok := v.selection()
-	if !ok {
-		return false
+	if !ok || line < a.Line || line > b.Line {
+		return 1, 0
 	}
-	p := vt.Pos{Line: line, Col: col}
-	return !p.Less(a) && !b.Less(p)
+	from, to = 0, math.MaxInt
+	if line == a.Line {
+		from = a.Col
+	}
+	if line == b.Line {
+		to = b.Col
+	}
+	return from, to
 }
 
 // SelectedText is the text selected, or "".
@@ -198,22 +228,34 @@ func (v *termView) SelectedText() string {
 	return v.target.Terminal().Text(a, b)
 }
 
-// updateFind recomputes the matches of the query as the output changes.
-func (v *termView) updateFind(query string, active bool) {
+// findEvery is how often at most the matches are found again as output
+// streams in: each time searches the whole scrollback.
+const findEvery = 150 * time.Millisecond
+
+// updateFind recomputes the matches of the query as the output changes,
+// at most every findEvery for the same query. It returns how long until
+// the output that came in since may be searched, 0 for none.
+func (v *termView) updateFind(query string, active bool, now time.Time) time.Duration {
 	t := v.target.Terminal()
 	gen := t.Generation()
 	if !active || query == "" {
 		v.matches, v.findQuery, v.findActive = nil, "", false
-		return
+		return 0
 	}
-	if v.findActive && gen == v.findGen && query == v.findQuery {
-		return
+	if v.findActive && query == v.findQuery {
+		if gen == v.findGen {
+			return 0
+		}
+		if wait := v.findAt.Add(findEvery).Sub(now); wait > 0 {
+			return wait
+		}
 	}
 	v.matches = t.Find(query, false)
-	v.findGen, v.findQuery, v.findActive = gen, query, true
+	v.findGen, v.findQuery, v.findActive, v.findAt = gen, query, true, now
 	if v.current >= len(v.matches) {
 		v.current = max(len(v.matches)-1, 0)
 	}
+	return 0
 }
 
 // showMatch scrolls match i into view.
@@ -225,18 +267,27 @@ func (v *termView) showMatch(i int) {
 	v.offset = v.target.Terminal().OffsetFor(v.matches[i].Line, v.offset)
 }
 
-func (v *termView) matchAt(line, col int) int {
-	for i, m := range v.matches {
-		start := m.Line*max(v.cols, 1) + m.Col
-		p := line*max(v.cols, 1) + col
-		if p >= start && p < start+m.Len {
-			if i == v.current {
-				return 2
-			}
-			return 1
+// rowMatches marks the cells of the matches on line in cols columns: 1
+// for a match, 2 for the current one. It is nil without any.
+func (v *termView) rowMatches(line, cols int) []uint8 {
+	// The matches are in order, and do not span lines.
+	i := sort.Search(len(v.matches), func(i int) bool { return v.matches[i].Line >= line })
+	if i == len(v.matches) || v.matches[i].Line != line {
+		return nil
+	}
+	v.marks = slices.Grow(v.marks[:0], cols)[:cols]
+	clear(v.marks)
+	for ; i < len(v.matches) && v.matches[i].Line == line; i++ {
+		m := v.matches[i]
+		mark := uint8(1)
+		if i == v.current {
+			mark = 2
+		}
+		for x := max(m.Col, 0); x < min(m.Col+m.Len, cols); x++ {
+			v.marks[x] = mark
 		}
 	}
-	return 0
+	return v.marks
 }
 
 // paint draws the grid, the selection, the matches, the cursor and the
@@ -253,7 +304,8 @@ func (v *termView) paint(p *ui.Painter, r ui.Rect, pal *theme.Terminal, focused 
 		v.target.Resize(cols, rows)
 	}
 	t := v.target.Terminal()
-	snap := t.Snapshot(v.offset)
+	t.SnapshotInto(&v.snap, v.offset)
+	snap := &v.snap
 	v.offset, v.first = snap.Offset, snap.First
 	if !v.clear {
 		p.Fill(r, pal.Background, 0)
@@ -262,25 +314,23 @@ func (v *termView) paint(p *ui.Painter, r ui.Rect, pal *theme.Terminal, focused 
 	ox := float32(math.Round(float64((r.X+termPad)*s))) / s
 	oy := float32(math.Round(float64((r.Y+termPad)*s))) / s
 	cw, ch := v.cellW, v.cellH
-	matching := len(v.matches) > 0
 
 	for y, line := range snap.Lines {
 		ry := oy + float32(y)*ch
 		abs := snap.First + y
+		selFrom, selTo := v.selectedCols(abs)
+		marks := v.rowMatches(abs, snap.Cols)
 		// backgrounds
 		for x := 0; x < len(line.Cells) && x < snap.Cols; x++ {
 			c := line.Cells[x]
 			_, bg, set := cellColors(c, pal)
 			switch {
-			case v.inSelection(abs, x):
+			case x >= selFrom && x <= selTo:
 				bg, set = pal.Selection, true
-			case matching:
-				switch v.matchAt(abs, x) {
-				case 1:
-					bg, set = pal.Match, true
-				case 2:
-					bg, set = pal.MatchCurrent, true
-				}
+			case marks != nil && marks[x] == 1:
+				bg, set = pal.Match, true
+			case marks != nil && marks[x] == 2:
+				bg, set = pal.MatchCurrent, true
 			}
 			if set {
 				w := float32(max(int(c.Width), 1))
@@ -297,8 +347,7 @@ func (v *termView) paint(p *ui.Painter, r ui.Rect, pal *theme.Terminal, focused 
 			}
 			fg, _, _ := cellColors(c, pal)
 			bold, italic := c.Attr&vt.Bold != 0, c.Attr&vt.Italic != 0
-			var sb strings.Builder
-			var colOf []int
+			run, colOf := v.run[:0], v.colOf[:0]
 			start := x
 			for x < len(line.Cells) && x < snap.Cols {
 				d := line.Cells[x]
@@ -310,25 +359,28 @@ func (v *termView) paint(p *ui.Painter, r ui.Rect, pal *theme.Terminal, focused 
 					break
 				}
 				f2, _, _ := cellColors(d, pal)
-				if f2 != fg || (d.Attr&vt.Bold != 0) != bold || (d.Attr&vt.Italic != 0) != italic {
+				if f2 != fg || (d.Attr&vt.Bold != 0) != bold || (d.Attr&vt.Italic != 0) != italic || (d.Attr^c.Attr)&(vt.Underline|vt.Strike) != 0 {
 					break
 				}
-				sb.WriteRune(d.Rune)
+				run = utf8.AppendRune(run, d.Rune)
 				colOf = append(colOf, x)
 				// what joins the rune is drawn in its cell
-				for _, cr := range d.Comb {
-					sb.WriteRune(cr)
-					colOf = append(colOf, x)
+				if d.Comb != 0 {
+					for _, cr := range d.Comb.String() {
+						run = utf8.AppendRune(run, cr)
+						colOf = append(colOf, x)
+					}
 				}
 				x++
 			}
-			if sb.Len() == 0 {
+			v.run, v.colOf = run, colOf
+			if len(run) == 0 {
 				x = start + 1
 				continue
 			}
-			g := v.shape(sb.String(), bold, italic)
-			placed := make([]ui.Glyph, len(g))
-			copy(placed, g)
+			g := v.shapeBytes(run, fontIndex(bold, italic))
+			placed := append(v.placed[:0], g...)
+			v.placed = placed
 			placeGlyphs(placed, g, colOf, line.Cells, cw)
 			p.Glyphs(placed, ox, ry+v.base, fg)
 			// decorations
@@ -440,9 +492,8 @@ func placeGlyphs(placed, g []ui.Glyph, colOf []int, cells []vt.Cell, cw float32)
 // caret is the cursor's cell in the element's box, where the input
 // method's window goes.
 func (v *termView) caret() ui.Rect {
-	t := v.target.Terminal()
-	snap := t.Snapshot(v.offset)
-	return ui.Rect{X: termPad + float32(snap.CursorX)*v.cellW, Y: termPad + float32(snap.CursorY)*v.cellH, W: max(v.cellW, 1), H: max(v.cellH, 1)}
+	x, y := v.target.Terminal().Cursor(v.offset)
+	return ui.Rect{X: termPad + float32(x)*v.cellW, Y: termPad + float32(y)*v.cellH, W: max(v.cellW, 1), H: max(v.cellH, 1)}
 }
 
 func (v *termView) send(b []byte) {

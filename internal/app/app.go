@@ -201,9 +201,16 @@ func (c *conn) close() {
 
 type sessTarget struct{ s *session.Session }
 
-func (t sessTarget) Terminal() *vt.Terminal      { return t.s.Term }
-func (t sessTarget) Write(p []byte) (int, error) { return t.s.Write(p) }
-func (t sessTarget) Resize(cols, rows int)       { t.s.Resize(cols, rows) }
+func (t sessTarget) Terminal() *vt.Terminal { return t.s.Term }
+func (t sessTarget) Resize(cols, rows int)  { t.s.Resize(cols, rows) }
+
+// Write sends typed input without waiting for the connection.
+func (t sessTarget) Write(p []byte) (int, error) {
+	if err := t.s.Send(p); err != nil {
+		return 0, err
+	}
+	return len(p), nil
+}
 
 // App is the interface's state. Its View runs on the UI thread; work in
 // the background posts its results with post.

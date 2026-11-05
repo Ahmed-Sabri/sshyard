@@ -36,43 +36,75 @@ type Snapshot struct {
 // Snapshot returns the screen, scrolled up offset lines into the
 // scrollback (0 is the live screen).
 func (t *Terminal) Snapshot(offset int) Snapshot {
+	var s Snapshot
+	t.SnapshotInto(&s, offset)
+	return s
+}
+
+// SnapshotInto is Snapshot into s, reusing the cells of its lines: for a
+// view that takes one every frame. Every line has Cols cells, the
+// scrollback's short ones filled with blanks.
+func (t *Terminal) SnapshotInto(s *Snapshot, offset int) {
+	lines := s.Lines
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	sb := 0
-	if !t.altActive {
-		sb = len(t.scrollback)
-	}
-	offset = max(0, min(offset, sb))
-	s := Snapshot{
+	offset = t.offset(offset)
+	*s = Snapshot{
 		Cols: t.cols, Rows: t.rows,
-		Scrollback: sb, Offset: offset,
+		Scrollback: t.scrollbackLen(), Offset: offset,
 		CursorStyle: t.style,
 		Modes:       t.modes,
 	}
 	s.Modes.AltScreen = t.altActive
 	s.First = t.firstLine() + t.historyLen() - t.rows - offset
-	s.Lines = make([]Line, t.rows)
-	for y := range t.rows {
-		s.Lines[y] = t.lineAt(s.First + y).clone()
+	if cap(lines) < t.rows {
+		lines = make([]Line, t.rows)
+	}
+	s.Lines = lines[:t.rows]
+	for y := range s.Lines {
+		src := t.lineAt(s.First + y)
+		cells := append(s.Lines[y].Cells[:0], src.Cells[:min(len(src.Cells), t.cols)]...)
+		for len(cells) < t.cols {
+			cells = append(cells, blank(Cell{}))
+		}
+		s.Lines[y] = Line{Cells: cells, Wrapped: src.Wrapped, widePad: src.widePad}
 	}
 	s.CursorX, s.CursorY = t.cur.x, t.cur.y+offset
 	s.CursorVisible = t.modes.CursorVisible && s.CursorY < t.rows
-	return s
 }
+
+// Cursor is where Snapshot(offset) has the cursor, without copying the
+// screen.
+func (t *Terminal) Cursor(offset int) (x, y int) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.cur.x, t.cur.y + t.offset(offset)
+}
+
+// scrollbackLen is how many lines are above the screen shown.
+func (t *Terminal) scrollbackLen() int {
+	if t.altActive {
+		return 0
+	}
+	return t.scrollback.len()
+}
+
+// offset is offset kept within the scrollback.
+func (t *Terminal) offset(offset int) int { return max(0, min(offset, t.scrollbackLen())) }
 
 // historyLen is the number of lines of history, scrollback and screen.
 func (t *Terminal) historyLen() int {
 	if t.altActive {
 		return t.rows
 	}
-	return len(t.scrollback) + t.rows
+	return t.scrollback.len() + t.rows
 }
 
 // lineAt returns the absolute line n, or an empty line.
 func (t *Terminal) lineAt(n int) Line {
 	i := n - t.dropped
 	if t.altActive {
-		i = n - t.dropped - len(t.scrollback)
+		i = n - t.dropped - t.scrollback.len()
 		if i >= 0 && i < t.rows {
 			return t.alt.lines[i]
 		}
@@ -81,10 +113,10 @@ func (t *Terminal) lineAt(n int) Line {
 	switch {
 	case i < 0:
 		return Line{}
-	case i < len(t.scrollback):
-		return t.scrollback[i]
-	case i-len(t.scrollback) < t.rows:
-		return t.primary.lines[i-len(t.scrollback)]
+	case i < t.scrollback.len():
+		return t.scrollback.at(i)
+	case i-t.scrollback.len() < t.rows:
+		return t.primary.lines[i-t.scrollback.len()]
 	}
 	return Line{}
 }
@@ -92,7 +124,7 @@ func (t *Terminal) lineAt(n int) Line {
 // firstLine is the absolute number of the oldest line kept.
 func (t *Terminal) firstLine() int {
 	if t.altActive {
-		return t.dropped + len(t.scrollback)
+		return t.dropped + t.scrollback.len()
 	}
 	return t.dropped
 }
@@ -163,28 +195,31 @@ func (t *Terminal) Find(query string, caseSensitive bool) []Match {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	var out []Match
+	// The runes of a line, with the cells each is in, in buffers the
+	// lines share.
+	var rs []rune
+	var cols, ends []int
+	add := func(r rune, x int, w uint8) {
+		if !caseSensitive {
+			r = unicode.ToLower(r)
+		}
+		rs = append(rs, r)
+		cols = append(cols, x)
+		ends = append(ends, x+int(w))
+	}
 	first := t.firstLine()
 	for n := first; n < first+t.historyLen(); n++ {
 		l := t.lineAt(n)
-		// The runes of the line, with the cells each is in.
-		rs := make([]rune, 0, len(l.Cells))
-		cols := make([]int, 0, len(l.Cells))
-		ends := make([]int, 0, len(l.Cells))
+		rs, cols, ends = rs[:0], cols[:0], ends[:0]
 		for x, c := range l.Cells {
-			if c.Width == 0 {
-				continue
-			}
-			cell := []rune{c.Rune}
-			if c.Comb != "" || c.Rune >= 0x80 {
-				cell = []rune(norm.NFD.String(c.Text()))
-			}
-			for _, r := range cell {
-				if !caseSensitive {
-					r = unicode.ToLower(r)
+			switch {
+			case c.Width == 0:
+			case c.Comb == 0 && c.Rune < 0x80:
+				add(c.Rune, x, c.Width)
+			default:
+				for _, r := range norm.NFD.String(c.Text()) {
+					add(r, x, c.Width)
 				}
-				rs = append(rs, r)
-				cols = append(cols, x)
-				ends = append(ends, x+int(c.Width))
 			}
 		}
 		for i := 0; i+len(q) <= len(rs); i++ {
@@ -212,7 +247,7 @@ func (t *Terminal) OffsetFor(n, current int) int {
 	if t.altActive {
 		return 0
 	}
-	sb := len(t.scrollback)
+	sb := t.scrollback.len()
 	first := t.dropped + sb - current
 	if n >= first && n < first+t.rows {
 		return current

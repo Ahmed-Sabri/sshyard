@@ -55,7 +55,7 @@ type Terminal struct {
 	alt        screen
 	altActive  bool
 
-	scrollback    []Line
+	scrollback    history
 	maxScrollback int
 	// dropped counts the lines that fell off the top of the scrollback,
 	// so that absolute line numbers stay stable as it is trimmed.
@@ -188,10 +188,7 @@ func (t *Terminal) SetScrollback(n int) {
 }
 
 func (t *Terminal) trimScrollback() {
-	if extra := len(t.scrollback) - t.maxScrollback; extra > 0 {
-		t.scrollback = append([]Line(nil), t.scrollback[extra:]...)
-		t.dropped += extra
-	}
+	t.dropped += t.scrollback.trim(t.maxScrollback)
 }
 
 // Size returns the terminal's size in cells.
@@ -292,9 +289,8 @@ func (t *Terminal) Resize(cols, rows int) {
 // columns and fits them to rows lines. c is the primary screen's cursor;
 // it stays on the cell it was on.
 func (t *Terminal) resizePrimary(cols, rows int, c *cursor) {
-	old := make([]Line, 0, len(t.scrollback)+len(t.primary.lines))
-	old = append(append(old, t.scrollback...), t.primary.lines...)
-	top, y := len(t.scrollback), len(t.scrollback)+c.y
+	old := append(t.scrollback.lines(), t.primary.lines...)
+	top, y := t.scrollback.len(), t.scrollback.len()+c.y
 	ls, x := old, c.x
 	if cols != t.cols {
 		var pending bool
@@ -311,7 +307,7 @@ func (t *Terminal) resizePrimary(cols, rows int, c *cursor) {
 		c.wrapPending = pending
 	} else {
 		for i := range ls {
-			ls[i] = fitLine(ls[i], cols)
+			ls[i] = clipLine(ls[i], cols)
 		}
 		c.wrapPending = false
 	}
@@ -338,7 +334,15 @@ func (t *Terminal) resizePrimary(cols, rows int, c *cursor) {
 			ls = append(ls, newLine(cols, Cell{}))
 		}
 	}
-	t.scrollback = ls[:top:top]
+	// The scrollback keeps its lines compact (lines the screen pushed
+	// in were full), the screen full.
+	for i := range ls[:top] {
+		ls[i] = trimmed(ls[i])
+	}
+	for i := top; i < len(ls); i++ {
+		ls[i] = fitLine(ls[i], cols)
+	}
+	t.scrollback.set(ls[:top])
 	t.primary.lines = ls[top:]
 	t.pushed = min(t.pushed, top)
 	c.x = min(x, cols-1)
@@ -373,7 +377,7 @@ func reflow(old []Line, cols, top, y, x int, pending bool) (out []Line, ntop, ny
 			if cur >= 0 {
 				ny, nx = len(out), cur
 			}
-			l := fitLine(old[i], cols)
+			l := clipLine(old[i], cols)
 			l.Wrapped, l.widePad = false, false
 			out = append(out, l)
 			i++
@@ -435,7 +439,7 @@ func reflow(old []Line, cols, top, y, x int, pending bool) (out []Line, ntop, ny
 		if first >= n {
 			ntop = len(out)
 		}
-		out = append(out, fitLine(line, cols))
+		out = append(out, clipLine(line, cols))
 		i = j + 1
 	}
 	return out, min(ntop, ny), ny, nx, wrap
@@ -443,7 +447,7 @@ func reflow(old []Line, cols, top, y, x int, pending bool) (out []Line, ntop, ny
 
 // isBlank reports a cell that only erased.
 func isBlank(c Cell) bool {
-	return (c.Rune == ' ' || c.Rune == 0) && c.Width == 1 && c.Comb == "" && c.Attr == 0
+	return (c.Rune == ' ' || c.Rune == 0) && c.Width == 1 && c.Comb == 0 && c.Attr == 0
 }
 
 // trimmedLen is the length of cells without the blanks at the end.
@@ -455,7 +459,8 @@ func trimmedLen(cells []Cell) int {
 	return n
 }
 
-func fitLine(l Line, cols int) Line {
+// clipLine cuts l to cols cells, as fitLine does, without filling it.
+func clipLine(l Line, cols int) Line {
 	if len(l.Cells) > cols {
 		l.Cells = l.Cells[:cols]
 		if cols > 0 && l.Cells[cols-1].Width == 2 {
@@ -463,6 +468,12 @@ func fitLine(l Line, cols int) Line {
 		}
 		l.Wrapped, l.widePad = false, false
 	}
+	return l
+}
+
+// fitLine makes l cols cells: cut, or filled with blanks.
+func fitLine(l Line, cols int) Line {
+	l = clipLine(l, cols)
 	for len(l.Cells) < cols {
 		l.Cells = append(l.Cells, blank(Cell{}))
 	}

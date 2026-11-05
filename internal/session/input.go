@@ -24,7 +24,53 @@ func (s *Session) CaptureInput() (io.Writer, error) {
 
 type serializedInput struct {
 	io.WriteCloser
+	// mu is held for the whole of each write to the shell.
 	mu sync.Mutex
+	// queued is the input Send has taken that a goroutine, holding mu
+	// while draining, has yet to write.
+	qmu      sync.Mutex
+	queued   []byte
+	draining bool
+}
+
+// send queues p behind the input still being written, in order, and
+// returns at once, so a stalled connection never holds up the UI thread.
+// It refuses input while a whole write (Write) is in progress.
+func (w *serializedInput) send(p []byte) error {
+	w.qmu.Lock()
+	defer w.qmu.Unlock()
+	if !w.draining {
+		if !w.mu.TryLock() {
+			return ErrInputBusy
+		}
+		w.draining = true
+		go w.drain()
+	}
+	w.queued = append(w.queued, p...)
+	return nil
+}
+
+// drain writes what send queued until there is no more, then lets go of
+// mu, which it holds from send's TryLock.
+func (w *serializedInput) drain() {
+	var p []byte
+	for {
+		w.qmu.Lock()
+		if len(w.queued) == 0 {
+			w.draining = false
+			w.mu.Unlock()
+			w.qmu.Unlock()
+			return
+		}
+		// The two buffers swap, so a steady stream of keys allocates none;
+		// a paste's is let go.
+		if cap(p) > 64<<10 {
+			p = nil
+		}
+		p, w.queued = w.queued, p[:0]
+		w.qmu.Unlock()
+		w.WriteCloser.Write(p)
+	}
 }
 
 func (w *serializedInput) Write(p []byte) (int, error) {

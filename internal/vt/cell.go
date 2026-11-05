@@ -5,6 +5,8 @@
 // MyGo's Painter.
 package vt
 
+import "sync"
+
 // Color is a cell's color: the default, an entry of the 256-color
 // palette, or a 24-bit RGB value.
 type Color uint32
@@ -55,13 +57,67 @@ const (
 // two cells: the first has Width 2, the second Width 0 and no rune.
 // Comb holds what joins Rune in its cell: combining marks, variation
 // selectors, emoji modifiers, and ZWJ with what it joins.
+//
+// A cell holds no pointer, so the garbage collector does not scan the
+// cells of the scrollback, megabytes of them.
 type Cell struct {
 	Rune  rune
-	Comb  string
-	Width uint8
+	Comb  Comb
 	FG    Color
 	BG    Color
 	Attr  Attr
+	Width uint8
+}
+
+// Comb is what joins a cell's rune, interned: 0 is nothing.
+type Comb uint32
+
+// maxCombs bounds the interned sequences, which output could otherwise
+// grow without end: past it a new sequence is not joined.
+const maxCombs = 1 << 16
+
+var combs struct {
+	sync.RWMutex
+	ids  map[string]Comb
+	strs []string // strs[id-1]
+}
+
+// CombOf interns s; it is 0 for "", or when the table is full.
+func CombOf(s string) Comb {
+	if s == "" {
+		return 0
+	}
+	combs.RLock()
+	id, ok := combs.ids[s]
+	combs.RUnlock()
+	if ok {
+		return id
+	}
+	combs.Lock()
+	defer combs.Unlock()
+	if id, ok := combs.ids[s]; ok {
+		return id
+	}
+	if len(combs.strs) >= maxCombs {
+		return 0
+	}
+	if combs.ids == nil {
+		combs.ids = map[string]Comb{}
+	}
+	combs.strs = append(combs.strs, s)
+	id = Comb(len(combs.strs))
+	combs.ids[s] = id
+	return id
+}
+
+// String is the sequence.
+func (c Comb) String() string {
+	if c == 0 {
+		return ""
+	}
+	combs.RLock()
+	defer combs.RUnlock()
+	return combs.strs[c-1]
 }
 
 // blank is an erased cell in the colors of the pen (background color
@@ -89,16 +145,12 @@ func newLine(cols int, pen Cell) Line {
 	return l
 }
 
-func (l Line) clone() Line {
-	return Line{Cells: append([]Cell(nil), l.Cells...), Wrapped: l.Wrapped, widePad: l.widePad}
-}
-
 // Text is the cell's text: its rune and what joins it.
 func (c Cell) Text() string {
-	if c.Comb == "" {
+	if c.Comb == 0 {
 		return string(c.Rune)
 	}
-	return string(c.Rune) + c.Comb
+	return string(c.Rune) + c.Comb.String()
 }
 
 // String returns the line's text, without trailing blanks.
@@ -115,7 +167,9 @@ func (l Line) text(trim bool) string {
 			r = ' '
 		}
 		rs = append(rs, r)
-		rs = append(rs, []rune(c.Comb)...)
+		if c.Comb != 0 {
+			rs = append(rs, []rune(c.Comb.String())...)
+		}
 	}
 	n := len(rs)
 	for trim && n > 0 && rs[n-1] == ' ' {

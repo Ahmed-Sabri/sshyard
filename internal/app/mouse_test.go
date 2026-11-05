@@ -248,7 +248,7 @@ func TestPlaceGlyphsKeepsMarksOnTheirBase(t *testing.T) {
 		{Cluster: 2, Runes: 1, X: 6, Advance: 6},
 	}
 	placed := append([]ui.Glyph(nil), g...)
-	cells := []vt.Cell{{Rune: 'e', Comb: "\u0301", Width: 1}, {Rune: 'x', Width: 1}}
+	cells := []vt.Cell{{Rune: 'e', Comb: vt.CombOf("\u0301"), Width: 1}, {Rune: 'x', Width: 1}}
 	placeGlyphs(placed, g, []int{0, 0, 1}, cells, 8)
 	if placed[0].X != 1 || placed[1].X != 2 || placed[2].X != 9 {
 		t.Errorf("x %v %v %v, want 1 2 9", placed[0].X, placed[1].X, placed[2].X)

@@ -226,7 +226,9 @@ func (a *App) terminalPage(c *ui.Context, m locales.Messages, tok theme.Tokens) 
 		a.finding = false
 	} else {
 		if a.finding {
-			cn.tv.updateFind(a.query, true)
+			if wait := cn.tv.updateFind(a.query, true, c.Now()); wait > 0 {
+				c.After(wait)
+			}
 		}
 		n := len(cn.tv.matches)
 		if a.match >= n {
@@ -237,7 +239,7 @@ func (a *App) terminalPage(c *ui.Context, m locales.Messages, tok theme.Tokens) 
 			cn.tv.showMatch(a.match)
 		}
 		if !a.finding {
-			cn.tv.updateFind("", false)
+			cn.tv.updateFind("", false, c.Now())
 		}
 	}
 	a.dropPreview = nil

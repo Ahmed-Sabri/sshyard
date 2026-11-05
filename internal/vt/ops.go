@@ -3,6 +3,7 @@ package vt
 import (
 	"fmt"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode"
@@ -138,11 +139,11 @@ func (t *Terminal) pairFlag(r rune) bool {
 	}
 	line := t.lines()[t.cur.y].Cells
 	base := line[x]
-	if base.Width != 1 || !isRegional(base.Rune) || base.Comb != "" {
+	if base.Width != 1 || !isRegional(base.Rune) || base.Comb != 0 {
 		return false
 	}
 	t.clearCell(t.cur.y, t.cur.x)
-	base.Comb, base.Width = string(r), 2
+	base.Comb, base.Width = CombOf(string(r)), 2
 	line[x] = base
 	line[t.cur.x] = Cell{Width: 0, FG: base.FG, BG: base.BG, Attr: base.Attr}
 	t.lastRune = r
@@ -168,13 +169,16 @@ func (t *Terminal) join(r rune) bool {
 	if x < 0 || x >= len(line) || line[x].Width == 0 || line[x].Rune == 0 {
 		return false
 	}
-	if isModifier(r) && RuneWidth(line[x].Rune) < 2 && line[x].Comb == "" {
+	if isModifier(r) && RuneWidth(line[x].Rune) < 2 && line[x].Comb == 0 {
 		return false // a modifier alone, after a non-emoji
 	}
-	if len(line[x].Comb) >= 32 {
+	comb := line[x].Comb.String()
+	if len(comb) >= 32 {
 		return true // bounded: drop the rest
 	}
-	line[x].Comb += string(r)
+	if id := CombOf(comb + string(r)); id != 0 {
+		line[x].Comb = id
+	}
 	return true
 }
 
@@ -243,13 +247,16 @@ func (t *Terminal) scrollUp(n int) {
 	ls := t.lines()
 	if !t.altActive && t.top == 0 && t.maxScrollback > 0 {
 		for _, l := range ls[:n] {
-			t.scrollback = append(t.scrollback, l.clone())
+			if t.scrollback.push(compact(l), t.maxScrollback) {
+				t.dropped++
+			}
 		}
-		t.trimScrollback()
 	}
-	copy(ls[t.top:], ls[t.top+n:t.bot+1])
+	// The lines that went come back blank at the bottom, in their cells:
+	// the scrollback has copies.
+	rotate(ls[t.top:t.bot+1], n)
 	for i := t.bot - n + 1; i <= t.bot; i++ {
-		ls[i] = newLine(t.cols, t.cur.pen)
+		ls[i] = blankLine(ls[i], t.cols, t.cur.pen)
 	}
 }
 
@@ -259,10 +266,29 @@ func (t *Terminal) scrollDown(n int) {
 		return
 	}
 	ls := t.lines()
-	copy(ls[t.top+n:t.bot+1], ls[t.top:t.bot+1-n])
+	rotate(ls[t.top:t.bot+1], len(ls[t.top:t.bot+1])-n)
 	for i := t.top; i < t.top+n; i++ {
-		ls[i] = newLine(t.cols, t.cur.pen)
+		ls[i] = blankLine(ls[i], t.cols, t.cur.pen)
 	}
+}
+
+// rotate moves the first n lines of ls to its end, in place.
+func rotate(ls []Line, n int) {
+	slices.Reverse(ls[:n])
+	slices.Reverse(ls[n:])
+	slices.Reverse(ls)
+}
+
+// blankLine is newLine in l's cells, when it has as many.
+func blankLine(l Line, cols int, pen Cell) Line {
+	if len(l.Cells) != cols {
+		return newLine(cols, pen)
+	}
+	b := blank(pen)
+	for i := range l.Cells {
+		l.Cells[i] = b
+	}
+	return Line{Cells: l.Cells}
 }
 
 func (t *Terminal) saveCursor() { t.saved = t.cur }
@@ -646,8 +672,8 @@ func (t *Terminal) eraseDisplay(mode int) {
 			ls[y] = newLine(t.cols, t.cur.pen)
 		}
 	case 3:
-		t.dropped += len(t.scrollback)
-		t.scrollback = nil
+		t.dropped += t.scrollback.len()
+		t.scrollback = history{}
 	}
 }
 

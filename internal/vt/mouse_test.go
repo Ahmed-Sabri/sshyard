@@ -129,13 +129,13 @@ func TestCombiningIntoCell(t *testing.T) {
 	term := New(20, 3)
 	in := "e\u0301 n\u0303 👍🏽\r\n"
 	term.WriteString(in)
-	if c := cell(term, 0, 0); c.Rune != 'e' || c.Comb != "\u0301" {
+	if c := cell(term, 0, 0); c.Rune != 'e' || c.Comb.String() != "\u0301" {
 		t.Errorf("é: %+v", c)
 	}
-	if c := cell(term, 2, 0); c.Rune != 'n' || c.Comb != "\u0303" {
+	if c := cell(term, 2, 0); c.Rune != 'n' || c.Comb.String() != "\u0303" {
 		t.Errorf("ñ: %+v", c)
 	}
-	if c := cell(term, 4, 0); c.Rune != '👍' || c.Comb != "🏽" || c.Width != 2 {
+	if c := cell(term, 4, 0); c.Rune != '👍' || c.Comb.String() != "🏽" || c.Width != 2 {
 		t.Errorf("👍🏽: %+v", c)
 	}
 	// nothing went past where it belongs
@@ -157,21 +157,21 @@ func TestCombiningKinds(t *testing.T) {
 	// variation selector 16, a ZWJ family, a mark at the last column, a
 	// mark with nothing before it.
 	term.WriteString("❤\ufe0f\r\n👨\u200d👩\u200d👧x\r\n\u0301a\r\n")
-	if c := cell(term, 0, 0); c.Comb != "\ufe0f" {
+	if c := cell(term, 0, 0); c.Comb.String() != "\ufe0f" {
 		t.Errorf("VS16: %+v", c)
 	}
-	if c := cell(term, 0, 1); c.Rune != '👨' || c.Comb != "\u200d👩\u200d👧" {
+	if c := cell(term, 0, 1); c.Rune != '👨' || c.Comb.String() != "\u200d👩\u200d👧" {
 		t.Errorf("ZWJ: %+v", c)
 	}
 	if c := cell(term, 2, 1); c.Rune != 'x' {
 		t.Errorf("after the family: %+v", c)
 	}
-	if c := cell(term, 0, 2); c.Rune != 'a' || c.Comb != "" {
+	if c := cell(term, 0, 2); c.Rune != 'a' || c.Comb.String() != "" {
 		t.Errorf("a lone mark: %+v", c)
 	}
 	term = New(3, 2)
 	term.WriteString("abc\u0301d")
-	if c := cell(term, 2, 0); c.Rune != 'c' || c.Comb != "\u0301" {
+	if c := cell(term, 2, 0); c.Rune != 'c' || c.Comb.String() != "\u0301" {
 		t.Errorf("mark at the last column: %+v", c)
 	}
 	if c := cell(term, 0, 1); c.Rune != 'd' {
@@ -187,10 +187,10 @@ func TestCombiningKinds(t *testing.T) {
 	// columns the program counts; a third stands alone in one column.
 	term = New(10, 2)
 	term.WriteString("\U0001F1EF\U0001F1F5\U0001F1FAx")
-	if c := cell(term, 0, 0); c.Rune != 0x1f1ef || c.Comb != "\U0001F1F5" || c.Width != 2 {
+	if c := cell(term, 0, 0); c.Rune != 0x1f1ef || c.Comb.String() != "\U0001F1F5" || c.Width != 2 {
 		t.Errorf("flag: %+v", c)
 	}
-	if c := cell(term, 2, 0); c.Rune != 0x1f1fa || c.Comb != "" || c.Width != 1 {
+	if c := cell(term, 2, 0); c.Rune != 0x1f1fa || c.Comb.String() != "" || c.Width != 1 {
 		t.Errorf("third indicator: %+v", c)
 	}
 	if c := cell(term, 3, 0); c.Rune != 'x' {
@@ -199,7 +199,7 @@ func TestCombiningKinds(t *testing.T) {
 	// a pair split by the right margin is not joined across lines
 	term = New(3, 2)
 	term.WriteString("ab\U0001F1EF\U0001F1F5")
-	if c := cell(term, 2, 0); c.Comb != "" || c.Width != 1 {
+	if c := cell(term, 2, 0); c.Comb.String() != "" || c.Width != 1 {
 		t.Errorf("at the margin: %+v", c)
 	}
 	if c := cell(term, 0, 1); c.Rune != 0x1f1f5 {

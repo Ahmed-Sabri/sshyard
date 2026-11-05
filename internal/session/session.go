@@ -296,6 +296,19 @@ func (s *Session) Write(p []byte) (int, error) {
 	return w.Write(p)
 }
 
+// Send writes p to the shell without waiting for it: after the input
+// still being written, in order. Typed input goes this way, so a stalled
+// connection never holds up the UI thread.
+func (s *Session) Send(p []byte) error {
+	s.mu.Lock()
+	w := s.stdin
+	s.mu.Unlock()
+	if w == nil {
+		return errors.New("session: not connected")
+	}
+	return w.send(p)
+}
+
 // Resize changes the size of the terminal and of the remote PTY.
 func (s *Session) Resize(cols, rows int) {
 	cols, rows = max(cols, 1), max(rows, 1)
