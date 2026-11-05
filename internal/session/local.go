@@ -52,7 +52,11 @@ func (s *Session) connectLocal() error {
 	s.mu.Lock()
 	cols, rows := s.cols, s.rows
 	s.mu.Unlock()
-	p, err := startPTY(cols, rows, s.opts.Term)
+	sh := s.opts.Shell
+	if sh.Path == "" {
+		sh = Shells()[0]
+	}
+	p, err := startPTY(sh, cols, rows, s.opts.Term)
 	if err != nil {
 		return err
 	}

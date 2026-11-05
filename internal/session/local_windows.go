@@ -6,10 +6,12 @@ import (
 	"errors"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
+	"golang.org/x/sys/windows/registry"
 )
 
 // conPTY is a shell on a Windows pseudo console (ConPTY, Windows 10 1809
@@ -23,27 +25,79 @@ type conPTY struct {
 	once sync.Once
 }
 
-// localShell is PowerShell 7 when installed, else Windows PowerShell,
-// else the command interpreter.
-func localShell() string {
-	for _, sh := range []string{"pwsh.exe", "powershell.exe"} {
-		if p, err := exec.LookPath(sh); err == nil {
-			return p
-		}
-	}
-	if sh := os.Getenv("COMSPEC"); sh != "" {
-		return sh
-	}
-	return "cmd.exe"
+func localShells() []Shell {
+	return windowsShells(winProbe{
+		getenv: os.Getenv,
+		exists: func(path string) bool {
+			fi, err := os.Stat(path)
+			return err == nil && !fi.IsDir()
+		},
+		lookPath: exec.LookPath,
+		gitRoots: gitRoots(),
+		distros:  wslDistros(),
+	})
 }
 
-// localEnv is the environment of the local shell: this app's, with the
-// terminal named. PowerShell 7's update notice is off unless the user
-// chose otherwise: under some languages it miscounts its padding and
-// ends the shell as it starts (PowerShell 7.6.6).
-func localEnv(term string) []string {
+// gitRoots are where the registry says Git for Windows is installed, for
+// all users and for this one.
+func gitRoots() []string {
+	var roots []string
+	for _, root := range []registry.Key{registry.LOCAL_MACHINE, registry.CURRENT_USER} {
+		k, err := registry.OpenKey(root, `SOFTWARE\GitForWindows`, registry.QUERY_VALUE)
+		if err != nil {
+			continue
+		}
+		if dir, _, err := k.GetStringValue("InstallPath"); err == nil && dir != "" {
+			roots = append(roots, dir)
+		}
+		k.Close()
+	}
+	return roots
+}
+
+// wslDistros are this user's WSL distributions, the default first, as
+// the registry lists them: reading it, unlike running wsl.exe, does not
+// start WSL.
+func wslDistros() []string {
+	k, err := registry.OpenKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Lxss`, registry.QUERY_VALUE|registry.ENUMERATE_SUB_KEYS)
+	if err != nil {
+		return nil
+	}
+	defer k.Close()
+	def, _, _ := k.GetStringValue("DefaultDistribution")
+	ids, err := k.ReadSubKeyNames(-1)
+	if err != nil {
+		return nil
+	}
+	var names []string
+	for _, id := range ids {
+		d, err := registry.OpenKey(k, id, registry.QUERY_VALUE)
+		if err != nil {
+			continue
+		}
+		name, _, err := d.GetStringValue("DistributionName")
+		d.Close()
+		if err != nil || name == "" {
+			continue
+		}
+		if strings.EqualFold(id, def) {
+			names = append([]string{name}, names...)
+		} else {
+			names = append(names, name)
+		}
+	}
+	return names
+}
+
+// localEnv is the environment of a local shell: this app's, with the
+// terminal named and the shell's own entries. PowerShell 7's update
+// notice is off unless the user chose otherwise: under some languages it
+// miscounts its padding and ends the shell as it starts (PowerShell
+// 7.6.6).
+func localEnv(sh Shell, term string) []string {
 	env := append([]string{"POWERSHELL_UPDATECHECK=Off"}, os.Environ()...)
-	return mergeEnv(append(env, termEnv(term)...), true)
+	env = append(env, termEnv(term)...)
+	return mergeEnv(append(env, sh.Env...), true)
 }
 
 // envBlock is env as CreateProcess takes it: each entry ended by a NUL,
@@ -62,7 +116,7 @@ func envBlock(env []string) *uint16 {
 	return &b[0]
 }
 
-func startLocal(cols, rows int, term string) (localPTY, error) {
+func startLocal(sh Shell, cols, rows int, term string) (localPTY, error) {
 	var inR, inW, outR, outW windows.Handle
 	if err := windows.CreatePipe(&inR, &inW, nil, 0); err != nil {
 		return nil, err
@@ -83,7 +137,7 @@ func startLocal(cols, rows int, term string) (localPTY, error) {
 		return nil, err
 	}
 	p := &conPTY{hpc: hpc, in: os.NewFile(uintptr(inW), "conpty-in"), out: os.NewFile(uintptr(outR), "conpty-out"), done: make(chan struct{})}
-	if err := p.spawn(localEnv(term)); err != nil {
+	if err := p.spawn(sh, localEnv(sh, term)); err != nil {
 		p.closeConsole()
 		return nil, err
 	}
@@ -94,8 +148,8 @@ func startLocal(cols, rows int, term string) (localPTY, error) {
 	return p, nil
 }
 
-// spawn starts the shell attached to the console, in the user's home.
-func (p *conPTY) spawn(env []string) error {
+// spawn starts sh attached to the console, in the user's home.
+func (p *conPTY) spawn(sh Shell, env []string) error {
 	attrs, err := windows.NewProcThreadAttributeList(1)
 	if err != nil {
 		return err
@@ -110,7 +164,7 @@ func (p *conPTY) spawn(env []string) error {
 	si.Cb = uint32(unsafe.Sizeof(*si))
 	// No standard handles of ours: the console's are the shell's.
 	si.Flags = windows.STARTF_USESTDHANDLES
-	cmd, err := windows.UTF16PtrFromString(windows.ComposeCommandLine([]string{localShell()}))
+	cmd, err := windows.UTF16PtrFromString(windows.ComposeCommandLine(append([]string{sh.Path}, sh.Args...)))
 	if err != nil {
 		return err
 	}

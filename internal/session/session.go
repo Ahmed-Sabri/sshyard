@@ -54,6 +54,9 @@ type Options struct {
 	// instead of connecting anywhere: the Config is not used, and the
 	// session has no Client. It ends, Exited, with the shell.
 	Local bool
+	// Shell is the shell a local session runs; zero is the first of
+	// Shells.
+	Shell Shell
 }
 
 // Status is a session's state, for the UI.

@@ -423,6 +423,9 @@ type App struct {
 	// localName is what local terminals are called, in the language of
 	// the last frame.
 	localName string
+	// shells are this computer's shells, found as the app starts; see
+	// localID.
+	shells []session.Shell
 	// group is the group sheet open (new or rename), groupDeleting asks
 	// before deleting groupDelete
 	group         *groupForm
@@ -460,6 +463,7 @@ func New(p Platform) (*App, error) {
 	a := &App{p: p, ws: layout.New(), conns: map[int]*conn{}, pool: session.NewPool(), typed: map[string]string{}, typedGen: map[string]int{}, sections: map[string]*bool{}, temps: map[string]assets.Host{}, pct: map[int]*float32{}, fwds: map[string]*fwdRun{}, fwdOpen: map[string]bool{}, paneBounds: map[int]ui.Rect{}, metrics: map[string]*session.Collector{}, aiRecent: map[string]int{}, stackPct: map[string]*float32{}}
 	a.logo = appicon.Bitmap()
 	a.settings = settings.Default()
+	a.shells = detectShells()
 	a.kdf = vault.DefaultParams
 	a.cloudCtx, a.cloudStop = context.WithCancel(context.Background())
 	a.kc = keychain.New(lockedSecrets{})
@@ -784,6 +788,9 @@ func (a *App) makeConn(hostID string, kind layout.Kind, link int) (*conn, error)
 		AutoReconnect: a.settings.AutoReconnect,
 		NoShell:       kind != layout.Terminal,
 		Local:         isLocal(h.ID),
+	}
+	if opts.Local {
+		opts.Shell = a.shell(h.ID)
 	}
 	c.s = session.New(cfg, opts, 80, 24)
 	c.s.OnChange = a.invalidate

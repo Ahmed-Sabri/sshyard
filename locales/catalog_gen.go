@@ -7053,6 +7053,46 @@ func (msgs Messages) MonitorLocal() string {
 	return Catalog.Format(msgs.locale, "monitorLocal", nil)
 }
 
+// DefaultShell says "Default shell"
+// in the language the app shows.
+func DefaultShell() string { return In(i18n.Locale()).DefaultShell() }
+
+// DefaultShell says "Default shell"
+// in the language of msgs.
+func (msgs Messages) DefaultShell() string {
+	return Catalog.Format(msgs.locale, "defaultShell", nil)
+}
+
+// DefaultShellNote says "What a new local terminal runs. The other shells are in the local terminal menu."
+// in the language the app shows.
+func DefaultShellNote() string { return In(i18n.Locale()).DefaultShellNote() }
+
+// DefaultShellNote says "What a new local terminal runs. The other shells are in the local terminal menu."
+// in the language of msgs.
+func (msgs Messages) DefaultShellNote() string {
+	return Catalog.Format(msgs.locale, "defaultShellNote", nil)
+}
+
+// ShellDefault says "Default"
+// in the language the app shows.
+func ShellDefault() string { return In(i18n.Locale()).ShellDefault() }
+
+// ShellDefault says "Default"
+// in the language of msgs.
+func (msgs Messages) ShellDefault() string {
+	return Catalog.Format(msgs.locale, "shellDefault", nil)
+}
+
+// LocalTerminalWith says "Local terminal: {name}"
+// in the language the app shows.
+func LocalTerminalWith(name string) string { return In(i18n.Locale()).LocalTerminalWith(name) }
+
+// LocalTerminalWith says "Local terminal: {name}"
+// in the language of msgs.
+func (msgs Messages) LocalTerminalWith(name string) string {
+	return Catalog.Format(msgs.locale, "localTerminalWith", map[string]any{"name": name})
+}
+
 // NewGroup says "New group"
 // in the language the app shows.
 func NewGroup() string { return In(i18n.Locale()).NewGroup() }

@@ -2,39 +2,106 @@ package app
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/Licoy/sshyard/internal/assets"
+	"github.com/Licoy/sshyard/internal/icons"
 	"github.com/Licoy/sshyard/internal/layout"
+	"github.com/Licoy/sshyard/internal/session"
 	"github.com/Licoy/sshyard/locales"
 )
 
 // localID is the host of local terminal panes: this computer, never
 // saved. Its panes split, move and close as any others, but it has no
 // files, AI, forwards or metrics: there is no SSH connection under them.
+// A shell's panes are of localID followed by the shell's ID; localID
+// alone is the default shell.
 const localID = "local:"
 
-func isLocal(id string) bool { return id == localID }
+func isLocal(id string) bool { return strings.HasPrefix(id, localID) }
+
+// detectShells finds this computer's shells; a variable so that tests
+// can stand in.
+var detectShells = session.Shells
+
+// shell is the shell of the local host id: its own, else the default one
+// (settings.LocalShell, else the first found) when it is gone.
+func (a *App) shell(id string) session.Shell {
+	want := strings.TrimPrefix(id, localID)
+	if want == "" {
+		want = a.settings.LocalShell
+	}
+	for _, sh := range a.shells {
+		if sh.ID == want {
+			return sh
+		}
+	}
+	if want != a.settings.LocalShell {
+		return a.shell(localID)
+	}
+	if len(a.shells) > 0 {
+		return a.shells[0]
+	}
+	return session.Shell{}
+}
 
 // errLocalTerminalOnly is opening anything but a terminal on this computer.
 var errLocalTerminalOnly = errors.New("app: this computer opens terminals only")
 
-// localHost is the host of local terminals, named in the app's language.
-func (a *App) localHost() assets.Host {
+// localHost is the local host id: named in the app's language, or for
+// its shell when there are several.
+func (a *App) localHost(id string) assets.Host {
 	name := a.localName
 	if name == "" {
 		name = locales.In("en").LocalTerminal()
 	}
-	return assets.Host{ID: localID, Name: name}
+	if len(a.shells) > 1 {
+		name = a.shell(id).Name
+	}
+	return assets.Host{ID: id, Name: name}
 }
 
-// OpenLocalTerminal opens a shell of this computer under the focused
-// pane, split from it in its tab, or in a new tab when there is none.
-func (a *App) OpenLocalTerminal() (int, error) {
+// OpenLocalTerminal opens the default shell of this computer under the
+// focused pane, split from it in its tab, or in a new tab when there is
+// none.
+func (a *App) OpenLocalTerminal() (int, error) { return a.OpenLocalShell(a.shell(localID).ID) }
+
+// OpenLocalShell opens the shell of id as OpenLocalTerminal does.
+func (a *App) OpenLocalShell(id string) (int, error) {
 	var at openAt
 	if t := a.ws.ActiveTab(); t != nil && t.Focus != 0 {
 		at = openAt{pane: t.Focus, edge: layout.Bottom}
 	}
-	return a.open(localID, layout.Terminal, at, nil)
+	return a.open(localID+id, layout.Terminal, at, nil)
+}
+
+// openLocal opens the shell of id, "" the default one, and says why it
+// could not.
+func (a *App) openLocal(m locales.Messages, id string) {
+	if id == "" {
+		id = a.shell(localID).ID
+	}
+	if _, err := a.OpenLocalShell(id); err != nil {
+		a.toastError(m.ErrGeneric(err.Error()))
+	}
+}
+
+// localEntry is the menu entry of local terminals: it opens the default
+// shell, or with several shells has a submenu of them.
+func (a *App) localEntry(m locales.Messages) menuEntry {
+	e := menuEntry{Icon: icons.LocalShell, Label: m.LocalTerminal(), Do: func() { a.openLocal(m, "") }}
+	if len(a.shells) < 2 {
+		return e
+	}
+	def := a.shell(localID).ID
+	for _, sh := range a.shells {
+		sub := menuEntry{Icon: icons.LocalShell, Label: sh.Name, Do: func() { a.openLocal(m, sh.ID) }}
+		if sh.ID == def {
+			sub.InlineNote = m.ShellDefault()
+		}
+		e.Sub = append(e.Sub, sub)
+	}
+	return e
 }
 
 // remoteOnly says a pane is on a server, where files and AI can open.

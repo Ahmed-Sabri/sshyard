@@ -297,7 +297,7 @@ func TestEditorFoldersLayout(t *testing.T) {
 	wins := fakeWindows(a)
 	dir := t.TempDir()
 	write(t, filepath.Join(dir, "f.txt"), "f")
-	a.editFile(&conn{host: a.localHost(), fs: newFilesState(nil)}, false, filepath.Join(dir, "f.txt"), 1, false)
+	a.editFile(&conn{host: a.localHost(localID), fs: newFilesState(nil)}, false, filepath.Join(dir, "f.txt"), 1, false)
 	_, et, ec := openedWindow(t, a, tt, wins, 1)
 	if ec.ed.treeW != 240 {
 		t.Fatalf("starts at %v", ec.ed.treeW)

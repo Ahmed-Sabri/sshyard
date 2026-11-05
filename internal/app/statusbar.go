@@ -119,9 +119,7 @@ func themeIcon(md theme.Mode) *icons.Icon {
 func (a *App) statusActions(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	ui.Row(c.Key("actions")).Shrink(0).Gap(theme.Space(1)).AlignItems(ui.Center).Children(func() {
 		if (IconButton{Icon: icons.LocalShell, Label: m.LocalTerminal(), Size: Small}).Clicked(c, "localterm") {
-			if _, err := a.OpenLocalTerminal(); err != nil {
-				c.AddToast(ui.Toast{Title: m.ErrGeneric(err.Error()), Type: "error"})
-			}
+			a.openLocal(m, "")
 		}
 		a.menuButton(c, "theme", IconButton{Icon: themeIcon(a.settings.Theme), Label: m.Theme(), Size: Small}, func() []menuEntry {
 			var entries []menuEntry

@@ -397,6 +397,27 @@ func (a *App) prefTerminal(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 		})
 		a.termFontPreview(c, tok)
 	})
+	if len(a.shells) > 1 {
+		settingsSection(c, tok, icons.LocalShell, tok.TintAt(3), m.LocalTerminal(), func(g *settingsGroup) {
+			g.row(m.DefaultShell(), m.DefaultShellNote(), func() {
+				names := make([]string, len(a.shells))
+				for i, sh := range a.shells {
+					names[i] = sh.Name
+				}
+				cur := names[0]
+				for _, sh := range a.shells {
+					if sh.ID == s.LocalShell {
+						cur = sh.Name
+					}
+				}
+				if ui.Select(c.Key("localshell"), &cur, names).Label(m.DefaultShell()).Width(220).Changed() {
+					if i := slices.Index(names, cur); i >= 0 {
+						s.LocalShell, *changed = a.shells[i].ID, true
+					}
+				}
+			})
+		})
+	}
 	settingsSection(c, tok, icons.Reconnect, tok.TintAt(0), m.ConnectionSection(), func(g *settingsGroup) {
 		g.row(m.KeepAlive(), "", func() {
 			if ui.NumberInput(c.Key("keep"), &a.keepChoice, 0, 600, 5).Changed() {

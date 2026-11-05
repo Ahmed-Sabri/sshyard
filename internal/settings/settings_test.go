@@ -16,7 +16,7 @@ func TestRoundTrip(t *testing.T) {
 	if err != nil || !reflect.DeepEqual(s, Default()) {
 		t.Fatalf("missing file: %+v %v", s, err)
 	}
-	s.Theme, s.Language, s.TerminalFontSize = theme.Dark, "zh-Hans", 15
+	s.Theme, s.Language, s.TerminalFontSize, s.LocalShell = theme.Dark, "zh-Hans", 15, "wsl:Ubuntu"
 	if err := Save(p, s); err != nil {
 		t.Fatal(err)
 	}

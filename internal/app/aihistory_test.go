@@ -177,7 +177,7 @@ func TestChatOfExternalAgent(t *testing.T) {
 
 func TestTempHostKeepsNoChats(t *testing.T) {
 	a, _ := newTestApp(t)
-	if a.keepsChats(&conn{host: a.localHost(), ai: &aiState{}}) {
+	if a.keepsChats(&conn{host: a.localHost(localID), ai: &aiState{}}) {
 		t.Fatal("a host that is not saved keeps chats")
 	}
 }

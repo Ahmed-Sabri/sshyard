@@ -149,11 +149,7 @@ func (a *App) newTabEntries(c *ui.Context, m locales.Messages) []menuEntry {
 	entries := []menuEntry{
 		a.bound(actQuickConnect, menuEntry{Icon: icons.Quick, Label: m.QuickConnectMenu(), Do: a.OpenQuickConnect}),
 		{Icon: icons.Host, Label: m.NewHost(), Do: func() { a.openEditor(nil) }},
-		{Icon: icons.LocalShell, Label: m.LocalTerminal(), Do: func() {
-			if _, err := a.OpenLocalTerminal(); err != nil {
-				c.AddToast(ui.Toast{Title: m.ErrGeneric(err.Error()), Type: "error"})
-			}
-		}},
+		a.localEntry(m),
 	}
 	hosts := a.store.List()
 	if len(hosts) > 0 {

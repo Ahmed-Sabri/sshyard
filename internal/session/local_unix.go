@@ -19,22 +19,22 @@ type unixPTY struct {
 	err  error
 }
 
-// localShell is the user's login shell.
-func localShell() string {
-	if sh := os.Getenv("SHELL"); filepath.IsAbs(sh) {
-		return sh
+// localShells is the user's login shell, run as one.
+func localShells() []Shell {
+	sh := os.Getenv("SHELL")
+	if !filepath.IsAbs(sh) {
+		sh = "/bin/sh"
+		if runtime.GOOS == "darwin" {
+			sh = "/bin/zsh"
+		}
 	}
-	if runtime.GOOS == "darwin" {
-		return "/bin/zsh"
-	}
-	return "/bin/sh"
+	return []Shell{{ID: sh, Name: filepath.Base(sh), Path: sh, Args: []string{"-l"}}}
 }
 
-// startLocal starts the user's shell as a login shell, in their home, as
-// a terminal app does.
-func startLocal(cols, rows int, term string) (localPTY, error) {
-	cmd := exec.Command(localShell(), "-l")
-	cmd.Env = append(os.Environ(), termEnv(term)...)
+// startLocal starts sh in the user's home, as a terminal app does.
+func startLocal(sh Shell, cols, rows int, term string) (localPTY, error) {
+	cmd := exec.Command(sh.Path, sh.Args...)
+	cmd.Env = append(append(os.Environ(), termEnv(term)...), sh.Env...)
 	if home, err := os.UserHomeDir(); err == nil {
 		cmd.Dir = home
 	}

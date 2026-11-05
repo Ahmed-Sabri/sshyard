@@ -20,7 +20,7 @@ func (a *App) addEntries(m locales.Messages) []menuEntry {
 		{Icon: icons.NewFolder, Label: m.NewGroup(), Do: func() { a.openGroupForm("", "") }},
 		a.bound(actQuickConnect, menuEntry{Icon: icons.Quick, Label: m.QuickConnectMenu(), Do: a.OpenQuickConnect}),
 		{Icon: icons.Forward, Label: m.NewForwardMenu(), Disabled: a.store.Len() == 0, Do: func() { a.openFwdForm(m, nil, a.selectedHost()) }},
-		{Icon: icons.LocalShell, Label: m.LocalTerminal(), Do: func() { a.OpenLocalTerminal() }},
+		a.localEntry(m),
 		menuSep,
 		{Icon: icons.Import, Label: m.ImportSSHConfigMenu(), Do: func() { a.OpenImport(m, "") }},
 	}

@@ -50,6 +50,9 @@ type Settings struct {
 	TerminalScheme string `json:"terminalScheme,omitempty"`
 	// TerminalSchemes are the color schemes the user imported.
 	TerminalSchemes []theme.Scheme `json:"terminalSchemes,omitempty"`
+	// LocalShell is the ID of the shell local terminals open by default
+	// (session.Shell); "" or one no longer installed is the first found.
+	LocalShell string `json:"localShell,omitempty"`
 	// Shortcuts are the shortcuts the user recorded, by the ID of the
 	// app's action, as keymap writes them; the others keep their default.
 	Shortcuts map[string]string `json:"shortcuts,omitempty"`
