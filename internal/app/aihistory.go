@@ -388,7 +388,7 @@ func (a *App) historyButton(c *ui.Context, cn *conn, tok theme.Tokens, m locales
 				a.OpenChat(cn.id, shown[0].ID)
 				return
 			}
-			ui.Scroll(c.Key("scroll")).MaxHeight(menuHeight).FillWidth().Children(func() {
+			gutterScroll(c, ui.Scroll(c.Key("scroll")).MaxHeight(menuHeight).FillWidth()).Children(func() {
 				ui.Column(c).FillWidth().Children(func() {
 					now := time.Now()
 					for i, s := range shown {

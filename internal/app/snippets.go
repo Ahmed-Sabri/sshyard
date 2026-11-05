@@ -120,7 +120,7 @@ func (a *App) snippetList(c *ui.Context, m locales.Messages, tok theme.Tokens, a
 		})
 	}
 	ui.Box(c).Height(1).Shrink(0).FillWidth().Background(tok.Line)
-	ui.Scroll(c.Key("snippet:list")).Grow(1).Shrink(1).MinHeight(0).FillWidth().Children(func() {
+	gutterScroll(c, ui.Scroll(c.Key("snippet:list")).Grow(1).Shrink(1).MinHeight(0).FillWidth()).Children(func() {
 		ui.Column(c).FillWidth().Padding(theme.Space(2)).Gap(theme.Space(0.5)).Children(func() {
 			// In sections by group while all of them show, and there are any.
 			sections := !a.snippets.grouped && len(groups) > 0

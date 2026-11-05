@@ -135,6 +135,39 @@ func sheet(el ui.Element, tok theme.Tokens) ui.Element {
 	return tok.Lift.On(el)
 }
 
+// scrollGutter is the room a vertical Scroll keeps at its end for its
+// scroll bar, which MyGo draws over the content (the theme's 8 DIPs, 3 in
+// from the edge): the bar never covers a field's border, a pill or a
+// row's trailing button.
+var scrollGutter = theme.Space(3)
+
+// sheetScroll lets a vertical Scroll reach scrollGutter into the padding
+// of the column holding it, as a sheet's, and keeps its scroll bar there:
+// the content stays as wide as the column, in line with the title and the
+// buttons. The column must have that much padding at its end.
+func sheetScroll(el ui.Element) ui.Element {
+	return el.AlignSelf(ui.Stretch).MarginEnd(-scrollGutter).PaddingEnd(scrollGutter)
+}
+
+// scrollGutterKey keys the state gutterScroll keeps on a Scroll.
+type scrollGutterKey struct{}
+
+// gutterScroll keeps the content of a vertical Scroll with no padding to
+// spare, as a menu's, clear of its scroll bar while it has one: while the
+// content overflowed in the last frame. A Scroll that just appeared asks
+// for a second frame, which knows.
+func gutterScroll(c *ui.Context, el ui.Element) ui.Element {
+	st := ui.Local(el, scrollGutterKey{}, func() *ui.ScrollState {
+		c.AnimationFrame()
+		return &ui.ScrollState{}
+	})
+	el.TrackScroll(*st)
+	if (*st).MaxY > 0 {
+		el.PaddingEnd(scrollGutter)
+	}
+	return el
+}
+
 // focusHold keeps the keyboard on a dialog's first field for a moment
 // after the dialog opens (or shows a new error), whatever else claims the
 // focus as the overlay settles: the field that had it, the window coming

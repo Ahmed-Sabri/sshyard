@@ -345,7 +345,7 @@ func (a *App) editorView(c *ui.Context, m locales.Messages) {
 						}
 					})
 				})
-				ui.Scroll(c.Key("f:scroll")).Shrink(1).MinHeight(0).FillWidth().Children(func() {
+				sheetScroll(ui.Scroll(c.Key("f:scroll")).Shrink(1).MinHeight(0)).Children(func() {
 					ui.Form(c, func() {
 						ui.Field(c, m.FieldName(), func() {
 							in := ui.TextInput(c.Key("f:name"), &f.name).Placeholder("web-01").AutoFocus()
@@ -472,9 +472,14 @@ func (a *App) networkFields(c *ui.Context, m locales.Messages, tok theme.Tokens,
 			f.jumpList.Key = func(i int) any { return f.jumps[i] }
 			f.jumpList.Label = func(i int) string { return a.hostLabel(f.jumps[i]) }
 			f.jumpList.Reorder = func(rows []int, to int) { f.jumps = moveRows(f.jumps, rows, to) }
+			// More than five scroll, the remove buttons clear of the bar.
+			end := float32(4)
+			if len(f.jumps) > 5 {
+				end += scrollGutter
+			}
 			ui.List(c.Key("f:jumps"), &f.jumpList, len(f.jumps), func(i int) {
 				id := f.jumps[i]
-				ui.Row(c.Key("jump:"+id)).Height(34).Gap(8).Padding(0, 4, 0, 8).AlignItems(ui.Center).FillWidth().Children(func() {
+				ui.Row(c.Key("jump:"+id)).Height(34).Gap(8).Padding(0, end, 0, 8).AlignItems(ui.Center).FillWidth().Children(func() {
 					ui.Text(c, strconv.Itoa(i+1)).FontSize(theme.Caption).TextColor(tok.TextMuted).Width(14)
 					tile(c, icons.JumpHost, tok.Tint(id), 20)
 					ui.Text(c, a.hostLabel(id)).FontSize(theme.Body).SingleLine().Grow(1).Shrink(1)

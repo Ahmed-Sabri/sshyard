@@ -54,7 +54,7 @@ func brandSelect(c *ui.Context, selected *string, options []string, brand func(s
 	})
 	sel.Popup(func(panel ui.Element) {
 		panel.Padding(theme.Space(1)).Radius(theme.RadiusCard).Background(tok.Inset).Border(1, tok.Line).MaxHeight(menuHeight)
-		ui.Scroll(c).MaxHeight(menuHeight).Children(func() {
+		gutterScroll(c, ui.Scroll(c).MaxHeight(menuHeight)).Children(func() {
 			ui.Column(c).FillWidth().Children(func() {
 				for _, option := range options {
 					c.Key(option)
@@ -76,7 +76,7 @@ func brandAutocomplete(c *ui.Context, value *string, models []string, provider s
 	in := cb.Input.Padding(theme.Space(1.5), theme.Space(2.5)).Radius(theme.RadiusSmall).Background(tok.Inset).Border(1, tok.Line)
 	cb.Popup(func(panel ui.Element) {
 		panel.Padding(theme.Space(1)).Radius(theme.RadiusCard).Background(tok.Inset).Border(1, tok.Line)
-		ui.Scroll(c).MaxHeight(240).Children(func() {
+		gutterScroll(c, ui.Scroll(c).MaxHeight(240)).Children(func() {
 			ui.Column(c).FillWidth().Children(func() {
 				for _, model := range models {
 					if cb.Filtering() && !strings.Contains(strings.ToLower(model), strings.ToLower(strings.TrimSpace(*value))) {

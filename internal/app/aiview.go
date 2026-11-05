@@ -308,7 +308,7 @@ func (a *App) modelChip(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Mes
 					open = false
 				}
 			}
-			ui.Scroll(c.Key("scroll")).MaxHeight(menuHeight).FillWidth().Children(func() {
+			gutterScroll(c, ui.Scroll(c.Key("scroll")).MaxHeight(menuHeight).FillWidth()).Children(func() {
 				ui.Column(c).FillWidth().Children(func() {
 					n := 0
 					for gi, g := range groups {
@@ -944,7 +944,7 @@ func (a *App) askSheet(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 				if cn.ai.onlyDiff {
 					diff = agent.OnlyChanges(diff)
 				}
-				ui.Scroll(c.Key("diff")).Height(220).FillWidth().Children(func() {
+				gutterScroll(c, ui.Scroll(c.Key("diff")).Height(220).FillWidth()).Children(func() {
 					ui.Text(c, diff).Font("monospace").FontSize(theme.Caption).FillWidth()
 				})
 			} else if pr.Action.Path != "" {

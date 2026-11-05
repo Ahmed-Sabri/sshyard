@@ -334,7 +334,7 @@ func (a *App) paletteView(c *ui.Context, m locales.Messages) {
 				ui.Text(c, m.PaletteNoResults()).FontSize(theme.Body).TextColor(tok.TextMuted).Padding(theme.Space(2))
 				return
 			}
-			ui.Scroll(c.Key("palette:list")).MaxHeight(420).FillWidth().Children(func() {
+			gutterScroll(c, ui.Scroll(c.Key("palette:list")).MaxHeight(420).FillWidth()).Children(func() {
 				ui.Column(c).Gap(2).FillWidth().Children(func() {
 					for i, it := range items {
 						if a.paletteRow(c, tok, it, i == p.sel) {

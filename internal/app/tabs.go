@@ -325,7 +325,7 @@ func (a *App) moreTabs(c *ui.Context, m locales.Messages, tok theme.Tokens, star
 		// A copy: closing a tab from its row changes the list as it builds.
 		tabs := slices.Clone(a.ws.Tabs)
 		panel.Children(func() {
-			ui.Scroll(c.Key("list")).MaxHeight(moreTabsHeight).FillWidth().Children(func() {
+			gutterScroll(c, ui.Scroll(c.Key("list")).MaxHeight(moreTabsHeight).FillWidth()).Children(func() {
 				ui.Column(c).Gap(2).FillWidth().Children(func() {
 					for i, t := range tabs {
 						if i < start || i >= start+k {

@@ -923,7 +923,7 @@ func (a *App) targetView(c *ui.Context, m locales.Messages) {
 					}
 				})
 			})
-			ui.Scroll(c.Key("bt:scroll")).Shrink(1).MinHeight(0).FillWidth().Children(func() {
+			sheetScroll(ui.Scroll(c.Key("bt:scroll")).Shrink(1).MinHeight(0)).Children(func() {
 				ui.Column(c).Gap(14).FillWidth().Children(func() {
 					a.targetFields(c, m, tok, f, kind)
 				})
@@ -1088,7 +1088,7 @@ func (a *App) remoteListView(c *ui.Context, m locales.Messages) {
 				ui.Text(c, m.RemoteBackupsEmpty()).FontSize(theme.Body).TextColor(tok.TextMuted)
 			case len(l.objs) > 0:
 				device := a.deviceID()
-				ui.Scroll(c.Key("rl:scroll")).Shrink(1).MinHeight(0).MaxHeight(360).FillWidth().Children(func() {
+				sheetScroll(ui.Scroll(c.Key("rl:scroll")).Shrink(1).MinHeight(0).MaxHeight(360)).Children(func() {
 					card(c, tok).FillWidth().Children(func() {
 						g := &settingsGroup{c: c, tok: tok}
 						for _, o := range l.objs {

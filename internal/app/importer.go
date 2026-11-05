@@ -557,7 +557,7 @@ func (a *App) importView(c *ui.Context, m locales.Messages) {
 			if f.cfg != nil {
 				n, skipped, _ := a.importCounts(m, f)
 				ui.Text(c, m.ImportSummary(strconv.Itoa(n), strconv.Itoa(skipped))).FontSize(theme.Body).FontWeight(500)
-				ui.Scroll(c.Key("imp:rows")).MaxHeight(420).FillWidth().Children(func() {
+				sheetScroll(ui.Scroll(c.Key("imp:rows")).MaxHeight(420)).Children(func() {
 					ui.Column(c).Gap(8).FillWidth().Children(func() {
 						for i, r := range f.rows {
 							a.importRowView(c, m, tok, f, i, r)

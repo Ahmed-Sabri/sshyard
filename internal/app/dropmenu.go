@@ -215,7 +215,7 @@ func (a *App) menuPanel(c *ui.Context, tok theme.Tokens, panel ui.Element, entri
 		a.menu.focus = -1
 	}
 	panel.Children(func() {
-		ui.Scroll(c.Key("scroll")).MaxHeight(menuHeight).FillWidth().Children(func() {
+		gutterScroll(c, ui.Scroll(c.Key("scroll")).MaxHeight(menuHeight).FillWidth()).Children(func() {
 			ui.Column(c).FillWidth().Children(func() {
 				for i, e := range entries {
 					if e.Sep {

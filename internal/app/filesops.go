@@ -533,9 +533,15 @@ func (a *App) transfersSheet(c *ui.Context, cn *conn, tok theme.Tokens, m locale
 					})
 					return
 				}
+				// Rows past the box's height scroll, the buttons clear of
+				// the bar.
+				end := float32(2)
+				if len(ts)*26 > 320-2*6 {
+					end += scrollGutter
+				}
 				ui.List(c.Key("queue"), &fs.queue, len(ts), func(i int) {
 					t := ts[i]
-					ui.Row(c.Key("tr:"+strconv.Itoa(t.ID))).Gap(8).AlignItems(ui.Center).Height(26).Padding(0, 2).FillWidth().Children(func() {
+					ui.Row(c.Key("tr:"+strconv.Itoa(t.ID))).Gap(8).AlignItems(ui.Center).Height(26).Padding(0, end, 0, 2).FillWidth().Children(func() {
 						ic := icons.Upload
 						if t.Dir == sftpsvc.Download {
 							ic = icons.Download

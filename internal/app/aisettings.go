@@ -296,7 +296,7 @@ func (a *App) providerSheet(c *ui.Context, m locales.Messages, tok theme.Tokens)
 	}
 	note := func(s string) { ui.Text(c, s).FontSize(theme.Caption).FillWidth().TextColor(tok.TextMuted) }
 	sheet(ui.Modal(c.Key("aiprov"), &a.provOpen, func() {
-		ui.Scroll(c.Key("ap:scroll")).MaxHeight(640).Children(func() {
+		sheetScroll(ui.Scroll(c.Key("ap:scroll")).MaxHeight(640)).Children(func() {
 			ui.Column(c).Gap(theme.Space(3)).Width(460).Children(func() {
 				sheetTitle(c, title)
 				ui.Field(c, m.FieldName(), func() {

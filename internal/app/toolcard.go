@@ -115,7 +115,7 @@ func (a *App) toolDetails(c *ui.Context, cn *conn, card agent.ToolCard, tok them
 		toolDetailText(c.Key("diff"), card.Diff, tok.Text, theme.Caption)
 	}
 	if card.Output != "" && card.Phase == "done" {
-		ui.Scroll(c.Key("out")).MaxHeight(220).FillWidth().Children(func() {
+		gutterScroll(c, ui.Scroll(c.Key("out")).MaxHeight(220).FillWidth()).Children(func() {
 			toolDetailText(c, toolOutput(m, card.Output), tok.Text, theme.Caption)
 		})
 	}
