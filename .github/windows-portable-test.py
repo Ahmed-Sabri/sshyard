@@ -101,12 +101,12 @@ class WindowsPortableTest(unittest.TestCase):
                 (dist / name).touch()
             command = [bash, (HERE / "release-download-notes.sh").as_posix(),
                        dist.as_posix(), "v0.0.4", "Licoy/sshyard"]
-            result = subprocess.run(command, capture_output=True, text=True)
+            result = subprocess.run(command, capture_output=True, encoding="utf-8")
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("expected one asset matching", result.stderr, repr(result))
             name = "sshyard-0.0.4-windows-amd64-portable.zip"
             (dist / name).touch()
-            result = subprocess.run(command, capture_output=True, text=True, check=True)
+            result = subprocess.run(command, capture_output=True, encoding="utf-8", check=True)
             self.assertIn(
                 f"[Portable ZIP](https://github.com/Licoy/sshyard/releases/download/v0.0.4/{name})",
                 result.stdout,
@@ -119,7 +119,7 @@ class WindowsPortableTest(unittest.TestCase):
             ):
                 self.assertIn(row, result.stdout)
             (dist / "sshyard-0.0.5-windows-amd64-portable.zip").touch()
-            result = subprocess.run(command, capture_output=True, text=True)
+            result = subprocess.run(command, capture_output=True, encoding="utf-8")
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("found 2", result.stderr)
 
