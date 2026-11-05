@@ -43,6 +43,10 @@ type hostForm struct {
 	jumpPick string
 	jumpList ui.ListState
 	netOpen  bool
+	// termDir, remoteDir and localDir are the host's default folders
+	// (Host.TerminalDir, RemoteDir, LocalDir); dirsOpen shows them.
+	termDir, remoteDir, localDir string
+	dirsOpen                     bool
 	// osc52 is the override's label once Advanced is open; osc52Code is
 	// the saved policy ("", allow, ask, deny), so a save before that
 	// keeps it. advOpen shows Advanced.
@@ -126,6 +130,8 @@ func (a *App) openEditor(h *assets.Host) {
 			f.proxy = p.Name
 		}
 		f.netOpen = f.proxy != "" || len(f.jumps) > 0
+		f.termDir, f.remoteDir, f.localDir = h.TerminalDir, h.RemoteDir, h.LocalDir
+		f.dirsOpen = f.termDir != "" || f.remoteDir != "" || f.localDir != ""
 		f.osc52Code = h.OSC52
 		f.advOpen = h.OSC52 != ""
 		f.aiIdx = hostModeIndex(h.AIPolicy.Mode)
@@ -257,6 +263,7 @@ func (a *App) SaveForm(m locales.Messages) bool {
 		}
 	}
 	h.JumpChain = slices.Clone(f.jumps)
+	h.TerminalDir, h.RemoteDir, h.LocalDir = f.termDir, f.remoteDir, f.localDir
 	h.OSC52 = osc52CodeFrom(m, f)
 	mode := ""
 	if f.aiIdx >= 0 && f.aiIdx < 4 {
@@ -437,6 +444,11 @@ func (a *App) editorView(c *ui.Context, m locales.Messages) {
 							})
 						}
 						if proto == assets.ProtoSSH {
+							ui.Field(c, "", func() {
+								ui.Collapsible(c.Key("f:dirs"), m.DefaultDirs(), &f.dirsOpen, func() {
+									a.dirFields(c, m, tok, f)
+								})
+							})
 							ui.Field(c, m.MetricsBar(), func() {
 								ui.Column(c).Gap(4).Children(func() {
 									ui.Segmented(c.Key("f:met"), &f.metricsIdx, m.MetricsFollow(), m.MetricsHostOn(), m.MetricsHostOff()).Label(m.MetricsBar()).Disabled(!a.settings.MetricsEnabled)
@@ -573,6 +585,27 @@ func (a *App) networkFields(c *ui.Context, m locales.Messages, tok theme.Tokens,
 				f.jumpPick = m.AddJumpHost()
 			}
 		}
+	})
+}
+
+// dirFields are the editor's default folders: where the host's terminal
+// and the two sides of its Files panes start.
+func (a *App) dirFields(c *ui.Context, m locales.Messages, tok theme.Tokens, f *hostForm) {
+	ui.Column(c).Gap(10).FillWidth().Margin(8, 0, 0, 0).Children(func() {
+		for _, d := range []struct {
+			key, label, hint string
+			value            *string
+		}{
+			{"f:tdir", m.DefaultDirTerminal(), "~", &f.termDir},
+			{"f:rdir", m.DefaultDirRemote(), "~", &f.remoteDir},
+			{"f:ldir", m.DefaultDirLocal(), a.localHome(), &f.localDir},
+		} {
+			ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
+				ui.Text(c, d.label).FontSize(theme.Footnote).TextColor(tok.TextMuted).Width(92)
+				ui.TextInput(c.Key(d.key), d.value).Placeholder(d.hint).Label(d.label).Grow(1)
+			})
+		}
+		ui.Text(c, m.DefaultDirsHint()).FontSize(theme.Caption).TextColor(tok.TextMuted)
 	})
 }
 

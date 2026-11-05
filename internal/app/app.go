@@ -908,6 +908,9 @@ func (a *App) makeConn(hostID string, kind layout.Kind, link int) (*conn, error)
 	if opts.Local {
 		opts.Shell = a.shell(h.ID)
 	}
+	if kind == layout.Terminal {
+		opts.Dir = h.TerminalDir
+	}
 	c.s = session.New(cfg, opts, 80, 24)
 	c.s.OnChange = a.invalidate
 	if kind != layout.Terminal {

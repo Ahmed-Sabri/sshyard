@@ -93,6 +93,13 @@ type Host struct {
 	// CwdFollow lets a Files pane follow the directory the terminal of
 	// the same tab reports (OSC 7). New hosts have it on.
 	CwdFollow bool `json:"cwdFollow"`
+	// TerminalDir, RemoteDir and LocalDir are where an SSH host's
+	// terminal, the server side of its Files panes and their side on
+	// this computer start; "~" or "~/…" is under the home folder. Empty
+	// is the home folder.
+	TerminalDir string `json:"terminalDir,omitempty"`
+	RemoteDir   string `json:"remoteDir,omitempty"`
+	LocalDir    string `json:"localDir,omitempty"`
 	// OSC52 overrides the global OSC 52 write policy (allow, ask or
 	// deny). Empty follows the global setting.
 	OSC52 string `json:"osc52,omitempty"`
@@ -188,6 +195,7 @@ func (h *Host) Normalize() {
 		h.normalizeStream()
 	} else {
 		h.Serial, h.NewLine, h.LocalEcho = nil, "", false
+		h.TerminalDir, h.RemoteDir, h.LocalDir = cleanDir(h.TerminalDir), cleanDir(h.RemoteDir), cleanDir(h.LocalDir)
 	}
 	if h.Auth == "" {
 		h.Auth = AuthAsk
@@ -238,6 +246,16 @@ func (p *AIPolicy) normalize() {
 	}
 	p.WritableRoots = cleanRemotePaths(p.WritableRoots)
 	p.Sensitive = cleanRemotePaths(p.Sensitive)
+}
+
+// cleanDir is a default folder trimmed, "" when it has a line break or
+// NUL, which no folder name typed in a field has.
+func cleanDir(s string) string {
+	s = strings.TrimSpace(s)
+	if strings.ContainsAny(s, "\x00\r\n") {
+		return ""
+	}
+	return s
 }
 
 // cleanRemotePaths trims remote POSIX paths, drops blanks, NULs and

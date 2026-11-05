@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"io"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Licoy/sshyard/internal/vt"
@@ -70,6 +72,10 @@ type Options struct {
 	// LocalEcho shows what is typed on an opened stream, for a device
 	// that does not echo it.
 	LocalEcho bool
+	// Dir is the folder an SSH shell goes to each time it starts: a cd
+	// typed once the shell has gone quiet (enterDir). "~" or "~/…" is
+	// under the home folder.
+	Dir string
 }
 
 // Status is a session's state, for the UI.
@@ -128,6 +134,9 @@ type Session struct {
 	// processes.
 	tag    string
 	tagged bool
+	// outAt is when the shell last wrote to the terminal, in Unix
+	// nanoseconds, 0 before its first output.
+	outAt atomic.Int64
 }
 
 // New returns a session of cols×rows; Start connects it.
@@ -501,6 +510,7 @@ func (s *Session) connect(ctx context.Context) error {
 	// last program may have gone with the mouse or focus reports on.
 	s.Term.ResetOutputStream()
 	s.Term.ResetInputModes(true)
+	s.outAt.Store(0)
 	if err := shell.Shell(); err != nil {
 		return fail(err)
 	}
@@ -513,8 +523,57 @@ func (s *Session) connect(ctx context.Context) error {
 	s.status.State, s.status.Err, s.status.Attempt = Connected, nil, 0
 	s.status.Connects++
 	s.mu.Unlock()
+	if s.opts.Dir != "" {
+		go s.enterDir(shell, time.Now())
+	}
 	s.changed()
 	return nil
+}
+
+// dirQuiet is how long a new shell prints nothing before enterDir takes
+// its prompt to be up; dirWait is how long it waits at most, for a shell
+// that prints nothing.
+const (
+	dirQuiet = 250 * time.Millisecond
+	dirWait  = 5 * time.Second
+)
+
+// enterDir types the cd to Options.Dir into shell, started at start,
+// once it has printed and then gone quiet for dirQuiet, or after dirWait:
+// typed before the prompt, the terminal would echo it twice. It gives up
+// when shell is gone.
+func (s *Session) enterDir(shell *ssh.Session, start time.Time) {
+	for {
+		time.Sleep(dirQuiet / 5)
+		s.mu.Lock()
+		in, cur := s.stdin, s.shell
+		s.mu.Unlock()
+		if cur != shell || in == nil {
+			return
+		}
+		now := time.Now()
+		at := s.outAt.Load()
+		if (at != 0 && now.Sub(time.Unix(0, at)) >= dirQuiet) || now.Sub(start) >= dirWait {
+			_ = in.send([]byte(cdLine(s.opts.Dir)))
+			return
+		}
+	}
+}
+
+// cdLine is the line changing a shell to dir, single-quoted as POSIX
+// shells and fish read it, with "~" left to the shell to expand.
+// Its leading space keeps it out of the history of shells that ignore
+// such lines.
+func cdLine(dir string) string {
+	quote := func(s string) string { return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'" }
+	arg := quote(dir)
+	switch {
+	case dir == "~":
+		arg = "~"
+	case strings.HasPrefix(dir, "~/"):
+		arg = "~/" + quote(dir[2:])
+	}
+	return " cd " + arg + "\r"
 }
 
 // serve waits for the shell to end. It returns nil when the shell exited
@@ -688,6 +747,7 @@ type termWriter struct {
 
 func (w *termWriter) Write(p []byte) (int, error) {
 	n, err := w.s.Term.Write(p)
+	w.s.outAt.Store(time.Now().UnixNano())
 	w.s.changed()
 	if w.login != nil {
 		if answer := w.login.feed(p, time.Now()); answer != nil {

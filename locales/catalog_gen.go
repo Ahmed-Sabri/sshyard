@@ -2647,6 +2647,56 @@ func (msgs Messages) Network() string {
 	return Catalog.Format(msgs.locale, "network", nil)
 }
 
+// DefaultDirs says "Default folders"
+// in the language the app shows.
+func DefaultDirs() string { return In(i18n.Locale()).DefaultDirs() }
+
+// DefaultDirs says "Default folders"
+// in the language of msgs.
+func (msgs Messages) DefaultDirs() string {
+	return Catalog.Format(msgs.locale, "defaultDirs", nil)
+}
+
+// DefaultDirTerminal says "Terminal"
+// in the language the app shows.
+func DefaultDirTerminal() string { return In(i18n.Locale()).DefaultDirTerminal() }
+
+// DefaultDirTerminal says "Terminal"
+// in the language of msgs.
+func (msgs Messages) DefaultDirTerminal() string {
+	return Catalog.Format(msgs.locale, "defaultDirTerminal", nil)
+}
+
+// DefaultDirRemote says "Server files"
+// in the language the app shows.
+func DefaultDirRemote() string { return In(i18n.Locale()).DefaultDirRemote() }
+
+// DefaultDirRemote says "Server files"
+// in the language of msgs.
+func (msgs Messages) DefaultDirRemote() string {
+	return Catalog.Format(msgs.locale, "defaultDirRemote", nil)
+}
+
+// DefaultDirLocal says "Local files"
+// in the language the app shows.
+func DefaultDirLocal() string { return In(i18n.Locale()).DefaultDirLocal() }
+
+// DefaultDirLocal says "Local files"
+// in the language of msgs.
+func (msgs Messages) DefaultDirLocal() string {
+	return Catalog.Format(msgs.locale, "defaultDirLocal", nil)
+}
+
+// DefaultDirsHint says "Where a new terminal and Files pane start. Empty is the home folder, and ~ stands for it. The terminal changes to its…"
+// in the language the app shows.
+func DefaultDirsHint() string { return In(i18n.Locale()).DefaultDirsHint() }
+
+// DefaultDirsHint says "Where a new terminal and Files pane start. Empty is the home folder, and ~ stands for it. The terminal changes to its…"
+// in the language of msgs.
+func (msgs Messages) DefaultDirsHint() string {
+	return Catalog.Format(msgs.locale, "defaultDirsHint", nil)
+}
+
 // FieldProxy says "Proxy"
 // in the language the app shows.
 func FieldProxy() string { return In(i18n.Locale()).FieldProxy() }

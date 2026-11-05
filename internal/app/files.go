@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -361,7 +363,7 @@ func (a *App) ensureSFTP(cn *conn) {
 	}
 	s.opening, s.err, s.listErr = true, "", false
 	connects := st.Connects
-	dir := s.dir
+	dir, start := s.dir, cn.host.RemoteDir
 	go func() {
 		c, err := sftpsvc.New(client)
 		var home string
@@ -370,7 +372,17 @@ func (a *App) ensureSFTP(cn *conn) {
 		if err == nil {
 			home, err = c.Home()
 		}
-		if err == nil {
+		listed := false
+		if err == nil && dir == "" && start != "" {
+			// The host's folder, or home when it cannot be listed.
+			d := remoteStart(home, start)
+			if es, un, err = c.ListUnfinished(d); err == nil {
+				dir, listed = d, true
+			} else {
+				err = nil
+			}
+		}
+		if err == nil && !listed {
 			if dir == "" {
 				dir = home
 			}
@@ -431,6 +443,49 @@ func (a *App) listRemote(s *remoteSide, dir string) {
 			s.show(dir, es)
 		})
 	}()
+}
+
+// remoteStart is the server folder a host's RemoteDir names: "~" and a
+// relative path are under home.
+func remoteStart(home, dir string) string {
+	if dir == "~" {
+		return home
+	}
+	dir = strings.TrimPrefix(dir, "~/")
+	if path.IsAbs(dir) {
+		return path.Clean(dir)
+	}
+	return path.Join(home, dir)
+}
+
+// localStart is the folder of this computer a host's LocalDir names: "~"
+// and a relative path are under home.
+func localStart(home, dir string) string {
+	if dir == "~" {
+		return home
+	}
+	if len(dir) > 1 && dir[0] == '~' && os.IsPathSeparator(dir[1]) {
+		dir = dir[2:]
+	}
+	if filepath.IsAbs(dir) {
+		return filepath.Clean(dir)
+	}
+	return filepath.Join(home, dir)
+}
+
+// listLocalFirst lists the local side of the files pane cn for the first
+// time: in its host's LocalDir, or home when that cannot be listed.
+func (a *App) listLocalFirst(cn *conn) {
+	l := &cn.fs.local
+	if l.dir == "" && cn.host.LocalDir != "" {
+		dir := localStart(a.localHome(), cn.host.LocalDir)
+		if es, err := sftpsvc.ListLocal(dir); err == nil {
+			l.loaded = true
+			l.show(dir, es)
+			return
+		}
+	}
+	a.listLocal(l, l.dir)
 }
 
 func (a *App) listLocal(l *localSide, dir string) {
@@ -1018,7 +1073,7 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 	fs := cn.fs
 	dual := a.settings.FilesDual
 	if dual && !fs.local.loaded {
-		a.listLocal(&fs.local, fs.local.dir)
+		a.listLocalFirst(cn)
 	}
 	a.ensureSFTP(cn)
 	a.refreshForTransfers(c, cn)

@@ -109,6 +109,7 @@ func (h *Host) normalizeStream() {
 	h.AskPassphrase, h.Certificate = false, ""
 	h.JumpChain = nil
 	h.CwdFollow = false
+	h.TerminalDir, h.RemoteDir, h.LocalDir = "", "", ""
 	h.Metrics = MetricsFollow
 	h.AIPolicy = AIPolicy{}
 	if h.Protocol == ProtoSerial {

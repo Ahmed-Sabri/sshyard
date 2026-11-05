@@ -17,10 +17,11 @@ func fieldIs(err error, field, reason string) bool {
 // has, get their own defaults, and say where they are.
 func TestStreamHostNormalize(t *testing.T) {
 	tn := Host{Protocol: ProtoTelnet, Address: " switch.lan ", User: "admin", JumpChain: []string{"x"}, CwdFollow: true,
-		Metrics: MetricsOn, AskPassphrase: true, Serial: &SerialLine{Device: "COM1"}, AIPolicy: AIPolicy{Mode: "full"}}
+		Metrics: MetricsOn, AskPassphrase: true, Serial: &SerialLine{Device: "COM1"}, AIPolicy: AIPolicy{Mode: "full"},
+		TerminalDir: "/srv", RemoteDir: "/srv", LocalDir: "/tmp"}
 	tn.Normalize()
 	if tn.Port != 23 || tn.Auth != AuthNone || tn.JumpChain != nil || tn.CwdFollow || tn.Metrics != MetricsFollow ||
-		tn.AskPassphrase || tn.Serial != nil || tn.AIPolicy.Mode != "" {
+		tn.AskPassphrase || tn.Serial != nil || tn.AIPolicy.Mode != "" || tn.TerminalDir != "" || tn.RemoteDir != "" || tn.LocalDir != "" {
 		t.Fatalf("telnet %+v", tn)
 	}
 	if err := tn.Validate(); err != nil {
@@ -189,5 +190,15 @@ func TestParseStreamURL(t *testing.T) {
 		if _, ok, _ := ParseStreamURL(ssh); ok {
 			t.Errorf("%q taken", ssh)
 		}
+	}
+}
+
+// TestHostDefaultDirsNormalize: an SSH host's default folders are kept
+// trimmed, and dropped when they could not be a folder typed in a field.
+func TestHostDefaultDirsNormalize(t *testing.T) {
+	h := Host{Address: "a", User: "u", TerminalDir: "  ~/www ", RemoteDir: "/srv\n/etc", LocalDir: "C:\\Users\\me"}
+	h.Normalize()
+	if h.TerminalDir != "~/www" || h.RemoteDir != "" || h.LocalDir != "C:\\Users\\me" {
+		t.Fatalf("dirs %q %q %q", h.TerminalDir, h.RemoteDir, h.LocalDir)
 	}
 }

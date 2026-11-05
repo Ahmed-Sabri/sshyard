@@ -494,3 +494,33 @@ func TestCertAuth(t *testing.T) {
 		t.Errorf("no certificate: %v", err)
 	}
 }
+
+func TestShellEntersDirAfterPrompt(t *testing.T) {
+	srv := server(t)
+	s := New(Config{Addr: srv.Addr, User: "demo", Credentials: password("secret"), HostKey: trusted(t, srv).Callback()},
+		Options{Dir: "/srv/it's here", AutoReconnect: true, Backoff: 20 * time.Millisecond}, 80, 24)
+	defer s.Close()
+	s.Start()
+	waitText(t, s, `you said: cd '/srv/it'\''s here'`)
+	if text := s.Term.ScreenText(); strings.Index(text, "Welcome") > strings.Index(text, "cd '") {
+		t.Errorf("cd typed before the prompt:\n%s", text)
+	}
+
+	srv.Drop()
+	waitFor(t, "a second connection", func() bool { st := s.Status(); return st.State == Connected && st.Connects == 2 })
+	waitFor(t, "the cd again", func() bool { return strings.Count(s.Term.ScreenText(), "you said: cd") == 2 })
+}
+
+func TestCdLine(t *testing.T) {
+	for dir, want := range map[string]string{
+		"/var/www":  " cd '/var/www'\r",
+		"~":         " cd ~\r",
+		"~/a b":     " cd ~/'a b'\r",
+		"/it's":     ` cd '/it'\''s'` + "\r",
+		"rel/$HOME": " cd 'rel/$HOME'\r",
+	} {
+		if got := cdLine(dir); got != want {
+			t.Errorf("cdLine(%q) = %q, want %q", dir, got, want)
+		}
+	}
+}
