@@ -137,9 +137,10 @@ func sheet(el ui.Element, tok theme.Tokens) ui.Element {
 
 // scrollGutter is the room a vertical Scroll keeps at its end for its
 // scroll bar, which MyGo draws over the content (the theme's 8 DIPs, 3 in
-// from the edge): the bar never covers a field's border, a pill or a
-// row's trailing button.
-var scrollGutter = theme.Space(3)
+// from the edge) and some space before it: the bar never covers or
+// crowds a field's border, a pill or a row's trailing button. In a sheet
+// it sits about midway between the content and the sheet's edge.
+var scrollGutter = theme.Space(4.5)
 
 // sheetScroll lets a vertical Scroll reach scrollGutter into the padding
 // of the column holding it, as a sheet's, and keeps its scroll bar there:
