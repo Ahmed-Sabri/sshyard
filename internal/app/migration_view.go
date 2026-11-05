@@ -2,6 +2,7 @@ package app
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/Licoy/sshyard/internal/icons"
 	"github.com/Licoy/sshyard/internal/migration"
@@ -19,6 +20,14 @@ func (a *App) migrationSection(c *ui.Context, m locales.Messages, tok theme.Toke
 			}
 			if a.p.PickFile != nil && (IconButton{Icon: icons.OpenFile, Label: m.ImportChooseFile()}).Clicked(c, "migration:openssh:file") {
 				a.pickImportFile(m)
+			}
+		})
+		g.row(m.MigrationText(), m.MigrationFormat("host=… port=… user=… password=… title=…"), func() {
+			if (IconButton{Icon: icons.Edit, Label: m.MigrationTextInput()}).Clicked(c, "migration:text") {
+				a.openTextMigration()
+			}
+			if a.p.PickFiles != nil && (IconButton{Icon: icons.OpenFile, Label: m.MigrationTextChooseFile()}).Clicked(c, "migration:text:file") {
+				a.readMigration(m, migration.Text, false)
 			}
 		})
 	})
@@ -51,27 +60,71 @@ func (a *App) migrationView(c *ui.Context, m locales.Messages) {
 	}
 	tok := currentTokens(c)
 	width, height := c.Size()
+	source := string(f.source)
+	if f.editable() {
+		source = m.MigrationText()
+	}
+	previewing := !f.reading && !f.saving && !f.composing && f.done == nil
+	var k migrationCheck
+	if f.editable() && previewing {
+		k = a.checkMigration(m, f)
+	}
 	sheet(ui.Modal(c, &a.migrationOpen, func() {
-		ui.Column(c).Width(min(float32(720), max(float32(220), width-theme.Space(24)))).Gap(theme.Space(3)).Children(func() {
-			sheetTitle(c, m.MigrationPreview(string(f.source)))
+		// The rows scroll between the controls and the buttons when the
+		// window is too short for them. A text import's table takes most of
+		// the window.
+		col := ui.Column(c).Width(min(float32(720), max(float32(220), width-theme.Space(24))))
+		if f.editable() && previewing {
+			col = ui.Column(c).Width(min(float32(1320), max(float32(220), width-theme.Space(24)))).Height(max(float32(200), height-theme.Space(24)))
+		}
+		col.Gap(theme.Space(3)).Shrink(1).MinHeight(0).Children(func() {
+			switch {
+			case f.composing:
+				sheetTitle(c, m.MigrationText())
+			case f.done != nil:
+				sheetTitle(c, m.MigrationResultTitle())
+			default:
+				sheetTitle(c, m.MigrationPreview(source))
+			}
 			switch {
 			case f.reading:
 				ui.Text(c, m.MigrationReading()).FontSize(theme.Body)
 			case f.saving:
 				ui.Text(c, m.MigrationSaving()).FontSize(theme.Body)
+			case f.composing:
+				a.migrationComposer(c, m, tok, f, max(float32(100), height-theme.Space(80)))
+			case f.done != nil:
+				migrationOutcomeView(c, m, tok, *f.done)
 			default:
-				a.migrationPreview(c, m, tok, f, max(float32(100), height-theme.Space(105)))
+				a.migrationPreview(c, m, tok, f, k, max(float32(100), height-theme.Space(105)))
+			}
+			if n := len(k.problems); n > 0 {
+				ui.Text(c, m.MigrationFixRows(strconv.Itoa(n))).TextColor(tok.Danger).FontSize(theme.Footnote)
 			}
 			if f.err != "" {
 				ui.Text(c, f.err).TextColor(tok.Danger).FontSize(theme.Footnote)
 			}
 			ui.Row(c).Gap(theme.Space(2)).FillWidth().Children(func() {
 				ui.Spacer(c)
-				if pill(c, m.Cancel(), false, false, f.saving) {
-					a.closeMigration()
-				}
-				if pill(c, m.ImportButton(strconv.Itoa(f.count())), true, false, f.reading || f.saving || f.count() == 0) {
-					a.startMigrationSave(m)
+				switch {
+				case f.done != nil:
+					if pill(c, m.Close(), true, false, false) {
+						a.closeMigration()
+					}
+				case f.composing:
+					if pill(c, m.Cancel(), false, false, false) {
+						a.closeMigration()
+					}
+					if pill(c, m.MigrationTextPreview(), true, false, strings.TrimSpace(f.text) == "") {
+						a.readTextMigration(m)
+					}
+				default:
+					if pill(c, m.Cancel(), false, false, f.saving) {
+						a.closeMigration()
+					}
+					if pill(c, m.ImportButton(strconv.Itoa(f.count())), true, false, f.reading || f.saving || f.count() == 0 || k.blocking > 0) {
+						a.startMigrationSave(m)
+					}
 				}
 			})
 		})
@@ -84,11 +137,13 @@ func (a *App) migrationView(c *ui.Context, m locales.Messages) {
 		}
 	}
 }
-func (a *App) migrationPreview(c *ui.Context, m locales.Messages, tok theme.Tokens, f *migrationForm, height float32) {
-	ui.Text(c, m.MigrationReadOnly()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
-	in := ui.TextInput(c.Key("migration:search"), &f.search).Label(m.SearchHosts()).Placeholder(m.SearchHosts()).AutoFocus().FillWidth()
-	a.migrationHold.apply(c, f, in)
-	ui.Row(c).Gap(theme.Space(2)).FillWidth().Children(func() {
+func (a *App) migrationPreview(c *ui.Context, m locales.Messages, tok theme.Tokens, f *migrationForm, k migrationCheck, height float32) {
+	if !f.editable() {
+		ui.Text(c, m.MigrationReadOnly()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
+	}
+	ui.Row(c).Gap(theme.Space(2)).AlignItems(ui.Center).FillWidth().Children(func() {
+		in := ui.TextInput(c.Key("migration:search"), &f.search).Label(m.SearchHosts()).Placeholder(m.SearchHosts()).AutoFocus().Grow(1).Shrink(1).MinWidth(0)
+		a.migrationHold.apply(c, f, in)
 		if pill(c, m.MigrationSelectAll(), false, false, false) {
 			f.selectVisible(true)
 		}
@@ -96,6 +151,15 @@ func (a *App) migrationPreview(c *ui.Context, m locales.Messages, tok theme.Toke
 			f.selectVisible(false)
 		}
 	})
+	if f.editable() {
+		choices, groups := a.hostAuthChoices(m), a.migrationGroups(f)
+		a.migrationBatchView(c, m, tok, f, choices, groups)
+		for _, issue := range f.issues {
+			warnLine(c, tok, migrationIssue(m, issue))
+		}
+		a.migrationTable(c, m, tok, f, k, choices, groups)
+		return
+	}
 	ui.Row(c).Gap(theme.Space(2)).FillWidth().Children(func() {
 		ui.TextInput(c.Key("migration:group"), &f.group).Label(m.FieldGroup()).Placeholder(m.FieldGroup()).Grow(1).Shrink(1)
 		if pill(c, m.MigrationApplyGroup(), false, false, false) {
@@ -108,7 +172,7 @@ func (a *App) migrationPreview(c *ui.Context, m locales.Messages, tok theme.Toke
 	})
 	ui.Checkbox(c.Key("migration:secrets"), &f.saveSecrets, m.MigrationSaveSecrets())
 	ui.Text(c, m.MigrationSecretsNote()).FontSize(theme.Caption).TextColor(tok.TextMuted)
-	ui.Scroll(c.Key("migration:rows")).MaxHeight(height).FillWidth().Children(func() {
+	sheetScroll(ui.Scroll(c.Key("migration:rows")).MaxHeight(height).Shrink(1).MinHeight(0)).Children(func() {
 		ui.Column(c).Gap(theme.Space(2)).FillWidth().Children(func() {
 			for _, issue := range f.issues {
 				warnLine(c, tok, migrationIssue(m, issue))
@@ -121,6 +185,20 @@ func (a *App) migrationPreview(c *ui.Context, m locales.Messages, tok theme.Toke
 		})
 	})
 }
+
+// migrationConflictView offers the choices for a row whose target a saved
+// host (or an earlier row) has.
+func migrationConflictView(c *ui.Context, m locales.Messages, tok theme.Tokens, key string, r *migrationRow) {
+	ui.Text(c, m.MigrationConflict()).FontSize(theme.Caption).TextColor(tok.Warning)
+	labels := importActions(m)
+	action := labels[int(r.action)]
+	ui.Select(c.Key(key+":action"), &action, labels).Label(m.ImportConflictAction()).FillWidth()
+	for i, label := range labels {
+		if action == label {
+			r.action = migrationAction(i)
+		}
+	}
+}
 func (a *App) migrationRowView(c *ui.Context, m locales.Messages, tok theme.Tokens, f *migrationForm, r *migrationRow, i int) {
 	key := "migration:row:" + strconv.Itoa(i)
 	ui.Column(c.Key(key)).Padding(theme.Space(2)).Gap(theme.Space(2)).FillWidth().Radius(theme.RadiusControl).Border(1, tok.Line).Children(func() {
@@ -132,15 +210,7 @@ func (a *App) migrationRowView(c *ui.Context, m locales.Messages, tok theme.Toke
 		ui.TextInput(c.Key(key+":group"), &r.group).Label(m.FieldGroup()).Placeholder(m.FieldGroup()).FillWidth()
 		conflicts, _ := f.choices()
 		if conflicts[r] {
-			ui.Text(c, m.MigrationConflict()).FontSize(theme.Caption).TextColor(tok.Warning)
-			labels := importActions(m)
-			action := labels[int(r.action)]
-			ui.Select(c.Key(key+":action"), &action, labels).Label(m.ImportConflictAction()).FillWidth()
-			for i, label := range labels {
-				if action == label {
-					r.action = migrationAction(i)
-				}
-			}
+			migrationConflictView(c, m, tok, key, r)
 		}
 		for _, issue := range r.entry.Issues {
 			warnLine(c, tok, migrationIssue(m, issue))
@@ -154,22 +224,10 @@ func (a *App) migrationRowView(c *ui.Context, m locales.Messages, tok theme.Toke
 		if f.saveSecrets && (len(r.entry.PrivateKey) > 0 || r.entry.KeyPath != "") {
 			ui.Text(c, r.entry.KeyPath).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine().Shrink(1)
 			if a.p.PickFile != nil && (IconButton{Icon: icons.OpenFile, Label: m.MigrationRelocateKey()}).Clicked(c, key+":key") {
-				go func() {
-					path, err := a.p.PickFile(m.MigrationRelocateKey())
-					a.post(func() {
-						if a.migration != f || f.saving {
-							return
-						}
-						if err != nil {
-							f.err = m.MigrationKeyError()
-							return
-						}
-						if path != "" {
-							r.entry.KeyPath = path
-							r.entry.PrivateKey = nil
-						}
-					})
-				}()
+				a.pickMigrationKey(m, f, func(path string) {
+					r.entry.KeyPath = path
+					r.entry.PrivateKey = nil
+				})
 			}
 			ui.TextInput(c.Key(key+":pass"), &r.pass).Password().Label(m.FieldPassphrase()).Placeholder(m.FieldPassphrase()).FillWidth()
 		}

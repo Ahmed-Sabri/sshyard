@@ -144,16 +144,47 @@ func migrationValidChain(id string, hosts map[string]assets.Host, seen map[strin
 	}
 	return true
 }
+
+// migrationRowError is a row's credential that cannot be saved.
+type migrationRowError struct {
+	row  *migrationRow
+	text string
+}
+
+func (e *migrationRowError) Error() string { return e.text }
+
 func migrationAuth(m locales.Messages, h assets.Host, r *migrationRow) (assets.Host, []keychain.Change, error) {
 	e := r.entry
 	var changes []keychain.Change
+	rowError := func(err error) error {
+		text := m.MigrationKeyError()
+		if r.auth != "" {
+			text = keyError(m, err)
+		}
+		return &migrationRowError{r, text}
+	}
+	switch r.auth {
+	case "":
+	case assets.AuthPassword:
+		// A blank password keeps that of the password host overwritten.
+		e.PrivateKey, e.KeyPath, e.Password = nil, "", []byte(r.password)
+	case assets.AuthKey:
+		e.Password = nil
+	default:
+		if h.Auth == assets.AuthPassword || h.Auth == assets.AuthKey {
+			changes = hostSecretDeletes(h.ID)
+		}
+		h.Auth, h.CredentialID, h.AskPassphrase = r.auth, r.cred, false
+		h.Normalize()
+		return h, changes, nil
+	}
 	data := e.PrivateKey
 	var err error
 	if e.KeyPath != "" && len(data) == 0 {
 		data, err = readKeyFile(e.KeyPath)
 	}
 	if err != nil {
-		return h, nil, errors.New(m.MigrationKeyError())
+		return h, nil, rowError(err)
 	}
 	switch {
 	case len(data) > 0:
@@ -166,7 +197,7 @@ func migrationAuth(m locales.Messages, h assets.Host, r *migrationRow) (assets.H
 			err = nil
 		}
 		if err != nil {
-			return h, nil, errors.New(m.MigrationKeyError())
+			return h, nil, rowError(err)
 		}
 		if h.Certificate != "" {
 			cert, err := keys.ParseCert([]byte(h.Certificate))
@@ -271,6 +302,8 @@ func migrationIssue(m locales.Messages, issue migration.Issue) string {
 		text = m.MigrationDuplicateID()
 	case "empty-source":
 		text = m.MigrationEmpty()
+	case "unclosed-quote":
+		text = m.MigrationUnclosedQuote()
 	default:
 		text = m.MigrationUnsupportedField()
 	}

@@ -12855,6 +12855,178 @@ func (msgs Messages) MigrationEncryptedSource() string {
 	return Catalog.Format(msgs.locale, "migrationEncryptedSource", nil)
 }
 
+// MigrationText says "Text batch import"
+// in the language the app shows.
+func MigrationText() string { return In(i18n.Locale()).MigrationText() }
+
+// MigrationText says "Text batch import"
+// in the language of msgs.
+func (msgs Messages) MigrationText() string {
+	return Catalog.Format(msgs.locale, "migrationText", nil)
+}
+
+// MigrationTextInput says "Enter or paste a host list"
+// in the language the app shows.
+func MigrationTextInput() string { return In(i18n.Locale()).MigrationTextInput() }
+
+// MigrationTextInput says "Enter or paste a host list"
+// in the language of msgs.
+func (msgs Messages) MigrationTextInput() string {
+	return Catalog.Format(msgs.locale, "migrationTextInput", nil)
+}
+
+// MigrationTextChooseFile says "Choose text file"
+// in the language the app shows.
+func MigrationTextChooseFile() string { return In(i18n.Locale()).MigrationTextChooseFile() }
+
+// MigrationTextChooseFile says "Choose text file"
+// in the language of msgs.
+func (msgs Messages) MigrationTextChooseFile() string {
+	return Catalog.Format(msgs.locale, "migrationTextChooseFile", nil)
+}
+
+// MigrationTextHelp says "One host per line, as key=value fields separated by spaces: host or ip, port, user or username, password, and title, …"
+// in the language the app shows.
+func MigrationTextHelp() string { return In(i18n.Locale()).MigrationTextHelp() }
+
+// MigrationTextHelp says "One host per line, as key=value fields separated by spaces: host or ip, port, user or username, password, and title, …"
+// in the language of msgs.
+func (msgs Messages) MigrationTextHelp() string {
+	return Catalog.Format(msgs.locale, "migrationTextHelp", nil)
+}
+
+// MigrationTextLabel says "Host list"
+// in the language the app shows.
+func MigrationTextLabel() string { return In(i18n.Locale()).MigrationTextLabel() }
+
+// MigrationTextLabel says "Host list"
+// in the language of msgs.
+func (msgs Messages) MigrationTextLabel() string {
+	return Catalog.Format(msgs.locale, "migrationTextLabel", nil)
+}
+
+// MigrationTextPreview says "Preview"
+// in the language the app shows.
+func MigrationTextPreview() string { return In(i18n.Locale()).MigrationTextPreview() }
+
+// MigrationTextPreview says "Preview"
+// in the language of msgs.
+func (msgs Messages) MigrationTextPreview() string {
+	return Catalog.Format(msgs.locale, "migrationTextPreview", nil)
+}
+
+// MigrationUnclosedQuote says "Unclosed quote; the rest of the line became this value"
+// in the language the app shows.
+func MigrationUnclosedQuote() string { return In(i18n.Locale()).MigrationUnclosedQuote() }
+
+// MigrationUnclosedQuote says "Unclosed quote; the rest of the line became this value"
+// in the language of msgs.
+func (msgs Messages) MigrationUnclosedQuote() string {
+	return Catalog.Format(msgs.locale, "migrationUnclosedQuote", nil)
+}
+
+// MigrationBatchEdit says "Edit selected hosts"
+// in the language the app shows.
+func MigrationBatchEdit() string { return In(i18n.Locale()).MigrationBatchEdit() }
+
+// MigrationBatchEdit says "Edit selected hosts"
+// in the language of msgs.
+func (msgs Messages) MigrationBatchEdit() string {
+	return Catalog.Format(msgs.locale, "migrationBatchEdit", nil)
+}
+
+// MigrationUnchanged says "Unchanged"
+// in the language the app shows.
+func MigrationUnchanged() string { return In(i18n.Locale()).MigrationUnchanged() }
+
+// MigrationUnchanged says "Unchanged"
+// in the language of msgs.
+func (msgs Messages) MigrationUnchanged() string {
+	return Catalog.Format(msgs.locale, "migrationUnchanged", nil)
+}
+
+// MigrationUseGroup says "Use this group"
+// in the language the app shows.
+func MigrationUseGroup() string { return In(i18n.Locale()).MigrationUseGroup() }
+
+// MigrationUseGroup says "Use this group"
+// in the language of msgs.
+func (msgs Messages) MigrationUseGroup() string {
+	return Catalog.Format(msgs.locale, "migrationUseGroup", nil)
+}
+
+// MigrationInvalidHost says "Enter a host name or IP address without a port, user or spaces"
+// in the language the app shows.
+func MigrationInvalidHost() string { return In(i18n.Locale()).MigrationInvalidHost() }
+
+// MigrationInvalidHost says "Enter a host name or IP address without a port, user or spaces"
+// in the language of msgs.
+func (msgs Messages) MigrationInvalidHost() string {
+	return Catalog.Format(msgs.locale, "migrationInvalidHost", nil)
+}
+
+// MigrationFixRows says "{count} hosts need attention; correct the fields marked in red"
+// in the language the app shows.
+func MigrationFixRows(count string) string { return In(i18n.Locale()).MigrationFixRows(count) }
+
+// MigrationFixRows says "{count} hosts need attention; correct the fields marked in red"
+// in the language of msgs.
+func (msgs Messages) MigrationFixRows(count string) string {
+	return Catalog.Format(msgs.locale, "migrationFixRows", map[string]any{"count": count})
+}
+
+// MigrationResultTitle says "Import complete"
+// in the language the app shows.
+func MigrationResultTitle() string { return In(i18n.Locale()).MigrationResultTitle() }
+
+// MigrationResultTitle says "Import complete"
+// in the language of msgs.
+func (msgs Messages) MigrationResultTitle() string {
+	return Catalog.Format(msgs.locale, "migrationResultTitle", nil)
+}
+
+// MigrationResult says "Added {added}, updated {updated}, skipped {skipped}"
+// in the language the app shows.
+func MigrationResult(added string, updated string, skipped string) string {
+	return In(i18n.Locale()).MigrationResult(added, updated, skipped)
+}
+
+// MigrationResult says "Added {added}, updated {updated}, skipped {skipped}"
+// in the language of msgs.
+func (msgs Messages) MigrationResult(added string, updated string, skipped string) string {
+	return Catalog.Format(msgs.locale, "migrationResult", map[string]any{"added": added, "updated": updated, "skipped": skipped})
+}
+
+// MigrationColSecret says "Password or key"
+// in the language the app shows.
+func MigrationColSecret() string { return In(i18n.Locale()).MigrationColSecret() }
+
+// MigrationColSecret says "Password or key"
+// in the language of msgs.
+func (msgs Messages) MigrationColSecret() string {
+	return Catalog.Format(msgs.locale, "migrationColSecret", nil)
+}
+
+// MigrationColStatus says "Status"
+// in the language the app shows.
+func MigrationColStatus() string { return In(i18n.Locale()).MigrationColStatus() }
+
+// MigrationColStatus says "Status"
+// in the language of msgs.
+func (msgs Messages) MigrationColStatus() string {
+	return Catalog.Format(msgs.locale, "migrationColStatus", nil)
+}
+
+// MigrationRowReady says "Ready to import"
+// in the language the app shows.
+func MigrationRowReady() string { return In(i18n.Locale()).MigrationRowReady() }
+
+// MigrationRowReady says "Ready to import"
+// in the language of msgs.
+func (msgs Messages) MigrationRowReady() string {
+	return Catalog.Format(msgs.locale, "migrationRowReady", nil)
+}
+
 // QuickMigration says "Quick Migration"
 // in the language the app shows.
 func QuickMigration() string { return In(i18n.Locale()).QuickMigration() }

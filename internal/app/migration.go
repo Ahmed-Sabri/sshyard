@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/netip"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -27,6 +28,14 @@ type migrationRow struct {
 	selected          bool
 	saveSecret        bool
 	action            migrationAction
+	// A text import edits every field and chooses the login: port is the
+	// port typed, auth and cred the login (set only for such rows), and
+	// password the password; a key is entry.PrivateKey or entry.KeyPath,
+	// opened with pass. problem is why the last save refused the row.
+	port, password string
+	auth           assets.AuthMethod
+	cred           string
+	problem        string
 }
 type migrationForm struct {
 	source                       migration.Source
@@ -35,7 +44,21 @@ type migrationForm struct {
 	baseline                     []assets.Host
 	search, group, err           string
 	saveSecrets, reading, saving bool
+	// composing shows the text area of a text import, text its content;
+	// batch edits the selected rows, table keeps the place of its rows,
+	// done is what the saved import did
+	composing bool
+	text      string
+	batch     migrationBatch
+	table     ui.ListState
+	done      *migrationOutcome
 }
+
+// migrationOutcome counts what a text import did with its rows.
+type migrationOutcome struct{ added, updated, skipped int }
+
+// editable reports a text import, whose rows edit every field.
+func (f *migrationForm) editable() bool { return f.source == migration.Text }
 
 func migrationTarget(address string, port int, user string) string {
 	address = strings.Trim(strings.TrimSpace(address), "[]")
@@ -49,6 +72,9 @@ func migrationTarget(address string, port int, user string) string {
 }
 func (a *App) newMigration(source migration.Source, result migration.Result) *migrationForm {
 	f := &migrationForm{source: source, issues: result.Issues, baseline: a.store.List()}
+	// A text import's rows choose their login, which saves its secret.
+	f.saveSecrets = f.editable()
+	saved := f.saved()
 	for _, e := range result.Entries {
 		if e.Port == 0 {
 			e.Port = 22
@@ -56,9 +82,55 @@ func (a *App) newMigration(source migration.Source, result migration.Result) *mi
 		if e.User == "" {
 			e.User = a.localUser()
 		}
-		f.rows = append(f.rows, &migrationRow{entry: e, name: e.Name, group: e.Group, selected: true, saveSecret: true})
+		r := &migrationRow{entry: e, name: e.Name, group: e.Group, selected: true, saveSecret: true}
+		if f.editable() {
+			a.editableRow(r, saved)
+		}
+		f.rows = append(f.rows, r)
 	}
 	return f
+}
+
+// editableRow readies a text import's row: its fields are checked as they
+// are edited, and it logs in with its password, else as the saved host
+// it would overwrite does, else by asking.
+func (a *App) editableRow(r *migrationRow, saved map[string]assets.Host) {
+	e := &r.entry
+	// A copy: deleting in place would rewrite the entry's issues in result.
+	e.Issues = slices.DeleteFunc(slices.Clone(e.Issues), func(i migration.Issue) bool { return i.Code == "invalid-entry" })
+	if e.Port > 0 {
+		r.port = strconv.Itoa(e.Port)
+	}
+	r.password = string(e.Password)
+	clear(e.Password)
+	e.Password = nil
+	r.auth = assets.AuthAsk
+	if old, ok := saved[migrationTarget(e.Address, e.Port, e.User)]; ok {
+		r.auth, r.cred = old.Auth, old.CredentialID
+	}
+	if r.password != "" {
+		r.auth, r.cred = assets.AuthPassword, ""
+	}
+}
+
+// saved maps the target of each saved host to it.
+func (f *migrationForm) saved() map[string]assets.Host {
+	out := map[string]assets.Host{}
+	for _, h := range f.baseline {
+		out[migrationTarget(h.Address, h.Port, h.User)] = h
+	}
+	return out
+}
+
+// overwrites is the saved host the row replaces, nil for a new one.
+func (f *migrationForm) overwrites(saved map[string]assets.Host, r *migrationRow) *assets.Host {
+	if r.action != migrationOverwrite {
+		return nil
+	}
+	if h, ok := saved[migrationTarget(r.entry.Address, r.entry.Port, r.entry.User)]; ok {
+		return &h
+	}
+	return nil
 }
 func (f *migrationForm) visible(r *migrationRow) bool {
 	return strings.Contains(strings.ToLower(r.name+" "+r.entry.Address+" "+r.entry.User+" "+r.group), strings.ToLower(f.search))
@@ -101,25 +173,63 @@ func (f *migrationForm) needsSecrets() bool {
 		return false
 	}
 	_, rows := f.choices()
+	saved := f.saved()
 	for _, r := range rows {
 		e := r.entry
+		if r.auth != "" {
+			// A secret given is written; another login deletes those of the
+			// host it overwrites, and a blank one of its own login keeps them.
+			old := f.overwrites(saved, r)
+			given := r.auth == assets.AuthPassword && r.password != "" || r.auth == assets.AuthKey && (len(e.PrivateKey) > 0 || e.KeyPath != "")
+			if given || old != nil && old.Auth != r.auth && (old.Auth == assets.AuthPassword || old.Auth == assets.AuthKey) {
+				return true
+			}
+			continue
+		}
 		if r.saveSecret && (len(e.Password) > 0 || len(e.PrivateKey) > 0 || e.KeyPath != "") {
 			return true
 		}
 	}
 	return false
 }
+
+// forget drops the secrets the form holds.
+func (f *migrationForm) forget() {
+	for _, r := range f.rows {
+		clear(r.entry.Password)
+		clear(r.entry.PrivateKey)
+		clear(r.entry.Passphrase)
+		r.pass, r.password = "", ""
+	}
+	f.text = ""
+	f.batch.password, f.batch.pass = "", ""
+}
 func (a *App) closeMigration() {
 	if f := a.migration; f != nil && !f.saving {
-		for _, r := range f.rows {
-			clear(r.entry.Password)
-			clear(r.entry.PrivateKey)
-			clear(r.entry.Passphrase)
-			r.pass = ""
-		}
+		f.forget()
 		a.migration = nil
 		a.migrationOpen = false
 	}
+}
+
+// openTextMigration shows the text area of a text import.
+func (a *App) openTextMigration() {
+	a.migration, a.migrationOpen = &migrationForm{source: migration.Text, composing: true}, true
+}
+
+// readTextMigration reads the text area's host list into the preview.
+func (a *App) readTextMigration(m locales.Messages) {
+	f := a.migration
+	if f == nil || !f.composing {
+		return
+	}
+	result, err := migration.ParseText(f.text)
+	if err != nil {
+		f.err = migrationReadError(m, err)
+		return
+	}
+	f.text = ""
+	a.migration = a.newMigration(migration.Text, result)
 }
 func (a *App) readMigration(m locales.Messages, source migration.Source, directory bool) {
 	f := &migrationForm{source: source, reading: true}
@@ -134,7 +244,11 @@ func (a *App) readMigration(m locales.Messages, source migration.Source, directo
 				paths = []string{path}
 			}
 		} else {
-			paths, err = a.p.PickFiles(m.MigrationChooseFiles())
+			title := m.MigrationChooseFiles()
+			if source == migration.Text {
+				title = m.MigrationTextChooseFile()
+			}
+			paths, err = a.p.PickFiles(title)
 		}
 		var result migration.Result
 		if err == nil && len(paths) > 0 {
@@ -165,7 +279,10 @@ func (a *App) readMigration(m locales.Messages, source migration.Source, directo
 }
 func (a *App) startMigrationSave(m locales.Messages) {
 	f := a.migration
-	if f == nil || f.saving || f.reading || f.count() == 0 {
+	if f == nil || f.saving || f.reading || f.composing || f.done != nil || f.count() == 0 {
+		return
+	}
+	if f.editable() && a.checkMigration(m, f).blocking > 0 {
 		return
 	}
 	if f.needsSecrets() && !a.unlocked() {
@@ -178,6 +295,10 @@ func (a *App) startMigrationSave(m locales.Messages) {
 	}
 	f.saving = true
 	f.err = ""
+	for _, r := range f.rows {
+		r.problem = ""
+	}
+	outcome := f.outcome()
 	// Freeze editor input while the batch runs off the UI thread.
 	go func() {
 		count, err := a.saveMigration(m, f)
@@ -186,8 +307,17 @@ func (a *App) startMigrationSave(m locales.Messages) {
 				return
 			}
 			f.saving = false
-			if err != nil {
+			var rowErr *migrationRowError
+			switch {
+			case errors.As(err, &rowErr) && f.editable():
+				rowErr.row.problem = rowErr.text
+				return
+			case err != nil:
 				f.err = err.Error()
+				return
+			case f.editable():
+				f.forget()
+				f.done = &outcome
 				return
 			}
 			a.closeMigration()
@@ -196,6 +326,22 @@ func (a *App) startMigrationSave(m locales.Messages) {
 			})
 		})
 	}()
+}
+
+// outcome counts the rows the selection adds, the saved hosts it
+// overwrites and the rows left out.
+func (f *migrationForm) outcome() migrationOutcome {
+	_, final := f.choices()
+	var o migrationOutcome
+	for id := range final {
+		if strings.HasPrefix(id, "row:") {
+			o.added++
+		} else {
+			o.updated++
+		}
+	}
+	o.skipped = len(f.rows) - len(final)
+	return o
 }
 func (a *App) migrationUnchanged(f *migrationForm) bool {
 	return reflect.DeepEqual(f.baseline, a.store.List())

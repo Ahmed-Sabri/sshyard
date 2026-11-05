@@ -16,6 +16,9 @@ const (
 	Remmina   Source = "Remmina"
 	MRemoteNG Source = "mRemoteNG"
 	WinSCP    Source = "WinSCP"
+	// Text is a host list of key=value lines, typed, pasted or read
+	// from a file; it is not one of the clients Sources lists.
+	Text Source = "Text"
 )
 
 func Sources() []Source {

@@ -8,6 +8,21 @@ in memory and are excluded from JSON/YAML serialization.
 SSH entries and 10,000 diagnostics; a file error rejects the batch; non-SSH rows and unsupported options
 produce machine-readable diagnostics; unknown or damaged schemas fail explicitly.
 A directory contributes only its relative subdirectory path to group names.
+`ParseText` keeps the same size, entry and diagnostic bounds for typed text.
+
+## Text host list
+
+`Text` reads one host per line of blank-separated `key=value` fields, typed or
+pasted into the text area or read from a selected `.txt` file: `host` / `ip`,
+`port`, `user` / `username`, `password` and `title` / `name` / `label` for the
+name. Keys ignore case; `authType` is ignored, other keys are diagnosed, and a
+missing password stays blank. A value opening with `"` or `'` runs to the
+matching quote, where in double quotes `\"` and `\\` escape; an unquoted value is
+literal up to the next blank, quotes and backslashes included, and an unclosed
+quote is diagnosed. Blank lines, `#` comments and lines without a field, such
+as separators, are skipped. The preview edits every field and the login of each
+row, alone or for the selected rows at once, and saves only once every
+selected row is valid.
 
 ## Independently verified source formats
 
