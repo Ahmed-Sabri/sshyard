@@ -512,6 +512,12 @@ func (a *App) termElement(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn
 	if tv.link.on {
 		term.Cursor(ui.CursorPointer)
 	}
+	if !term.Hovered() && !tv.barDrag {
+		tv.barHover = false
+	}
+	if tv.barHover || tv.barDrag {
+		term.Cursor(ui.CursorDefault) // the scrollbar's, not a text's
+	}
 	if has && t.Focus != n.ID {
 		t.Focus = n.ID
 	}

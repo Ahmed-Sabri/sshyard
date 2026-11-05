@@ -72,6 +72,7 @@ type termView struct {
 	first               int // absolute line of the top row last drawn
 	offset              int // lines scrolled into the scrollback
 	scrollAcc           float32
+	w, h                float32 // the element's size last drawn
 	selA, selB          vt.Pos
 	selecting, selected bool
 	preedit             string
@@ -83,6 +84,11 @@ type termView struct {
 	lastMouse vt.Pos // the cell of the last report, for moves
 	wheelAcc  float32
 	focusSeen int8 // 0 unknown, 1 focused, -1 not
+
+	// the scrollbar: the pointer over its strip, the thumb dragged, and
+	// where in the thumb it was taken
+	barHover, barDrag bool
+	barGrab           float32
 
 	// what paint reuses from frame to frame, so that a frame of a
 	// terminal allocates nothing once warm
@@ -158,6 +164,57 @@ func (v *termView) gridSize(w, h float32) (int, int) {
 	cols := int((w - 2*termPad) / v.cellW)
 	rows := int((h - 2*termPad) / v.cellH)
 	return max(cols, 2), max(rows, 1)
+}
+
+// The scrollbar is drawn in the right padding: thin at rest, wide under
+// the pointer, and its thumb never shorter than barMinThumb.
+const (
+	barThin, barWide = 4, 8
+	barMinThumb      = 16
+)
+
+// scrollBar returns the scrollbar's strip and thumb in the element's box,
+// as last drawn; ok is false without a scrollback (and on the alternate
+// screen, which has none).
+func (v *termView) scrollBar() (track, thumb ui.Rect, ok bool) {
+	s := &v.snap
+	if s.Scrollback <= 0 || v.w <= 0 || v.h <= 0 {
+		return ui.Rect{}, ui.Rect{}, false
+	}
+	track = ui.Rect{X: v.w - termPad, W: termPad, H: v.h}
+	h := min(max(v.h*float32(s.Rows)/float32(s.Scrollback+s.Rows), barMinThumb), v.h)
+	top := (v.h - h) * float32(s.Scrollback-s.Offset) / float32(s.Scrollback)
+	return track, ui.Rect{X: track.X, Y: top, W: termPad, H: h}, true
+}
+
+// barOffset is the scroll offset that puts the thumb's top at y.
+func (v *termView) barOffset(y float32) int {
+	_, thumb, ok := v.scrollBar()
+	room := v.h - thumb.H
+	if !ok || room <= 0 {
+		return v.offset
+	}
+	f := min(max(y/room, 0), 1)
+	sb := v.snap.Scrollback
+	return sb - int(math.Round(float64(f*float32(sb))))
+}
+
+// barPress takes a left press on the scrollbar's strip and starts
+// dragging the thumb; a press off the thumb first brings its middle
+// there.
+func (v *termView) barPress(x, y float32) bool {
+	track, thumb, ok := v.scrollBar()
+	if !ok || !track.Contains(x, y) {
+		return false
+	}
+	if thumb.Contains(x, y) {
+		v.barGrab = y - thumb.Y
+	} else {
+		v.barGrab = thumb.H / 2
+		v.offset = v.barOffset(y - v.barGrab)
+	}
+	v.barDrag, v.barHover = true, true
+	return true
 }
 
 // cellAt is the cell under a point in the element's box.
@@ -326,6 +383,7 @@ func (v *termView) paint(p *ui.Painter, r ui.Rect, pal *theme.Terminal, focused 
 		v.hl.Apply(snap.Lines, v.hlOverride)
 	}
 	v.offset, v.first = snap.Offset, snap.First
+	v.w, v.h = r.W, r.H
 	if !v.clear {
 		p.Fill(r, pal.Background, 0)
 	}
@@ -476,12 +534,14 @@ func (v *termView) paint(p *ui.Painter, r ui.Rect, pal *theme.Terminal, focused 
 		p.Fill(ui.Rect{X: cx, Y: cy + ch - 1, W: w, H: 1}, pal.Foreground, 0)
 	}
 
-	// where the view is in the scrollback
-	if snap.Offset > 0 && snap.Scrollback > 0 {
-		total := float32(snap.Scrollback + snap.Rows)
-		h := max(r.H*float32(snap.Rows)/total, 16)
-		top := r.Y + (r.H-h)*float32(snap.Scrollback-snap.Offset)/float32(snap.Scrollback)
-		p.Fill(ui.Rect{X: r.X + r.W - 6, Y: top, W: 4, H: h}, pal.Foreground.Alpha(0.35), 2)
+	// where the view is in the scrollback: shown scrolled up, or with the
+	// pointer on it
+	if _, thumb, ok := v.scrollBar(); ok && (snap.Offset > 0 || v.barHover || v.barDrag) {
+		w, alpha := float32(barThin), float32(0.35)
+		if v.barHover || v.barDrag {
+			w, alpha = barWide, 0.5
+		}
+		p.Fill(ui.Rect{X: r.X + r.W - 2 - w, Y: r.Y + thumb.Y, W: w, H: thumb.H}, pal.Foreground.Alpha(alpha), w/2)
 	}
 }
 
@@ -682,6 +742,9 @@ func (v *termView) input(ev ui.InputEvent, cb clipboard) bool {
 		}
 		return false
 	case ui.InputPointerDown:
+		if ev.Button == 0 && v.barPress(ev.X, ev.Y) {
+			return true
+		}
 		if ev.Button == 0 && ev.Clicks <= 1 && ev.Mods&linkMods() != 0 && v.openLink != nil {
 			if url, _, _ := t.LinkAt(v.cellAt(ev.X, ev.Y)); url != "" && ui.SafeToOpen(url) {
 				v.openLink(url)
@@ -725,6 +788,19 @@ func (v *termView) input(ev ui.InputEvent, cb clipboard) bool {
 		v.selecting = true
 		return true
 	case ui.InputPointerMove:
+		if v.barDrag {
+			v.offset = v.barOffset(ev.Y - v.barGrab)
+			return true
+		}
+		track, _, ok := v.scrollBar()
+		hover := ok && track.Contains(ev.X, ev.Y)
+		if hover != v.barHover && !v.selecting && !v.held {
+			v.barHover = hover
+			return true
+		}
+		if v.barHover {
+			return true
+		}
 		v.hoverLink(t, ev.X, ev.Y, ev.Mods)
 		if v.held || !v.selecting {
 			m := t.Modes()
@@ -750,6 +826,12 @@ func (v *termView) input(ev ui.InputEvent, cb clipboard) bool {
 		}
 		return false
 	case ui.InputPointerUp:
+		if v.barDrag {
+			v.barDrag = false
+			track, _, ok := v.scrollBar()
+			v.barHover = ok && track.Contains(ev.X, ev.Y)
+			return true
+		}
 		if v.held {
 			v.held = false
 			m := t.Modes()
