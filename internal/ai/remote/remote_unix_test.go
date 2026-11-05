@@ -569,12 +569,13 @@ func TestWrapBranchStop(t *testing.T) {
 		min   time.Duration
 		max   time.Duration
 	}{
-		{"setsid", []string{"sh", "setsid", "true", "sleep"}, true, "sleep 600", 0, 4 * time.Second},
-		{"perl", []string{"sh", "perl", "sleep"}, true, "sleep 600", 0, 4 * time.Second},
-		{"pid", []string{"sh", "sleep"}, false, "sleep 600", 0, 4 * time.Second},
-		{"setsid-ignore", []string{"sh", "setsid", "true", "sleep"}, true, "trap '' TERM; sleep 600", 4 * time.Second, 15 * time.Second},
-		{"perl-ignore", []string{"sh", "perl", "sleep"}, true, "trap '' TERM; sleep 600", 4 * time.Second, 15 * time.Second},
-		{"pid-ignore", []string{"sh", "sleep"}, false, "trap '' TERM; sleep 600", 4 * time.Second, 15 * time.Second},
+		{"setsid", []string{"sh", "setsid", "true", "sleep"}, true, `echo $$ > "$READY"; sleep 600`, 0, 4 * time.Second},
+		{"perl", []string{"sh", "perl", "sleep"}, true, `echo $$ > "$READY"; sleep 600`, 0, 4 * time.Second},
+		{"pid", []string{"sh", "sleep"}, false, `echo $$ > "$READY"; sleep 600`, 0, 4 * time.Second},
+		// Publishing READY means the command already ignores TERM.
+		{"setsid-ignore", []string{"sh", "setsid", "true", "sleep"}, true, `trap '' TERM; echo $$ > "$READY"; sleep 600`, 4 * time.Second, 15 * time.Second},
+		{"perl-ignore", []string{"sh", "perl", "sleep"}, true, `trap '' TERM; echo $$ > "$READY"; sleep 600`, 4 * time.Second, 15 * time.Second},
+		{"pid-ignore", []string{"sh", "sleep"}, false, `trap '' TERM; echo $$ > "$READY"; sleep 600`, 4 * time.Second, 15 * time.Second},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -592,6 +593,7 @@ func TestWrapBranchStop(t *testing.T) {
 			}
 			sibFile := filepath.Join(dir, "sib")
 			errFile := filepath.Join(dir, "err")
+			readyFile := filepath.Join(dir, "ready")
 			sleepBin, err := exec.LookPath("sleep")
 			if err != nil {
 				t.Fatal(err)
@@ -606,6 +608,7 @@ func TestWrapBranchStop(t *testing.T) {
 				"WRAP=" + wrapPath,
 				"OUT=" + filepath.Join(dir, "out"),
 				"ERR=" + errFile,
+				"READY=" + readyFile,
 			}
 			if err := sup.Start(); err != nil {
 				t.Fatal(err)
@@ -651,6 +654,7 @@ func TestWrapBranchStop(t *testing.T) {
 			if m.group != tt.group {
 				t.Fatalf("marker %+v, want group %v", m, tt.group)
 			}
+			waitPID(t, readyFile)
 
 			k := exec.Command(shell, "-c", killScript(m))
 			start := time.Now()
