@@ -405,3 +405,67 @@ func TestFilesBreadcrumbs(t *testing.T) {
 		t.Errorf("no %q in %q", first, tt.Texts())
 	}
 }
+
+func TestTypedPath(t *testing.T) {
+	for _, tc := range []struct{ typed, want string }{
+		{"/var/log", "/var/log"},
+		{"  '/var/log/'  ", "/var/log"},
+		{`"/srv/a b"`, "/srv/a b"},
+		{"logs", "/home/me/www/logs"},
+		{"../x", "/home/me/x"},
+		{"~", "/home/me"},
+		{"~/tmp", "/home/me/tmp"},
+		{`C:\Users\me`, "C:/Users/me"},
+		{"  ", ""},
+	} {
+		if got := typedPath(tc.typed, "/home/me/www", "/home/me", true); got != tc.want {
+			t.Errorf("remote %q: %q, want %q", tc.typed, got, tc.want)
+		}
+	}
+	home := filepath.Join(string(filepath.Separator), "Users", "me")
+	if got := typedPath("~/Desktop", filepath.Join(home, "x"), home, false); got != filepath.Join(home, "Desktop") {
+		t.Errorf("local home: %q", got)
+	}
+	if got := typedPath("docs", home, home, false); got != filepath.Join(home, "docs") {
+		t.Errorf("local relative: %q", got)
+	}
+}
+
+// The breadcrumbs' button gives a field on the folder shown, selected,
+// so that a path typed or pasted replaces it: Enter goes there, Escape
+// gives the breadcrumbs back where they were.
+func TestFilesTypePath(t *testing.T) {
+	skipWindowsSFTP(t)
+	a, tt, fc, root := filesPaneAs(t, false, nil)
+	write(t, filepath.Join(root, "sub", "deep", "x.txt"), "x")
+	s := &fc.fs.remote
+	a.listRemote(s, root)
+	waitFor(t, tt, "the root", func() bool { return s.dir == root && tt.HasText("sub") })
+	tt.Frame()
+
+	mustClick(t, tt, "Type a Path")
+	tt.Frame()
+	tt.Frame()
+	if !s.typing || s.typed != root {
+		t.Fatalf("field: typing %v on %q", s.typing, s.typed)
+	}
+	tt.Type(filepath.Join(root, "sub", "deep"))
+	tt.Key(0, ui.KeyEnter)
+	waitFor(t, tt, "deep", func() bool { return tt.HasText("x.txt") })
+	if s.dir != filepath.Join(root, "sub", "deep") || s.typing {
+		t.Fatalf("went to %q, typing %v", s.dir, s.typing)
+	}
+
+	mustClick(t, tt, "Type a Path")
+	tt.Frame()
+	tt.Frame()
+	tt.Type("/nowhere")
+	tt.Key(0, ui.KeyEscape)
+	tt.Frame()
+	if s.typing || s.dir != filepath.Join(root, "sub", "deep") {
+		t.Errorf("Escape: typing %v in %q", s.typing, s.dir)
+	}
+	if !tt.HasText("deep") {
+		t.Error("the breadcrumbs did not come back")
+	}
+}

@@ -2287,5 +2287,7 @@
   "rightClickMenu": "Menu",
   "rightClickCopyPaste": "Copy or paste",
   "copyOnSelect": "Copy on select",
-  "copyOnSelectNote": "Text selected in the terminal is copied to the clipboard"
+  "copyOnSelectNote": "Text selected in the terminal is copied to the clipboard",
+  "typePath": "Type a Path",
+  "pathPlaceholder": "A path, ~/ for home, or a folder here"
 }

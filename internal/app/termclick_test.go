@@ -127,3 +127,43 @@ func TestCopyOnSelect(t *testing.T) {
 		t.Errorf("copied %q, want world", got)
 	}
 }
+
+// TestOpenLink: ⌘-click (Ctrl-click off macOS) on a web address opens it
+// in the browser; a plain click, or one off the address, does not.
+// Holding the modifiers over it underlines it under a pointing hand.
+func TestOpenLink(t *testing.T) {
+	srv, _ := startScript(t, "docs https://example.com/x?a=1. end")
+	a, tt := newTestApp(t)
+	c := connected(t, a, tt, srv)
+	shownText(t, tt, c, "end")
+	x, y := cellPoint(t, tt, c, 12, 0)
+	tt.ClickAt(x, y)
+	tt.Frame()
+	if got := tt.OpenedURLs(); len(got) != 0 {
+		t.Fatalf("a plain click opened %q", got)
+	}
+	ox, _ := cellPoint(t, tt, c, 1, 0)
+	tt.ClickAtWith(linkMods(), ox, y)
+	tt.Frame()
+	if got := tt.OpenedURLs(); len(got) != 0 {
+		t.Fatalf("a click off the link opened %q", got)
+	}
+	tt.ClickAtWith(linkMods(), x, y)
+	tt.Frame()
+	if got := tt.OpenedURLs(); len(got) != 1 || got[0] != "https://example.com/x?a=1" {
+		t.Fatalf("opened %q", got)
+	}
+
+	tt.HoldModifiers(linkMods())
+	tt.Move(x, y)
+	tt.Frame()
+	if !c.tv.link.on || tt.Cursor() != ui.CursorPointer {
+		t.Errorf("hovering with the modifiers: link %v, cursor %v", c.tv.link, tt.Cursor())
+	}
+	tt.HoldModifiers(0)
+	tt.Move(x+1, y)
+	tt.Frame()
+	if c.tv.link.on {
+		t.Error("the link stays underlined without the modifiers")
+	}
+}

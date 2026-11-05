@@ -43,6 +43,14 @@ type sideList struct {
 	width float32
 	// sizes are the sizes of folders here calculated on request, by name.
 	sizes map[string]*dirSize
+	// typing shows a field to type a path in place of the breadcrumbs,
+	// typed its text; typings counts the times it opened, which keys the
+	// field, and typeFocus is whether it had the focus in the last frame.
+	typing    bool
+	typed     string
+	typings   int
+	typeFocus bool
+	typeHold  focusHold
 }
 
 // dirSize is the size of a folder, calculated on request.
@@ -148,7 +156,8 @@ func (sd *sideList) rowAt(y float32) (string, bool) {
 type remoteSide struct {
 	sideList
 	client   *sftpsvc.Client
-	connects int // the connection the client is on
+	home     string // the server's home folder, once connected
+	connects int    // the connection the client is on
 	opening  bool
 	err      string
 	// listErr says err came from listing this side. A list that works
@@ -377,7 +386,7 @@ func (a *App) ensureSFTP(cn *conn) {
 				s.connects = connects
 				return
 			}
-			s.client, s.connects, s.unfinished = c, connects, un
+			s.client, s.connects, s.unfinished, s.home = c, connects, un, home
 			s.show(dir, es)
 			cn.fs.publish(c, connects)
 			if cn.kind == layout.Files {

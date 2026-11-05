@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/Licoy/sshyard/internal/icons"
 	"github.com/Licoy/sshyard/internal/sftpsvc"
@@ -106,6 +107,10 @@ const (
 func (a *App) crumbsBar(c *ui.Context, cn *conn, remote bool, tok theme.Tokens, m locales.Messages) {
 	fs := cn.fs
 	sd := fs.side(remote)
+	if sd.typing {
+		a.pathField(c, cn, remote, m)
+		return
+	}
 	cs := crumbsOf(sd.dir, remote)
 	if len(cs) == 0 {
 		return
@@ -116,6 +121,14 @@ func (a *App) crumbsBar(c *ui.Context, cn *conn, remote bool, tok theme.Tokens, 
 	}
 	bar := ui.Row(c.Key(key)).Height(26).Shrink(0).FillWidth().MinWidth(0).AlignItems(ui.Center).Padding(0, 2).
 		Role(ui.RoleGroup).Label(m.CrumbsLabel())
+	// A double click beside the crumbs types a path, as the button does.
+	bar.HandleInput(func(ev ui.InputEvent) bool {
+		if ev.Kind == ui.InputPointerDown && ev.Button == 0 && ev.Clicks == 2 {
+			sd.startTyping()
+			return true
+		}
+		return false
+	})
 	widths := make([]float32, len(cs))
 	for i, cr := range cs {
 		w := float32(crumbIcon)
@@ -124,7 +137,7 @@ func (a *App) crumbsBar(c *ui.Context, cn *conn, remote bool, tok theme.Tokens, 
 		}
 		widths[i] = w + crumbPad + crumbChevron
 	}
-	room := bar.Bounds().W - 4
+	room := bar.Bounds().W - 4 - crumbTypeButton
 	if n := sd.chosen.Len(); n > 1 {
 		w, _ := c.MeasureText(0, ui.Span{Text: m.ItemsSelected(n), Size: theme.Caption})
 		room -= w + theme.Space(3)
@@ -168,11 +181,102 @@ func (a *App) crumbsBar(c *ui.Context, cn *conn, remote bool, tok theme.Tokens, 
 			}
 			a.crumbMenu(c, fs, el, menuKey+cr.path, func() []menuEntry { return a.crumbEntries(cn, remote, cr.path, next, m) })
 		}
+		ui.Spacer(c)
 		if n := sd.chosen.Len(); n > 1 {
-			ui.Spacer(c)
 			ui.Text(c, m.ItemsSelected(n)).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine().Shrink(0).MarginStart(theme.Space(3))
 		}
+		if (IconButton{Icon: icons.Edit, Label: m.TypePath(), Size: Small}).Clicked(c, "typepath") {
+			sd.startTyping()
+		}
 	})
+}
+
+// crumbTypeButton is the room the button that types a path takes.
+const crumbTypeButton = 28
+
+// startTyping shows the side's path field on the folder shown.
+func (sd *sideList) startTyping() {
+	sd.typing, sd.typed, sd.typings = true, sd.dir, sd.typings+1
+}
+
+// pathField is the field a side's path is typed in, in place of its
+// breadcrumbs: it opens on the folder shown, selected, so that a path
+// pasted replaces it. Enter goes to the folder typed; Escape, or the
+// focus leaving, gives the breadcrumbs back.
+func (a *App) pathField(c *ui.Context, cn *conn, remote bool, m locales.Messages) {
+	sd := cn.fs.side(remote)
+	key := "lpath"
+	if remote {
+		key = "rpath"
+	}
+	ui.Row(c.Key(key)).MinHeight(26).Shrink(0).FillWidth().MinWidth(0).AlignItems(ui.Center).Padding(0, 2).Children(func() {
+		in := ui.TextInput(c.Key("in:"+strconv.Itoa(sd.typings)), &sd.typed).Label(m.CrumbsLabel()).
+			Placeholder(m.PathPlaceholder()).FontSize(theme.Footnote).Grow(1).MinWidth(0).AutoFocus()
+		if sd.typeHold.key != any(sd.typings) {
+			in.SetTextSelection(0, utf8.RuneCountInString(sd.typed))
+		}
+		sd.typeHold.apply(c, sd.typings, in)
+		focused := in.Focused()
+		switch {
+		case in.Submitted():
+			a.goToTyped(cn, remote, sd.typed)
+		case in.Shortcut(0, ui.KeyEscape), sd.typeFocus && !focused:
+			sd.typing = false
+		}
+		sd.typeFocus = focused && sd.typing
+	})
+}
+
+// goToTyped goes to the folder typed in a side's path field, and gives
+// the breadcrumbs back.
+func (a *App) goToTyped(cn *conn, remote bool, typed string) {
+	sd := cn.fs.side(remote)
+	sd.typing, sd.typeFocus = false, false
+	home := a.localHome()
+	if remote {
+		home = cn.fs.remote.home
+	}
+	if dir := typedPath(typed, sd.dir, home, remote); dir != "" && dir != sd.dir {
+		a.goTo(cn, remote, dir)
+	}
+}
+
+// typedPath is the folder a path typed on a side names: from the root,
+// from home with "~", or else from the folder dir. Quotes round a pasted
+// path go; on the server, backslashes are slashes. "" is none.
+func typedPath(typed, dir, home string, remote bool) string {
+	p := strings.TrimSpace(typed)
+	if len(p) >= 2 && (p[0] == '"' || p[0] == '\'') && p[len(p)-1] == p[0] {
+		p = strings.TrimSpace(p[1 : len(p)-1])
+	}
+	if p == "" {
+		return ""
+	}
+	if !remote {
+		switch {
+		case p == "~":
+			p = home
+		case strings.HasPrefix(p, "~/") || strings.HasPrefix(p, "~"+string(filepath.Separator)):
+			p = filepath.Join(home, p[2:])
+		case !filepath.IsAbs(p):
+			p = filepath.Join(dir, p)
+		}
+		return filepath.Clean(p)
+	}
+	p = strings.ReplaceAll(p, "\\", "/")
+	if home == "" {
+		home = "/"
+	}
+	switch {
+	case p == "~":
+		p = home
+	case strings.HasPrefix(p, "~/"):
+		p = path.Join(home, p[2:])
+	case strings.HasPrefix(p, "/") || len(p) >= 2 && p[1] == ':':
+	default:
+		p = path.Join(dir, p)
+	}
+	return path.Clean(p)
 }
 
 // crumbButton is a crumb: an icon, or the folder's name (named shows it,

@@ -1564,5 +1564,7 @@
   "rightClickMenu": "選單",
   "rightClickCopyPaste": "複製或貼上",
   "copyOnSelect": "選取即複製",
-  "copyOnSelectNote": "在終端機中選取的文字會自動複製到剪貼簿"
+  "copyOnSelectNote": "在終端機中選取的文字會自動複製到剪貼簿",
+  "typePath": "輸入路徑",
+  "pathPlaceholder": "完整路徑、~/ 表示主目錄，或目前位置下的資料夾"
 }

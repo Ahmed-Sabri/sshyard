@@ -13908,3 +13908,23 @@ func CopyOnSelectNote() string { return In(i18n.Locale()).CopyOnSelectNote() }
 func (msgs Messages) CopyOnSelectNote() string {
 	return Catalog.Format(msgs.locale, "copyOnSelectNote", nil)
 }
+
+// TypePath says "Type a Path"
+// in the language the app shows.
+func TypePath() string { return In(i18n.Locale()).TypePath() }
+
+// TypePath says "Type a Path"
+// in the language of msgs.
+func (msgs Messages) TypePath() string {
+	return Catalog.Format(msgs.locale, "typePath", nil)
+}
+
+// PathPlaceholder says "A path, ~/ for home, or a folder here"
+// in the language the app shows.
+func PathPlaceholder() string { return In(i18n.Locale()).PathPlaceholder() }
+
+// PathPlaceholder says "A path, ~/ for home, or a folder here"
+// in the language of msgs.
+func (msgs Messages) PathPlaceholder() string {
+	return Catalog.Format(msgs.locale, "pathPlaceholder", nil)
+}

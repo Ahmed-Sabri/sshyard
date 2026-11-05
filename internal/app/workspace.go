@@ -509,6 +509,9 @@ func (a *App) termElement(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn
 	if cn.s.Term.Modes().MouseTracking {
 		term.Cursor(ui.CursorDefault) // the program's, not a text's
 	}
+	if tv.link.on {
+		term.Cursor(ui.CursorPointer)
+	}
 	if has && t.Focus != n.ID {
 		t.Focus = n.ID
 	}
@@ -527,6 +530,7 @@ func (a *App) termElement(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn
 		}
 		tv.shortcuts = a.settings.Shortcuts
 		tv.rightClick, tv.copyOnSelect = a.settings.TerminalRightClick, a.settings.CopyOnSelect
+		tv.openLink = svc.OpenURL
 		// A program reading the mouse takes the right click too.
 		return tv.input(ev, svc) || a.contextPress(tb, ev, entries)
 	})

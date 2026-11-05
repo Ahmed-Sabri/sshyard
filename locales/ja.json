@@ -1564,5 +1564,7 @@
   "rightClickMenu": "メニュー",
   "rightClickCopyPaste": "コピーまたは貼り付け",
   "copyOnSelect": "選択時にコピー",
-  "copyOnSelectNote": "ターミナルで選択したテキストをクリップボードにコピーします"
+  "copyOnSelectNote": "ターミナルで選択したテキストをクリップボードにコピーします",
+  "typePath": "パスを入力",
+  "pathPlaceholder": "フルパス、ホームは ~/、または現在の場所のフォルダ"
 }

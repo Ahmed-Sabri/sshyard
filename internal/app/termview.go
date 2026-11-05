@@ -46,6 +46,10 @@ type termView struct {
 	// it is made (settings.CopyOnSelect).
 	rightClick   string
 	copyOnSelect bool
+	// openLink opens a web address clicked with linkMods; link is the one
+	// under the pointer while they are held, underlined.
+	openLink func(string)
+	link     linkSpan
 	// clear leaves the background to the pane's translucent fill, for a
 	// content area on the window's material (settings.ContentMaterial)
 	clear bool
@@ -411,6 +415,11 @@ func (v *termView) paint(p *ui.Painter, r ui.Rect, pal *theme.Terminal, focused 
 				}
 			}
 		}
+		// the link under the pointer, underlined
+		if from, to := v.linkCols(abs, snap.Cols); from <= to {
+			x0, x1 := ox+float32(from)*cw, ox+float32(to+1)*cw
+			p.Fill(ui.Rect{X: x0, Y: ry + v.base + 2/s, W: x1 - x0, H: max(1/s, 1)}, pal.Foreground, 0)
+		}
 	}
 
 	// cursor
@@ -673,6 +682,12 @@ func (v *termView) input(ev ui.InputEvent, cb clipboard) bool {
 		}
 		return false
 	case ui.InputPointerDown:
+		if ev.Button == 0 && ev.Clicks <= 1 && ev.Mods&linkMods() != 0 && v.openLink != nil {
+			if url, _, _ := t.LinkAt(v.cellAt(ev.X, ev.Y)); url != "" && ui.SafeToOpen(url) {
+				v.openLink(url)
+				return true
+			}
+		}
 		if m := t.Modes(); v.reports(m, ev.Mods) {
 			btn := vt.MouseLeft
 			switch ev.Button {
@@ -710,6 +725,7 @@ func (v *termView) input(ev ui.InputEvent, cb clipboard) bool {
 		v.selecting = true
 		return true
 	case ui.InputPointerMove:
+		v.hoverLink(t, ev.X, ev.Y, ev.Mods)
 		if v.held || !v.selecting {
 			m := t.Modes()
 			btn := vt.MouseNone
@@ -807,6 +823,49 @@ func (v *termView) input(ev ui.InputEvent, cb clipboard) bool {
 		return true
 	}
 	return false
+}
+
+// linkSpan is the cells a link spans, when on.
+type linkSpan struct {
+	a, b vt.Pos
+	on   bool
+}
+
+// linkMods are the modifiers a click opens a link with: ⌘ on macOS,
+// Ctrl elsewhere.
+func linkMods() ui.Modifiers {
+	if runtime.GOOS == "darwin" {
+		return ui.Super
+	}
+	return ui.Ctrl
+}
+
+// hoverLink keeps the link under the pointer at (x, y) while mods hold
+// linkMods and no button is down.
+func (v *termView) hoverLink(t *vt.Terminal, x, y float32, mods ui.Modifiers) {
+	v.link.on = false
+	if mods&linkMods() == 0 || v.held || v.selecting || v.openLink == nil {
+		return
+	}
+	if url, a, b := t.LinkAt(v.cellAt(x, y)); url != "" && ui.SafeToOpen(url) {
+		v.link = linkSpan{a, b, true}
+	}
+}
+
+// linkCols are the columns of line the hovered link spans, from > to for
+// none.
+func (v *termView) linkCols(line, cols int) (from, to int) {
+	if !v.link.on || line < v.link.a.Line || line > v.link.b.Line {
+		return 1, 0
+	}
+	from, to = 0, cols-1
+	if line == v.link.a.Line {
+		from = v.link.a.Col
+	}
+	if line == v.link.b.Line {
+		to = v.link.b.Col
+	}
+	return from, to
 }
 
 // rightPress handles a right press no program reads, as rightClick

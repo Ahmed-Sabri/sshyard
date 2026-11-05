@@ -2287,5 +2287,7 @@
   "rightClickMenu": "메뉴",
   "rightClickCopyPaste": "복사 또는 붙여넣기",
   "copyOnSelect": "선택 시 복사",
-  "copyOnSelectNote": "터미널에서 선택한 텍스트를 클립보드에 복사합니다"
+  "copyOnSelectNote": "터미널에서 선택한 텍스트를 클립보드에 복사합니다",
+  "typePath": "경로 입력",
+  "pathPlaceholder": "전체 경로, 홈은 ~/, 또는 현재 위치의 폴더"
 }

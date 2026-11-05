@@ -1564,5 +1564,7 @@
   "rightClickMenu": "菜单",
   "rightClickCopyPaste": "复制或粘贴",
   "copyOnSelect": "选中即复制",
-  "copyOnSelectNote": "在终端中选中的文本会自动复制到剪贴板"
+  "copyOnSelectNote": "在终端中选中的文本会自动复制到剪贴板",
+  "typePath": "输入路径",
+  "pathPlaceholder": "完整路径、~/ 表示主目录，或当前位置下的文件夹"
 }
