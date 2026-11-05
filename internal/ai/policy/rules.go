@@ -491,6 +491,9 @@ func (e *shellEnv) core(name string, args []arg) partial {
 		return partial{cat: "read", risk: RiskReadOnly, prefix: name + " --help", why: "help"}
 	}
 	if isInterp(name) {
+		if interpVersion(name, args) {
+			return partial{cat: "read", risk: RiskReadOnly, prefix: name + " " + args[1].text, why: "version"}
+		}
 		// python/perl/php/node (shells are wrappers).
 		g := unk("interpreter " + name)
 		g.interp = true
@@ -514,6 +517,10 @@ func (e *shellEnv) core(name string, args []arg) partial {
 		return e.gradeTee(args)
 	case "sed":
 		return e.gradeSed(args)
+	case "awk", "gawk", "mawk", "nawk":
+		return e.gradeAwk(name, args)
+	case "nginx", "apachectl", "apache2ctl", "httpd":
+		return gradeWebServer(name, args)
 	case "find":
 		return e.gradeFind(args)
 	case "chmod":
@@ -539,6 +546,9 @@ func (e *shellEnv) core(name string, args []arg) partial {
 	default:
 		if strings.HasPrefix(name, "mkfs") || name == "mke2fs" || name == "mkswap" || name == "mkdosfs" {
 			return crit(name, "mkfs")
+		}
+		if strings.HasPrefix(name, "php-fpm") {
+			return gradePHPFPM(name, args)
 		}
 		if g, ok := e.gradePkg(name, args); ok {
 			return g
@@ -924,10 +934,17 @@ func (e *shellEnv) gradeSed(args []arg) partial {
 			}
 		}
 	} else {
+		untrusted := false
 		for _, f := range files {
 			if f.ok && e.sensitive(f.text) {
 				g = better(g, sens(f.text))
+			} else if f.text != "-" && !e.trustedRead(f.text) {
+				untrusted = true
 			}
+		}
+		// A w write already asks, as it did before content reads were checked.
+		if untrusted && g.risk == RiskReadOnly {
+			g = better(g, partial{cat: "sensitive-read", risk: RiskMedium, why: "unresolved file content read"})
 		}
 	}
 	if g.risk == RiskCritical {
@@ -1941,11 +1958,7 @@ func (e *shellEnv) gradeSimple(name string, args []arg) (partial, bool) {
 			return u, true
 		}
 		g := partial{cat: "read", risk: RiskReadOnly, prefix: name, why: name}
-		if name == "echo" || name == "printf" || name == "env" || name == "printenv" ||
-			name == "true" || name == "false" || name == ":" || name == "pwd" ||
-			name == "date" || name == "uname" || name == "hostname" || name == "id" ||
-			name == "whoami" || name == "uptime" || name == "free" || name == "which" ||
-			name == "ps" || name == "ss" || name == "netstat" || name == "journalctl" {
+		if noPathOperands(name) {
 			return g, true
 		}
 		for _, a := range args[1:] {
@@ -1958,11 +1971,11 @@ func (e *shellEnv) gradeSimple(name string, args []arg) (partial, bool) {
 					g = better(g, sens(p))
 				}
 			}
-			if name == "sort" && (a.text == "-o" || a.text == "--output") {
-				// handled below
-			}
 		}
 		g = better(g, e.sortOutput(name, args))
+		if g.risk == RiskReadOnly && contentReader(name) && e.readsUntrusted(name, args) {
+			g = better(g, partial{cat: "sensitive-read", risk: RiskMedium, why: "unresolved file content read"})
+		}
 		g.prefix = name
 		return g, true
 	}
@@ -2052,16 +2065,29 @@ func pathLike(s string) bool {
 	return strings.Contains(s, "/") || strings.Contains(s, `\`) || strings.HasPrefix(s, "~") || strings.Contains(s, "$")
 }
 
+// noPathOperands is a read-only command whose operands are not files.
+func noPathOperands(name string) bool {
+	switch name {
+	case "echo", "printf", "env", "printenv", "true", "false", ":", "pwd", "date", "uname",
+		"hostname", "id", "whoami", "uptime", "free", "which", "ps", "ss", "netstat", "journalctl",
+		"sysctl", "dmesg", "pidstat", "vmstat", "iostat", "mpstat", "lscpu", "lsblk", "lsmem",
+		"lspci", "lsusb", "w", "who", "last", "lastb", "tr", "seq", "type":
+		return true
+	default:
+		return false
+	}
+}
+
 func readOnlyCmd(name string) bool {
 	switch name {
 	case "ls", "cat", "head", "tail", "less", "more", "grep", "rg", "egrep", "fgrep",
 		"stat", "df", "du", "free", "uptime", "uname", "ps", "top", "journalctl", "getconf", "nproc",
 		"ss", "netstat", "hostname", "id", "whoami", "which", "whereis", "file",
 		"wc", "sort", "uniq", "date", "echo", "printf", "pwd", "true", "false",
-		":", "env", "printenv":
+		":", "env", "printenv", "sysctl", "dmesg", "pidstat", "cut", "tac", "nl", "column":
 		return true
 	default:
-		return false
+		return anyArgsReader(name)
 	}
 }
 

@@ -23,7 +23,8 @@ const (
 
 // GateConfig builds one gate for one AI pane session.
 // A nil Engine uses NewEngine. A nil Mode reports ModeAsk.
-// A nil Reviewer means review mode asks the user for Medium actions.
+// A nil Reviewer means review mode runs ReadOnly and Low actions and asks
+// the user for the rest.
 // A nil Auditor skips the log. PromptTimeout and ReviewTimeout of 0
 // use the defaults (5 minutes and 10 seconds).
 // Output, when set, supplies the recent untrusted terminal text the
@@ -167,7 +168,12 @@ func (g *gate) Authorize(ctx context.Context, a Action, diff string) (Verdict, e
 		return g.commit(v, a, diff)
 	}
 
-	if !(mode == ModeReview && g.reviewer != nil) && g.hasGrant(v, a) {
+	// Under a reviewer, a grant only covers one plain command, so a script
+	// cannot ride on a prefix the user allowed for something else.
+	if mode == ModeReview && g.reviewer != nil && !singleCommand(a.Command) {
+		v.Similar = false
+	}
+	if g.hasGrant(v, a) {
 		v.Run = true
 		v.By = ByUser
 		v.Answer = AllowSimilar
@@ -271,6 +277,7 @@ func (g *gate) reviewInput(a Action, d Decision, diff string) ReviewInput {
 		Task:     Redact(truncRunes(task, maxReviewTask)),
 		Category: d.Category,
 		Risk:     d.Risk,
+		Why:      Redact(d.Why),
 		Where:    where,
 		Dir:      Redact(a.Dir),
 		Command:  Redact(a.Command),

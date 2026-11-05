@@ -504,24 +504,27 @@ func TestGateFlows(t *testing.T) {
 		p := &scriptPrompt{answers: []Answer{AllowSimilar, Reject}}
 		r := &scriptReview{raw: `{"decision":"ask","reason":"again"}`}
 		g := testGate(ModeReview, p, r, nil)
-		// Medium with no prior grant goes to the reviewer, who asks.
-		if _, err := g.Authorize(ctx, cmdAction("systemctl restart nginx"), ""); err != nil {
-			t.Fatal(err)
-		}
-		// The same action must be reviewed again and ask again; configured
-		// review mode never creates a grant from AllowSimilar.
+		// Medium with no prior grant goes to the reviewer, who asks; the
+		// user allows similar commands for this session.
 		v, err := g.Authorize(ctx, cmdAction("systemctl restart nginx"), "")
-		if err != nil || v.Run || v.ReviewReason != "again" || len(p.seen()) != 2 {
+		if err != nil || !v.Run || v.Answer != AllowSimilar || !v.Similar {
 			t.Fatalf("%+v %v", v, err)
 		}
-		if r.n() != 2 {
-			t.Fatalf("reviewer calls %d", r.n())
+		// The reviewer is still asked first; once it asks, the grant covers
+		// the same plain command without another prompt.
+		for i, cmd := range []string{"systemctl restart nginx", "systemctl restart redis"} {
+			v, err = g.Authorize(ctx, cmdAction(cmd), "")
+			if err != nil || !v.Run || v.By != ByUser || v.Answer != AllowSimilar || v.ReviewReason != "again" || len(p.seen()) != 1 {
+				t.Fatalf("%s: %+v %v prompts=%d", cmd, v, err, len(p.seen()))
+			}
+			if r.n() != i+2 {
+				t.Fatalf("reviewer calls %d", r.n())
+			}
 		}
-		if _, err := g.Authorize(ctx, cmdAction("systemctl restart redis"), ""); err != nil {
-			t.Fatal(err)
-		}
-		if r.n() != 3 {
-			t.Fatalf("another action was not reviewed: %d", r.n())
+		// A script never rides on the grant, and is not offered one.
+		v, err = g.Authorize(ctx, cmdAction("systemctl restart nginx; echo done"), "")
+		if err != nil || v.Run || v.Similar || r.n() != 4 || len(p.seen()) != 2 || p.seen()[1].Decision.Similar {
+			t.Fatalf("script used the grant: %+v %v reviews=%d prompts=%d", v, err, r.n(), len(p.seen()))
 		}
 	})
 

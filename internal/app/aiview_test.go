@@ -116,7 +116,7 @@ func TestAIPaneLayout(t *testing.T) {
 
 	mustClick(t, tt, "Permission")
 	tt.Frame()
-	for _, s := range []string{"Asks you before every action", "The configured model reviews every operation", "Every action runs without asking"} {
+	for _, s := range []string{"Asks you before every action", "Read-only actions run; the configured model reviews the rest", "Every action runs without asking"} {
 		if !tt.HasText(s) {
 			t.Fatalf("permission menu lacks %q: %q", s, tt.Texts())
 		}

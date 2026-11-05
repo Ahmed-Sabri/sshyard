@@ -5391,11 +5391,11 @@ func (msgs Messages) AiModeAskNote() string {
 	return Catalog.Format(msgs.locale, "aiModeAskNote", nil)
 }
 
-// AiModeReviewNote says "The configured model reviews every operation"
+// AiModeReviewNote says "Read-only actions run; the configured model reviews the rest"
 // in the language the app shows.
 func AiModeReviewNote() string { return In(i18n.Locale()).AiModeReviewNote() }
 
-// AiModeReviewNote says "The configured model reviews every operation"
+// AiModeReviewNote says "Read-only actions run; the configured model reviews the rest"
 // in the language of msgs.
 func (msgs Messages) AiModeReviewNote() string {
 	return Catalog.Format(msgs.locale, "aiModeReviewNote", nil)
@@ -12087,11 +12087,11 @@ func (msgs Messages) AiHTTPFailedDetail(status string, detail string) string {
 	return Catalog.Format(msgs.locale, "aiHTTPFailedDetail", map[string]any{"status": status, "detail": detail})
 }
 
-// AiReviewProviderNote says "In Review mode, the selected model checks every operation; only explicit approval runs it, otherwise you are asked."
+// AiReviewProviderNote says "In Review mode, read-only operations run and the selected model checks every other operation; only explicit approval …"
 // in the language the app shows.
 func AiReviewProviderNote() string { return In(i18n.Locale()).AiReviewProviderNote() }
 
-// AiReviewProviderNote says "In Review mode, the selected model checks every operation; only explicit approval runs it, otherwise you are asked."
+// AiReviewProviderNote says "In Review mode, read-only operations run and the selected model checks every other operation; only explicit approval …"
 // in the language of msgs.
 func (msgs Messages) AiReviewProviderNote() string {
 	return Catalog.Format(msgs.locale, "aiReviewProviderNote", nil)

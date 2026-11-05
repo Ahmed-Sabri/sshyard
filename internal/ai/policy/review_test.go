@@ -110,7 +110,7 @@ func TestReviewExecutionContext(t *testing.T) {
 				Scope: Scope{Home: "/home/should-not-be-invented"},
 				Task:  func() string { return "查看服务器资源使用情况" },
 			})
-			a := cmdAction(resourceQueryWithCPUCount + "; vmstat 1 3")
+			a := cmdAction(resourceQueryWithCPUCount + "; atop 1 3")
 			a.Where, a.Dir = tc.where, tc.dir
 			v, err := g.Authorize(context.Background(), a, "")
 			if err != nil || !v.Run || r.n() != 1 {
@@ -128,6 +128,12 @@ func TestReviewExecutionContext(t *testing.T) {
 				!strings.Contains(prompt, "working directory: "+tc.wantDir+"\n") ||
 				strings.Contains(prompt, "fake-context-secret") || strings.Contains(prompt, "should-not-be-invented") {
 				t.Fatalf("wrong execution context: %s", prompt)
+			}
+			// The model learns which command the rules did not cover, and
+			// that this alone is not danger.
+			if !strings.Contains(prompt, "risk: unknown (not covered by the local rule table; not a sign of danger by itself)\n") ||
+				!strings.Contains(prompt, "local rule: unlisted command: atop\n") {
+				t.Fatalf("unknown risk not explained: %s", prompt)
 			}
 		})
 	}

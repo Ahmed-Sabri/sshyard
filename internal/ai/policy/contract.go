@@ -4,8 +4,9 @@
 // agent says (its reason, its own approval settings, allow_always) changes
 // a decision.
 //
-// In automatic review mode, a configured review model judges every action;
-// local risk grades supply metadata and audit context, not approval.
+// In automatic review mode, read-only actions run and a configured review
+// model judges every other action; local risk grades supply metadata and
+// audit context, not approval.
 package policy
 
 import (
@@ -156,6 +157,7 @@ type ReviewInput struct {
 	Task     string
 	Category Category
 	Risk     Risk
+	Why      string // the local rule that set the risk, e.g. "unlisted command: atop"
 	Where    Where
 	Dir      string // actual working directory; empty means unknown
 	Command  string

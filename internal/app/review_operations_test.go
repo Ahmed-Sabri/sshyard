@@ -32,8 +32,8 @@ func (*reviewOperationTools) ReadFile(context.Context, string) (string, bool, er
 func TestAIReviewEveryOperationUsesConfiguredModel(t *testing.T) {
 	for _, kind := range []string{settings.AIReviewChat, settings.AIReviewDecisions} {
 		t.Run(kind, func(t *testing.T) {
-			a, tt, cn, tools, reviews := reviewOperationApp(t, kind, "allow")
-			a.SendAI(cn.id, "Check disk and virtual memory usage")
+			a, tt, cn, tools, reviews := reviewOperationApp(t, kind, "allow", reviewedCommands...)
+			a.SendAI(cn.id, "Restart nginx and sample system activity")
 			waitFor(t, tt, "reviewed operations", func() bool { return !cn.ai.running || cn.ai.pending != nil })
 			if cn.ai.pending != nil {
 				t.Fatalf("operation bypassed model for user confirmation: %+v", cn.ai.pending.prompt)
@@ -53,14 +53,33 @@ func TestAIReviewEveryOperationUsesConfiguredModel(t *testing.T) {
 	}
 }
 
+// reviewedCommands are not read-only, so review mode sends each to the model.
+var reviewedCommands = []string{"systemctl restart nginx", "atop 1 2"}
+
+func TestAIReviewReadOnlyRunsWithoutModel(t *testing.T) {
+	for _, kind := range []string{settings.AIReviewChat, settings.AIReviewDecisions} {
+		t.Run(kind, func(t *testing.T) {
+			a, tt, cn, tools, reviews := reviewOperationApp(t, kind, "ask", "df -h", "vmstat 1 2")
+			a.SendAI(cn.id, "Check disk and virtual memory usage")
+			waitFor(t, tt, "read-only operations", func() bool { return !cn.ai.running || cn.ai.pending != nil })
+			if cn.ai.pending != nil || reviews.Load() != 0 || tools.calls.Load() != 2 {
+				t.Fatalf("pending=%v reviews %d executions %d", cn.ai.pending != nil, reviews.Load(), tools.calls.Load())
+			}
+			if countExact(tt, "Approved · Auto") != 2 || tt.HasText("Approved · Reviewer") {
+				t.Fatalf("wrong approval source: %q", tt.Texts())
+			}
+		})
+	}
+}
+
 func TestAIReviewAskAndFailureKeepConfirmation(t *testing.T) {
 	for _, tc := range []struct{ kind, response string }{
 		{settings.AIReviewChat, "ask"}, {settings.AIReviewChat, "error"},
 		{settings.AIReviewDecisions, "ask"}, {settings.AIReviewDecisions, "error"},
 	} {
 		t.Run(tc.kind+"/"+tc.response, func(t *testing.T) {
-			a, tt, cn, tools, reviews := reviewOperationApp(t, tc.kind, tc.response)
-			a.SendAI(cn.id, "Check disk and virtual memory usage")
+			a, tt, cn, tools, reviews := reviewOperationApp(t, tc.kind, tc.response, reviewedCommands...)
+			a.SendAI(cn.id, "Restart nginx and sample system activity")
 			waitFor(t, tt, "review confirmation", func() bool { return cn.ai.pending != nil || !cn.ai.running })
 			if cn.ai.pending == nil || cn.ai.pending.prompt.ReviewNote == "" || reviews.Load() != 1 || tools.calls.Load() != 0 {
 				t.Fatalf("missing confirmation after review: pending=%+v reviews=%d executions=%d", cn.ai.pending, reviews.Load(), tools.calls.Load())
@@ -75,9 +94,9 @@ func TestAIReviewAskAndFailureKeepConfirmation(t *testing.T) {
 	}
 }
 
-func reviewOperationApp(t *testing.T, kind, response string) (*App, *ui.Tester, *conn, *reviewOperationTools, *atomic.Int32) {
+func reviewOperationApp(t *testing.T, kind, response string, commands ...string) (*App, *ui.Tester, *conn, *reviewOperationTools, *atomic.Int32) {
 	t.Helper()
-	srv, reviews := reviewOperationServer(kind, response)
+	srv, reviews := reviewOperationServer(kind, response, commands)
 	t.Cleanup(srv.Close)
 	a, tt := newTestApp(t)
 	host := savedHost(t, a, "review", "127.0.0.1")
@@ -102,7 +121,7 @@ func reviewOperationApp(t *testing.T, kind, response string) (*App, *ui.Tester, 
 	return a, tt, a.conns[id], tools, reviews
 }
 
-func reviewOperationServer(kind, response string) (*httptest.Server, *atomic.Int32) {
+func reviewOperationServer(kind, response string, commands []string) (*httptest.Server, *atomic.Int32) {
 	var assistant, reviews atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
@@ -136,7 +155,12 @@ func reviewOperationServer(kind, response string) (*httptest.Server, *atomic.Int
 			_ = json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": map[string]string{"content": string(content)}, "finish_reason": "stop"}}})
 		case "assistant-model":
 			if assistant.Add(1) == 1 {
-				io.WriteString(w, `{"choices":[{"message":{"tool_calls":[{"id":"a","type":"function","function":{"name":"run_command","arguments":"{\"command\":\"df -h\"}"}},{"id":"b","type":"function","function":{"name":"run_command","arguments":"{\"command\":\"vmstat 1 2\"}"}}]},"finish_reason":"tool_calls"}]}`)
+				var calls []any
+				for i, c := range commands {
+					args, _ := json.Marshal(map[string]string{"command": c})
+					calls = append(calls, map[string]any{"id": string(rune('a' + i)), "type": "function", "function": map[string]string{"name": "run_command", "arguments": string(args)}})
+				}
+				_ = json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": map[string]any{"tool_calls": calls}, "finish_reason": "tool_calls"}}})
 				return
 			}
 			io.WriteString(w, `{"choices":[{"message":{"content":"Inspection complete"},"finish_reason":"stop"}]}`)
@@ -151,9 +175,9 @@ func TestAIReviewModeExplainsEveryOperation(t *testing.T) {
 	for _, lang := range []string{"en", "zh-Hans"} {
 		note := locales.In(lang).AiReviewProviderNote()
 		old := "medium-risk"
-		want := "every operation"
+		want := "read-only operations run"
 		if lang == "zh-Hans" {
-			old, want = "中风险", "每个操作"
+			old, want = "中风险", "只读操作直接执行"
 		}
 		if strings.Contains(note, old) || !strings.Contains(note, want) {
 			t.Fatalf("%s has stale review scope: %s", lang, note)

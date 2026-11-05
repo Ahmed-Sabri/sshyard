@@ -283,6 +283,32 @@ func (e *shellEnv) script(src string) partial {
 	return child.block(f.Stmts)
 }
 
+// singleCommand reports whether src is one plain command: no list, pipe,
+// redirection, background job or substitution.
+func singleCommand(src string) bool {
+	if strings.TrimSpace(src) == "" {
+		return false
+	}
+	f, err := syntax.NewParser().Parse(strings.NewReader(src), "")
+	if err != nil || f == nil || len(f.Stmts) != 1 {
+		return false
+	}
+	s := f.Stmts[0]
+	call, ok := s.Cmd.(*syntax.CallExpr)
+	if !ok || s.Background || s.Coprocess || s.Negated || len(s.Redirs) > 0 || len(call.Args) == 0 {
+		return false
+	}
+	plain := true
+	syntax.Walk(call, func(n syntax.Node) bool {
+		switch n.(type) {
+		case *syntax.CmdSubst, *syntax.ProcSubst, *syntax.ParamExp, *syntax.ArithmExp:
+			plain = false
+		}
+		return plain
+	})
+	return plain
+}
+
 func forkBomb(s string) bool {
 	var b strings.Builder
 	for _, r := range s {
@@ -494,6 +520,9 @@ func (e *shellEnv) redir(r *syntax.Redirect) partial {
 	if write {
 		return better(g, e.gradeWrite(w.text, writeRedirect))
 	}
+	if e.trustedRead(w.text) {
+		return g
+	}
 	return better(g, sens(w.text))
 }
 
@@ -682,9 +711,6 @@ func (e *shellEnv) gradeArgs(args []arg) partial {
 		core = e.wrap(name, rest)
 	} else {
 		core = e.core(name, rest)
-	}
-	if core.risk == RiskReadOnly && shellReadsContent(name, rest) {
-		core = partial{cat: "sensitive-read", risk: RiskMedium, prefix: core.prefix, why: "unresolved file content read"}
 	}
 	core = better(core, subst)
 	core = dynFloor(core, rest)

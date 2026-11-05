@@ -51,7 +51,7 @@ func TestResourceQuerySecurityBoundaries(t *testing.T) {
 		{"head -n18 -- -secret", RiskMedium}, {"head -n18 $FILE", RiskUnknown},
 		{"head --unknown-option", RiskUnknown}, {"df -hT /etc/shadow", RiskMedium},
 		{"du -T", RiskUnknown}, {"df --unknown-option", RiskUnknown},
-		{"cat /etc/os-release", RiskMedium}, {"rm -rf /", RiskCritical},
+		{"cat /tmp/os-release", RiskMedium}, {"rm -rf /", RiskCritical},
 		{"chmod 777 /etc/shadow", RiskHigh}, {"unverified-program", RiskUnknown},
 		{"getconf", RiskUnknown}, {"getconf -a", RiskUnknown}, {"getconf --unknown", RiskUnknown},
 		{"getconf -v POSIX_V7_LP64_OFF64 _NPROCESSORS_ONLN", RiskUnknown},
@@ -85,6 +85,12 @@ func TestResourceQuerySecurityBoundaries(t *testing.T) {
 	}
 }
 
+// untrustedRead swaps a resource query's trusted file read for one under
+// /tmp, which a link could point at a secret.
+func untrustedRead(query string) string {
+	return strings.Replace(query, "cat /etc/os-release", "cat /tmp/os-release", 1)
+}
+
 func TestResourceQueryCallsReviewer(t *testing.T) {
 	r := &scriptReview{raw: `{"decision":"allow","reason":"requested resource inspection"}`}
 	p := &scriptPrompt{}
@@ -92,17 +98,17 @@ func TestResourceQueryCallsReviewer(t *testing.T) {
 		Mode: func() Mode { return ModeReview }, Scope: Scope{},
 		Reviewer: r, Prompter: p, Task: func() string { return "查看服务器资源使用情况" },
 	})
-	v, err := g.Authorize(context.Background(), cmdAction(resourceQuery), "")
+	reviewed := untrustedRead(resourceQuery)
+	v, err := g.Authorize(context.Background(), cmdAction(reviewed), "")
 	if err != nil || !v.Run || v.By != ByReviewer || v.Risk != RiskMedium || r.n() != 1 || len(p.seen()) != 0 {
 		t.Fatalf("verdict=%+v err=%v reviews=%d prompts=%d", v, err, r.n(), len(p.seen()))
 	}
-	if in := r.input(); in.Command != resourceQuery || in.Task != "查看服务器资源使用情况" {
+	if in := r.input(); in.Command != reviewed || in.Task != "查看服务器资源使用情况" || in.Why != "unresolved file content read" {
 		t.Fatalf("review did not receive the requested action: %+v", in)
 	}
-	safeQuery := strings.Replace(resourceQuery, "cat /etc/os-release; ", "", 1)
-	v, err = g.Authorize(context.Background(), cmdAction(safeQuery), "")
-	if err != nil || !v.Run || v.By != ByReviewer || v.Risk != RiskReadOnly || r.n() != 2 || len(p.seen()) != 0 {
-		t.Fatalf("safe resource query verdict=%+v err=%v reviews=%d prompts=%d", v, err, r.n(), len(p.seen()))
+	v, err = g.Authorize(context.Background(), cmdAction(resourceQuery), "")
+	if err != nil || !v.Run || v.By != ByRule || v.Risk != RiskReadOnly || r.n() != 1 || len(p.seen()) != 0 {
+		t.Fatalf("read-only resource query verdict=%+v err=%v reviews=%d prompts=%d", v, err, r.n(), len(p.seen()))
 	}
 }
 
@@ -124,7 +130,7 @@ func TestResourceQueryWithCPUCountCallsReviewer(t *testing.T) {
 				Mode: func() Mode { return ModeReview }, Scope: Scope{},
 				Reviewer: r, Prompter: p, Task: func() string { return "查看服务器资源使用情况" },
 			})
-			a := cmdAction(resourceQueryWithCPUCount)
+			a := cmdAction(untrustedRead(resourceQueryWithCPUCount))
 			a.Dir = "/"
 			v, err := g.Authorize(context.Background(), a, "")
 			if err != nil || v.Run != tc.run || v.Risk != RiskMedium || r.n() != 1 || len(p.seen()) != tc.prompts {
@@ -134,9 +140,9 @@ func TestResourceQueryWithCPUCountCallsReviewer(t *testing.T) {
 				t.Fatalf("missing review outcome: %+v", v)
 			}
 			if tc.run {
-				a.Command = strings.Replace(a.Command, "cat /etc/os-release; ", "", 1)
+				a.Command = resourceQueryWithCPUCount
 				v, err = g.Authorize(context.Background(), a, "")
-				if err != nil || !v.Run || v.By != ByReviewer || v.Risk != RiskReadOnly || r.n() != 2 || len(p.seen()) != 0 {
+				if err != nil || !v.Run || v.By != ByRule || v.Risk != RiskReadOnly || r.n() != 1 || len(p.seen()) != 0 {
 					t.Fatalf("safe resource query verdict=%+v err=%v reviews=%d prompts=%d", v, err, r.n(), len(p.seen()))
 				}
 			}

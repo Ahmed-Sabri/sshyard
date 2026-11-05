@@ -85,14 +85,29 @@
 // the sandbox is a low write. Deleting a Windows drive root or anything
 // under \Windows is Critical.
 //
+// A shell read of file content (cat, head, tail, less, grep, sort, wc,
+// cut, sed, awk and the like, or a < redirect) is read-only only when every
+// file is a literal, non-sensitive path under /etc, /var/log, /sys, /usr,
+// /lib, /www/server or /www/wwwlogs, or a /proc entry that cannot reach
+// another process's environment, memory or files. Globs, braces and
+// backslashes, and files elsewhere (home, /tmp), are Medium
+// "sensitive-read": a link there could lead to a secret. Standard input is
+// not a file. awk is read-only when its program cannot run a command or
+// write a file (system, getline, a pipe, print > file, a gawk @ directive);
+// -f and other options are Unknown, and ENVIRON is a sensitive read.
+// nginx, apachectl, httpd and php-fpm configuration tests and versions are
+// read-only; their signals and service verbs are Medium "service".
+//
 // ModeAsk does not offer "allow similar" for a file write, so the diff is
 // shown every time. That is stricter than the spec table and is an open
 // question. Session grants never skip the review model.
-// ModeReview with a configured model sends every risk grade to that model,
-// including ReadOnly and Unknown. Only an explicit allow runs automatically;
-// ask, invalid replies, errors and timeouts ask the user. Session grants do
-// not replace that confirmation. Without a model, ReadOnly and Low auto-run
-// and all other grades ask. Grades remain metadata and audit context.
+// ModeReview auto-runs ReadOnly and sends every other grade to a
+// configured model, including Unknown. Only an explicit allow runs
+// automatically; ask, invalid replies, errors and timeouts ask the user.
+// After the model asks, a session grant still covers one plain command (no
+// list, pipe, redirection or substitution) but never a script. Without a
+// model, ReadOnly and Low auto-run and all other grades ask. Grades remain
+// metadata and audit context for the model.
 // ModeFull auto-runs every grade except Unknown. Unknown asks with the
 // red confirmation and does not offer "allow similar". Critical in
 // ModeFull still auto-runs and sets Red. High, including git exec-config,
