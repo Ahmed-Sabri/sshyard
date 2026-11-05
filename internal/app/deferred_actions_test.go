@@ -55,7 +55,7 @@ func TestDeferredMetadataFormsDoNotRequestSecrets(t *testing.T) {
 	a, _ := lockedTestApp(t, b)
 	a.openEditor(nil)
 	a.form.name, a.form.address, a.form.user = "plain", "example.test", "demo"
-	a.form.auth = en.AuthAsk()
+	a.form.auth = a.askLabel(en)
 	if !a.SaveForm(en) {
 		t.Fatal(a.form.err)
 	}
@@ -121,7 +121,7 @@ func TestDeferredExistingVaultAllowsMetadataEditAndPlainOwnerDeletion(t *testing
 		t.Fatal(a.form.err)
 	}
 	a.openEditor(nil)
-	a.form.name, a.form.address, a.form.user, a.form.auth = "plain", "plain.test", "demo", en.AuthAsk()
+	a.form.name, a.form.address, a.form.user, a.form.auth = "plain", "plain.test", "demo", a.askLabel(en)
 	if !a.SaveForm(en) {
 		t.Fatal(a.form.err)
 	}

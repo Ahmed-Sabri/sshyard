@@ -140,7 +140,7 @@ func TestHostOwnedAuthMouseFields(t *testing.T) {
 				m := locales.In(language)
 				a.openEditor(nil)
 				tt.Frame()
-				mustClick(t, tt, m.AuthAsk())
+				mustClick(t, tt, a.askLabel(m))
 				mustClick(t, tt, m.CredKindPassword())
 				if a.form.auth != m.CredKindPassword() || !tt.HasText(m.FieldPassword()) {
 					t.Fatal(tt.Texts())
