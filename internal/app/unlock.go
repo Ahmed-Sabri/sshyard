@@ -176,6 +176,7 @@ func (a *App) acceptUnlock(err error) {
 	after := a.unlock.after
 	a.unlock.after = nil
 	a.unlock.mu.Unlock()
+	a.startRestoredConnections()
 	if !a.unlock.servicesStarted {
 		a.unlock.servicesStarted = true
 		a.autoStartForwards()

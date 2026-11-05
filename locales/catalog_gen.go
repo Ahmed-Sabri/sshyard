@@ -97,6 +97,56 @@ func (msgs Messages) TrayIconFailed() string {
 	return Catalog.Format(msgs.locale, "trayIconFailed", nil)
 }
 
+// RememberLayout says "Remember layout"
+// in the language the app shows.
+func RememberLayout() string { return In(i18n.Locale()).RememberLayout() }
+
+// RememberLayout says "Remember layout"
+// in the language of msgs.
+func (msgs Messages) RememberLayout() string {
+	return Catalog.Format(msgs.locale, "rememberLayout", nil)
+}
+
+// RememberLayoutNote says "Restore window position and size, tabs and split panes and reconnect on next launch; session contents are not restore…"
+// in the language the app shows.
+func RememberLayoutNote() string { return In(i18n.Locale()).RememberLayoutNote() }
+
+// RememberLayoutNote says "Restore window position and size, tabs and split panes and reconnect on next launch; session contents are not restore…"
+// in the language of msgs.
+func (msgs Messages) RememberLayoutNote() string {
+	return Catalog.Format(msgs.locale, "rememberLayoutNote", nil)
+}
+
+// ErrLayoutRead says "Could not read the saved layout. The original file has been preserved; turn Remember layout off and on again to reset…"
+// in the language the app shows.
+func ErrLayoutRead() string { return In(i18n.Locale()).ErrLayoutRead() }
+
+// ErrLayoutRead says "Could not read the saved layout. The original file has been preserved; turn Remember layout off and on again to reset…"
+// in the language of msgs.
+func (msgs Messages) ErrLayoutRead() string {
+	return Catalog.Format(msgs.locale, "errLayoutRead", nil)
+}
+
+// ErrLayoutSave says "Could not save the layout."
+// in the language the app shows.
+func ErrLayoutSave() string { return In(i18n.Locale()).ErrLayoutSave() }
+
+// ErrLayoutSave says "Could not save the layout."
+// in the language of msgs.
+func (msgs Messages) ErrLayoutSave() string {
+	return Catalog.Format(msgs.locale, "errLayoutSave", nil)
+}
+
+// LayoutRestoreSkipped says "Some unavailable panes could not be restored."
+// in the language the app shows.
+func LayoutRestoreSkipped() string { return In(i18n.Locale()).LayoutRestoreSkipped() }
+
+// LayoutRestoreSkipped says "Some unavailable panes could not be restored."
+// in the language of msgs.
+func (msgs Messages) LayoutRestoreSkipped() string {
+	return Catalog.Format(msgs.locale, "layoutRestoreSkipped", nil)
+}
+
 // CloseBehavior says "When closing the window"
 // in the language the app shows.
 func CloseBehavior() string { return In(i18n.Locale()).CloseBehavior() }

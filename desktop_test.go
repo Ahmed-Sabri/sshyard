@@ -30,7 +30,11 @@ import (
 func TestMain(m *testing.M) {
 	if mode := os.Getenv("SSHYARD_NATIVE_HELPER"); mode != "" {
 		runtime.LockOSThread()
-		runNativeDesktop(mode, os.Getenv("SSHYARD_NATIVE_DIR"))
+		if strings.HasPrefix(mode, "layout-") {
+			runNativeLayout(mode, os.Getenv("SSHYARD_NATIVE_DIR"))
+		} else {
+			runNativeDesktop(mode, os.Getenv("SSHYARD_NATIVE_DIR"))
+		}
 		os.Exit(0)
 	}
 	os.Exit(m.Run())

@@ -1,40 +1,50 @@
 package app
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
+	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/Licoy/sshyard/internal/layout"
 	"github.com/Licoy/sshyard/internal/settings"
+	"github.com/Licoy/sshyard/locales"
+	"github.com/egoist/mygo/ui"
 )
 
-// layoutSnap is the workspace written to layout.json. Session content
-// (terminal scrollback, editor buffer, AI timeline) is not saved.
-// A missing or unreadable file starts empty; there is no migration.
+// Version 1 keeps workspace structure only, never session content or directories.
 type layoutSnap struct {
-	Active int       `json:"active"`
-	Tabs   []tabSnap `json:"tabs"`
+	Version  int                `json:"version"`
+	Active   int                `json:"active"`
+	Tabs     []tabSnap          `json:"tabs"`
+	Sections map[string]bool    `json:"sections,omitempty"`
+	Panels   []inspectorKind    `json:"panels,omitempty"`
+	StackPct map[string]float32 `json:"stackPct,omitempty"`
 }
-
 type tabSnap struct {
+	Title string    `json:"title,omitempty"`
 	Focus int       `json:"focus"`
 	Root  *nodeSnap `json:"root"`
 }
-
 type nodeSnap struct {
-	Split    string    `json:"split,omitempty"`
-	Ratio    float32   `json:"ratio,omitempty"`
-	A        *nodeSnap `json:"a,omitempty"`
-	B        *nodeSnap `json:"b,omitempty"`
-	Kind     string    `json:"kind,omitempty"`
-	Host     string    `json:"host,omitempty"`
-	Path     string    `json:"path,omitempty"`
-	Agent    string    `json:"agent,omitempty"`
-	Mode     string    `json:"mode,omitempty"`
-	Provider string    `json:"provider,omitempty"`
-	Model    string    `json:"model,omitempty"`
-	Effort   string    `json:"effort,omitempty"`
+	ID    int       `json:"id,omitempty"`
+	Split string    `json:"split,omitempty"`
+	Ratio float32   `json:"ratio,omitempty"`
+	A     *nodeSnap `json:"a,omitempty"`
+	B     *nodeSnap `json:"b,omitempty"`
+	Kind  string    `json:"kind,omitempty"`
+	Host  string    `json:"host,omitempty"`
+	// Path is accepted only to identify legacy files; it is never populated.
+	Path     string `json:"path,omitempty"`
+	Link     int    `json:"link,omitempty"`
+	Agent    string `json:"agent,omitempty"`
+	Mode     string `json:"mode,omitempty"`
+	Provider string `json:"provider,omitempty"`
+	Model    string `json:"model,omitempty"`
+	Effort   string `json:"effort,omitempty"`
 }
 
 func (a *App) layoutPath() string {
@@ -43,27 +53,21 @@ func (a *App) layoutPath() string {
 	}
 	return filepath.Join(a.p.DataDir, "layout.json")
 }
-
-func (a *App) saveLayout() {
-	file := a.layoutPath()
-	if file == "" || a.restoring || !a.unlocked() {
-		return
-	}
-	snap := layoutSnap{}
-	for i, t := range a.ws.Tabs {
-		if t == nil || t.Root == nil {
-			continue
+func (a *App) layoutSnapshot() layoutSnap {
+	snap := layoutSnap{Version: 1, Active: 0, Sections: map[string]bool{}, Panels: append([]inspectorKind(nil), a.panels...), StackPct: map[string]float32{}}
+	for _, key := range a.sidebarSectionKeys() {
+		if p := a.sections[key]; p != nil {
+			snap.Sections[key] = *p
 		}
-		n := 0
-		focus := 0
-		for _, p := range t.Panes() {
-			if !layoutAI(a.conns[p.Item.ID]) {
-				continue
-			}
-			n++
-			if p.ID == t.Focus {
-				focus = n
-			}
+	}
+	for k, p := range a.stackPct {
+		if p != nil {
+			snap.StackPct[k] = *p
+		}
+	}
+	for i, t := range a.ws.Tabs {
+		if t == nil {
+			continue
 		}
 		root := a.snapNode(t.Root)
 		if root == nil {
@@ -72,22 +76,16 @@ func (a *App) saveLayout() {
 		if i == a.ws.Active {
 			snap.Active = len(snap.Tabs)
 		}
-		snap.Tabs = append(snap.Tabs, tabSnap{Focus: focus, Root: root})
+		snap.Tabs = append(snap.Tabs, tabSnap{Title: t.Title, Focus: t.Focus, Root: root})
 	}
-	b, err := json.MarshalIndent(snap, "", "  ")
-	if err != nil {
-		return
-	}
-	_ = settings.WriteFileAtomic(file, append(b, '\n'), 0o600)
+	return snap
 }
-
 func (a *App) snapNode(n *layout.Node) *nodeSnap {
 	if n == nil {
 		return nil
 	}
 	if !n.Leaf() {
-		left := a.snapNode(n.A)
-		right := a.snapNode(n.B)
+		left, right := a.snapNode(n.A), a.snapNode(n.B)
 		if left == nil {
 			return right
 		}
@@ -101,103 +99,142 @@ func (a *App) snapNode(n *layout.Node) *nodeSnap {
 		return &nodeSnap{Split: split, Ratio: n.Ratio, A: left, B: right}
 	}
 	c := a.conns[n.Item.ID]
-	if !layoutAI(c) {
+	if c == nil || isTemp(c.host.ID) || c.kind == layout.Editor {
 		return nil
 	}
-	return &nodeSnap{Kind: "ai", Host: c.host.ID, Agent: c.ai.agent, Mode: c.ai.mode, Provider: c.ai.provider, Model: c.ai.model, Effort: c.ai.effort}
+	host := c.host.ID
+	if host == localID {
+		host = localID + a.shell(host).ID
+	}
+	s := &nodeSnap{ID: n.ID, Kind: c.kind.String(), Host: host}
+	if c.ai != nil {
+		s.Agent, s.Mode, s.Provider, s.Model, s.Effort = c.ai.agent, c.ai.mode, c.ai.provider, c.ai.model, c.ai.effort
+		if s.Mode == "full" {
+			s.Mode = ""
+		}
+		if _, p := a.ws.Locate(c.ai.link); p != nil {
+			s.Link = p.ID
+		}
+	}
+	return s
 }
-
-// layoutAI is a pane the layout file keeps: an AI pane on a saved host.
-// Terminals, files and editors are not restored, so they are not saved.
-func layoutAI(c *conn) bool {
-	return c != nil && c.kind == layout.AI && c.ai != nil && !isTemp(c.host.ID)
+func (a *App) layoutBytes() ([]byte, error) {
+	b, err := json.MarshalIndent(a.layoutSnapshot(), "", "  ")
+	return append(b, '\n'), err
 }
-
-func (a *App) loadLayout() {
-	file := a.layoutPath()
-	if file == "" || len(a.ws.Tabs) > 0 {
+func (a *App) saveLayout() {
+	if a.layoutPath() == "" || a.restoring || !a.ready() || !a.settings.RememberLayout || a.layoutBlocked {
 		return
 	}
-	b, err := os.ReadFile(file)
+	b, err := a.layoutBytes()
+	if err == nil {
+		err = settings.WriteFileAtomic(a.layoutPath(), b, 0o600)
+	}
 	if err != nil {
-		return // missing file is a fresh window; a bad read is left as-is
-	}
-	var snap layoutSnap
-	if err := json.Unmarshal(b, &snap); err != nil {
-		return // corrupt: start empty, keep the file
-	}
-	a.restoring = true
-	defer func() { a.restoring = false }()
-	for _, t := range snap.Tabs {
-		ai := false // a tab has one AI pane; a second one saved is dropped
-		root := a.restoreNode(t.Root, &ai)
-		if root == nil {
-			continue
+		if !a.layoutSaveFailed {
+			a.layoutNotice(false)
 		}
-		a.ws.AddTab(root, 0)
-		tab := a.ws.ActiveTab()
-		panes := tab.Panes()
-		if t.Focus >= 1 && t.Focus <= len(panes) {
-			tab.Focus = panes[t.Focus-1].ID
-		}
+		a.layoutSaveFailed = true
+		log.Printf("sshyard: workspace layout save failed")
+		return
 	}
-	if snap.Active >= 0 && snap.Active < len(a.ws.Tabs) {
-		a.ws.Active = snap.Active
+	a.layoutSaveFailed = false
+	a.layoutObserved = append(a.layoutObserved[:0], b...)
+	a.layoutDue = time.Time{}
+}
+
+// Observing the safe snapshot captures focus, split drags and all shared controls.
+func (a *App) observeLayout(c *ui.Context) {
+	if !a.settings.RememberLayout || a.layoutBlocked || a.restoring {
+		return
+	}
+	b, err := a.layoutBytes()
+	if err != nil {
+		if !a.layoutSaveFailed {
+			a.layoutNotice(false)
+		}
+		a.layoutSaveFailed = true
+		return
+	}
+	if !bytes.Equal(b, a.layoutObserved) {
+		a.layoutObserved = b
+		a.layoutDue = c.Now().Add(300 * time.Millisecond)
+	}
+	if a.layoutDue.IsZero() {
+		return
+	}
+	if c.Now().Before(a.layoutDue) {
+		c.After(a.layoutDue.Sub(c.Now()))
+		return
+	}
+	a.layoutDue = time.Time{}
+	a.saveLayout()
+}
+func (a *App) layoutNotice(read bool) {
+	a.toasts = append(a.toasts, func(m locales.Messages) ui.Toast {
+		text := m.ErrLayoutSave()
+		if read {
+			text = m.ErrLayoutRead()
+		}
+		return ui.Toast{Title: text, Type: "error"}
+	})
+}
+
+// ReportLayoutError makes native geometry failures observable without exposing paths.
+func (a *App) ReportLayoutError(err error) {
+	if err != nil {
+		log.Printf("sshyard: native layout persistence failed")
+		a.post(func() { a.layoutNotice(false) })
 	}
 }
 
-func (a *App) restoreNode(n *nodeSnap, ai *bool) *layout.Node {
-	if n == nil {
-		return nil
+// saveSettingsLayout keeps the preference, native state and workspace in step.
+// Failed transactions restore the previous workspace bytes before returning.
+func (a *App) saveSettingsLayout(s, old settings.Settings) error {
+	path := a.layoutPath()
+	if s.RememberLayout == old.RememberLayout {
+		return settings.Save(filepath.Join(a.p.DataDir, "settings.json"), s)
 	}
-	if n.Split == "row" || n.Split == "column" {
-		left := a.restoreNode(n.A, ai)
-		right := a.restoreNode(n.B, ai)
-		if left == nil {
-			return right
+	previous, readErr := os.ReadFile(path)
+	if readErr != nil && !errors.Is(readErr, os.ErrNotExist) {
+		return readErr
+	}
+	var undo func() error
+	if a.p.SetRememberLayout != nil {
+		var err error
+		undo, err = a.p.SetRememberLayout(s.RememberLayout)
+		if err != nil {
+			return err
 		}
-		if right == nil {
-			return left
+	}
+	rollback := func(err error) error {
+		if readErr == nil {
+			err = errors.Join(err, settings.WriteFileAtomic(path, previous, 0o600))
+		} else if e := os.Remove(path); e != nil && !errors.Is(e, os.ErrNotExist) {
+			err = errors.Join(err, e)
 		}
-		axis := layout.Row
-		if n.Split == "column" {
-			axis = layout.Column
+		if undo != nil {
+			err = errors.Join(err, undo())
 		}
-		ratio := n.Ratio
-		if ratio <= 0 || ratio >= 1 {
-			ratio = 0.5
+		return err
+	}
+	if s.RememberLayout {
+		b, err := a.layoutBytes()
+		if err != nil {
+			return rollback(err)
 		}
-		return &layout.Node{ID: a.ws.FreshID(), Axis: axis, Ratio: ratio, A: left, B: right}
+		if err = settings.WriteFileAtomic(path, b, 0o600); err != nil {
+			return rollback(err)
+		}
+	} else if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return rollback(err)
 	}
-	if *ai {
-		return nil
+	if err := settings.Save(filepath.Join(a.p.DataDir, "settings.json"), s); err != nil {
+		return rollback(err)
 	}
-	c := a.restoreLeaf(n)
-	if c == nil {
-		return nil
-	}
-	*ai = true
-	return &layout.Node{ID: a.ws.FreshID(), Item: c.item()}
-}
-
-// restoreLeaf brings back an AI pane only. A terminal, files or editor
-// leaf is dropped, so launch never dials and never reloads a buffer.
-// The linked terminal is gone; the pane stays unlinked until the user picks one.
-func (a *App) restoreLeaf(n *nodeSnap) *conn {
-	if n.Kind != "ai" {
-		return nil
-	}
-	c, err := a.makeConn(n.Host, layout.AI, 0)
-	if err != nil {
-		return nil
-	}
-	if n.Agent != "" {
-		c.ai.agent = n.Agent
-	}
-	// "full" is this session only. A saved copy must not turn it back on.
-	if n.Mode != "full" {
-		c.ai.mode = n.Mode
-	}
-	c.ai.provider, c.ai.model, c.ai.effort = n.Provider, n.Model, n.Effort
-	return c
+	a.layoutBlocked = false
+	a.layoutSaveFailed = false
+	a.layoutObserved = nil
+	a.layoutDue = time.Time{}
+	return nil
 }

@@ -50,6 +50,9 @@ type Platform struct {
 	Post func(func())
 	// SetTrayIcon changes the system tray icon immediately; an error leaves it unchanged.
 	SetTrayIcon func(style string) error
+	// SetRememberLayout changes native geometry persistence; errors leave it unchanged.
+	// A successful change returns an undo that restores its exact previous state.
+	SetRememberLayout func(bool) (undo func() error, err error)
 	// OpenPath opens a file in its default app; nil can't.
 	OpenPath func(path string) error
 	// CacheDir is where files opened in another app are copied, the
@@ -134,6 +137,8 @@ const (
 // reconnects and closes on its own.
 type conn struct {
 	waitingSecrets bool
+	restorePending bool
+	restoredQuiet  bool
 	id             int
 	kind           layout.Kind
 	host           assets.Host
@@ -463,7 +468,11 @@ type App struct {
 	closing bool
 	// restoring is set while a saved layout is opened, so it is not saved
 	// again over itself mid-way.
-	restoring bool
+	restoring        bool
+	layoutBlocked    bool
+	layoutSaveFailed bool
+	layoutObserved   []byte
+	layoutDue        time.Time
 	// localName is what local terminals are called, in the language of
 	// the last frame.
 	localName string
@@ -615,7 +624,7 @@ func (a *App) ApplySettings(s settings.Settings) error {
 		}
 	}
 	if a.p.DataDir != "" {
-		if err := settings.Save(filepath.Join(a.p.DataDir, "settings.json"), s); err != nil {
+		if err := a.saveSettingsLayout(s, old); err != nil {
 			if iconChanged {
 				err = errors.Join(err, a.p.SetTrayIcon(old.TrayIcon))
 			}
@@ -713,7 +722,7 @@ func (a *App) startIndependent() {
 		return
 	}
 	a.unlock.started = true
-	// Start with an empty workspace; saved AI layouts contain no session content.
+	a.loadLayout()
 	if a.settings.OpenLocalOnStart {
 		a.post(func() {
 			if len(a.ws.Tabs) == 0 {

@@ -300,6 +300,7 @@ func backupIDs(snap assets.Snapshot, provs []settings.AIProvider) []string {
 // that confirmed AI use are joined.
 func mergeSettings(cur, in settings.Settings) settings.Settings {
 	out := in
+	out.RememberLayout = cur.RememberLayout
 	out.SidebarWidth, out.ChromeMaterial, out.ContentMaterial = cur.SidebarWidth, cur.ChromeMaterial, cur.ContentMaterial
 	out.UIFont, out.TerminalFont = cur.UIFont, cur.TerminalFont
 	out.FilesDual, out.FilesSplit = cur.FilesDual, cur.FilesSplit

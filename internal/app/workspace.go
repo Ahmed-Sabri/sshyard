@@ -623,6 +623,8 @@ func (a *App) banner(c *ui.Context, cn *conn, st session.Status, tok theme.Token
 				a.withSecrets(func() {
 					if a.conns[cn.id] == cn {
 						cn.waitingSecrets = false
+						cn.restorePending = false
+						cn.restoredQuiet = false
 						cn.s.Start()
 					}
 				})
@@ -630,11 +632,12 @@ func (a *App) banner(c *ui.Context, cn *conn, st session.Status, tok theme.Token
 		}
 		switch st.State {
 		case session.Failed, session.Disconnected, session.Exited, session.Reconnecting:
-			if session.Classify(st.Err) == session.KindHostChanged {
+			if session.Classify(st.Err) == session.KindHostChanged && !cn.restoredQuiet {
 				break
 			}
 			if (IconButton{Icon: icons.Reconnect, Label: m.Reconnect(), Size: Small}).Clicked(c, "reconnect") {
 				cn.handled = nil
+				cn.restoredQuiet = false
 				if a.connectionNeedsSecrets(cn.host) {
 					a.withSecrets(func() {
 						if a.conns[cn.id] == cn {

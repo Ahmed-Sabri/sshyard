@@ -236,7 +236,7 @@ func (a *App) checkFailures(m locales.Messages) {
 	}
 	for _, id := range a.promptConns() {
 		c := a.conns[id]
-		if c == nil || c.s == nil {
+		if c == nil || c.s == nil || c.restoredQuiet {
 			continue
 		}
 		st := c.s.Status()

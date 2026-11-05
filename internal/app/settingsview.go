@@ -350,6 +350,11 @@ func (a *App) prefAppearance(c *ui.Context, m locales.Messages, tok theme.Tokens
 				*changed = true
 			}
 		})
+		g.row(m.RememberLayout(), m.RememberLayoutNote(), func() {
+			if ui.Switch(c.Key("rememberlayout"), &s.RememberLayout).Label(m.RememberLayout()).Changed() {
+				*changed = true
+			}
+		})
 		g.row(m.TrayIconStyle(), m.TrayIconStyleNote(), func() {
 			cur := m.TrayIconMono()
 			if s.TrayIcon == settings.TrayIconColor {

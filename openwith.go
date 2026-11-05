@@ -39,25 +39,30 @@ func openWith(path, title string) error {
 
 // openWindow opens a window beside the main one, for the file editor.
 func openWindow(s app.WindowSpec) app.Window {
-	w := mygo.NewWindow(mygo.WindowOptions{
-		Title:           s.Title,
-		Width:           s.Width,
-		Height:          s.Height,
-		MinWidth:        420,
-		MinHeight:       300,
-		StateKey:        s.StateKey,
-		BackgroundColor: "light-dark(#EDEDF0,#28282A)",
-		Content:         ui.View(s.View),
-	})
-	w.OnClose(func(e *mygo.CloseEvent) {
-		if s.Closing != nil && !s.Closing() {
-			e.PreventDefault()
-		}
-	})
-	w.OnClosed(func() {
-		if s.Closed != nil {
-			s.Closed()
-		}
+	var w *mygo.Window
+	mygo.RunOnMain(func() {
+		prepareWindowState(s.StateKey)
+		w = mygo.NewWindow(mygo.WindowOptions{
+			Title:           s.Title,
+			Width:           s.Width,
+			Height:          s.Height,
+			MinWidth:        420,
+			MinHeight:       300,
+			StateKey:        s.StateKey,
+			BackgroundColor: "light-dark(#EDEDF0,#28282A)",
+			Content:         ui.View(s.View),
+		})
+		rememberWindow(w, s.StateKey)
+		w.OnClose(func(e *mygo.CloseEvent) {
+			if s.Closing != nil && !s.Closing() {
+				e.PreventDefault()
+			}
+		})
+		w.OnClosed(func() {
+			if s.Closed != nil {
+				s.Closed()
+			}
+		})
 	})
 	return window{w}
 }

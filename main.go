@@ -114,8 +114,11 @@ func main() {
 		var d *desktop
 		p := platform()
 		p.SetTrayIcon = func(style string) error { return d.setTrayIcon(style) }
+		p.SetRememberLayout = changeRememberLayout
 		a, _ := app.New(p)
+		installWindowStates(a)
 		mygo.App.OnQuit(a.Close)
+		prepareWindowState("main")
 		w := mygo.NewWindow(mygo.WindowOptions{
 			Title:     "SSHYard",
 			Width:     1200,
@@ -138,6 +141,7 @@ func main() {
 			// Native UI only: no web view anywhere in SSHYard.
 			Content: ui.View(a.View),
 		})
+		rememberWindow(w, "main")
 		d = newDesktop(a, w)
 		a.Start()
 		w.OnMinimize(func() { a.SetMinimized(true) })

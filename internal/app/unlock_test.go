@@ -154,6 +154,7 @@ func TestUnlockBusyAndCloseLateResult(t *testing.T) {
 	if err := os.WriteFile(file, original, 0600); err != nil {
 		t.Fatal(err)
 	}
+	a.loadLayout() // An unreadable snapshot remains protected even while secrets are locked.
 	a.Close()
 	close(b.release)
 	// Reopening the same encrypted store proves the late result released its lock.

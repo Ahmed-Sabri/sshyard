@@ -21,6 +21,7 @@ import (
 	"github.com/Licoy/sshyard/internal/assets"
 	"github.com/Licoy/sshyard/internal/keychain"
 	"github.com/Licoy/sshyard/internal/layout"
+	"github.com/Licoy/sshyard/internal/session"
 	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/internal/sshtest"
 	"github.com/Licoy/sshyard/internal/vt"
@@ -206,7 +207,7 @@ func paneHas(a *App, id int, s string) bool {
 	return false
 }
 
-func TestStartupLeavesSavedAILayoutClosed(t *testing.T) {
+func TestStartupRestoresSavedAILayout(t *testing.T) {
 	srv, err := sshtest.Start("127.0.0.1:0", "demo", "secret")
 	if err != nil {
 		t.Fatal(err)
@@ -218,36 +219,35 @@ func TestStartupLeavesSavedAILayoutClosed(t *testing.T) {
 	term := connected(t, a, tt, srv)
 	tt.Key(aiMods, ui.KeyA)
 	tt.Frame()
-	if a.focused() == nil || a.focused().kind != layout.AI {
-		t.Fatal("AI pane missing before restart")
+	ai := a.focused()
+	if ai == nil || ai.kind != layout.AI {
+		t.Fatal("AI pane missing")
 	}
+	ai.ai.items = append(ai.ai.items, aiItem{kind: "user", text: "private previous conversation"})
 	a.Close()
-	file := filepath.Join(dir, "layout.json")
-	before, err := os.ReadFile(file)
-	if err != nil {
-		t.Fatal(err)
-	}
 	logins := srv.Logins()
 	again, tt2 := appIn(t, dir, system)
-	tt2.Frame()
-	if len(again.ws.Tabs) != 0 || len(again.conns) != 0 || !tt2.HasText("Welcome to SSHYard") {
-		t.Fatalf("startup restored panes: tabs=%d conns=%d texts=%q", len(again.ws.Tabs), len(again.conns), tt2.Texts())
+	if len(again.ws.Tabs) != 1 || len(again.conns) != 2 {
+		t.Fatalf("workspace not restored: %d %d", len(again.ws.Tabs), len(again.conns))
 	}
-	after, err := os.ReadFile(file)
-	if err != nil || string(after) != string(before) {
-		t.Fatalf("startup changed saved layout: %q %v", after, err)
+	var restoredAI, restoredTerm *conn
+	for _, c := range again.conns {
+		if c.kind == layout.AI {
+			restoredAI = c
+		}
+		if c.kind == layout.Terminal {
+			restoredTerm = c
+		}
 	}
-	id, err := again.OpenAI(term.host.ID, openAt{}, 0)
-	if err != nil {
-		t.Fatal(err)
+	if restoredAI == nil || restoredTerm == nil || restoredAI.ai.link != restoredTerm.id || len(restoredAI.ai.items) != 0 || restoredAI.ai.sess != nil {
+		t.Fatal("AI link or empty session not restored")
 	}
-	tt2.Frame()
-	ai := aiPaneOf(again, id)
-	if ai == nil || ai.ai.link != 0 || ai.s != nil || len(again.ws.Tabs) != 1 || !tt2.HasText("AI · box") {
-		t.Fatalf("manual AI open failed: pane=%+v texts=%q", ai, tt2.Texts())
+	if restoredTerm.host.ID != term.host.ID || restoredTerm.startCmd != "" || restoredTerm.cwd != "" {
+		t.Fatal("restored terminal content")
 	}
-	if again.pool.Shared(again.poolKey(term.host)) != 0 || srv.Logins() != logins {
-		t.Fatal("startup or manual AI open dialed SSH")
+	waitFor(t, tt2, "fresh startup connection", func() bool { return restoredTerm.s.Status().State == session.Connected })
+	if srv.Logins() != logins+1 {
+		t.Fatal("startup did not establish exactly one fresh connection")
 	}
 }
 
@@ -276,7 +276,7 @@ func TestAILayoutRestoresEmptySession(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(string(b), "secret question") || strings.Contains(string(b), `"kind": "terminal"`) || !strings.Contains(string(b), `"mode": "review"`) {
+	if strings.Contains(string(b), "secret question") || !strings.Contains(string(b), `"kind": "terminal"`) || !strings.Contains(string(b), `"mode": "review"`) {
 		t.Fatalf("layout %s", b)
 	}
 	a.Close()
@@ -285,22 +285,29 @@ func TestAILayoutRestoresEmptySession(t *testing.T) {
 	again, tt2 := appIn(t, dir, system)
 	again.loadLayout()
 	tt2.Frame()
-	var got *conn
+	var got, restoredTerm *conn
 	for _, c := range again.conns {
-		if c.kind != layout.AI || c.s != nil {
-			t.Fatalf("restored a %s session", c.kind)
+		if c.kind == layout.AI {
+			got = c
 		}
-		got = c
+		if c.kind == layout.Terminal {
+			restoredTerm = c
+		}
 	}
-	if got == nil || got.ai.sess != nil || len(got.ai.items) != 0 {
-		t.Fatalf("restored %#v", got)
+	if got == nil || got.ai.sess != nil || len(got.ai.items) != 0 || got.s != nil {
+		t.Fatalf("restored AI %#v", got)
 	}
 	if got.ai.mode != "review" || got.ai.agent != "other" || got.ai.provider != "prov1" {
 		t.Fatalf("restored fields %+v", got.ai)
 	}
-	if got.ai.link != 0 || again.pool.Shared(again.poolKey(term.host)) != 0 || srv.Logins() != logins {
-		t.Fatalf("link %d shared %d logins %d to %d", got.ai.link, again.pool.Shared(again.poolKey(term.host)), logins, srv.Logins())
+	if restoredTerm == nil || restoredTerm.host.ID != term.host.ID || got.ai.link != restoredTerm.id {
+		t.Fatal("terminal association lost")
 	}
+	waitFor(t, tt2, "fresh layout connection", func() bool { return restoredTerm.s.Status().State == session.Connected })
+	if srv.Logins() != logins+1 {
+		t.Fatalf("logins %d to %d", logins, srv.Logins())
+	}
+
 }
 
 func TestAILayoutDropsSavedFullMode(t *testing.T) {
@@ -399,21 +406,22 @@ func TestLayoutSkipsTempHosts(t *testing.T) {
 	if len(again.ws.Tabs) != 3 {
 		t.Fatalf("tabs %d", len(again.ws.Tabs))
 	}
-	var ai *conn
+	var ai, restoredTerm *conn
 	for _, c := range again.conns {
 		if isTemp(c.host.ID) {
 			t.Fatalf("restored temporary host %s", c.host.ID)
 		}
-		if c.kind != layout.AI || c.s != nil {
-			t.Fatalf("restored a %s session", c.kind)
-		}
-		if c.host.ID == term.host.ID {
+		if c.host.ID == term.host.ID && c.kind == layout.AI {
 			ai = c
 		}
+		if c.host.ID == term.host.ID && c.kind == layout.Terminal {
+			restoredTerm = c
+		}
 	}
-	if ai == nil || ai.ai == nil || ai.ai.link != 0 {
-		t.Fatalf("link %+v", ai)
+	if ai == nil || restoredTerm == nil || ai.ai.link != restoredTerm.id {
+		t.Fatal("terminal association lost")
 	}
+
 	found := false
 	for _, p := range again.ws.ActiveTab().Panes() {
 		if c := again.conns[p.Item.ID]; c != nil && c.kind == layout.AI && c.host.ID == term.host.ID {
@@ -425,8 +433,7 @@ func TestLayoutSkipsTempHosts(t *testing.T) {
 	}
 }
 
-// TestLayoutRestoreDoesNotDial starts from a layout that still names
-// terminal, files and editor panes. None of them come back, and nothing dials.
+// Legacy unversioned snapshots are protected without guessing terminal sessions.
 func TestLayoutRestoreDoesNotDial(t *testing.T) {
 	srvA, err := sshtest.Start("127.0.0.1:0", "demo", "secret")
 	if err != nil {
@@ -477,7 +484,8 @@ func TestLayoutRestoreDoesNotDial(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// An old file may still name a link. It is not a field anymore.
+	// An old file had no version and may still name a terminal link.
+	raw = []byte(strings.Replace(string(raw), `"version": 0,`, "", 1))
 	raw = []byte(strings.ReplaceAll(string(raw), `"kind": "ai"`, `"kind": "ai", "link": 1`))
 	if err := os.WriteFile(filepath.Join(dir, "layout.json"), append(raw, '\n'), 0o600); err != nil {
 		t.Fatal(err)
@@ -486,35 +494,14 @@ func TestLayoutRestoreDoesNotDial(t *testing.T) {
 	again, tt := appIn(t, dir, kc)
 	again.loadLayout()
 	tt.Frame()
-	if len(again.ws.Tabs) != 2 {
-		t.Fatalf("tabs %d, editor tab should be dropped", len(again.ws.Tabs))
+	if len(again.ws.Tabs) != 0 || len(again.conns) != 0 || again.layoutBlocked {
+		t.Fatal("legacy unversioned layout should not restore or block new recording")
 	}
-	// A tab has one AI pane: of two saved in one, the first comes back.
-	first, second := again.ws.Tabs[0].Root, again.ws.Tabs[1].Root
-	if first == nil || !first.Leaf() || second == nil || !second.Leaf() {
-		t.Fatalf("tabs %+v %+v", first, second)
+	preserved, err := os.ReadFile(filepath.Join(dir, "layout.json"))
+	if err != nil || string(preserved) != string(append(raw, '\n')) {
+		t.Fatal("legacy file changed")
 	}
-	if len(again.conns) != 2 {
-		t.Fatalf("conns %d", len(again.conns))
-	}
-	var review, ask *conn
-	for _, c := range again.conns {
-		if c.kind != layout.AI || c.s != nil || c.ai == nil || c.ai.link != 0 {
-			t.Fatalf("pane %s session %v link %d", c.kind, c.s != nil, linkOf(c))
-		}
-		switch c.host.ID {
-		case ha.ID:
-			review = c
-		case hb.ID:
-			ask = c
-		}
-	}
-	if review == nil || review.ai.mode != "review" || review.ai.agent != "other" || review.ai.provider != "prov1" || ask == nil || ask.ai.mode != "ask" {
-		t.Fatalf("review %+v ask %+v", review, ask)
-	}
-	if again.conns[first.Item.ID] != review || again.conns[second.Item.ID] != ask {
-		t.Fatal("AI panes lost their tabs")
-	}
+
 	h1, _ := again.host(ha.ID)
 	h2, _ := again.host(hb.ID)
 	deadline := time.Now().Add(400 * time.Millisecond)
