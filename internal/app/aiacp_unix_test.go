@@ -4,12 +4,15 @@ package app
 
 import (
 	"context"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/Licoy/sshyard/internal/session"
 	"github.com/Licoy/sshyard/internal/settings"
@@ -194,6 +197,103 @@ func TestACPAppProtocolAndLifecycle(t *testing.T) {
 		waitFor(t, tt, "scope change stops ACP", func() bool { return !c.ai.running && c.ai.acp == nil })
 		waitFor(t, tt, "scope change closes process", func() bool { _, err := os.Stat(r.session.Sandbox()); return os.IsNotExist(err) })
 	})
+	t.Run("close-with-stalled-host", func(t *testing.T) {
+		grace := acpCloseGrace
+		acpCloseGrace = 100 * time.Millisecond
+		t.Cleanup(func() { acpCloseGrace = grace })
+		a, tt, srv, h := bashHost(t)
+		stall := stallProxy(t, srv.Addr)
+		_, h.Port = splitAddr(t, stall.addr)
+		h, err := a.store.Update(h)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := a.known.Add(h.Addr(), srv.HostKey.PublicKey()); err != nil {
+			t.Fatal(err)
+		}
+		script := filepath.Join(t.TempDir(), "script")
+		if err := os.WriteFile(script, []byte("---\nmessage answered\n"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		s := a.Settings()
+		s.AIDefaultAgent = "acp"
+		s.AIACPAgents = []settings.ACPConfig{{Command: binary, Args: []string{script}}}
+		if err := a.ApplySettings(s); err != nil {
+			t.Fatal(err)
+		}
+		id := openAIPane(t, a, h.ID)
+		a.SendAI(id, "hi")
+		waitFor(t, tt, "ACP answer", func() bool { return paneHas(a, id, "answered") })
+		r := a.conns[id].ai.acp
+		// The host stops answering: closing the SFTP session waits for a
+		// reply that never comes.
+		stall.stalled.Store(true)
+		t.Cleanup(func() { stall.stalled.Store(false) })
+		closed := make(chan struct{})
+		go func() {
+			a.Close()
+			close(closed)
+		}()
+		select {
+		case <-closed:
+		case <-time.After(acpQuitWait / 2):
+			t.Fatal("quitting waits for a host that stopped answering")
+		}
+		if _, err := os.Stat(r.session.Sandbox()); !os.IsNotExist(err) {
+			t.Fatal("agent left running")
+		}
+	})
+}
+
+// stallProxy forwards to addr until stalled, then holds everything, as a
+// network that drops without resetting the connection.
+type stalling struct {
+	addr    string
+	stalled atomic.Bool
+}
+
+func stallProxy(t *testing.T, addr string) *stalling {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { ln.Close() })
+	p := &stalling{addr: ln.Addr().String()}
+	pipe := func(dst, src net.Conn) {
+		defer dst.Close()
+		buf := make([]byte, 32<<10)
+		for {
+			n, err := src.Read(buf)
+			for p.stalled.Load() {
+				time.Sleep(10 * time.Millisecond)
+			}
+			if n > 0 {
+				if _, err := dst.Write(buf[:n]); err != nil {
+					return
+				}
+			}
+			if err != nil {
+				return
+			}
+		}
+	}
+	go func() {
+		for {
+			c, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			up, err := net.Dial("tcp", addr)
+			if err != nil {
+				c.Close()
+				continue
+			}
+			go pipe(up, c)
+			go pipe(c, up)
+		}
+	}()
+	return p
 }
 
 func TestACPConfigurationUIAndUnknownBackend(t *testing.T) {

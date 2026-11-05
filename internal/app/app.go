@@ -770,7 +770,7 @@ func (a *App) Close() {
 		c.close()
 	}
 	a.stopACPProbes()
-	a.acpWG.Wait()
+	a.waitACP()
 	a.clipAsk = nil
 	a.fwds = map[string]*fwdRun{}
 	if a.kc != nil && (!a.unlock.busy || a.unlock.completed) {

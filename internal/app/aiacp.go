@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Licoy/sshyard/internal/ai/acp"
 	"github.com/Licoy/sshyard/internal/ai/acp/detect"
@@ -57,21 +58,58 @@ func (r *acpRuntime) close() {
 		go func() {
 			defer r.done()
 			<-r.ready
+			release := func() {
+				if r.release != nil {
+					r.release()
+				}
+			}
+			cleaned := make(chan error, 1)
+			go func() {
+				var cleanup error
+				if r.session != nil {
+					cleanup = errors.Join(r.session.Stop(), r.session.Close())
+				}
+				if r.files != nil {
+					cleanup = errors.Join(cleanup, r.files.Close())
+				}
+				cleaned <- cleanup
+			}()
 			var cleanup error
-			if r.session != nil {
-				cleanup = errors.Join(r.session.Stop(), r.session.Close())
+			select {
+			case cleanup = <-cleaned:
+			case <-time.After(acpCloseGrace):
+				// A host that stopped answering keeps the SFTP session and
+				// the agent's requests waiting for replies that never come;
+				// letting go of the connection ends them.
+				release()
+				cleanup = <-cleaned
 			}
-			if r.files != nil {
-				cleanup = errors.Join(cleanup, r.files.Close())
-			}
-			if r.release != nil {
-				r.release()
-			}
+			release()
 			if cleanup != nil && r.report != nil {
 				r.report(cleanup)
 			}
 		}()
 	})
+}
+
+// acpCloseGrace is how long closing waits for the agent and the SFTP
+// session before letting go of the connection under them.
+var acpCloseGrace = 3 * time.Second
+
+// acpQuitWait bounds how long quitting waits for the agents to stop, so
+// that one that never does cannot keep the app open.
+var acpQuitWait = 10 * time.Second
+
+func (a *App) waitACP() {
+	done := make(chan struct{})
+	go func() {
+		a.acpWG.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(acpQuitWait):
+	}
 }
 
 func (r *acpRuntime) start(ctx context.Context, a *App, cfg session.Config, key, agent string, options acp.Config) error {

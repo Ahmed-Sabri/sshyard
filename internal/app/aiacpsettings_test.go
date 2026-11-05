@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/Licoy/sshyard/internal/ai/acp"
 	"github.com/Licoy/sshyard/internal/ai/acp/detect"
@@ -277,5 +278,24 @@ func TestACPToolCardWhere(t *testing.T) {
 	a.onACPUpdate(c, acp.Update{Kind: "tool", Tool: &acp.ToolView{ID: "3", Kind: "edit", Title: "Edit a.go"}})
 	if where("1") != string(policy.Local) || where("2") != string(policy.Remote) || where("3") != string(policy.Remote) {
 		t.Fatalf("where %q %q %q", where("1"), where("2"), where("3"))
+	}
+}
+
+func TestQuitStopsWaitingForACP(t *testing.T) {
+	wait := acpQuitWait
+	acpQuitWait = 50 * time.Millisecond
+	t.Cleanup(func() { acpQuitWait = wait })
+	a, _ := newTestApp(t)
+	a.acpWG.Add(1)
+	t.Cleanup(a.acpWG.Done)
+	closed := make(chan struct{})
+	go func() {
+		a.Close()
+		close(closed)
+	}()
+	select {
+	case <-closed:
+	case <-time.After(5 * time.Second):
+		t.Fatal("quitting waits for an agent that never stops")
 	}
 }
