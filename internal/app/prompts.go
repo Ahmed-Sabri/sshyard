@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -176,6 +177,13 @@ func errText(m locales.Messages, h assets.Host, err error) string {
 			return m.ErrAgentEmpty()
 		}
 		return m.ErrAgentUnavailable()
+	case session.KindLocalKey:
+		var le *session.LocalKeyError
+		errors.As(err, &le)
+		if le.Wrong {
+			return m.ErrLocalKeyWrong(filepath.Base(le.Path))
+		}
+		return m.ErrLocalKeyPassphrase(filepath.Base(le.Path))
 	}
 	return m.ErrGeneric(rootCause(err))
 }
@@ -202,6 +210,12 @@ type credPrompt struct {
 	savePassword bool
 	value        string
 	err          string
+	// localKey is the key file of this computer whose passphrase is
+	// asked; remember keeps the answer in the encrypted store.
+	localKey *session.LocalKeyError
+	remember bool
+	// note says what was tried before the password was asked.
+	note string
 }
 
 // hostKeyAsk asks whether to trust a host's key seen for the first time.
@@ -228,15 +242,22 @@ func (a *App) checkFailures(m locales.Messages) {
 		}
 		c.handled = st.Err
 		switch session.Classify(st.Err) {
-		case session.KindNoCredentials, session.KindAuth, session.KindPassphrase:
+		case session.KindNoCredentials, session.KindAuth, session.KindPassphrase, session.KindLocalKey:
 			kind := session.Classify(st.Err)
 			h := a.failedHost(c.host, st.Err)
-			key, pass := a.promptKey(h, kind)
+			key, pass := a.promptKeyFor(h, kind, st.Err)
 			if key == "" {
 				continue // the editor is where a missing key goes
 			}
 			p := &credPrompt{conn: id, host: h, key: key, passphrase: pass}
+			var le *session.LocalKeyError
 			a.mu.Lock()
+			if errors.As(st.Err, &le) {
+				// Asked again, as the passphrase was wrong: keep the choice
+				// to remember it.
+				_, pending := a.rememberKeys[le.ID]
+				p.localKey, p.remember = le, pending || a.lk.IsRemembered(le.ID)
+			}
 			if gen, ok := c.tried[key]; ok && gen < a.typedGen[key] && a.typed[key] != "" {
 				// It failed with what was typed before the latest
 				// answer: try that one instead of asking again.
@@ -246,7 +267,11 @@ func (a *App) checkFailures(m locales.Messages) {
 				}
 				continue
 			}
-			if kind == session.KindAuth || errors.Is(st.Err, session.ErrPassphraseWrong) {
+			var kr *session.KeysRefusedError
+			switch {
+			case errors.As(st.Err, &kr):
+				p.note = m.LocalKeysRefused(strconv.Itoa(kr.Offered))
+			case kind == session.KindAuth || errors.Is(st.Err, session.ErrPassphraseWrong) || le != nil && le.Wrong:
 				p.err = errText(m, h, st.Err)
 			}
 			delete(a.typed, key)
@@ -272,7 +297,7 @@ func (a *App) checkFailures(m locales.Messages) {
 func (a *App) SubmitPrompt() { a.submitPrompt(locales.In(a.settings.Language)) }
 
 func (a *App) submitPrompt(m locales.Messages) {
-	if a.prompt != nil && a.prompt.savePassword && !a.unlocked() {
+	if a.prompt != nil && (a.prompt.savePassword || a.prompt.localKey != nil && a.prompt.remember) && !a.unlocked() {
 		draft := a.prompt
 		a.withSecrets(func() {
 			if a.prompt == draft {
@@ -298,12 +323,21 @@ func (a *App) submitPrompt(m locales.Messages) {
 		}
 	}
 	a.prompt, a.prompting = nil, false
+	if p.localKey != nil {
+		a.rememberAfterLogin(p)
+	}
 	a.mu.Lock()
 	a.typed[p.key] = p.value
 	a.typedGen[p.key]++
 	a.mu.Unlock()
+	a.retryPrompted(c, p.key)
+}
+
+// retryPrompted connects c again, and the other panes that failed for the
+// secret of key with it.
+func (a *App) retryPrompted(c *conn, key string) {
 	a.focusReq = c.id
-	others := a.sameSecretFailures(c, p.key)
+	others := a.sameSecretFailures(c, key)
 	if c.s != nil {
 		c.s.Reconnect()
 	}
@@ -329,8 +363,8 @@ func (a *App) sameSecretFailures(c *conn, key string) []*conn {
 			continue
 		}
 		switch k := session.Classify(st.Err); k {
-		case session.KindNoCredentials, session.KindAuth, session.KindPassphrase:
-			if ok, _ := a.promptKey(a.failedHost(o.host, st.Err), k); ok == key {
+		case session.KindNoCredentials, session.KindAuth, session.KindPassphrase, session.KindLocalKey:
+			if ok, _ := a.promptKeyFor(a.failedHost(o.host, st.Err), k, st.Err); ok == key {
 				out = append(out, o)
 			}
 		}
@@ -359,7 +393,10 @@ func (a *App) promptsView(c *ui.Context, m locales.Messages) {
 	a.checkFailures(m)
 	if p := a.prompt; p != nil {
 		title := m.PasswordPromptTitle(a.pv(p.host.Target()))
-		if p.passphrase {
+		switch {
+		case p.localKey != nil:
+			title = m.LocalKeyPromptTitle(filepath.Base(p.localKey.Path))
+		case p.passphrase:
 			title = m.PassphrasePromptTitle(a.pv(p.host.Target()))
 		}
 		tok := currentTokens(c)
@@ -369,21 +406,46 @@ func (a *App) promptsView(c *ui.Context, m locales.Messages) {
 					hostAvatar(c, tok, a.liveHost(p.host), 36)
 					ui.Text(c, title).FontSize(theme.Title3).FontWeight(600).Shrink(1)
 				})
+				if p.localKey != nil {
+					ui.Text(c, a.homePath(p.localKey.Path)+" · "+ssh.FingerprintSHA256(p.localKey.Public)).FontSize(theme.Caption).TextColor(tok.TextMuted)
+				}
+				if p.note != "" {
+					ui.Text(c, p.note).FontSize(theme.Footnote).TextColor(tok.TextMuted)
+				}
 				if p.err != "" {
 					ui.Text(c, p.err).FontSize(theme.Footnote).TextColor(tok.Danger)
 				}
 				in := ui.TextInput(c.Key("secret"), &p.value).Password().AutoFocus().Label(title).FillWidth()
 				a.promptHold.apply(c, [2]any{p, p.err}, in)
 				hint := m.TypedNotSaved()
-				if p.savePassword {
+				switch {
+				case p.savePassword:
 					hint = m.SaveHostPasswordHint()
+				case p.localKey != nil && p.remember:
+					hint = m.RememberKeyPassphraseHint()
 				}
 				ui.Text(c, hint).FontSize(theme.Caption).TextColor(tok.TextMuted)
 				if a.canSavePromptPassword(p) {
 					ui.Checkbox(c.Key("prompt:save-password"), &p.savePassword, m.SavePasswordCredential())
 				}
+				if p.localKey != nil {
+					ui.Checkbox(c.Key("prompt:remember-key"), &p.remember, m.RememberKeyPassphrase())
+					// A remembered passphrase is in the store, which is locked.
+					if a.lk.IsRemembered(p.localKey.ID) && !a.unlocked() {
+						ui.Row(c).Children(func() {
+							if pill(c, m.UseRememberedPassphrase(), false, false, false) {
+								a.useRememberedPassphrase()
+							}
+						})
+					}
+				}
 				submit := in.Submitted()
 				ui.Row(c).Gap(8).Margin(4, 0, 0, 0).Children(func() {
+					if p.localKey != nil {
+						if pill(c, m.SkipLocalKey(), false, false, false) {
+							a.skipLocalKey()
+						}
+					}
 					ui.Spacer(c)
 					if pill(c, m.Cancel(), false, false, false) {
 						a.prompting = false

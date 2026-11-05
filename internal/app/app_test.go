@@ -99,13 +99,14 @@ func TestAddHostFlow(t *testing.T) {
 	cr := addCred(t, a, "ops", "pw")
 	tt.Frame()
 	a.form.name, a.form.address, a.form.user = "web", "10.0.0.5", "root"
-	// The auth select offers asking, the agent and the credential.
-	for _, s := range []string{"Ask for password each time"} {
+	// The auth select offers asking (local keys first, by default), the
+	// agent and the credential.
+	for _, s := range []string{"Auto (local keys, then ask for password)"} {
 		if !tt.HasText(s) {
 			t.Errorf("auth select misses %q: %q", s, tt.Texts())
 		}
 	}
-	if a.form.auth != "Ask for password each time" || !a.form.cwdFollow {
+	if a.form.auth != "Auto (local keys, then ask for password)" || !a.form.cwdFollow {
 		t.Errorf("new host defaults: auth %q, cwd follow %v", a.form.auth, a.form.cwdFollow)
 	}
 	a.form.auth = "ops · Password"

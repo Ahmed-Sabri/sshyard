@@ -304,8 +304,9 @@ func mergeSettings(cur, in settings.Settings) settings.Settings {
 	out.UIFont, out.TerminalFont = cur.UIFont, cur.TerminalFont
 	out.FilesDual, out.FilesSplit = cur.FilesDual, cur.FilesSplit
 	out.EditorTreeWidth, out.EditorTreeHidden = cur.EditorTreeWidth, cur.EditorTreeHidden
-	// A backup never turns the MCP endpoint on: that is asked here.
-	out.MCPEnabled, out.MCPPort = cur.MCPEnabled, cur.MCPPort
+	// A backup never turns the MCP endpoint on, nor lets it use the keys
+	// of this computer: that is asked here.
+	out.MCPEnabled, out.MCPPort, out.LocalKeysMCP = cur.MCPEnabled, cur.MCPPort, cur.LocalKeysMCP
 	// Nor does it choose where this device backs up to.
 	out.BackupTargets, out.DefaultBackupPassword = slices.Clone(cur.BackupTargets), cur.DefaultBackupPassword
 	out.AIProviders = slices.Clone(cur.AIProviders)

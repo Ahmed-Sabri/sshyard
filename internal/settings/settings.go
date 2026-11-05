@@ -132,6 +132,12 @@ type Settings struct {
 	MCPEnabled bool `json:"mcpEnabled,omitempty"`
 	// MCPPort is the endpoint's port, 1024 to 65535.
 	MCPPort int `json:"mcpPort,omitempty"`
+	// LocalKeys lets a host that asks for its password first try the SSH
+	// agent's keys and the key files of this computer. On by default.
+	LocalKeys bool `json:"localKeys"`
+	// LocalKeysMCP lets MCP connections try them too, without asking
+	// anything. Off by default; it needs LocalKeys.
+	LocalKeysMCP bool `json:"localKeysMcp,omitempty"`
 	// BackupTargets are the places this device backs up to. They belong
 	// to this device: a backup neither holds nor replaces them.
 	BackupTargets []BackupTarget `json:"backupTargets,omitempty"`
@@ -368,7 +374,7 @@ var Languages = []string{"en", "zh-Hans", "zh-Hant", "ko", "ja"}
 // Default returns the defaults.
 func Default() Settings {
 	return Settings{Theme: theme.Auto, CheckUpdates: true, UpdateIntervalHours: 1, TerminalFontSize: 13, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, FilesSplit: 50, EditorTreeWidth: 240, OSC52Write: OSC52Ask, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
-		AIDefaultAgent: "builtin", AIDefaultMode: "ask", AIReviewStrictness: AIReviewStandard, AIContextLines: 200, AIAuditRetentionDays: 90, AIRedact: true, MCPPort: MCPPortDefault}
+		AIDefaultAgent: "builtin", AIDefaultMode: "ask", AIReviewStrictness: AIReviewStandard, AIContextLines: 200, AIAuditRetentionDays: 90, AIRedact: true, MCPPort: MCPPortDefault, LocalKeys: true}
 }
 
 // ResolveOSC52Write is the write policy in effect. A host value of allow,

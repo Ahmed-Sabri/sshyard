@@ -390,6 +390,10 @@ func (a *App) mcpLogin(h assets.Host) error {
 			if !ok || cr.AskPassphrase {
 				return errMCPNeedsInput
 			}
+		case assets.AuthAsk:
+			if !a.lkMCP.Load() {
+				return errMCPNeedsInput
+			}
 		default:
 			return errMCPNeedsInput
 		}
@@ -406,6 +410,11 @@ func (a *App) mcpCredentials(h assets.Host) (session.Credentials, error) {
 	}
 	if h.Auth == assets.AuthAgent {
 		out.Agent = true
+		return out, nil
+	}
+	if h.Auth == assets.AuthAsk && a.lkMCP.Load() {
+		// What is typed is never used here; only what signs unasked.
+		a.localKeyCredentials(&out, h, nil)
 		return out, nil
 	}
 	cr, ok := a.store.Credential(h.CredentialID)
@@ -521,7 +530,8 @@ func mcpDialErr(err error) error {
 	case errors.As(err, &changed):
 		return fmt.Errorf("the host key of %s changed; SSHYard refused to connect", changed.Host)
 	case errors.Is(err, errMCPNeedsInput), errors.Is(err, session.ErrNoCredentials),
-		errors.Is(err, session.ErrPassphraseNeeded), errors.Is(err, session.ErrPassphraseWrong):
+		errors.Is(err, session.ErrPassphraseNeeded), errors.Is(err, session.ErrPassphraseWrong),
+		errors.As(err, new(*session.LocalKeyError)), errors.As(err, new(*session.KeysRefusedError)):
 		return errMCPNeedsInput
 	}
 	return fmt.Errorf("connect failed: %v", err)

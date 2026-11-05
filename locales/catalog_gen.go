@@ -1635,6 +1635,16 @@ func (msgs Messages) AuthAsk() string {
 	return Catalog.Format(msgs.locale, "authAsk", nil)
 }
 
+// AuthAuto says "Auto (local keys, then ask for password)"
+// in the language the app shows.
+func AuthAuto() string { return In(i18n.Locale()).AuthAuto() }
+
+// AuthAuto says "Auto (local keys, then ask for password)"
+// in the language of msgs.
+func (msgs Messages) AuthAuto() string {
+	return Catalog.Format(msgs.locale, "authAuto", nil)
+}
+
 // AuthAgent says "SSH agent"
 // in the language the app shows.
 func AuthAgent() string { return In(i18n.Locale()).AuthAgent() }
@@ -13075,4 +13085,156 @@ func QuickMigration() string { return In(i18n.Locale()).QuickMigration() }
 // in the language of msgs.
 func (msgs Messages) QuickMigration() string {
 	return Catalog.Format(msgs.locale, "quickMigration", nil)
+}
+
+// LocalKeyPromptTitle says "Unlock the key {key}"
+// in the language the app shows.
+func LocalKeyPromptTitle(key string) string { return In(i18n.Locale()).LocalKeyPromptTitle(key) }
+
+// LocalKeyPromptTitle says "Unlock the key {key}"
+// in the language of msgs.
+func (msgs Messages) LocalKeyPromptTitle(key string) string {
+	return Catalog.Format(msgs.locale, "localKeyPromptTitle", map[string]any{"key": key})
+}
+
+// ErrLocalKeyPassphrase says "The key {key} needs its passphrase."
+// in the language the app shows.
+func ErrLocalKeyPassphrase(key string) string { return In(i18n.Locale()).ErrLocalKeyPassphrase(key) }
+
+// ErrLocalKeyPassphrase says "The key {key} needs its passphrase."
+// in the language of msgs.
+func (msgs Messages) ErrLocalKeyPassphrase(key string) string {
+	return Catalog.Format(msgs.locale, "errLocalKeyPassphrase", map[string]any{"key": key})
+}
+
+// ErrLocalKeyWrong says "Wrong passphrase for the key {key}."
+// in the language the app shows.
+func ErrLocalKeyWrong(key string) string { return In(i18n.Locale()).ErrLocalKeyWrong(key) }
+
+// ErrLocalKeyWrong says "Wrong passphrase for the key {key}."
+// in the language of msgs.
+func (msgs Messages) ErrLocalKeyWrong(key string) string {
+	return Catalog.Format(msgs.locale, "errLocalKeyWrong", map[string]any{"key": key})
+}
+
+// LocalKeysRefused says "Tried {count} keys on this computer; the server accepted none."
+// in the language the app shows.
+func LocalKeysRefused(count string) string { return In(i18n.Locale()).LocalKeysRefused(count) }
+
+// LocalKeysRefused says "Tried {count} keys on this computer; the server accepted none."
+// in the language of msgs.
+func (msgs Messages) LocalKeysRefused(count string) string {
+	return Catalog.Format(msgs.locale, "localKeysRefused", map[string]any{"count": count})
+}
+
+// RememberKeyPassphrase says "Remember passphrase (encrypted on this computer)"
+// in the language the app shows.
+func RememberKeyPassphrase() string { return In(i18n.Locale()).RememberKeyPassphrase() }
+
+// RememberKeyPassphrase says "Remember passphrase (encrypted on this computer)"
+// in the language of msgs.
+func (msgs Messages) RememberKeyPassphrase() string {
+	return Catalog.Format(msgs.locale, "rememberKeyPassphrase", nil)
+}
+
+// RememberKeyPassphraseHint says "Saved encrypted on this computer once it logs in; never included in backups."
+// in the language the app shows.
+func RememberKeyPassphraseHint() string { return In(i18n.Locale()).RememberKeyPassphraseHint() }
+
+// RememberKeyPassphraseHint says "Saved encrypted on this computer once it logs in; never included in backups."
+// in the language of msgs.
+func (msgs Messages) RememberKeyPassphraseHint() string {
+	return Catalog.Format(msgs.locale, "rememberKeyPassphraseHint", nil)
+}
+
+// SkipLocalKey says "Skip this key"
+// in the language the app shows.
+func SkipLocalKey() string { return In(i18n.Locale()).SkipLocalKey() }
+
+// SkipLocalKey says "Skip this key"
+// in the language of msgs.
+func (msgs Messages) SkipLocalKey() string {
+	return Catalog.Format(msgs.locale, "skipLocalKey", nil)
+}
+
+// UseRememberedPassphrase says "Use remembered passphrase"
+// in the language the app shows.
+func UseRememberedPassphrase() string { return In(i18n.Locale()).UseRememberedPassphrase() }
+
+// UseRememberedPassphrase says "Use remembered passphrase"
+// in the language of msgs.
+func (msgs Messages) UseRememberedPassphrase() string {
+	return Catalog.Format(msgs.locale, "useRememberedPassphrase", nil)
+}
+
+// LocalKeysSection says "SSH keys on this computer"
+// in the language the app shows.
+func LocalKeysSection() string { return In(i18n.Locale()).LocalKeysSection() }
+
+// LocalKeysSection says "SSH keys on this computer"
+// in the language of msgs.
+func (msgs Messages) LocalKeysSection() string {
+	return Catalog.Format(msgs.locale, "localKeysSection", nil)
+}
+
+// LocalKeysTry says "Try local keys first"
+// in the language the app shows.
+func LocalKeysTry() string { return In(i18n.Locale()).LocalKeysTry() }
+
+// LocalKeysTry says "Try local keys first"
+// in the language of msgs.
+func (msgs Messages) LocalKeysTry() string {
+	return Catalog.Format(msgs.locale, "localKeysTry", nil)
+}
+
+// LocalKeysTryNote says "Hosts set to Auto log in with the SSH agent and the keys in ~/.ssh first, and ask for the password only if none works."
+// in the language the app shows.
+func LocalKeysTryNote() string { return In(i18n.Locale()).LocalKeysTryNote() }
+
+// LocalKeysTryNote says "Hosts set to Auto log in with the SSH agent and the keys in ~/.ssh first, and ask for the password only if none works."
+// in the language of msgs.
+func (msgs Messages) LocalKeysTryNote() string {
+	return Catalog.Format(msgs.locale, "localKeysTryNote", nil)
+}
+
+// LocalKeysMCP says "Allow MCP connections"
+// in the language the app shows.
+func LocalKeysMCP() string { return In(i18n.Locale()).LocalKeysMCP() }
+
+// LocalKeysMCP says "Allow MCP connections"
+// in the language of msgs.
+func (msgs Messages) LocalKeysMCP() string {
+	return Catalog.Format(msgs.locale, "localKeysMCP", nil)
+}
+
+// LocalKeysMCPNote says "AI agents connecting through MCP may log in to Auto hosts with these keys without asking. Encrypted keys need a remem…"
+// in the language the app shows.
+func LocalKeysMCPNote() string { return In(i18n.Locale()).LocalKeysMCPNote() }
+
+// LocalKeysMCPNote says "AI agents connecting through MCP may log in to Auto hosts with these keys without asking. Encrypted keys need a remem…"
+// in the language of msgs.
+func (msgs Messages) LocalKeysMCPNote() string {
+	return Catalog.Format(msgs.locale, "localKeysMCPNote", nil)
+}
+
+// RememberedKeyPassphrase says "Passphrase of {key} remembered"
+// in the language the app shows.
+func RememberedKeyPassphrase(key string) string {
+	return In(i18n.Locale()).RememberedKeyPassphrase(key)
+}
+
+// RememberedKeyPassphrase says "Passphrase of {key} remembered"
+// in the language of msgs.
+func (msgs Messages) RememberedKeyPassphrase(key string) string {
+	return Catalog.Format(msgs.locale, "rememberedKeyPassphrase", map[string]any{"key": key})
+}
+
+// ForgetKeyPassphrase says "Forget passphrase"
+// in the language the app shows.
+func ForgetKeyPassphrase() string { return In(i18n.Locale()).ForgetKeyPassphrase() }
+
+// ForgetKeyPassphrase says "Forget passphrase"
+// in the language of msgs.
+func (msgs Messages) ForgetKeyPassphrase() string {
+	return Catalog.Format(msgs.locale, "forgetKeyPassphrase", nil)
 }

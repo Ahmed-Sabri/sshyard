@@ -22,7 +22,8 @@ var Kinds = []Kind{Password, PrivateKey, Passphrase}
 // The keys of the entries SSHYard keeps; there are no others:
 // host/<id>/<kind>, cred/<id>/<kind>, proxy/<id>/password, forward/<id>/password,
 // snippet/<id>/content, ai/<profileID>/apikey, ai/<agentID>/env/<NAME>,
-// backup/<id>/secret, backup/<id>/key and mcp/token.
+// backup/<id>/secret, backup/<id>/key, localkey/<keyID>/passphrase and
+// mcp/token.
 
 // Cred is the entry of a credential's secret: cred/<id>/<kind>.
 // Host is a host-owned secret entry.
@@ -51,6 +52,11 @@ func BackupKey(id string) string { return "backup/" + id + "/key" }
 // DefaultBackupKey is the key derived from the default backup password,
 // which exports and backup targets may seal with instead of their own.
 const DefaultBackupKey = "backup/default-key"
+
+// LocalKeyPassphrase is the remembered passphrase of a key file of this
+// computer, by its session.KeyID: localkey/<keyID>/passphrase. It opens
+// only that file here, so no backup holds it.
+func LocalKeyPassphrase(keyID string) string { return "localkey/" + keyID + "/passphrase" }
 
 // MCPToken is the bearer token of the MCP endpoint.
 const MCPToken = "mcp/token"

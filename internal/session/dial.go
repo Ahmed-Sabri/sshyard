@@ -1,5 +1,6 @@
 // Package session is SSHYard's SSH sessions: it dials with
-// golang.org/x/crypto/ssh, authenticates by password or private key,
+// golang.org/x/crypto/ssh, authenticates by password, private key or the
+// SSH agent,
 // checks the host key against known_hosts, opens a shell on a PTY that
 // feeds a vt.Terminal, keeps the connection alive and reconnects it.
 package session
@@ -33,6 +34,21 @@ type Credentials struct {
 	// User, when set, logs in instead of Config.User (a credential's
 	// own user name).
 	User string
+	// TryAgent offers the agent's keys when an agent runs; unlike Agent,
+	// no agent or an empty one is no error.
+	TryAgent bool
+	// LocalKeys are this computer's key files, offered with the agent's
+	// keys (see offerKeys).
+	LocalKeys []LocalKey
+	// IdentitiesOnly offers only the keys the config names, as ssh's
+	// option of that name; with none named, the files alone.
+	IdentitiesOnly bool
+	// Prefer is the KeyID offered first: the one that logged in last.
+	Prefer string
+	// Skip are the KeyIDs never offered.
+	Skip []string
+	// OnKey hears the KeyID of the TryAgent or local key that logged in.
+	OnKey func(id string)
 }
 
 // ErrPassphraseNeeded reports a private key encrypted with a passphrase
@@ -92,41 +108,60 @@ func (c Config) timeout() time.Duration {
 	return 15 * time.Second
 }
 
-func authMethods(cr Credentials) ([]ssh.AuthMethod, io.Closer, error) {
+// authMethods are how cr logs in, the agent's connection to close once
+// it did, and the keys offered with TryAgent and LocalKeys, nil for none.
+func authMethods(cr Credentials) ([]ssh.AuthMethod, io.Closer, *keyOffer, error) {
 	var ms []ssh.AuthMethod
 	var closer io.Closer
+	var offer *keyOffer
 	if cr.Agent {
-		m, c, err := agentAuth()
+		signers, c, err := agentSigners()
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
-		ms, closer = append(ms, m), c
+		ms, closer = append(ms, ssh.PublicKeys(signers...)), c
+	} else if cr.TryAgent || len(cr.LocalKeys) > 0 {
+		var signers []ssh.Signer
+		if cr.TryAgent {
+			// No agent, or none that answers, is no error here.
+			signers, closer, _ = agentSigners()
+		}
+		if offer = offerKeys(cr, signers); len(offer.signers) > 0 {
+			ms = append(ms, ssh.PublicKeys(offer.signers...))
+		} else {
+			offer = nil
+		}
 	}
 	if len(cr.PrivateKey) > 0 {
 		signer, err := ssh.ParsePrivateKey(cr.PrivateKey)
 		var pm *ssh.PassphraseMissingError
 		if errors.As(err, &pm) {
 			if len(cr.Passphrase) == 0 {
-				return nil, nil, ErrPassphraseNeeded
+				closeAgent(closer)
+				return nil, nil, nil, ErrPassphraseNeeded
 			}
 			signer, err = ssh.ParsePrivateKeyWithPassphrase(cr.PrivateKey, cr.Passphrase)
 		}
 		if errors.Is(err, x509.IncorrectPasswordError) || (err != nil && len(cr.Passphrase) > 0 && strings.Contains(err.Error(), "decryption password incorrect")) {
-			return nil, nil, fmt.Errorf("%w: %w", ErrPassphraseWrong, err)
+			closeAgent(closer)
+			return nil, nil, nil, fmt.Errorf("%w: %w", ErrPassphraseWrong, err)
 		}
 		if err != nil {
-			return nil, nil, fmt.Errorf("session: private key: %w", err)
+			closeAgent(closer)
+			return nil, nil, nil, fmt.Errorf("session: private key: %w", err)
 		}
 		signers := []ssh.Signer{signer}
 		if len(cr.Certificate) > 0 {
 			pub, _, _, _, err := ssh.ParseAuthorizedKey(cr.Certificate)
 			cert, ok := pub.(*ssh.Certificate)
 			if err != nil || !ok {
-				return nil, nil, fmt.Errorf("%w: not a certificate", ErrCertificate)
+				closeAgent(closer)
+				return nil, nil, nil, fmt.Errorf("%w: not a certificate", ErrCertificate)
 			}
 			cs, err := ssh.NewCertSigner(cert, signer)
 			if err != nil {
-				return nil, nil, fmt.Errorf("%w: %w", ErrCertificate, err)
+				closeAgent(closer)
+				return nil, nil, nil, fmt.Errorf("%w: %w", ErrCertificate, err)
 			}
 			signers = []ssh.Signer{cs, signer}
 		}
@@ -143,9 +178,16 @@ func authMethods(cr Credentials) ([]ssh.AuthMethod, io.Closer, error) {
 		}))
 	}
 	if len(ms) == 0 {
-		return nil, nil, ErrNoCredentials
+		closeAgent(closer)
+		return nil, nil, nil, ErrNoCredentials
 	}
-	return ms, closer, nil
+	return ms, closer, offer, nil
+}
+
+func closeAgent(c io.Closer) {
+	if c != nil {
+		c.Close()
+	}
 }
 
 // Hop is one host dialed through on the way to Config.Addr: a jump
@@ -236,7 +278,7 @@ func dialHop(ctx context.Context, hop Hop, dial func(ctx context.Context, networ
 			return nil, err
 		}
 	}
-	methods, closer, err := authMethods(cr)
+	methods, closer, offer, err := authMethods(cr)
 	if err != nil {
 		return nil, err
 	}
@@ -287,10 +329,25 @@ func dialHop(ctx context.Context, hop Hop, dial func(ctx context.Context, networ
 		if ctx.Err() != nil && !isHostKeyErr(err) {
 			return nil, fmt.Errorf("%w: %w", context.DeadlineExceeded, err)
 		}
+		if offer != nil && cr.Password == "" && keysRefused(err) {
+			err = &KeysRefusedError{Offered: len(offer.signers), Err: err}
+		}
 		return nil, err
 	}
 	conn.SetDeadline(time.Time{})
+	if offer != nil && cr.OnKey != nil {
+		if id := offer.last(); id != "" {
+			cr.OnKey(id)
+		}
+	}
 	return ssh.NewClient(c, chans, reqs), nil
+}
+
+// keysRefused reports a login the server refused every key of, or hung up
+// on after too many of them.
+func keysRefused(err error) bool {
+	s := err.Error()
+	return strings.Contains(s, "unable to authenticate") || strings.Contains(s, "Too many authentication failures")
 }
 
 // heardConn notes whether the server has sent anything.
@@ -335,6 +392,9 @@ const (
 	KindProxyAuth
 	// KindProxy: the proxy could not be reached, or would not connect.
 	KindProxy
+	// KindLocalKey: a key file of this computer the server accepts needs
+	// its passphrase (LocalKeyError).
+	KindLocalKey
 	KindOther
 )
 
@@ -354,6 +414,10 @@ func Classify(err error) Kind {
 		return KindProxyAuth
 	case errors.As(err, new(*netproxy.Error)), errors.As(err, new(*netproxy.RefusedError)):
 		return KindProxy
+	case errors.As(err, new(*LocalKeyError)):
+		return KindLocalKey
+	case errors.As(err, new(*KeysRefusedError)):
+		return KindAuth
 	case errors.Is(err, ErrAgentUnavailable), errors.Is(err, ErrAgentEmpty):
 		return KindAgent
 	case errors.Is(err, ErrPassphraseNeeded), errors.Is(err, ErrPassphraseWrong):

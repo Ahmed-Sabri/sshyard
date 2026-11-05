@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	appicon "github.com/Licoy/sshyard/icon"
@@ -27,6 +28,7 @@ import (
 	"github.com/Licoy/sshyard/internal/forward"
 	"github.com/Licoy/sshyard/internal/keychain"
 	"github.com/Licoy/sshyard/internal/layout"
+	"github.com/Licoy/sshyard/internal/localkeys"
 	"github.com/Licoy/sshyard/internal/netproxy"
 	"github.com/Licoy/sshyard/internal/session"
 	"github.com/Licoy/sshyard/internal/settings"
@@ -228,7 +230,17 @@ type App struct {
 	typed map[string]string
 	// typedGen counts the answers to the prompt for each key. Under mu.
 	typedGen map[string]int
-	upd      updater.Backend
+	// skipKeys are the KeyIDs of the keys of this computer the user
+	// passed over this run. Under mu.
+	skipKeys map[string]bool
+	// rememberKeys are the keys whose typed passphrase is remembered once
+	// it logged in. Under mu.
+	rememberKeys map[string]localkeys.Remembered
+	// lk is what is kept about the keys of this computer; lkOn and lkMCP
+	// are settings.LocalKeys and LocalKeysMCP, read off the UI thread.
+	lk          *localkeys.State
+	lkOn, lkMCP atomic.Bool
+	upd         updater.Backend
 
 	mu    sync.Mutex
 	queue []func()
@@ -331,7 +343,10 @@ type App struct {
 	updEvery  int
 	themeIdx  int
 	autoRecon bool
-	fonts     fontState
+	// lkChoice and lkMCPChoice are the switches of settings.LocalKeys and
+	// LocalKeysMCP.
+	lkChoice, lkMCPChoice bool
+	fonts                 fontState
 	// paneBounds are where the panes were last frame, by session
 	paneBounds map[int]ui.Rect
 	// dropPreview is where a drag in progress would land, nil for none
@@ -460,7 +475,7 @@ type App struct {
 
 // New opens the app's data.
 func New(p Platform) (*App, error) {
-	a := &App{p: p, ws: layout.New(), conns: map[int]*conn{}, pool: session.NewPool(), typed: map[string]string{}, typedGen: map[string]int{}, sections: map[string]*bool{}, temps: map[string]assets.Host{}, pct: map[int]*float32{}, fwds: map[string]*fwdRun{}, fwdOpen: map[string]bool{}, paneBounds: map[int]ui.Rect{}, metrics: map[string]*session.Collector{}, aiRecent: map[string]int{}, stackPct: map[string]*float32{}}
+	a := &App{p: p, ws: layout.New(), conns: map[int]*conn{}, pool: session.NewPool(), typed: map[string]string{}, typedGen: map[string]int{}, skipKeys: map[string]bool{}, rememberKeys: map[string]localkeys.Remembered{}, lk: localkeys.Open(""), sections: map[string]*bool{}, temps: map[string]assets.Host{}, pct: map[int]*float32{}, fwds: map[string]*fwdRun{}, fwdOpen: map[string]bool{}, paneBounds: map[int]ui.Rect{}, metrics: map[string]*session.Collector{}, aiRecent: map[string]int{}, stackPct: map[string]*float32{}}
 	a.logo = appicon.Bitmap()
 	a.settings = settings.Default()
 	a.shells = detectShells()
@@ -499,6 +514,7 @@ func (a *App) loadData() error {
 			errs = append(errs, err)
 		}
 	}
+	a.lk = localkeys.Open(path("localkeys.json"))
 	st, err := assets.Open(path("hosts.json"))
 	if err != nil {
 		errs = append(errs, err)
@@ -524,6 +540,8 @@ func (disabledUpdates) Available() string            { return "" }
 func (disabledUpdates) OnChange(func()) (off func()) { return func() {} }
 
 func (a *App) syncChoices() {
+	a.lkOn.Store(a.settings.LocalKeys)
+	a.lkMCP.Store(a.settings.LocalKeys && a.settings.LocalKeysMCP)
 	a.langChoice = a.settings.Language
 	a.fontChoice = float64(a.settings.TerminalFontSize)
 	a.keepChoice = float64(a.settings.KeepAliveSeconds)
@@ -1066,12 +1084,58 @@ func (a *App) credentials(c *conn, h assets.Host) (session.Credentials, error) {
 			}
 		}
 	default:
+		// The password typed for it, else the keys of this computer, and
+		// the password is asked when none of them logs in.
 		out.Password = typed("ask/" + h.ID)
 		if out.Password == "" {
-			return out, session.ErrNoCredentials
+			if !a.lkOn.Load() {
+				return out, session.ErrNoCredentials
+			}
+			a.localKeyCredentials(&out, h, typed)
 		}
 	}
 	return out, nil
+}
+
+// localKeyPrompt is where the passphrase typed for the key of this
+// computer of KeyID id goes in a.typed.
+func localKeyPrompt(id string) string { return "localkey/" + id }
+
+// localKeyCredentials offers h the agent's keys and the key files of this
+// computer for it, those that logged in to h last first. An encrypted
+// key opens with the passphrase typed this run, else the one remembered;
+// typed is nil where nothing is typed (MCP).
+func (a *App) localKeyCredentials(out *session.Credentials, h assets.Host, typed func(string) string) {
+	f := localkeys.Find(a.homeDir(), a.localUser(), h.Name, h.Address)
+	out.TryAgent, out.IdentitiesOnly, out.Prefer = true, f.IdentitiesOnly, a.lk.Last(h.ID)
+	a.mu.Lock()
+	for id := range a.skipKeys {
+		out.Skip = append(out.Skip, id)
+	}
+	a.mu.Unlock()
+	for i := range f.Keys {
+		k := &f.Keys[i]
+		if !k.Encrypted {
+			continue
+		}
+		id := session.KeyID(k.Public)
+		if typed != nil {
+			if p := typed(localKeyPrompt(id)); p != "" {
+				k.Passphrase = []byte(p)
+				continue
+			}
+		}
+		if a.lk.IsRemembered(id) {
+			if b, err := a.kc.Get(keychain.LocalKeyPassphrase(id)); err == nil {
+				k.Passphrase = b
+			}
+		}
+	}
+	out.LocalKeys = f.Keys
+	out.OnKey = func(id string) {
+		a.lk.SetLast(h.ID, id)
+		a.rememberOnLogin(id)
+	}
 }
 
 // closeSoon closes the pane on the next frame. Closing while the frame

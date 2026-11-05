@@ -250,6 +250,7 @@ func (a *App) settingsPage(c *ui.Context, m locales.Messages, tok theme.Tokens) 
 				a.prefAgents(c, m, tok, &s, &changed)
 			case prefCredentials:
 				a.credentialsSection(c, m, tok)
+				a.localKeysSection(c, m, tok, &s, &changed)
 			case prefProxies:
 				a.proxiesSection(c, m, tok)
 			case prefMigration:

@@ -1,6 +1,7 @@
 // Package sshconfig reads OpenSSH client configuration (~/.ssh/config)
-// for import: the Host blocks, with the directives SSHYard keeps (HostName,
-// User, Port, IdentityFile, ProxyJump), Include, and the defaults of
+// for import and for the keys a host offers: the Host blocks, with the
+// directives SSHYard keeps (HostName, User, Port, IdentityFile,
+// IdentitiesOnly, ProxyJump), Include, and the defaults of
 // pattern blocks such as Host *. It only reads files; it never writes.
 package sshconfig
 
@@ -56,6 +57,9 @@ type Entry struct {
 	Port     int // 0: not given (22)
 	// IdentityFiles are the key files, expanded to absolute paths, in order.
 	IdentityFiles []string
+	// IdentitiesOnly offers only the IdentityFiles, not the agent's other
+	// keys.
+	IdentitiesOnly bool
 	// ProxyJump is the jump chain, first hop first; nil for none.
 	ProxyJump []Hop
 	// Unsupported names the directives applying to the host that are not
@@ -99,6 +103,7 @@ type block struct {
 var keep = map[string]string{
 	"hostname": "HostName", "user": "User", "port": "Port",
 	"identityfile": "IdentityFile", "proxyjump": "ProxyJump",
+	"identitiesonly": "IdentitiesOnly",
 }
 
 // Parse reads the config at path and the files it includes.
@@ -363,6 +368,8 @@ func (c *Config) Resolve(name string) Entry {
 				}
 			case "ProxyJump":
 				jump = d.val
+			case "IdentitiesOnly":
+				e.IdentitiesOnly = strings.EqualFold(d.val, "yes")
 			}
 		}
 	}

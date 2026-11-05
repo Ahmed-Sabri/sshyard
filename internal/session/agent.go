@@ -20,10 +20,10 @@ var ErrAgentEmpty = errors.New("session: the SSH agent has no keys")
 // DialAgent connects to the system's SSH agent; a var for tests.
 var DialAgent = dialAgent
 
-// agentAuth signs with the agent's keys. The keys never leave the agent:
+// agentSigners are the agent's keys. The keys never leave the agent:
 // SSHYard neither reads nor caches them. The connection to the agent is
 // closed with closer once the handshake is done.
-func agentAuth() (ssh.AuthMethod, io.Closer, error) {
+func agentSigners() ([]ssh.Signer, io.Closer, error) {
 	rw, err := DialAgent()
 	if err != nil {
 		return nil, nil, fmt.Errorf("%w: %v", ErrAgentUnavailable, err)
@@ -38,5 +38,5 @@ func agentAuth() (ssh.AuthMethod, io.Closer, error) {
 		rw.Close()
 		return nil, nil, ErrAgentEmpty
 	}
-	return ssh.PublicKeys(signers...), rw, nil
+	return signers, rw, nil
 }

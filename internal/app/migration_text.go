@@ -391,7 +391,7 @@ func (a *App) migrationTable(c *ui.Context, m locales.Messages, tok theme.Tokens
 			}
 			label := migrationAuthLabel(choices, r.auth, r.cred)
 			if label == "" {
-				label = m.AuthAsk()
+				label = a.askLabel(m)
 			}
 			if ui.Select(c.Key(key+":auth"), &label, labels).Label(m.FieldAuth()).Error(wrong("auth", "credential")).Grow(1).MinWidth(0).Changed() {
 				for _, ch := range choices {

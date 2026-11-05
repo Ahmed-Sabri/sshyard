@@ -751,7 +751,7 @@ func (a *App) keyNotes(c *ui.Context, m locales.Messages, tok theme.Tokens, f *c
 // askDeleteCred opens the delete dialog of a credential.
 func (a *App) askDeleteCred(m locales.Messages, id string) {
 	a.credDelete, a.credDeleting = id, true
-	a.rebindChoice = m.AuthAsk()
+	a.rebindChoice = a.askLabel(m)
 	a.credEditing = false
 	if f := a.credForm; f != nil {
 		f.back = nil // the host editor behind it may name it

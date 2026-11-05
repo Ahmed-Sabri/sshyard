@@ -580,7 +580,7 @@ func (a *App) authText(m locales.Messages, h assets.Host) string {
 	case assets.AuthAgent:
 		return m.AuthAgent()
 	case assets.AuthAsk:
-		return m.AuthAsk()
+		return a.askLabel(m)
 	case assets.AuthCredential:
 		if cr, ok := a.store.Credential(h.CredentialID); ok {
 			return m.AuthLabelCredential(cr.Name)

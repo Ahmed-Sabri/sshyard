@@ -276,10 +276,10 @@ func TestNewCredentialFromHostEditor(t *testing.T) {
 	tt.Frame()
 	a.form.name, a.form.address, a.form.user = "web", "10.0.0.5", "root"
 	f := a.form
-	if !tt.HasText("Ask for password each time") {
+	if !tt.HasText("Auto (local keys, then ask for password)") {
 		t.Fatal(tt.Texts())
 	}
-	mustClick(t, tt, "Ask for password each time")
+	mustClick(t, tt, "Auto (local keys, then ask for password)")
 	tt.Frame()
 	mustClick(t, tt, en.NewCredentialChoice())
 	tt.Frame()

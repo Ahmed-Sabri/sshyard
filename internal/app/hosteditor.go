@@ -65,10 +65,19 @@ type authChoice struct {
 	cred   string
 }
 
+// askLabel names the ask login: it tries the keys of this computer first
+// when the setting allows.
+func (a *App) askLabel(m locales.Messages) string {
+	if a.lkOn.Load() {
+		return m.AuthAuto()
+	}
+	return m.AuthAsk()
+}
+
 // authChoices are the editor's ways to log in: asking each time, the
 // SSH agent, then every credential.
 func (a *App) authChoices(m locales.Messages) []authChoice {
-	out := []authChoice{{m.AuthAsk(), assets.AuthAsk, ""}, {m.AuthAgent(), assets.AuthAgent, ""}}
+	out := []authChoice{{a.askLabel(m), assets.AuthAsk, ""}, {m.AuthAgent(), assets.AuthAgent, ""}}
 	for _, cr := range a.store.Credentials() {
 		kind := m.CredKindPassword()
 		if cr.Kind == assets.CredKey {
@@ -85,7 +94,7 @@ func (a *App) authLabel(m locales.Messages, h assets.Host) string {
 			return ch.label
 		}
 	}
-	return m.AuthAsk()
+	return a.askLabel(m)
 }
 
 func (a *App) openEditor(h *assets.Host) {
@@ -285,6 +294,7 @@ func (a *App) DeleteHost(id string) error {
 	a.mu.Lock()
 	delete(a.typed, "ask/"+id)
 	a.mu.Unlock()
+	a.lk.ForgetHost(id)
 	if a.selectedHost() == "" {
 		a.selected = ""
 	}
