@@ -22,6 +22,8 @@ type hostForm struct {
 	orig                assets.Host
 	name, address, port string
 	user, group         string
+	newGroup            string
+	addingGroup         bool
 	// icon and color are the host's look as chosen (Host.Icon and
 	// Host.Color), "" for those picked from the address; emoji is the
 	// icon field's text
@@ -201,6 +203,9 @@ func (a *App) SaveForm(m locales.Messages) bool {
 	if f == nil {
 		return false
 	}
+	if f.addingGroup && !a.addHostGroup(m, f) {
+		return false
+	}
 	port, err := strconv.Atoi(strings.TrimSpace(f.port))
 	if err != nil || port < 1 || port > 65535 {
 		f.err = m.InvalidPort()
@@ -359,12 +364,14 @@ func (a *App) editorView(c *ui.Context, m locales.Messages) {
 					ui.Form(c, func() {
 						ui.Field(c, m.FieldName(), func() {
 							in := ui.TextInput(c.Key("f:name"), &f.name).Placeholder("web-01").AutoFocus()
-							a.editorHold.apply(c, f, in)
+							if !f.addingGroup {
+								a.editorHold.apply(c, f, in)
+							}
 						})
 						ui.Field(c, m.FieldHost(), func() { ui.TextInput(c.Key("f:addr"), &f.address).Placeholder("example.com") })
 						ui.Field(c, m.FieldPort(), func() { ui.TextInput(c.Key("f:port"), &f.port).Width(90) })
 						ui.Field(c, m.FieldUser(), func() { ui.TextInput(c.Key("f:user"), &f.user).Placeholder("root") })
-						ui.Field(c, m.FieldGroup(), func() { ui.TextInput(c.Key("f:group"), &f.group) })
+						ui.Field(c, m.FieldGroup(), func() { a.hostGroupField(c, m, f) })
 						ui.Field(c, m.FieldAppearance(), func() { a.lookFields(c, m, tok, f) })
 						ui.Field(c, m.FieldAuth(), func() {
 							if f.auth == "" {
