@@ -87,6 +87,7 @@ func (a *App) prefNow() prefPage {
 
 // openSettings shows the settings on page p.
 func (a *App) openSettings(p prefPage) {
+	a.clearOutputEncodingMenu("")
 	a.page, a.pref = pageSettings, p
 }
 

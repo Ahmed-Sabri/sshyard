@@ -97,6 +97,9 @@ type Terminal struct {
 	oscPd    int  // base64 digits of the OSC 52 payload, -1 until it starts
 	escInter byte
 	utf8buf  []byte
+
+	outputEncoding OutputEncoding
+	gbkLead        byte
 	// onlyOSC is set while a tmux passthrough payload is parsed: OSC 52
 	// and OSC 0/2 apply, and nothing else changes the screen.
 	onlyOSC bool
@@ -133,7 +136,7 @@ type Terminal struct {
 
 // New returns a terminal of cols×rows cells.
 func New(cols, rows int) *Terminal {
-	t := &Terminal{maxScrollback: DefaultScrollback}
+	t := &Terminal{maxScrollback: DefaultScrollback, outputEncoding: EncodingUTF8}
 	t.cols, t.rows = max(cols, 1), max(rows, 1)
 	t.reset()
 	return t
@@ -485,6 +488,9 @@ func (t *Terminal) Write(p []byte) (int, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.gen++
+	if t.outputEncoding == EncodingGBK {
+		return t.writeGBK(p)
+	}
 	for i := 0; i < len(p); i++ {
 		b := p[i]
 		if len(t.utf8buf) > 0 || (b >= 0x80 && t.state != sOSC && t.state != sString && t.state != sDCS && t.state != sDCSEsc) {

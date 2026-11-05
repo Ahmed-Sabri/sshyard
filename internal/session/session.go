@@ -98,6 +98,8 @@ type Session struct {
 	closed  bool
 	started bool
 	done    chan struct{}
+	// localOutputDone closes after the current local shell's output is drained.
+	localOutputDone chan struct{}
 
 	// probe, when set, is how often to measure keepalive round trip
 	// while a metrics bar is on screen. Zero uses KeepAlive.
@@ -480,6 +482,7 @@ func (s *Session) connect(ctx context.Context) error {
 	shell.Stderr = out
 	// A new shell starts with the terminal's input as at a reset: the
 	// last program may have gone with the mouse or focus reports on.
+	s.Term.ResetOutputStream()
 	s.Term.ResetInputModes(true)
 	if err := shell.Shell(); err != nil {
 		return fail(err)
@@ -517,8 +520,10 @@ func (s *Session) serve(ctx context.Context) error {
 	go func() { connDone <- client.Wait() }()
 
 	var err error
+	shellWaited := false
 	select {
 	case err = <-waited:
+		shellWaited = true
 		var exit *ssh.ExitError
 		if err == nil || errors.As(err, &exit) {
 			err = nil
@@ -548,6 +553,16 @@ func (s *Session) serve(ctx context.Context) error {
 	s.mu.Unlock()
 	if release != nil {
 		release()
+	}
+	// A lost connection is now closed, so Wait can drain its output copies
+	// before a replacement shell resets the decoder. A normal cancellation
+	// only closes one channel on a possibly shared connection; do not wait
+	// for a remote peer to acknowledge that close.
+	if err != nil && shell != nil && !shellWaited {
+		select {
+		case <-waited:
+		case <-ctx.Done():
+		}
 	}
 	return err
 }
@@ -637,7 +652,7 @@ func (s *Session) keepAlive(ctx context.Context, client *ssh.Client, lost chan<-
 type termWriter struct{ s *Session }
 
 func (w *termWriter) Write(p []byte) (int, error) {
-	w.s.Term.Write(p)
+	n, err := w.s.Term.Write(p)
 	w.s.changed()
-	return len(p), nil
+	return n, err
 }

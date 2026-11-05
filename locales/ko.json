@@ -2305,5 +2305,9 @@
   "copyOnSelect": "선택 시 복사",
   "copyOnSelectNote": "터미널에서 선택한 텍스트를 클립보드에 복사합니다",
   "typePath": "경로 입력",
-  "pathPlaceholder": "전체 경로, 홈은 ~/, 또는 현재 위치의 폴더"
+  "pathPlaceholder": "전체 경로, 홈은 ~/, 또는 현재 위치의 폴더",
+  "outputEncodingTip": "출력 인코딩: {encoding}; 새 출력에만 적용되며 이전 내용은 다시 출력해야 합니다",
+  "outputEncodingUTF8": "UTF-8",
+  "outputEncodingGBK": "GBK",
+  "outputEncodingError": "출력 인코딩을 변경할 수 없습니다: {error}"
 }

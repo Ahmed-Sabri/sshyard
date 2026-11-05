@@ -14088,3 +14088,43 @@ func PathPlaceholder() string { return In(i18n.Locale()).PathPlaceholder() }
 func (msgs Messages) PathPlaceholder() string {
 	return Catalog.Format(msgs.locale, "pathPlaceholder", nil)
 }
+
+// OutputEncodingTip says "Output encoding: {encoding}; affects new output only, re-run commands to refresh history"
+// in the language the app shows.
+func OutputEncodingTip(encoding string) string { return In(i18n.Locale()).OutputEncodingTip(encoding) }
+
+// OutputEncodingTip says "Output encoding: {encoding}; affects new output only, re-run commands to refresh history"
+// in the language of msgs.
+func (msgs Messages) OutputEncodingTip(encoding string) string {
+	return Catalog.Format(msgs.locale, "outputEncodingTip", map[string]any{"encoding": encoding})
+}
+
+// OutputEncodingUTF8 says "UTF-8"
+// in the language the app shows.
+func OutputEncodingUTF8() string { return In(i18n.Locale()).OutputEncodingUTF8() }
+
+// OutputEncodingUTF8 says "UTF-8"
+// in the language of msgs.
+func (msgs Messages) OutputEncodingUTF8() string {
+	return Catalog.Format(msgs.locale, "outputEncodingUTF8", nil)
+}
+
+// OutputEncodingGBK says "GBK"
+// in the language the app shows.
+func OutputEncodingGBK() string { return In(i18n.Locale()).OutputEncodingGBK() }
+
+// OutputEncodingGBK says "GBK"
+// in the language of msgs.
+func (msgs Messages) OutputEncodingGBK() string {
+	return Catalog.Format(msgs.locale, "outputEncodingGBK", nil)
+}
+
+// OutputEncodingError says "Could not change output encoding: {error}"
+// in the language the app shows.
+func OutputEncodingError(error string) string { return In(i18n.Locale()).OutputEncodingError(error) }
+
+// OutputEncodingError says "Could not change output encoding: {error}"
+// in the language of msgs.
+func (msgs Messages) OutputEncodingError(error string) string {
+	return Catalog.Format(msgs.locale, "outputEncodingError", map[string]any{"error": error})
+}

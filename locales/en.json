@@ -2305,5 +2305,9 @@
   "copyOnSelect": "Copy on select",
   "copyOnSelectNote": "Text selected in the terminal is copied to the clipboard",
   "typePath": "Type a Path",
-  "pathPlaceholder": "A path, ~/ for home, or a folder here"
+  "pathPlaceholder": "A path, ~/ for home, or a folder here",
+  "outputEncodingTip": "Output encoding: {encoding}; affects new output only, re-run commands to refresh history",
+  "outputEncodingUTF8": "UTF-8",
+  "outputEncodingGBK": "GBK",
+  "outputEncodingError": "Could not change output encoding: {error}"
 }

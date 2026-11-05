@@ -60,14 +60,20 @@ func (s *Session) connectLocal() error {
 	if err != nil {
 		return err
 	}
+	s.Term.ResetOutputStream()
 	s.Term.ResetInputModes(true)
-	go io.Copy(&termWriter{s}, p)
 	s.mu.Lock()
 	if s.closed {
 		s.mu.Unlock()
 		p.Close()
 		return context.Canceled
 	}
+	outputDone := make(chan struct{})
+	s.localOutputDone = outputDone
+	go func() {
+		io.Copy(&termWriter{s}, p)
+		close(outputDone)
+	}()
 	s.local, s.stdin = p, &serializedInput{WriteCloser: p}
 	s.status.State, s.status.Err, s.status.Attempt = Connected, nil, 0
 	s.status.Connects++
@@ -79,6 +85,9 @@ func (s *Session) connectLocal() error {
 // serveLocal waits for the local shell to end, which is never a lost
 // connection: it is not reconnected by itself.
 func (s *Session) serveLocal(ctx context.Context, p localPTY) error {
+	s.mu.Lock()
+	outputDone := s.localOutputDone
+	s.mu.Unlock()
 	waited := make(chan struct{})
 	go func() {
 		p.Wait()
@@ -90,8 +99,9 @@ func (s *Session) serveLocal(ctx context.Context, p localPTY) error {
 	}
 	s.Term.ResetInputModes(false)
 	p.Close()
+	<-outputDone
 	s.mu.Lock()
-	s.local, s.stdin = nil, nil
+	s.local, s.stdin, s.localOutputDone = nil, nil, nil
 	s.mu.Unlock()
 	return nil
 }

@@ -1582,5 +1582,9 @@
   "copyOnSelect": "選択時にコピー",
   "copyOnSelectNote": "ターミナルで選択したテキストをクリップボードにコピーします",
   "typePath": "パスを入力",
-  "pathPlaceholder": "フルパス、ホームは ~/、または現在の場所のフォルダ"
+  "pathPlaceholder": "フルパス、ホームは ~/、または現在の場所のフォルダ",
+  "outputEncodingTip": "出力エンコーディング：{encoding}；新しい出力にのみ適用、履歴は再出力が必要です",
+  "outputEncodingUTF8": "UTF-8",
+  "outputEncodingGBK": "GBK",
+  "outputEncodingError": "出力エンコーディングを変更できません：{error}"
 }

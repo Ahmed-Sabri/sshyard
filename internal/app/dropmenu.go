@@ -174,12 +174,12 @@ func (a *App) menuButton(c *ui.Context, key string, b IconButton, entries func()
 // as menuButton is an IconButton: for a choice that shows what is chosen.
 func (a *App) menuChip(c *ui.Context, key string, ch chip, entries func() []menuEntry) ui.Element {
 	ch.open = a.menu.key == key
-	return a.dropDown(c, key, ch.show(c, key), false, entries)
+	return a.dropDown(c, key, ch.show(c, key), false, entries, ch.CompactMenu)
 }
 
 // dropDown makes el, a button under key, open a drop-down menu of entries
 // below it while it is not disabled.
-func (a *App) dropDown(c *ui.Context, key string, el ui.Element, disabled bool, entries func() []menuEntry) ui.Element {
+func (a *App) dropDown(c *ui.Context, key string, el ui.Element, disabled bool, entries func() []menuEntry, compactMenu ...bool) ui.Element {
 	open := a.menu.key == key
 	el.Role(ui.RoleMenuButton).Expanded(open)
 	if el.Clicked() && !disabled {
@@ -196,7 +196,7 @@ func (a *App) dropDown(c *ui.Context, key string, el ui.Element, disabled bool, 
 	tok := currentTokens(c)
 	ui.PopoverBase(c.Key("menu:"+key), el, &open, func(panel ui.Element) {
 		panel.Margin(4, 0, 0, 0)
-		a.menuPanel(c, tok, panel, entries(), 0)
+		a.menuPanel(c, tok, panel, entries(), 0, compactMenu...)
 	})
 	if !open {
 		a.menu = dropMenu{}
@@ -206,8 +206,18 @@ func (a *App) dropDown(c *ui.Context, key string, el ui.Element, disabled bool, 
 
 // menuPanel lays out the panel of a drop-down menu at level, 0 the menu
 // and 1 a submenu of it, with its entries.
-func (a *App) menuPanel(c *ui.Context, tok theme.Tokens, panel ui.Element, entries []menuEntry, level int) {
-	panel.Role(ui.RoleMenu).MinWidth(menuWidth).Padding(5).Radius(theme.RadiusCard).Background(tok.Inset).
+func (a *App) menuPanel(c *ui.Context, tok theme.Tokens, panel ui.Element, entries []menuEntry, level int, compactMenu ...bool) {
+	compact := len(compactMenu) > 0 && compactMenu[0]
+	for _, e := range entries {
+		if e.Icon != nil || e.Image != nil || e.Lead != nil || e.Note != "" {
+			compact = false // Illustrated or multi-line menus retain their icon column.
+		}
+	}
+	width := float32(menuWidth)
+	if compact {
+		width = theme.Space(28)
+	}
+	panel.Role(ui.RoleMenu).MinWidth(width).Padding(5).Radius(theme.RadiusCard).Background(tok.Inset).
 		Border(1, tok.GlassEdge).FocusGroup(ui.Vertical)
 	tok.Lift.On(panel)
 	focus := a.menu.focus == level
@@ -222,7 +232,7 @@ func (a *App) menuPanel(c *ui.Context, tok theme.Tokens, panel ui.Element, entri
 						ui.Box(c.Key("sep:"+strconv.Itoa(i))).Height(1).Margin(4, 8).Background(tok.Line)
 						continue
 					}
-					row := a.menuRow(c, tok, e, i, level)
+					row := a.menuRow(c, tok, e, i, level, compact)
 					if focus && !e.Disabled {
 						row.Focus()
 						focus = false
@@ -236,7 +246,7 @@ func (a *App) menuPanel(c *ui.Context, tok theme.Tokens, panel ui.Element, entri
 // menuRow is the i-th entry e of a drop-down menu at level: lit in the
 // accent's tint under the pointer or the keyboard's focus, as IconButtons
 // are; its submenu after it, which the pointer or the right arrow opens.
-func (a *App) menuRow(c *ui.Context, tok theme.Tokens, e menuEntry, i, level int) ui.Element {
+func (a *App) menuRow(c *ui.Context, tok theme.Tokens, e menuEntry, i, level int, compactMenu ...bool) ui.Element {
 	row := ui.ButtonBase(c.Key("mi:"+strconv.Itoa(i))).Role(ui.RoleMenuItem).FillWidth().Justify(ui.Start).
 		Padding(6, 8).Gap(10).Radius(theme.RadiusSmall).FocusRing(false).Disabled(e.Disabled)
 	if e.Checked {
@@ -275,7 +285,10 @@ func (a *App) menuRow(c *ui.Context, tok theme.Tokens, e menuEntry, i, level int
 		fg, muted = hue, hue
 	}
 	row.Children(func() {
-		ic := ui.Box(c).Size(16, 16).Shrink(0)
+		var ic ui.Element
+		if len(compactMenu) == 0 || !compactMenu[0] {
+			ic = ui.Box(c).Size(16, 16).Shrink(0)
+		}
 		tint := muted
 		if e.Tint != (ui.Color{}) && !lit && !e.Disabled {
 			tint = e.Tint
@@ -375,6 +388,8 @@ type chip struct {
 	Bare     bool
 	LabelMax float32
 	open     bool
+	// CompactMenu narrows a text-only choice menu and omits its empty icon column.
+	CompactMenu bool
 }
 
 // fit is ch at fit, in a pane of controls: bare at aiIcons, its label
