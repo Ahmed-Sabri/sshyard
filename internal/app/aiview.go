@@ -424,9 +424,6 @@ func (a *App) aiTimeline(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 		return
 	}
 	st := &cn.ai.scroll
-	if st.Y >= st.MaxY-theme.Space(2) {
-		st.Y = math.MaxFloat32
-	}
 	ui.Scroll(c.Key("aitime")).TrackScroll(st).Grow(1).FillWidth().Children(func() {
 		ui.Column(c).Padding(theme.Space(3), theme.Space(3), theme.Space(4), theme.Space(3)).Gap(theme.Space(3)).FillWidth().Children(func() {
 			// The agent does not remember what comes before forgot.
@@ -456,6 +453,12 @@ func (a *App) aiTimeline(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 				})
 			}
 		})
+		// Reveal the end only when it moves out of view, so an idle
+		// timeline never resets the offset and cancels a wheel glide.
+		end := ui.Box(c.Key("aiend")).Height(0)
+		if st.Y == st.MaxY {
+			end.ScrollIntoView()
+		}
 	})
 }
 
