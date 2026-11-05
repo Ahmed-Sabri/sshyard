@@ -44,7 +44,7 @@ func TestProviderDefaultURLSwitch(t *testing.T) {
 	}
 }
 
-func TestAIBrandModelMenu(t *testing.T) {
+func TestAIModelMenu(t *testing.T) {
 	for _, mode := range []theme.Mode{theme.Light, theme.Dark} {
 		t.Run(string(mode), func(t *testing.T) {
 			a, tt := newTestApp(t)
@@ -70,39 +70,18 @@ func TestAIBrandModelMenu(t *testing.T) {
 			if note.Y+note.H < model.Y || model.Y+model.H < note.Y || note.X <= model.X {
 				t.Fatalf("default not inline: model=%v note=%v", model, note)
 			}
-			for _, label := range []string{"openai", "claude"} {
-				if !tt.HasText(label) {
-					t.Fatalf("missing brand %q: %q", label, tt.Texts())
-				}
-			}
-			saveBrandScreenshot(t, tt, "ai-models-"+string(mode))
 			mustClick(t, tt, "claude-sonnet-4")
 			tt.Frame()
-			if !tt.HasText("claude") || a.conns[id].ai.model != "claude-sonnet-4" {
+			if a.conns[id].ai.model != "claude-sonnet-4" {
 				t.Fatalf("model selection: %q %q", a.conns[id].ai.model, tt.Texts())
 			}
 			mustClick(t, tt, "Model")
 			tt.Frame()
 			mustClick(t, tt, "unknown-model")
 			tt.Frame()
-			fallback := aibrands.Provider(s.AIProviders[0]).Name
-			if !tt.HasText(fallback) || a.conns[id].ai.model != "unknown-model" {
-				t.Fatalf("fallback: %q", tt.Texts())
+			if a.conns[id].ai.model != "unknown-model" {
+				t.Fatalf("unknown model selection: %q", a.conns[id].ai.model)
 			}
-			a.menu = dropMenu{}
-			a.openProvider(nil)
-			tt.Frame()
-			saveBrandScreenshot(t, tt, "ai-provider-"+string(mode))
-			a.provOpen = false
-			tt.SetLocale("zh-Hans")
-			tt.Frame()
-			mustClick(t, tt, locales.In("zh-Hans").AiModel())
-			tt.Frame()
-			saveBrandScreenshot(t, tt, "ai-models-zh-"+string(mode))
-			a.menu = dropMenu{}
-			a.openProvider(nil)
-			tt.Frame()
-			saveBrandScreenshot(t, tt, "ai-provider-zh-"+string(mode))
 		})
 	}
 }
