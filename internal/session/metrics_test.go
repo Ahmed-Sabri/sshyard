@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Licoy/sshyard/internal/sshtest"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -354,6 +355,31 @@ func TestMetricsCommandQuotesMount(t *testing.T) {
 	// <<<SSHYARD is the frame marker. Anything else starting with << is a here-document.
 	if strings.Contains(strings.ReplaceAll(metricsScript, "<<<SSHYARD", ""), "<<") {
 		t.Fatal("here-document would be written to a temp file")
+	}
+}
+
+func TestMetricsCommandFitsDropbear(t *testing.T) {
+	for _, mount := range []string{"", "/mnt/my disk", "/mnt/数据", "/" + strings.Repeat("x", 255)} {
+		for _, interval := range []int{0, 1, 2, 5, 10} {
+			cmd := MetricsCommand(interval, mount)
+			if len(cmd) > 9000 {
+				t.Fatalf("exec command is %d bytes; Dropbear limits strings to 9000 bytes", len(cmd))
+			}
+		}
+	}
+}
+
+func TestMetricsCommandReadsStdin(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, skipNoSh(t), "-c", MetricsCommand(99, "/mnt/my disk"))
+	cmd.Stdin = strings.NewReader("printf '%s\\n' \"$1\" \"$2\"\n")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("stdin script: %v %s", err, out)
+	}
+	if string(out) != "2\n/mnt/my disk\n" {
+		t.Fatalf("script arguments: %q", out)
 	}
 }
 
@@ -835,6 +861,49 @@ func twoFrames() string {
 		"os linux\n" +
 		"cpu 200 0 0 1000 0 0 0 0\n" +
 		">>>\n"
+}
+
+func TestCollectorStreamsScriptKeepsTerminal(t *testing.T) {
+	skipNoSh(t)
+	srv := server(t)
+	run := sshtest.ShellExec(t.TempDir())
+	srv.Exec = func(ch ssh.Channel, cmd string) int {
+		// Dropbear exits the entire connection while decoding an oversized string.
+		if len(cmd) > 9000 {
+			srv.Drop()
+			return 1
+		}
+		return run(ch, cmd)
+	}
+	s := New(Config{Addr: srv.Addr, User: "demo", Credentials: password("secret"), HostKey: trusted(t, srv).Callback()}, Options{}, 80, 24)
+	defer s.Close()
+	s.Start()
+	waitState(t, s, Connected)
+	waitText(t, s, "Welcome")
+	c := NewCollector()
+	defer c.Stop()
+	c.Start(s.Client(), 1, "")
+	waitFor(t, "metrics or lost transport", func() bool {
+		r, _ := c.View()
+		return r.OS != "" || s.Status().State != Connected
+	})
+	if st := s.Status(); st.State != Connected {
+		t.Fatalf("metrics disconnected the interactive terminal: %v", st.Err)
+	}
+	r, reason := c.View()
+	if reason != "" || r.OS == "" || len(r.Vols) == 0 {
+		t.Fatalf("metrics reading %+v, reason %q", r, reason)
+	}
+	c.Stop()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := c.Wait(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Write([]byte("after metrics\r")); err != nil {
+		t.Fatal(err)
+	}
+	waitText(t, s, "you said: after metrics")
 }
 
 func TestCollectorReadsOneCommand(t *testing.T) {

@@ -406,7 +406,7 @@ func TestMetricsUnavailable(t *testing.T) {
 		return tt.HasText("Metrics unavailable") && tt.HasText("The server refused the metrics command.") && hasLatency(tt)
 	})
 	for _, s := range tt.Texts() {
-		if strings.Contains(s, "sh -c") || strings.Contains(s, "<<<SSHYARD") {
+		if strings.Contains(s, "sh -c") || strings.Contains(s, "sh -s") || strings.Contains(s, "<<<SSHYARD") {
 			t.Fatalf("remote command leaked: %s", s)
 		}
 	}

@@ -5,8 +5,11 @@ import (
 	"context"
 	"errors"
 	"io"
+	"strconv"
+	"strings"
 	"sync/atomic"
 	"testing"
+	"testing/iotest"
 	"time"
 
 	"github.com/Licoy/sshyard/internal/sshtest"
@@ -42,6 +45,53 @@ func TestExecStreamsStdoutAndStderr(t *testing.T) {
 	}
 	if got.Load() != "say" || out.String() != "out" || errb.String() != "err" {
 		t.Fatalf("cmd %v stdout %q stderr %q", got.Load(), out.String(), errb.String())
+	}
+}
+
+func TestExecStdin(t *testing.T) {
+	for _, code := range []int{0, 3} {
+		t.Run(strconv.Itoa(code), func(t *testing.T) {
+			srv := server(t)
+			srv.Exec = func(ch ssh.Channel, cmd string) int {
+				if _, err := io.Copy(ch, ch); err != nil {
+					t.Errorf("stdin: %v", err)
+					return 1
+				}
+				if _, err := io.WriteString(ch.Stderr(), "stderr"); err != nil {
+					t.Errorf("stderr: %v", err)
+					return 1
+				}
+				return code
+			}
+			input := strings.Repeat("script\n", 2048)
+			var out, errb bytes.Buffer
+			err := execStarted(context.Background(), dialClient(t, srv), "read", execStreams{
+				stdin: strings.NewReader(input), stdout: &out, stderr: &errb,
+			}, nil)
+			var exit *ssh.ExitError
+			if code == 0 && err != nil || code != 0 && (!errors.As(err, &exit) || exit.ExitStatus() != code) {
+				t.Fatalf("exit %d: %v", code, err)
+			}
+			if out.String() != input || errb.String() != "stderr" {
+				t.Fatalf("stdout %d/%d bytes, stderr %q", out.Len(), len(input), errb.String())
+			}
+		})
+	}
+}
+
+func TestExecStdinReadError(t *testing.T) {
+	srv := server(t)
+	srv.Exec = func(ch ssh.Channel, cmd string) int {
+		if _, err := io.Copy(io.Discard, ch); err != nil {
+			t.Errorf("stdin: %v", err)
+			return 1
+		}
+		return 0
+	}
+	want := errors.New("stdin read failed")
+	err := execStarted(context.Background(), dialClient(t, srv), "read", execStreams{stdin: iotest.ErrReader(want)}, nil)
+	if !errors.Is(err, want) {
+		t.Fatalf("stdin read error: %v", err)
 	}
 }
 

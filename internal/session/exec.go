@@ -22,6 +22,16 @@ func Exec(ctx context.Context, client *ssh.Client, command string, stdout, stder
 // starts and must not block. The session stays open until ExecStarted
 // returns; the callback may Signal it until then.
 func ExecStarted(ctx context.Context, client *ssh.Client, command string, stdout, stderr io.Writer, started func(*ssh.Session)) error {
+	return execStarted(ctx, client, command, execStreams{stdout: stdout, stderr: stderr}, started)
+}
+
+type execStreams struct {
+	stdin          io.Reader
+	stdout, stderr io.Writer
+}
+
+// execStarted configures all streams before Start begins copying them.
+func execStarted(ctx context.Context, client *ssh.Client, command string, streams execStreams, started func(*ssh.Session)) error {
 	if client == nil {
 		return errors.New("session: no client")
 	}
@@ -36,12 +46,7 @@ func ExecStarted(ctx context.Context, client *ssh.Client, command string, stdout
 		return err
 	}
 	defer sess.Close()
-	if stdout != nil {
-		sess.Stdout = stdout
-	}
-	if stderr != nil {
-		sess.Stderr = stderr
-	}
+	sess.Stdin, sess.Stdout, sess.Stderr = streams.stdin, streams.stdout, streams.stderr
 	if err := sess.Start(command); err != nil {
 		return err
 	}

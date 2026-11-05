@@ -148,15 +148,15 @@ func MetricsMountOK(mount string) bool {
 
 func shellQuote(s string) string { return "'" + s + "'" }
 
-// MetricsCommand is the remote command: sh -c of the fixed script, then
-// the interval and the mount as arguments. It re-checks both, so a caller
-// that skipped Normalize still cannot interpolate them.
+// MetricsCommand starts sh reading the script from stdin, with the interval
+// and mount as arguments. Keeping the script out of exec requests avoids
+// Dropbear's command-string limit. Both arguments are re-checked here.
 func MetricsCommand(interval int, mount string) string {
 	interval = MetricsInterval(interval)
 	if !MetricsMountOK(mount) {
 		mount = ""
 	}
-	return "sh -c " + shellQuote(metricsScript) + " _ " + strconv.Itoa(interval) + " " + shellQuote(mount)
+	return "sh -s -- " + strconv.Itoa(interval) + " " + shellQuote(mount)
 }
 
 // ParseFrame parses one frame body (without the <<<SSHYARD / >>> markers).
@@ -769,7 +769,9 @@ func (c *Collector) launch(ctx context.Context, cancel context.CancelFunc, clien
 		return
 	}
 	fw := &frameWriter{c: c, cancel: cancel, gen: gen}
-	err := Exec(ctx, client, MetricsCommand(interval, mount), fw, nil)
+	err := execStarted(ctx, client, MetricsCommand(interval, mount), execStreams{
+		stdin: strings.NewReader(metricsScript), stdout: fw,
+	}, nil)
 	if c.failedNow() || ctx.Err() != nil {
 		return
 	}
