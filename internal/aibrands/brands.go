@@ -145,3 +145,17 @@ func Model(model string, p settings.AIProvider) *Icon {
 	}
 	return Provider(p)
 }
+
+// agentBrands maps an ACP agent's catalog id (internal/ai/acp/detect) to
+// its brand.
+var agentBrands = map[string]string{
+	"claude": "claudecode", "codex": "codex", "grok": "grok", "gemini": "geminicli",
+	"qwen": "qwen", "copilot": "githubcopilot", "kimi": "kimi", "opencode": "opencode",
+	"goose": "goose", "codebuddy": "codebuddy", "vibe": "mistral",
+}
+
+// Agent is the brand of a detected ACP agent, or nil for an agent without
+// one and a command the user typed.
+func Agent(id string) *Icon {
+	return brands[agentBrands[id]]
+}

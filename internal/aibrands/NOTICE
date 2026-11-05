@@ -7,16 +7,18 @@ License source: https://raw.githubusercontent.com/lobehub/lobe-icons/6e2e41d2968
 Archive: https://registry.npmjs.org/@lobehub/icons-static-png/-/icons-static-png-2.6.0.tgz
 Archive SHA-256: d24d8ab7c6aae72ffc7a494380c9b417d4cf76821ca1bcce77a3fe5769246ade
 
-The 27 selected brands come from the archive's light/ and dark/ directories
+The 34 selected brands come from the archive's light/ and dark/ directories
 into png/light/ and png/dark/, keeping upstream names, scaled by gen.go from
 640px to the 64px the interface needs; the artwork is otherwise unchanged.
 Use the -color variant when the package provides it; never tint the artwork.
-OpenAI, Anthropic, Grok, Groq, Moonshot, Ollama and TypeSafe AI have no -color
-file in either directory's complete archive manifest; their official default
-artwork is retained, including light/dark contrast differences.
-Other selected brands: Azure, ChatGLM, Claude, Cohere, DeepSeek, Doubao,
-Gemini, Gemma, Google, Kimi, Meta, MiniMax, Mistral, OpenRouter, Perplexity, Qwen,
-SiliconCloud, Together, Volcengine and Zhipu.
+OpenAI, Anthropic, Grok, Groq, Moonshot, Ollama, TypeSafe AI, GitHub Copilot,
+OpenCode and Goose have no -color file in either directory's complete archive
+manifest; their official default artwork is retained, including light/dark
+contrast differences.
+Other selected brands: Azure, ChatGLM, Claude, Claude Code, CodeBuddy, Codex,
+Cohere, DeepSeek, Doubao, Gemini, Gemini CLI, Gemma, Google, Kimi, Meta, MiniMax,
+Mistral, OpenRouter, Perplexity, Qwen, SiliconCloud, Together, Volcengine and
+Zhipu.
 
 To update, download an explicitly versioned archive from the npm registry,
 verify its registry integrity and SHA-256, copy only the selected light/dark

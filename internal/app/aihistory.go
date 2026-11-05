@@ -12,6 +12,7 @@ import (
 	"github.com/Licoy/sshyard/internal/aibrands"
 	"github.com/Licoy/sshyard/internal/icons"
 	"github.com/Licoy/sshyard/internal/keychain"
+	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/locales"
 	"github.com/egoist/mygo/ui"
@@ -270,8 +271,8 @@ func (a *App) OpenChat(paneID int, id string) {
 		return
 	}
 	a.resetChat(c)
-	if conv.Agent == "builtin" || conv.Agent == "acp" {
-		c.ai.agent = aiAgentName(conv.Agent)
+	if conv.Agent == "builtin" || settings.IsACP(conv.Agent) {
+		c.ai.agent = conv.Agent
 	}
 	if a.providerByID(conv.Provider) != nil {
 		c.ai.provider, c.ai.model, c.ai.effort = conv.Provider, conv.Model, conv.Effort
@@ -307,11 +308,18 @@ func chatWhen(t, now time.Time) string {
 	return t.Format("2006-01-02")
 }
 
-// chatLead is the mark of a conversation in a list: its model's brand,
-// else the robot.
+// chatLead is the mark of a conversation in a list: its model's or ACP
+// agent's brand, else the robot.
 func (a *App) chatLead(c *ui.Context, tok theme.Tokens, s history.Summary) func() {
 	return func() {
-		if p := a.providerByID(s.Provider); p != nil && s.Agent != "acp" {
+		if settings.IsACP(s.Agent) {
+			if cfg, ok := a.settings.ACP(s.Agent); ok {
+				if icon := aibrands.Agent(cfg.Agent); icon != nil {
+					brandImage(c, icon, 16)
+					return
+				}
+			}
+		} else if p := a.providerByID(s.Provider); p != nil {
 			brandImage(c, aibrands.Model(s.Model, *p), 16)
 			return
 		}

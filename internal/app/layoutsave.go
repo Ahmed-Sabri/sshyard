@@ -192,7 +192,7 @@ func (a *App) restoreLeaf(n *nodeSnap) *conn {
 		return nil
 	}
 	if n.Agent != "" {
-		c.ai.agent = aiAgentName(n.Agent)
+		c.ai.agent = n.Agent
 	}
 	// "full" is this session only. A saved copy must not turn it back on.
 	if n.Mode != "full" {

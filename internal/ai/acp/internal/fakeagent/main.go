@@ -7,7 +7,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -36,6 +38,10 @@ type script struct {
 	modelID      string
 	modelCurrent string
 	modelValues  []string
+	effortID     string
+	effortCur    string
+	effortValues []string
+	mcpHTTP      bool
 	authFailN    int
 	authFailID   string
 	steps        []string
@@ -66,6 +72,11 @@ func parseScript(s string) script {
 			case "model":
 				sc.modelID, sc.modelCurrent = f[1], f[2]
 				sc.modelValues = append([]string(nil), f[3:]...)
+			case "effort":
+				sc.effortID, sc.effortCur = f[1], f[2]
+				sc.effortValues = append([]string(nil), f[3:]...)
+			case "mcp-http":
+				sc.mcpHTTP = true
 			case "authfail":
 				sc.authFailN, _ = strconv.Atoi(f[1])
 				sc.authFailID = f[2]
@@ -86,6 +97,7 @@ type agent struct {
 	sid       string
 	authed    bool
 	failCount int
+	servers   []sdk.McpServer
 }
 
 func (a *agent) SetAgentConnection(c *sdk.AgentSideConnection) { a.conn = c }
@@ -93,7 +105,9 @@ func (a *agent) SetAgentConnection(c *sdk.AgentSideConnection) { a.conn = c }
 func (a *agent) Initialize(_ context.Context, params sdk.InitializeRequest) (sdk.InitializeResponse, error) {
 	b, _ := json.Marshal(params)
 	fmt.Fprintf(os.Stderr, "init %s\n", b)
-	return sdk.InitializeResponse{ProtocolVersion: sdk.ProtocolVersion(a.sc.version)}, nil
+	resp := sdk.InitializeResponse{ProtocolVersion: sdk.ProtocolVersion(a.sc.version)}
+	resp.AgentCapabilities.McpCapabilities.Http = a.sc.mcpHTTP
+	return resp, nil
 }
 
 func (a *agent) Authenticate(_ context.Context, params sdk.AuthenticateRequest) (sdk.AuthenticateResponse, error) {
@@ -133,23 +147,30 @@ func (a *agent) NewSession(_ context.Context, params sdk.NewSessionRequest) (sdk
 		}
 		resp.Modes = &sdk.SessionModeState{AvailableModes: modes, CurrentModeId: sdk.SessionModeId(a.sc.modeCurrent)}
 	}
-	if a.sc.modelID != "" {
-		cat := sdk.SessionConfigOptionCategoryModel
-		opts := make(sdk.SessionConfigSelectOptionsUngrouped, 0, len(a.sc.modelValues))
-		for _, v := range a.sc.modelValues {
-			opts = append(opts, sdk.SessionConfigSelectOption{Name: v, Value: sdk.SessionConfigValueId(v)})
-		}
-		resp.ConfigOptions = []sdk.SessionConfigOption{{
-			Select: &sdk.SessionConfigOptionSelect{
-				Id:           sdk.SessionConfigId(a.sc.modelID),
-				Name:         "Model",
-				Category:     &cat,
-				CurrentValue: sdk.SessionConfigValueId(a.sc.modelCurrent),
-				Options:      sdk.SessionConfigSelectOptions{Ungrouped: &opts},
-			},
-		}}
-	}
+	a.servers = params.McpServers
+	resp.ConfigOptions = a.configOptions()
 	return resp, nil
+}
+
+// configOptions are the scripted model and effort selectors.
+func (a *agent) configOptions() []sdk.SessionConfigOption {
+	var out []sdk.SessionConfigOption
+	add := func(id, cur string, values []string, cat sdk.SessionConfigOptionCategory) {
+		if id == "" {
+			return
+		}
+		opts := make(sdk.SessionConfigSelectOptionsUngrouped, 0, len(values))
+		for _, v := range values {
+			opts = append(opts, sdk.SessionConfigSelectOption{Name: strings.ToUpper(v), Value: sdk.SessionConfigValueId(v)})
+		}
+		out = append(out, sdk.SessionConfigOption{Select: &sdk.SessionConfigOptionSelect{
+			Id: sdk.SessionConfigId(id), Name: string(cat), Category: &cat,
+			CurrentValue: sdk.SessionConfigValueId(cur), Options: sdk.SessionConfigSelectOptions{Ungrouped: &opts},
+		}})
+	}
+	add(a.sc.modelID, a.sc.modelCurrent, a.sc.modelValues, sdk.SessionConfigOptionCategoryModel)
+	add(a.sc.effortID, a.sc.effortCur, a.sc.effortValues, sdk.SessionConfigOptionCategoryThoughtLevel)
+	return out
 }
 
 func authMethods(in []authSpec) []sdk.AuthMethod {
@@ -280,6 +301,11 @@ func (a *agent) step(ctx context.Context, line string) error {
 				CurrentModeId: sdk.SessionModeId(rest),
 			}},
 		})
+	case "env":
+		fmt.Fprintf(os.Stderr, "env %s=%s\n", rest, os.Getenv(rest))
+		return nil
+	case "mcp-call":
+		return a.doMCPCall(ctx, rest)
 	case "stderr":
 		if rest == "BIG" {
 			_, _ = os.Stderr.Write([]byte(strings.Repeat("Z", 200<<10)))
@@ -697,8 +723,14 @@ func (a *agent) ResumeSession(context.Context, sdk.ResumeSessionRequest) (sdk.Re
 func (a *agent) SetSessionConfigOption(_ context.Context, params sdk.SetSessionConfigOptionRequest) (sdk.SetSessionConfigOptionResponse, error) {
 	if params.ValueId != nil {
 		fmt.Fprintf(os.Stderr, "set_config %s=%s\n", params.ValueId.ConfigId, params.ValueId.Value)
+		switch string(params.ValueId.ConfigId) {
+		case a.sc.modelID:
+			a.sc.modelCurrent = string(params.ValueId.Value)
+		case a.sc.effortID:
+			a.sc.effortCur = string(params.ValueId.Value)
+		}
 	}
-	return sdk.SetSessionConfigOptionResponse{}, nil
+	return sdk.SetSessionConfigOptionResponse{ConfigOptions: a.configOptions()}, nil
 }
 func (a *agent) SetSessionMode(_ context.Context, params sdk.SetSessionModeRequest) (sdk.SetSessionModeResponse, error) {
 	fmt.Fprintf(os.Stderr, "set_mode %s\n", params.ModeId)
@@ -742,4 +774,36 @@ func main() {
 	asc.SetLogger(slog.New(slog.DiscardHandler))
 	ag.SetAgentConnection(asc)
 	<-asc.Done()
+}
+
+// doMCPCall calls a tool of the HTTP MCP server given in session/new:
+// "mcp-call <tool> <json arguments>". The reply is logged as it came.
+func (a *agent) doMCPCall(ctx context.Context, rest string) error {
+	tool, args, _ := strings.Cut(rest, " ")
+	args = strings.ReplaceAll(args, "@sandbox", a.cwd)
+	for _, srv := range a.servers {
+		if srv.Http == nil {
+			continue
+		}
+		body := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":` + strconv.Quote(tool) + `,"arguments":` + args + `}}`
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, srv.Http.Url, strings.NewReader(body))
+		if err != nil {
+			return err
+		}
+		req.Header.Set("Content-Type", "application/json")
+		for _, h := range srv.Http.Headers {
+			req.Header.Set(h.Name, h.Value)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "mcp-err %v\n", err)
+			return nil
+		}
+		out, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		fmt.Fprintf(os.Stderr, "mcp-result %s\n", strings.TrimSpace(string(out)))
+		return nil
+	}
+	fmt.Fprintln(os.Stderr, "mcp-err no server")
+	return nil
 }

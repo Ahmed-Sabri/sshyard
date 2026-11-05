@@ -4,14 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/Licoy/sshyard/internal/ai/acp"
+	"github.com/Licoy/sshyard/internal/ai/acp/detect"
 	"github.com/Licoy/sshyard/internal/ai/agent"
 	"github.com/Licoy/sshyard/internal/ai/policy"
 	"github.com/Licoy/sshyard/internal/ai/remote"
@@ -71,8 +74,9 @@ func (r *acpRuntime) close() {
 	})
 }
 
-func (r *acpRuntime) start(ctx context.Context, a *App, cfg session.Config, key string, options acp.Config) error {
+func (r *acpRuntime) start(ctx context.Context, a *App, cfg session.Config, key, agent string, options acp.Config) error {
 	defer close(r.ready)
+	locateACP(ctx, agent, &options)
 	client, release, err := a.pool.Acquire(ctx, key, cfg)
 	if err != nil {
 		return &acpFailure{"host", err}
@@ -111,8 +115,30 @@ func (r *acpRuntime) start(ctx context.Context, a *App, cfg session.Config, key 
 	return ctx.Err()
 }
 
+// locateACP gives the agent the login shell's search path, proxy and its
+// own variables, which an app started from the desktop lacks; finds a
+// detected agent again when its executable moved; and looks a bare
+// command up on that search path.
+func locateACP(ctx context.Context, agent string, options *acp.Config) {
+	sh := detect.LoginShell(ctx, false)
+	options.Env = detect.Vars(agent, sh, os.Environ())
+	if agent != "" {
+		if _, err := os.Stat(options.Command); err != nil {
+			if found, ok := detect.Find(ctx, agent); ok {
+				options.Command, options.Args = found.Command, found.Args
+			}
+		}
+	}
+	if !filepath.IsAbs(options.Command) && !strings.ContainsAny(options.Command, `/\`) {
+		if bin := detect.LookPath(sh.Path, options.Command); bin != "" {
+			options.Command = bin
+		}
+	}
+}
+
 func (a *App) sendACP(c *conn, text string, files []*aiAttach) {
-	if strings.TrimSpace(a.settings.AIACP.Command) == "" {
+	acpCfg, ok := a.settings.ACP(c.ai.agent)
+	if !ok || strings.TrimSpace(acpCfg.Command) == "" {
 		c.ai.items = append(c.ai.items, aiItem{kind: "err", text: "acp-start"})
 		return
 	}
@@ -131,6 +157,7 @@ func (a *App) sendACP(c *conn, text string, files []*aiAttach) {
 			})
 		}
 		c.ai.acp = r
+		c.ai.acpOpts = nil
 	}
 	r.mu.Lock()
 	r.cwd = a.aiMeta(c).Cwd
@@ -140,7 +167,9 @@ func (a *App) sendACP(c *conn, text string, files []*aiAttach) {
 	if fresh {
 		gate = a.aiGate(c)
 	}
-	options := acp.Config{Command: a.settings.AIACP.Command, Args: append([]string(nil), a.settings.AIACP.Args...), Type: "custom", Gate: gate, Redact: a.settings.AIRedact}
+	agentID := acpCfg.Agent
+	options := acp.Config{Command: acpCfg.Command, Args: append([]string(nil), acpCfg.Args...), Type: detect.Type(agentID), Gate: gate, Redact: a.settings.AIRedact}
+	prefer := maps.Clone(acpCfg.Options)
 	id := c.id
 	c.ai.turn++
 	turn := c.ai.turn
@@ -180,7 +209,17 @@ func (a *App) sendACP(c *conn, text string, files []*aiAttach) {
 		defer cancel()
 		var err error
 		if fresh {
-			err = r.start(ctx, a, cfg, key, options)
+			err = r.start(ctx, a, cfg, key, agentID, options)
+			if err == nil {
+				// A choice that fails to apply leaves the agent's own value.
+				_ = r.session.Prefer(ctx, prefer)
+				opts := r.session.Options()
+				a.post(func() {
+					if current := a.conns[id]; current != nil && current.ai != nil && current.ai.acp == r {
+						a.setACPOptions(current, opts)
+					}
+				})
+			}
 		}
 		if err == nil {
 			r.runner.BeginTurn()
@@ -234,7 +273,10 @@ func (a *App) onACPUpdate(c *conn, u acp.Update) {
 			return
 		}
 		v := u.Tool
-		card := agent.ToolCard{ID: v.ID, Name: v.Title, Category: v.Kind, Phase: "open", Exit: -1, Where: "remote"}
+		card := agent.ToolCard{ID: v.ID, Name: v.Title, Category: v.Kind, Phase: "open", Exit: -1, Where: string(policy.Remote)}
+		if v.Local() {
+			card.Where = string(policy.Local)
+		}
 		if v.Status == "completed" || v.Status == "failed" {
 			card.Phase = "done"
 			if v.Status == "completed" {
@@ -259,9 +301,14 @@ func (a *App) onACPUpdate(c *conn, u acp.Update) {
 				if card.Diff == "" {
 					card.Diff = item.tool.Diff
 				}
+				if v.Kind == "" {
+					card.Category, card.Where = item.tool.Category, item.tool.Where
+				}
 			}
 		}
 		a.onAIEvent(c.id, agent.Event{Kind: agent.EventTool, Tool: &card})
+	case "config":
+		a.setACPOptions(c, u.Options)
 	case "warning":
 		c.ai.items = append(c.ai.items, aiItem{kind: "err", text: "acp-warning"})
 	case "error":

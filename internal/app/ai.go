@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Licoy/sshyard/internal/ai/acp"
 	"github.com/Licoy/sshyard/internal/ai/agent"
 	"github.com/Licoy/sshyard/internal/ai/audit"
 	"github.com/Licoy/sshyard/internal/ai/llm"
@@ -55,6 +56,9 @@ type aiState struct {
 	onlyDiff bool
 	tools    agent.Tools
 	acp      *acpRuntime
+	// acpOpts are the ACP agent's model and thinking selectors as its
+	// session last reported them; nil until it reports.
+	acpOpts []acp.Option
 
 	// conv is the conversation's ID in the host's history, from its first
 	// question, with its title and when it began; msgs are the built-in
@@ -371,7 +375,7 @@ func (a *App) aiGate(c *conn) policy.Gate {
 		gate = a.newGate(mode, ask)
 	} else {
 		var rev policy.Reviewer
-		if (a.newModel == nil || c.ai.agent == "acp") && a.settings.AIReviewProvider != "" {
+		if (a.newModel == nil || settings.IsACP(c.ai.agent)) && a.settings.AIReviewProvider != "" {
 			rev = a.newReviewer(c)
 		}
 		var aud policy.Auditor
@@ -438,7 +442,7 @@ func (a *App) SendAI(id int, text string) {
 		return
 	}
 	files := c.ai.attach
-	if c.ai.agent == "acp" {
+	if settings.IsACP(c.ai.agent) {
 		a.noteQuestion(c, text, files)
 		a.sendACP(c, text, files)
 		return
@@ -466,8 +470,8 @@ func (a *App) SendAI(id int, text string) {
 func (a *App) aiNeedsSecrets(c *conn) bool {
 	return a.keepsChats(c) ||
 		c.ai.agent == "builtin" && a.newModel == nil ||
-		c.ai.agent == "acp" && a.connectionNeedsSecrets(c.host) ||
-		a.settings.AIReviewProvider != "" && (a.newModel == nil || c.ai.agent == "acp")
+		settings.IsACP(c.ai.agent) && a.connectionNeedsSecrets(c.host) ||
+		a.settings.AIReviewProvider != "" && (a.newModel == nil || settings.IsACP(c.ai.agent))
 }
 
 func (a *App) unlockAISend(c *conn, text string) {

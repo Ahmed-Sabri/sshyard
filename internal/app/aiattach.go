@@ -14,6 +14,7 @@ import (
 	"github.com/Licoy/sshyard/internal/ai/agent"
 	"github.com/Licoy/sshyard/internal/ai/llm"
 	"github.com/Licoy/sshyard/internal/icons"
+	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/locales"
 	"github.com/egoist/mygo/ui"
 )
@@ -121,7 +122,7 @@ func (a *App) addAttach(cn *conn, f *aiAttach) {
 		total += len(g.data)
 	}
 	switch {
-	case cn.ai.agent == "acp" && !f.text():
+	case settings.IsACP(cn.ai.agent) && !f.text():
 		why = func(m locales.Messages) string { return m.AiAttachTextOnly(f.name) }
 	case len(cn.ai.attach) >= maxAttachments:
 		why = func(m locales.Messages) string { return m.AiAttachTooMany(strconv.Itoa(maxAttachments)) }

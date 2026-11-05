@@ -17,7 +17,6 @@ import (
 )
 
 func TestACPAppProtocolAndLifecycle(t *testing.T) {
-	enableACP(t)
 	binary := filepath.Join(t.TempDir(), "fakeagent")
 	command := exec.Command("go", "build", "-o", binary, "github.com/Licoy/sshyard/internal/ai/acp/internal/fakeagent")
 	if output, err := command.CombinedOutput(); err != nil {
@@ -40,14 +39,14 @@ func TestACPAppProtocolAndLifecycle(t *testing.T) {
 		}
 		s := a.Settings()
 		s.AIDefaultAgent = "acp"
-		s.AIACP = settings.ACPConfig{Command: binary, Args: []string{script}}
+		s.AIACPAgents = []settings.ACPConfig{{Command: binary, Args: []string{script}}}
 		if err := a.ApplySettings(s); err != nil {
 			t.Fatal(err)
 		}
 		id := openAIPane(t, a, h.ID)
 		tt.Frame()
 		c := a.conns[id]
-		if !tt.HasText("External ACP") {
+		if !tt.HasText(filepath.Base(binary)) {
 			t.Fatal("ACP backend missing from pane header")
 		}
 		a.SendAI(id, "update AKIA0000000000000000")
@@ -120,7 +119,7 @@ func TestACPAppProtocolAndLifecycle(t *testing.T) {
 		}
 		s := a.Settings()
 		s.AIDefaultAgent = "acp"
-		s.AIACP = settings.ACPConfig{Command: binary, Args: []string{script}}
+		s.AIACPAgents = []settings.ACPConfig{{Command: binary, Args: []string{script}}}
 		s.AIConsentHosts = nil
 		if err := a.ApplySettings(s); err != nil {
 			t.Fatal(err)
@@ -162,7 +161,7 @@ func TestACPAppProtocolAndLifecycle(t *testing.T) {
 		}
 		s := a.Settings()
 		s.AIDefaultAgent = "acp"
-		s.AIACP = settings.ACPConfig{Command: binary, Args: []string{script}}
+		s.AIACPAgents = []settings.ACPConfig{{Command: binary, Args: []string{script}}}
 		if err := a.ApplySettings(s); err != nil {
 			t.Fatal(err)
 		}
@@ -178,7 +177,7 @@ func TestACPAppProtocolAndLifecycle(t *testing.T) {
 		}
 		s := a.Settings()
 		s.AIDefaultAgent = "acp"
-		s.AIACP = settings.ACPConfig{Command: binary, Args: []string{script}}
+		s.AIACPAgents = []settings.ACPConfig{{Command: binary, Args: []string{script}}}
 		if err := a.ApplySettings(s); err != nil {
 			t.Fatal(err)
 		}
@@ -198,12 +197,14 @@ func TestACPAppProtocolAndLifecycle(t *testing.T) {
 }
 
 func TestACPConfigurationUIAndUnknownBackend(t *testing.T) {
-	enableACP(t)
+	fakeACPScan(t)
 	a, tt := newTestApp(t)
 	tt.SetSize(900, 850)
 	a.openSettings(prefAI)
 	tt.Frame()
-	mustClick(t, tt, "Configure ACP Agent")
+	mustClick(t, tt, "Configure ACP Agents")
+	tt.Frame()
+	mustClick(t, tt, "Add custom command")
 	tt.Frame()
 	if !tt.HasText("ACP executable") || !tt.HasText("One argument per line, passed directly without a shell") {
 		t.Fatalf("configuration labels missing: %q", tt.Texts())
@@ -224,7 +225,7 @@ func TestACPConfigurationUIAndUnknownBackend(t *testing.T) {
 	if !a.saveACP(locales.In("en")) {
 		t.Fatal(a.acpForm.err)
 	}
-	if got := a.Settings().AIACP; got.Command != "/usr/local/bin/custom-acp" || len(got.Args) != 2 || got.Args[1] != "argument with spaces" {
+	if got := a.Settings().AIACPAgents; len(got) != 1 || got[0].ID != "custom" || got[0].Command != "/usr/local/bin/custom-acp" || len(got[0].Args) != 2 || got[0].Args[1] != "argument with spaces" {
 		t.Fatalf("config=%+v", got)
 	}
 	h := savedHost(t, a, "unknown", "127.0.0.1")
@@ -277,8 +278,12 @@ func TestUnrelatedProviderChangesKeepTurnRunning(t *testing.T) {
 }
 
 func TestACPBackendMenuIsScopedToOnePane(t *testing.T) {
-	enableACP(t)
 	a, tt := newTestApp(t)
+	s := a.Settings()
+	s.AIACPAgents = []settings.ACPConfig{{Command: "/opt/first-acp"}, {Command: "/opt/second-acp"}}
+	if err := a.ApplySettings(s); err != nil {
+		t.Fatal(err)
+	}
 	h := savedHost(t, a, "backend", "127.0.0.1")
 	first := openAIPane(t, a, h.ID)
 	second, err := a.OpenAI(h.ID, openAt{}, 0)
@@ -288,28 +293,9 @@ func TestACPBackendMenuIsScopedToOnePane(t *testing.T) {
 	tt.Frame()
 	a.menu = dropMenu{key: "aiagent:" + strconv.Itoa(second), sub: -1}
 	tt.Frame()
-	mustClick(t, tt, "External ACP")
+	mustClick(t, tt, "second-acp")
 	tt.Frame()
-	if a.conns[first].ai.agent != "builtin" || a.conns[second].ai.agent != "acp" {
-		t.Fatal("backend menu changed a different pane")
-	}
-}
-
-func TestACPHiddenWhenDisabled(t *testing.T) {
-	a, tt := newTestApp(t)
-	h := savedHost(t, a, "hidden", "127.0.0.1")
-	s := a.Settings()
-	s.AIDefaultAgent = "acp"
-	if err := a.ApplySettings(s); err != nil {
-		t.Fatal(err)
-	}
-	id := openAIPane(t, a, h.ID)
-	tt.Frame()
-	m := locales.In("en")
-	if a.conns[id].ai.agent != "builtin" {
-		t.Fatalf("saved ACP default opened %q", a.conns[id].ai.agent)
-	}
-	if tt.HasText(m.AiBackend()) || tt.HasText(m.AiACP()) {
-		t.Fatalf("backend chip shown: %q", tt.Texts())
+	if a.conns[first].ai.agent != "builtin" || a.conns[second].ai.agent != "acp:custom-2" {
+		t.Fatalf("backend menu changed a different pane: %q %q", a.conns[first].ai.agent, a.conns[second].ai.agent)
 	}
 }

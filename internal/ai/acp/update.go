@@ -28,15 +28,24 @@ type ToolView struct {
 	TerminalID string
 }
 
+// Local says whether the agent ran the tool on this computer itself: a
+// command or search that went neither through the client's terminal nor
+// through the remote tools. Reads and edits reach the host through the
+// client's file callbacks.
+func (v ToolView) Local() bool {
+	return (v.Kind == "execute" || v.Kind == "search") && v.TerminalID == "" && !RemoteTool(v.Title)
+}
+
 // Update is one session event the UI can show. Kind is message, thought,
 // tool, plan, mode, config, warning or error. Unknown agent events are dropped.
+// A config update carries the agent's selectors as they are now.
 type Update struct {
-	Kind   string
-	Text   string
-	Tool   *ToolView
-	Plan   []PlanLine
-	Mode   string
-	Config string
+	Kind    string
+	Text    string
+	Tool    *ToolView
+	Plan    []PlanLine
+	Mode    string
+	Options []Option
 }
 
 // decodeUpdate handles a session update only when the variant's
@@ -57,7 +66,7 @@ func decodeUpdate(u sdk.SessionUpdate) (Update, bool) {
 	case u.CurrentModeUpdate != nil && u.CurrentModeUpdate.SessionUpdate == "current_mode_update":
 		return Update{Kind: "mode", Mode: string(u.CurrentModeUpdate.CurrentModeId)}, true
 	case u.ConfigOptionUpdate != nil && u.ConfigOptionUpdate.SessionUpdate == "config_option_update":
-		return Update{Kind: "config", Config: modelID(u.ConfigOptionUpdate.ConfigOptions)}, true
+		return Update{Kind: "config", Options: options(u.ConfigOptionUpdate.ConfigOptions)}, true
 	case u.AvailableCommandsUpdate != nil && u.AvailableCommandsUpdate.SessionUpdate == "available_commands_update":
 		return Update{}, false
 	default:
@@ -226,13 +235,4 @@ func stringSlice(v any) []string {
 		out = append(out, s)
 	}
 	return out
-}
-
-func modelID(opts []sdk.SessionConfigOption) string {
-	for _, o := range opts {
-		if o.Select != nil && o.Select.Category != nil && *o.Select.Category == sdk.SessionConfigOptionCategoryModel {
-			return string(o.Select.Id)
-		}
-	}
-	return ""
 }

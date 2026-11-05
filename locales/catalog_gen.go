@@ -11097,11 +11097,11 @@ func (msgs Messages) AiACP() string {
 	return Catalog.Format(msgs.locale, "aiACP", nil)
 }
 
-// AiACPConfigure says "Configure ACP Agent"
+// AiACPConfigure says "Configure ACP Agents"
 // in the language the app shows.
 func AiACPConfigure() string { return In(i18n.Locale()).AiACPConfigure() }
 
-// AiACPConfigure says "Configure ACP Agent"
+// AiACPConfigure says "Configure ACP Agents"
 // in the language of msgs.
 func (msgs Messages) AiACPConfigure() string {
 	return Catalog.Format(msgs.locale, "aiACPConfigure", nil)
@@ -11137,11 +11137,11 @@ func (msgs Messages) AiACPArgsNote() string {
 	return Catalog.Format(msgs.locale, "aiACPArgsNote", nil)
 }
 
-// AiACPConfigNote says "Use an ACP-compatible executable installed on this computer; authenticate in that program before sending a message"
+// AiACPConfigNote says "ACP agents installed on this computer are detected automatically; sign in to the agent in its own program before send…"
 // in the language the app shows.
 func AiACPConfigNote() string { return In(i18n.Locale()).AiACPConfigNote() }
 
-// AiACPConfigNote says "Use an ACP-compatible executable installed on this computer; authenticate in that program before sending a message"
+// AiACPConfigNote says "ACP agents installed on this computer are detected automatically; sign in to the agent in its own program before send…"
 // in the language of msgs.
 func (msgs Messages) AiACPConfigNote() string {
 	return Catalog.Format(msgs.locale, "aiACPConfigNote", nil)
@@ -11157,11 +11157,11 @@ func (msgs Messages) AiACPCommandRequired() string {
 	return Catalog.Format(msgs.locale, "aiACPCommandRequired", nil)
 }
 
-// AiBackendUnavailable says "Assistant backend unavailable; select Built-in or External ACP"
+// AiBackendUnavailable says "Assistant backend unavailable; choose Built-in or an ACP agent"
 // in the language the app shows.
 func AiBackendUnavailable() string { return In(i18n.Locale()).AiBackendUnavailable() }
 
-// AiBackendUnavailable says "Assistant backend unavailable; select Built-in or External ACP"
+// AiBackendUnavailable says "Assistant backend unavailable; choose Built-in or an ACP agent"
 // in the language of msgs.
 func (msgs Messages) AiBackendUnavailable() string {
 	return Catalog.Format(msgs.locale, "aiBackendUnavailable", nil)
@@ -11255,6 +11255,166 @@ func AiACPCloseFailed() string { return In(i18n.Locale()).AiACPCloseFailed() }
 // in the language of msgs.
 func (msgs Messages) AiACPCloseFailed() string {
 	return Catalog.Format(msgs.locale, "aiACPCloseFailed", nil)
+}
+
+// AiACPDetected says "Detected on this computer"
+// in the language the app shows.
+func AiACPDetected() string { return In(i18n.Locale()).AiACPDetected() }
+
+// AiACPDetected says "Detected on this computer"
+// in the language of msgs.
+func (msgs Messages) AiACPDetected() string {
+	return Catalog.Format(msgs.locale, "aiACPDetected", nil)
+}
+
+// AiACPDetecting says "Looking for ACP agents…"
+// in the language the app shows.
+func AiACPDetecting() string { return In(i18n.Locale()).AiACPDetecting() }
+
+// AiACPDetecting says "Looking for ACP agents…"
+// in the language of msgs.
+func (msgs Messages) AiACPDetecting() string {
+	return Catalog.Format(msgs.locale, "aiACPDetecting", nil)
+}
+
+// AiACPNoneDetected says "No ACP agent found. Install one, such as Claude Code, Codex, Grok or Gemini CLI, and detect again, or enter a custom …"
+// in the language the app shows.
+func AiACPNoneDetected() string { return In(i18n.Locale()).AiACPNoneDetected() }
+
+// AiACPNoneDetected says "No ACP agent found. Install one, such as Claude Code, Codex, Grok or Gemini CLI, and detect again, or enter a custom …"
+// in the language of msgs.
+func (msgs Messages) AiACPNoneDetected() string {
+	return Catalog.Format(msgs.locale, "aiACPNoneDetected", nil)
+}
+
+// AiACPDetectAgain says "Detect again"
+// in the language the app shows.
+func AiACPDetectAgain() string { return In(i18n.Locale()).AiACPDetectAgain() }
+
+// AiACPDetectAgain says "Detect again"
+// in the language of msgs.
+func (msgs Messages) AiACPDetectAgain() string {
+	return Catalog.Format(msgs.locale, "aiACPDetectAgain", nil)
+}
+
+// AiACPCustom says "Custom commands"
+// in the language the app shows.
+func AiACPCustom() string { return In(i18n.Locale()).AiACPCustom() }
+
+// AiACPCustom says "Custom commands"
+// in the language of msgs.
+func (msgs Messages) AiACPCustom() string {
+	return Catalog.Format(msgs.locale, "aiACPCustom", nil)
+}
+
+// AiACPViaNpx says "Runs its ACP adapter with npx, which downloads it the first time it starts"
+// in the language the app shows.
+func AiACPViaNpx() string { return In(i18n.Locale()).AiACPViaNpx() }
+
+// AiACPViaNpx says "Runs its ACP adapter with npx, which downloads it the first time it starts"
+// in the language of msgs.
+func (msgs Messages) AiACPViaNpx() string {
+	return Catalog.Format(msgs.locale, "aiACPViaNpx", nil)
+}
+
+// AiACPNeedsAdapter says "Install its ACP adapter first: npm install -g {pkg}"
+// in the language the app shows.
+func AiACPNeedsAdapter(pkg string) string { return In(i18n.Locale()).AiACPNeedsAdapter(pkg) }
+
+// AiACPNeedsAdapter says "Install its ACP adapter first: npm install -g {pkg}"
+// in the language of msgs.
+func (msgs Messages) AiACPNeedsAdapter(pkg string) string {
+	return Catalog.Format(msgs.locale, "aiACPNeedsAdapter", map[string]any{"pkg": pkg})
+}
+
+// AiACPAddCustom says "Add custom command"
+// in the language the app shows.
+func AiACPAddCustom() string { return In(i18n.Locale()).AiACPAddCustom() }
+
+// AiACPAddCustom says "Add custom command"
+// in the language of msgs.
+func (msgs Messages) AiACPAddCustom() string {
+	return Catalog.Format(msgs.locale, "aiACPAddCustom", nil)
+}
+
+// AiACPAddCommand says "Add"
+// in the language the app shows.
+func AiACPAddCommand() string { return In(i18n.Locale()).AiACPAddCommand() }
+
+// AiACPAddCommand says "Add"
+// in the language of msgs.
+func (msgs Messages) AiACPAddCommand() string {
+	return Catalog.Format(msgs.locale, "aiACPAddCommand", nil)
+}
+
+// AiACPRemove says "Remove {name}"
+// in the language the app shows.
+func AiACPRemove(name string) string { return In(i18n.Locale()).AiACPRemove(name) }
+
+// AiACPRemove says "Remove {name}"
+// in the language of msgs.
+func (msgs Messages) AiACPRemove(name string) string {
+	return Catalog.Format(msgs.locale, "aiACPRemove", map[string]any{"name": name})
+}
+
+// AiACPAgentDefault says "Agent default"
+// in the language the app shows.
+func AiACPAgentDefault() string { return In(i18n.Locale()).AiACPAgentDefault() }
+
+// AiACPAgentDefault says "Agent default"
+// in the language of msgs.
+func (msgs Messages) AiACPAgentDefault() string {
+	return Catalog.Format(msgs.locale, "aiACPAgentDefault", nil)
+}
+
+// AiACPLoadingOptions says "Asking the agent for its models…"
+// in the language the app shows.
+func AiACPLoadingOptions() string { return In(i18n.Locale()).AiACPLoadingOptions() }
+
+// AiACPLoadingOptions says "Asking the agent for its models…"
+// in the language of msgs.
+func (msgs Messages) AiACPLoadingOptions() string {
+	return Catalog.Format(msgs.locale, "aiACPLoadingOptions", nil)
+}
+
+// AiACPNoOptions says "This agent offers no choice of model"
+// in the language the app shows.
+func AiACPNoOptions() string { return In(i18n.Locale()).AiACPNoOptions() }
+
+// AiACPNoOptions says "This agent offers no choice of model"
+// in the language of msgs.
+func (msgs Messages) AiACPNoOptions() string {
+	return Catalog.Format(msgs.locale, "aiACPNoOptions", nil)
+}
+
+// AiACPOptionsFailed says "Unable to start the agent to read its models"
+// in the language the app shows.
+func AiACPOptionsFailed() string { return In(i18n.Locale()).AiACPOptionsFailed() }
+
+// AiACPOptionsFailed says "Unable to start the agent to read its models"
+// in the language of msgs.
+func (msgs Messages) AiACPOptionsFailed() string {
+	return Catalog.Format(msgs.locale, "aiACPOptionsFailed", nil)
+}
+
+// AiACPRetryOptions says "Try again"
+// in the language the app shows.
+func AiACPRetryOptions() string { return In(i18n.Locale()).AiACPRetryOptions() }
+
+// AiACPRetryOptions says "Try again"
+// in the language of msgs.
+func (msgs Messages) AiACPRetryOptions() string {
+	return Catalog.Format(msgs.locale, "aiACPRetryOptions", nil)
+}
+
+// AiACPOptionFailed says "The agent did not accept this choice"
+// in the language the app shows.
+func AiACPOptionFailed() string { return In(i18n.Locale()).AiACPOptionFailed() }
+
+// AiACPOptionFailed says "The agent did not accept this choice"
+// in the language of msgs.
+func (msgs Messages) AiACPOptionFailed() string {
+	return Catalog.Format(msgs.locale, "aiACPOptionFailed", nil)
 }
 
 // Snippets says "Snippets"

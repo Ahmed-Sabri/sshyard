@@ -54,7 +54,7 @@ func TestInitializeRequestAuthObject(t *testing.T) {
 			t.Fatalf("initialize JSON missing %s: %s", want, b)
 		}
 	}
-	nb, err := json.Marshal(newSessionRequest("/work", "claude"))
+	nb, err := json.Marshal(newSessionRequest("/work", "claude", nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -606,7 +606,7 @@ func TestUnknownUpdatesIgnoredAndSessionEvents(t *testing.T) {
 	if strings.Contains(b.texts(), "nope") || !strings.Contains(b.texts(), "ok") || !strings.Contains(b.texts(), "hmm") {
 		t.Fatalf("updates %q kinds %v", b.texts(), b.kinds())
 	}
-	if !strings.Contains(d, "rpc -32601") || !strings.Contains(d, "{not-json") || !strings.Contains(d, "prompt text resource") {
+	if !strings.Contains(d, "rpc -32601") || !strings.Contains(d, "{not-json") || !strings.Contains(d, "prompt resource text resource") || !strings.Contains(d, "sshyard://instructions") {
 		t.Fatalf("diag %s", d)
 	}
 	joined := strings.Join(b.kinds(), " ")
@@ -749,8 +749,8 @@ func TestModeAndModel(t *testing.T) {
 		t.Fatalf("diag %s updates %q", d, b.texts())
 	}
 
-	cs := mustStart(t, "modes agent workspace-write\n", Config{Type: "codex", Gate: &fixedGate{run: true}})
-	if !strings.Contains(waitDiag(t, cs, "set_mode workspace-write"), "set_mode workspace-write") {
+	cs := mustStart(t, "modes agent read-only workspace-write\n", Config{Type: "codex", Gate: &fixedGate{run: true}})
+	if !strings.Contains(waitDiag(t, cs, "set_mode read-only"), "set_mode read-only") {
 		t.Fatal(cs.Diagnostics())
 	}
 	cl := mustStart(t, "modes default default\n", Config{Type: "claude", Gate: &fixedGate{run: true}})
@@ -760,7 +760,7 @@ func TestModeAndModel(t *testing.T) {
 	}
 
 	ms := mustStart(t, "model mdl v1 v2\n", Config{Gate: &fixedGate{run: true}})
-	if err := ms.SetModel(t.Context(), "v2"); err != nil {
+	if _, err := ms.SetOption(t.Context(), "mdl", "v2"); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(waitDiag(t, ms, "set_config mdl=v2"), "set_config mdl=v2") {

@@ -21,50 +21,59 @@ func (s *Session) ReadTextFile(ctx context.Context, p sdk.ReadTextFileRequest) (
 	if err := s.checkSession(p.SessionId); err != nil {
 		return sdk.ReadTextFileResponse{}, err
 	}
-	if _, err := sliceLines("", p.Line, p.Limit); err != nil {
-		return sdk.ReadTextFileResponse{}, err
-	}
 	remote, err := s.mapPath(p.Path)
 	if err != nil {
 		return sdk.ReadTextFileResponse{}, err
 	}
-	remote, err = s.resolveFile(ctx, remote)
+	text, err := s.readText(ctx, remote, p.Line, p.Limit)
 	if err != nil {
 		return sdk.ReadTextFileResponse{}, err
+	}
+	return sdk.ReadTextFileResponse{Content: text}, nil
+}
+
+// readText reads a remote file for the agent, as the gate allows.
+func (s *Session) readText(ctx context.Context, remote string, line, limit *int) (string, error) {
+	if _, err := sliceLines("", line, limit); err != nil {
+		return "", err
+	}
+	remote, err := s.resolveFile(ctx, remote)
+	if err != nil {
+		return "", err
 	}
 	act := policy.Action{Where: policy.Remote, Tool: "read_file", Path: remote}
 	start := time.Now()
 	v, err := s.gate.Authorize(ctx, act, "")
 	if err != nil {
-		return sdk.ReadTextFileResponse{}, err
+		return "", err
 	}
 	if !v.Run {
-		return sdk.ReadTextFileResponse{}, refusalError(v)
+		return "", refusalError(v)
 	}
 	if s.cfg.Files == nil {
 		s.finish(act, v, 1, start, 0)
-		return sdk.ReadTextFileResponse{}, errNotConnected
+		return "", errNotConnected
 	}
 	data, _, err := s.readFile(ctx, remote)
 	if err != nil {
 		s.finish(act, v, failureExit(err), start, 0)
-		return sdk.ReadTextFileResponse{}, err
+		return "", err
 	}
 	if len(data) > readCap {
 		s.finish(act, v, 1, start, len(data))
-		return sdk.ReadTextFileResponse{}, errors.New("file exceeds 10MB")
+		return "", errors.New("file exceeds 10MB")
 	}
 	output := string(data)
 	if s.cfg.Redact {
 		output = policy.RedactLines(output)
 	}
-	text, err := sliceLines(output, p.Line, p.Limit)
+	text, err := sliceLines(output, line, limit)
 	if err != nil {
 		s.finish(act, v, 1, start, len(data))
-		return sdk.ReadTextFileResponse{}, err
+		return "", err
 	}
 	s.finish(act, v, 0, start, len(data))
-	return sdk.ReadTextFileResponse{Content: text}, nil
+	return text, nil
 }
 
 func (s *Session) WriteTextFile(ctx context.Context, p sdk.WriteTextFileRequest) (sdk.WriteTextFileResponse, error) {
@@ -76,30 +85,39 @@ func (s *Session) WriteTextFile(ctx context.Context, p sdk.WriteTextFileRequest)
 	if err := s.checkSession(p.SessionId); err != nil {
 		return sdk.WriteTextFileResponse{}, err
 	}
-	if len(p.Content) > writeCap {
-		return sdk.WriteTextFileResponse{}, errors.New("content exceeds 10MB")
-	}
 	remote, err := s.mapPath(p.Path)
 	if err != nil {
 		return sdk.WriteTextFileResponse{}, err
 	}
-	remote, err = s.resolveFile(ctx, remote)
-	if err != nil {
+	if err := s.writeText(ctx, remote, p.Content); err != nil {
 		return sdk.WriteTextFileResponse{}, err
+	}
+	return sdk.WriteTextFileResponse{}, nil
+}
+
+// writeText writes a remote file for the agent, as the gate allows, after
+// showing the diff.
+func (s *Session) writeText(ctx context.Context, remote, content string) error {
+	if len(content) > writeCap {
+		return errors.New("content exceeds 10MB")
+	}
+	remote, err := s.resolveFile(ctx, remote)
+	if err != nil {
+		return err
 	}
 	// A diff reads the current file, so authorize that read independently.
 	readAct := policy.Action{Where: policy.Remote, Tool: "read_file", Path: remote}
 	readStart := time.Now()
 	readVerdict, err := s.gate.Authorize(ctx, readAct, "")
 	if err != nil {
-		return sdk.WriteTextFileResponse{}, err
+		return err
 	}
 	if !readVerdict.Run {
-		return sdk.WriteTextFileResponse{}, refusalError(readVerdict)
+		return refusalError(readVerdict)
 	}
 	if s.cfg.Files == nil {
 		s.finish(readAct, readVerdict, 1, readStart, 0)
-		return sdk.WriteTextFileResponse{}, errNotConnected
+		return errNotConnected
 	}
 	data, ver, readErr := s.readFile(ctx, remote)
 	if readErr == nil && len(data) > readCap {
@@ -111,46 +129,46 @@ func (s *Session) WriteTextFile(ctx context.Context, p sdk.WriteTextFileRequest)
 	}
 	s.finish(readAct, readVerdict, readExit, readStart, len(data))
 	if readErr != nil && !errors.Is(readErr, fs.ErrNotExist) {
-		return sdk.WriteTextFileResponse{}, readErr
+		return readErr
 	}
 	old := ""
 	if readErr == nil {
 		old = string(data)
 	}
-	diff := agent.Unified(remote, old, p.Content)
+	diff := agent.Unified(remote, old, content)
 	act := policy.Action{Where: policy.Remote, Tool: "write_file", Path: remote}
 	start := time.Now()
 	v, err := s.gate.Authorize(ctx, act, diff)
 	if err != nil {
-		return sdk.WriteTextFileResponse{}, err
+		return err
 	}
 	if !v.Run {
-		return sdk.WriteTextFileResponse{}, refusalError(v)
+		return refusalError(v)
 	}
 	if s.cfg.Files == nil {
 		s.finish(act, v, 1, start, 0)
-		return sdk.WriteTextFileResponse{}, errNotConnected
+		return errNotConnected
 	}
 	// A zero version is a file that was absent when the diff was made.
 	// shortcut: the re-check and Write are not atomic, upgrade when a zero version means create-only.
 	if ver == (sftpsvc.Version{}) {
 		if _, _, err := s.readFile(ctx, remote); err == nil {
 			s.finish(act, v, 1, start, 0)
-			return sdk.WriteTextFileResponse{}, errors.New("file appeared since the diff was made")
+			return errors.New("file appeared since the diff was made")
 		} else if !errors.Is(err, fs.ErrNotExist) {
 			s.finish(act, v, failureExit(err), start, 0)
-			return sdk.WriteTextFileResponse{}, err
+			return err
 		}
 	}
-	if _, err := s.cfg.Files.WriteContext(ctx, remote, []byte(p.Content), ver); err != nil {
+	if _, err := s.cfg.Files.WriteContext(ctx, remote, []byte(content), ver); err != nil {
 		s.finish(act, v, failureExit(err), start, 0)
 		if errors.Is(err, sftpsvc.ErrChanged) {
-			return sdk.WriteTextFileResponse{}, errors.New("file changed since it was read")
+			return errors.New("file changed since it was read")
 		}
-		return sdk.WriteTextFileResponse{}, err
+		return err
 	}
-	s.finish(act, v, 0, start, len(p.Content))
-	return sdk.WriteTextFileResponse{}, nil
+	s.finish(act, v, 0, start, len(content))
+	return nil
 }
 
 func (s *Session) RequestPermission(ctx context.Context, p sdk.RequestPermissionRequest) (sdk.RequestPermissionResponse, error) {

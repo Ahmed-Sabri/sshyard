@@ -47,7 +47,7 @@ SSHYard is a native desktop SSH / SFTP client for macOS, Windows and Linux, brin
 
 - **AI assistant**
   - Run commands and edit files through a dedicated assistant for each host
-  - Connect AI providers or use an external ACP agent
+  - Connect AI providers, or use ACP agents detected on this computer (Claude Code, Codex, Grok, Gemini CLI and more), several at once, each with the models and thinking levels it offers; their work stays on the remote host
   - Choose Ask, Review or Full access mode, with configurable AI review
 
 - **Agent integrations**

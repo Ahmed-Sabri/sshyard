@@ -81,7 +81,7 @@ func TestMapPathSandboxAndRemote(t *testing.T) {
 }
 
 func TestPickModeConservative(t *testing.T) {
-	if m, set, stop := PickMode("codex", "agent", nil); m != "workspace-write" || !set || stop {
+	if m, set, stop := PickMode("codex", "agent", nil); m != "read-only" || !set || stop {
 		t.Fatalf("codex %q set %v stop %v", m, set, stop)
 	}
 	if _, set, stop := PickMode("claude", "default", []string{"bypass"}); set || stop {

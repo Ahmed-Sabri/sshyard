@@ -437,6 +437,8 @@ type App struct {
 	acpForm  *acpForm
 	acpOpen  bool
 	acpWG    sync.WaitGroup
+	// acpProbes are the configured ACP agents' selectors, by agent id.
+	acpProbes map[string]*acpProbe
 	// provDelete asks before removing a provider and its keychain key.
 	provDeleting bool
 	provDeleteID string
@@ -608,7 +610,9 @@ func (a *App) ApplySettings(s settings.Settings) error {
 		if c.ai == nil {
 			continue
 		}
-		all := c.ai.agent == "acp" && !reflect.DeepEqual(old.AIACP, s.AIACP) ||
+		oldACP, _ := old.ACP(c.ai.agent)
+		newACP, _ := s.ACP(c.ai.agent)
+		all := settings.IsACP(c.ai.agent) && !oldACP.SameLaunch(newACP) ||
 			old.AIReviewProvider != s.AIReviewProvider || old.AIReviewKind != s.AIReviewKind ||
 			old.AIReviewModel != s.AIReviewModel || old.AIReviewStrictness != s.AIReviewStrictness ||
 			old.AIRedact != s.AIRedact || old.AIDefaultMode != s.AIDefaultMode
@@ -765,6 +769,7 @@ func (a *App) Close() {
 		}
 		c.close()
 	}
+	a.stopACPProbes()
 	a.acpWG.Wait()
 	a.clipAsk = nil
 	a.fwds = map[string]*fwdRun{}
@@ -823,7 +828,7 @@ func (a *App) makeConn(hostID string, kind layout.Kind, link int) (*conn, error)
 		c.temp = h.ID
 	}
 	if kind == layout.AI {
-		agentName := aiAgentName(a.settings.AIDefaultAgent)
+		agentName := a.settings.AIDefaultAgent
 		if agentName == "" {
 			agentName = "builtin"
 		}

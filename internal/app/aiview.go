@@ -527,6 +527,8 @@ func (a *App) aiComposer(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 				if cn.ai.agent == "builtin" {
 					a.modelChip(c, cn, tok, m, fit)
 					a.effortChip(c, cn, tok, m, fit)
+				} else {
+					a.acpOptionChips(c, cn, tok, m, fit)
 				}
 				if cn.ai.running {
 					if (IconButton{Icon: icons.Stop, Label: m.StopAI(), Size: Small, Danger: true, Active: true}).Clicked(c, "aistop") {

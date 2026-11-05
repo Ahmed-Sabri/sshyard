@@ -155,7 +155,6 @@ func TestChatHistory(t *testing.T) {
 }
 
 func TestChatOfExternalAgent(t *testing.T) {
-	enableACP(t)
 	a, tt := newTestApp(t)
 	h := savedHost(t, a, "web", "10.0.0.8")
 	conv := history.Conversation{ID: history.NewID(), Host: h.ID, Title: "deploy", Agent: "acp",
@@ -180,26 +179,4 @@ func TestTempHostKeepsNoChats(t *testing.T) {
 	if a.keepsChats(&conn{host: a.localHost(localID), ai: &aiState{}}) {
 		t.Fatal("a host that is not saved keeps chats")
 	}
-}
-
-func TestChatOfHiddenExternalAgentUsesBuiltin(t *testing.T) {
-	a, _ := newTestApp(t)
-	h := savedHost(t, a, "web", "10.0.0.8")
-	conv := history.Conversation{ID: history.NewID(), Host: h.ID, Title: "deploy", Agent: "acp",
-		Items: []history.Item{{Kind: "user", Text: "deploy"}, {Kind: "text", Text: "done"}}}
-	if err := a.chatHistory().Save(conv); err != nil {
-		t.Fatal(err)
-	}
-	id, _ := a.OpenAI(h.ID, openAt{}, 0)
-	a.OpenChat(id, conv.ID)
-	if c := a.conns[id]; c.ai.agent != "builtin" || c.ai.forgot != 2 {
-		t.Fatalf("agent %q, forgot %d", c.ai.agent, c.ai.forgot)
-	}
-}
-
-// enableACP turns on the hidden ACP backend for one test
-func enableACP(t *testing.T) {
-	old := acpEnabled
-	acpEnabled = true
-	t.Cleanup(func() { acpEnabled = old })
 }

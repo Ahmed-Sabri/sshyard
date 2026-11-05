@@ -48,12 +48,7 @@ func testAIPermissionApprovalSection(t *testing.T, lang string, mode theme.Mode)
 			t.Fatalf("%q outside approval section: %v", label, row)
 		}
 	}
-	for _, label := range []string{m.AiDefaultAgent(), m.AiACP(), m.AiACPConfigure()} {
-		if tt.HasText(label) {
-			t.Fatalf("hidden ACP control %q shown", label)
-		}
-	}
-	for _, label := range []string{m.AiContextLines(), m.AiAuditDays(), m.AiRedact()} {
+	for _, label := range []string{m.AiDefaultAgent(), m.AiACP(), m.AiACPConfigure(), m.AiContextLines(), m.AiAuditDays(), m.AiRedact()} {
 		if row := mustFind(t, tt, label); row.Y+row.H >= consent.Y {
 			t.Fatalf("%q left the general section: %v", label, row)
 		}

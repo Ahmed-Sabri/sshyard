@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Licoy/sshyard/internal/ai/policy"
+	"github.com/Licoy/sshyard/internal/mcp"
 	sdk "github.com/coder/acp-go-sdk"
 )
 
@@ -31,6 +32,9 @@ type Config struct {
 	CwdFollow  func() string
 	// OnUpdate is called from a background goroutine and must not block.
 	OnUpdate func(Update)
+
+	// probe opens the session only to read its options: no remote tools.
+	probe bool
 }
 
 // Resource is an embedded prompt block.
@@ -67,16 +71,22 @@ type Session struct {
 
 	stderrDone chan struct{}
 
+	// bridge serves the remote tools; nil when they are not served.
+	bridge      *mcp.Server
+	bridgeToken string
+	mcpHTTP     bool
+
 	mu          sync.Mutex
 	sid         sdk.SessionId
 	methods     []AuthChoice
 	authTried   bool
 	pinned      string
 	bounced     bool
-	modelID     string
+	options     []Option
 	closing     bool
 	turn        *activeTurn
 	interrupted bool
+	introduced  bool
 	perms       []context.CancelFunc
 	terms       map[string]*termProc
 
@@ -110,7 +120,15 @@ func Start(ctx context.Context, cfg Config) (*Session, error) {
 		updates: make(chan sdk.SessionNotification, 64),
 		terms:   map[string]*termProc{},
 	}
+	if !cfg.probe {
+		// Without the bridge the agent still runs; it has the client's
+		// files and terminals only.
+		_ = s.startBridge()
+	}
 	if err := s.spawn(); err != nil {
+		if s.bridge != nil {
+			_ = s.bridge.Close()
+		}
 		_ = os.RemoveAll(sandbox)
 		return nil, err
 	}
@@ -135,7 +153,7 @@ func (s *Session) spawn() error {
 		base = os.Environ()
 	}
 	cmd := exec.Command(s.cfg.Command, s.cfg.Args...)
-	cmd.Env = FilterEnv(base, s.cfg.Env)
+	cmd.Env = FilterEnv(base, s.agentEnv())
 	cmd.Dir = s.sandbox
 	setGroup(cmd)
 	stdin, err := cmd.StdinPipe()
@@ -221,9 +239,9 @@ func (s *Session) handleUpdate(n sdk.SessionNotification) {
 		s.bounceMode(u.Mode)
 		return
 	}
-	if u.Kind == "config" && u.Config != "" {
+	if u.Kind == "config" {
 		s.mu.Lock()
-		s.modelID = u.Config
+		s.options = u.Options
 		s.mu.Unlock()
 	}
 	s.emit(u)
@@ -279,23 +297,12 @@ func (s *Session) initialize(ctx context.Context) error {
 	if resp.ProtocolVersion != sdk.ProtocolVersionNumber {
 		return fmt.Errorf("%w: agent speaks %d", ErrProtocolVersion, resp.ProtocolVersion)
 	}
+	s.mcpHTTP = resp.AgentCapabilities.McpCapabilities.Http
 	return nil
 }
 
-func newSessionRequest(cwd, kind string) sdk.NewSessionRequest {
-	req := sdk.NewSessionRequest{Cwd: cwd, McpServers: []sdk.McpServer{}}
-	if kind == "claude" {
-		req.Meta = map[string]any{
-			"claudeCode": map[string]any{
-				"options": map[string]any{"allowDangerouslySkipPermissions": false},
-			},
-		}
-	}
-	return req
-}
-
 func (s *Session) openSession(ctx context.Context) error {
-	resp, err := s.conn.NewSession(ctx, newSessionRequest(s.sandbox, s.cfg.Type))
+	resp, err := s.conn.NewSession(ctx, newSessionRequest(s.sandbox, s.cfg.Type, s.bridgeServer()))
 	if err != nil {
 		var re *sdk.RequestError
 		if errors.As(err, &re) && re.Code == -32000 {
@@ -305,9 +312,7 @@ func (s *Session) openSession(ctx context.Context) error {
 	}
 	s.mu.Lock()
 	s.sid = resp.SessionId
-	if id := modelID(resp.ConfigOptions); id != "" {
-		s.modelID = id
-	}
+	s.options = options(resp.ConfigOptions)
 	s.mu.Unlock()
 	return s.applyMode(ctx, resp)
 }
@@ -425,7 +430,7 @@ func (s *Session) Prompt(ctx context.Context, text string, resources []Resource)
 	if sid == "" {
 		return "", errors.New("session is not open")
 	}
-	blocks := make([]sdk.ContentBlock, 0, 1+len(resources))
+	blocks := make([]sdk.ContentBlock, 0, 2+len(resources))
 	if text != "" {
 		blocks = append(blocks, sdk.TextBlock(s.outbound(text)))
 	}
@@ -446,6 +451,17 @@ func (s *Session) Prompt(ctx context.Context, text string, resources []Resource)
 		return "", err
 	}
 	defer s.finishTurn(t)
+	// An agent without a system prompt of SSHYard's learns where it works
+	// before its first request.
+	s.mu.Lock()
+	introduce := !s.introduced && !ownPrompt(s.cfg.Type)
+	s.introduced = true
+	s.mu.Unlock()
+	if introduce {
+		blocks = append([]sdk.ContentBlock{sdk.ResourceBlock(sdk.EmbeddedResourceResource{
+			TextResourceContents: &sdk.TextResourceContents{Uri: "sshyard://instructions", Text: Instructions},
+		})}, blocks...)
+	}
 	resp, err := s.conn.Prompt(t.ctx, sdk.PromptRequest{SessionId: sid, Prompt: blocks})
 	// Inspect cancellation after the SDK call instead of racing a done channel.
 	if ctx.Err() != nil || t.ctx.Err() != nil {
@@ -469,25 +485,6 @@ func (s *Session) Prompt(ctx context.Context, text string, resources []Resource)
 		return "", errors.Join(err, t.cleanupErr)
 	}
 	return string(resp.StopReason), nil
-}
-
-// SetModel selects the config option whose category is "model".
-func (s *Session) SetModel(ctx context.Context, value string) error {
-	s.mu.Lock()
-	id := s.modelID
-	sid := s.sid
-	s.mu.Unlock()
-	if id == "" {
-		return errors.New("agent has no model option")
-	}
-	_, err := s.conn.SetSessionConfigOption(ctx, sdk.SetSessionConfigOptionRequest{
-		ValueId: &sdk.SetSessionConfigOptionValueId{
-			ConfigId:  sdk.SessionConfigId(id),
-			SessionId: sid,
-			Value:     sdk.SessionConfigValueId(value),
-		},
-	})
-	return err
 }
 
 // Stop cancels the turn, answers every pending permission request with
@@ -530,6 +527,9 @@ func (s *Session) Close() error {
 		}
 		close(s.closed)
 		s.wg.Wait()
+		if s.bridge != nil {
+			_ = s.bridge.Close()
+		}
 		if s.sandbox != "" {
 			_ = os.RemoveAll(s.sandbox)
 		}

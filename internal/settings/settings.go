@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/Licoy/sshyard/internal/highlight"
@@ -113,10 +114,16 @@ type Settings struct {
 	// MetricsMount is an extra filesystem shown beside the root. Empty is the root only.
 	MetricsMount string `json:"metricsMount,omitempty"`
 	// AIDefaultAgent is the agent a new AI pane starts with. "builtin"
-	// is the in-process agent, which speaks to the configured providers.
+	// is the in-process agent, which speaks to the configured providers;
+	// "acp:<id>" is one of AIACPAgents, and "acp" alone the first of them.
 	AIDefaultAgent string `json:"aiDefaultAgent,omitempty"`
-	// AIACP is a user-supplied ACP executable; arguments are passed directly, without a shell
-	AIACP ACPConfig `json:"aiACP,omitempty"`
+	// AIACPAgents are the external ACP agents: ones detected on this
+	// computer, or user-supplied executables; arguments are passed
+	// directly, without a shell.
+	AIACPAgents []ACPConfig `json:"aiACPAgents,omitempty"`
+	// AIACP is the single agent older files kept; Normalize moves it into
+	// AIACPAgents.
+	AIACP *ACPConfig `json:"aiACP,omitempty"`
 	// AIDefaultMode is the global permission mode: ask, review or full.
 	// "full" is kept when a file already says so; the UI asks before
 	// writing it.
@@ -321,10 +328,73 @@ func (s Settings) BackupTarget(id string) (BackupTarget, bool) {
 	return BackupTarget{}, false
 }
 
-// ACPConfig describes the one external ACP backend
+// ACPConfig describes one external ACP backend. ID names it among the
+// others: the detected agent's, else "custom", "custom-2" and so on.
+// Agent is the detected agent's catalog id (internal/ai/acp/detect), or
+// empty for a command the user typed; a detected agent is found again
+// when its executable moves. Options are the values last chosen for the
+// agent's own settings (its model and thinking level), by setting id.
 type ACPConfig struct {
-	Command string   `json:"command,omitempty"`
-	Args    []string `json:"args,omitempty"`
+	ID      string            `json:"id,omitempty"`
+	Agent   string            `json:"agent,omitempty"`
+	Command string            `json:"command,omitempty"`
+	Args    []string          `json:"args,omitempty"`
+	Options map[string]string `json:"options,omitempty"`
+}
+
+// SameLaunch says whether two configurations start the same agent the
+// same way: chosen option values are not part of it.
+func (c ACPConfig) SameLaunch(o ACPConfig) bool {
+	return c.ID == o.ID && c.Agent == o.Agent && c.Command == o.Command && slices.Equal(c.Args, o.Args)
+}
+
+// ACP is the agent a pane's backend names: "acp:<id>" is that agent,
+// "acp" the first one.
+func (s Settings) ACP(backend string) (ACPConfig, bool) {
+	id, ok := strings.CutPrefix(backend, "acp:")
+	if !ok && backend != "acp" {
+		return ACPConfig{}, false
+	}
+	for _, c := range s.AIACPAgents {
+		if !ok || c.ID == id {
+			return c, true
+		}
+	}
+	return ACPConfig{}, false
+}
+
+// IsACP says whether a pane's backend is an external ACP agent.
+func IsACP(backend string) bool { return backend == "acp" || strings.HasPrefix(backend, "acp:") }
+
+func (s *Settings) normalizeACP() {
+	if s.AIACP != nil {
+		if len(s.AIACPAgents) == 0 {
+			s.AIACPAgents = []ACPConfig{*s.AIACP}
+		}
+		s.AIACP = nil
+	}
+	seen := map[string]bool{}
+	out := s.AIACPAgents[:0:0]
+	for _, c := range s.AIACPAgents {
+		c.ID, c.Agent, c.Command = strings.TrimSpace(c.ID), strings.TrimSpace(c.Agent), strings.TrimSpace(c.Command)
+		if c.Command == "" {
+			continue
+		}
+		base := c.ID
+		if base == "" {
+			base = c.Agent
+		}
+		if base == "" {
+			base = "custom"
+		}
+		c.ID = base
+		for n := 2; seen[c.ID]; n++ {
+			c.ID = base + "-" + strconv.Itoa(n)
+		}
+		seen[c.ID] = true
+		out = append(out, c)
+	}
+	s.AIACPAgents = out
 }
 
 // AIProvider is one built-in agent profile. Headers are non-secret;
@@ -611,7 +681,7 @@ func (s *Settings) RemoveTerminalScheme(id string) {
 var aiModes = map[string]bool{"ask": true, "review": true, "full": true}
 
 func (s *Settings) normalizeAI(d Settings) {
-	s.AIACP.Command = strings.TrimSpace(s.AIACP.Command)
+	s.normalizeACP()
 	s.AIDefaultAgent = strings.TrimSpace(s.AIDefaultAgent)
 	if s.AIDefaultAgent == "" {
 		s.AIDefaultAgent = d.AIDefaultAgent
