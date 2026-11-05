@@ -1195,7 +1195,7 @@
   "aiAttachTotal": "附件总大小不能超过 {limit}。",
   "aiDropFiles": "松开即可添加附件",
   "aiHTTPFailedDetail": "服务商响应失败（HTTP {status}）：{detail}",
-  "aiReviewProviderNote": "在“自动审核”下，只读操作直接执行，其余每个操作均交给所选模型审核；模型允许才执行，要求确认或审核失败时询问你",
+  "aiReviewProviderNote": "在“自动审核”下，只读操作直接执行，高危操作始终询问你，其余操作由所选模型对照你的请求审核；模型允许才执行，要求确认或审核失败时询问你",
   "aiReviewCustom": "自定义…",
   "aiReviewWith": "审核服务商",
   "aiReviewKind": "审核方式",

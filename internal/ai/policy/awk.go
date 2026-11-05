@@ -6,7 +6,8 @@ func awkName(name string) bool {
 	return name == "awk" || name == "gawk" || name == "mawk" || name == "nawk"
 }
 
-func awkUnk(name, why string) partial {
+// namedUnk is Unknown with name as its grant prefix.
+func namedUnk(name, why string) partial {
 	u := unk(why)
 	u.prefix = name
 	return u
@@ -21,7 +22,7 @@ func (e *shellEnv) gradeAwk(name string, args []arg) partial {
 	options, sawProg := true, false
 	for i := 1; i < len(args); i++ {
 		if !args[i].ok {
-			return awkUnk(name, "awk argument")
+			return namedUnk(name, "awk argument")
 		}
 		t := args[i].text
 		switch {
@@ -37,14 +38,14 @@ func (e *shellEnv) gradeAwk(name string, args []arg) partial {
 			options = false
 		case t == "-F" || t == "-v":
 			if i+1 >= len(args) || !args[i+1].ok {
-				return awkUnk(name, "awk "+t)
+				return namedUnk(name, "awk "+t)
 			}
 			i++
 		case strings.HasPrefix(t, "-F") || strings.HasPrefix(t, "-v") ||
 			strings.HasPrefix(t, "--field-separator=") || strings.HasPrefix(t, "--assign="):
 		case t == "-e" || t == "--source":
 			if i+1 >= len(args) || !args[i+1].ok {
-				return awkUnk(name, "awk "+t)
+				return namedUnk(name, "awk "+t)
 			}
 			progs = append(progs, args[i+1].text)
 			sawProg = true
@@ -53,17 +54,17 @@ func (e *shellEnv) gradeAwk(name string, args []arg) partial {
 			progs = append(progs, strings.TrimPrefix(t, "--source="))
 			sawProg = true
 		default:
-			return awkUnk(name, "awk option "+t)
+			return namedUnk(name, "awk option "+t)
 		}
 	}
 	if len(progs) == 0 {
-		return awkUnk(name, "awk")
+		return namedUnk(name, "awk")
 	}
 	g := partial{cat: "read", risk: RiskReadOnly, prefix: name, why: name}
 	for _, p := range progs {
 		exec, env, bad := scanAwk(p)
 		if bad || exec {
-			return awkUnk(name, "awk program")
+			return namedUnk(name, "awk program")
 		}
 		if env {
 			g = better(g, partial{cat: "sensitive-read", risk: RiskMedium, why: "awk ENVIRON"})

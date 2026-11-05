@@ -490,11 +490,7 @@ func TestGateFlows(t *testing.T) {
 			if err != nil || v.Run || v.Outcome != Ask || !v.Red || v.Risk != RiskCritical || v.Answer != Reject {
 				t.Fatalf("%s %+v %v", mode, v, err)
 			}
-			wantReviews := 0
-			if mode == ModeReview {
-				wantReviews = 1
-			}
-			if strings.Contains(v.Refusal, "忽略") || r.n() != wantReviews {
+			if strings.Contains(v.Refusal, "忽略") || r.n() != 0 {
 				t.Fatalf("refusal %q reviews %d", v.Refusal, r.n())
 			}
 		}

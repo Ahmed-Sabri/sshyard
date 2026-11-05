@@ -54,7 +54,7 @@ func TestAIReviewEveryOperationUsesConfiguredModel(t *testing.T) {
 }
 
 // reviewedCommands are not read-only, so review mode sends each to the model.
-var reviewedCommands = []string{"systemctl restart nginx", "atop 1 2"}
+var reviewedCommands = []string{"systemctl restart nginx", "iotop -b -n 1"}
 
 func TestAIReviewReadOnlyRunsWithoutModel(t *testing.T) {
 	for _, kind := range []string{settings.AIReviewChat, settings.AIReviewDecisions} {
@@ -67,6 +67,30 @@ func TestAIReviewReadOnlyRunsWithoutModel(t *testing.T) {
 			}
 			if countExact(tt, "Approved · Auto") != 2 || tt.HasText("Approved · Reviewer") {
 				t.Fatalf("wrong approval source: %q", tt.Texts())
+			}
+		})
+	}
+}
+
+// The review model judges a short follow-up with the user's earlier
+// messages in the pane, never the assistant's text.
+func TestAIReviewSeesEarlierUserMessages(t *testing.T) {
+	for _, kind := range []string{settings.AIReviewChat, settings.AIReviewDecisions} {
+		t.Run(kind, func(t *testing.T) {
+			a, tt, cn, _, reviews := reviewOperationApp(t, kind, "allow", "systemctl restart nginx")
+			cn.ai.items = []aiItem{
+				{kind: "user", text: "nginx keeps returning 502"},
+				{kind: "text", text: "assistant-only analysis"},
+				{kind: "user", text: "check the upstream config"},
+			}
+			a.SendAI(cn.id, "go ahead and fix it")
+			waitFor(t, tt, "reviewed operation", func() bool { return !cn.ai.running || cn.ai.pending != nil })
+			body, _ := reviews.body.Load().(string)
+			if reviews.Load() != 1 || !strings.Contains(body, "earlier user message: nginx keeps returning 502") ||
+				!strings.Contains(body, "earlier user message: check the upstream config") ||
+				!strings.Contains(body, "user request: go ahead and fix it") ||
+				strings.Contains(body, "earlier user message: go ahead") || strings.Contains(body, "assistant-only analysis") {
+				t.Fatalf("review request %q", body)
 			}
 		})
 	}
@@ -94,7 +118,7 @@ func TestAIReviewAskAndFailureKeepConfirmation(t *testing.T) {
 	}
 }
 
-func reviewOperationApp(t *testing.T, kind, response string, commands ...string) (*App, *ui.Tester, *conn, *reviewOperationTools, *atomic.Int32) {
+func reviewOperationApp(t *testing.T, kind, response string, commands ...string) (*App, *ui.Tester, *conn, *reviewOperationTools, *reviewCount) {
 	t.Helper()
 	srv, reviews := reviewOperationServer(kind, response, commands)
 	t.Cleanup(srv.Close)
@@ -121,19 +145,31 @@ func reviewOperationApp(t *testing.T, kind, response string, commands ...string)
 	return a, tt, a.conns[id], tools, reviews
 }
 
-func reviewOperationServer(kind, response string, commands []string) (*httptest.Server, *atomic.Int32) {
-	var assistant, reviews atomic.Int32
+// reviewCount counts review requests and keeps the last one's body.
+type reviewCount struct {
+	atomic.Int32
+	body atomic.Value
+}
+
+func reviewOperationServer(kind, response string, commands []string) (*httptest.Server, *reviewCount) {
+	var assistant atomic.Int32
+	var reviews reviewCount
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			Model string `json:"model"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		body, err := io.ReadAll(r.Body)
+		if err == nil {
+			err = json.Unmarshal(body, &req)
+		}
+		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
 		switch req.Model {
 		case "review-model":
+			reviews.body.Store(string(body))
 			reviews.Add(1)
 			if response == "error" {
 				http.Error(w, "review temporarily unavailable", http.StatusServiceUnavailable)

@@ -521,6 +521,8 @@ func (e *shellEnv) core(name string, args []arg) partial {
 		return e.gradeAwk(name, args)
 	case "nginx", "apachectl", "apache2ctl", "httpd":
 		return gradeWebServer(name, args)
+	case "atop":
+		return e.gradeAtop(args)
 	case "find":
 		return e.gradeFind(args)
 	case "chmod":
@@ -2071,7 +2073,7 @@ func noPathOperands(name string) bool {
 	case "echo", "printf", "env", "printenv", "true", "false", ":", "pwd", "date", "uname",
 		"hostname", "id", "whoami", "uptime", "free", "which", "ps", "ss", "netstat", "journalctl",
 		"sysctl", "dmesg", "pidstat", "vmstat", "iostat", "mpstat", "lscpu", "lsblk", "lsmem",
-		"lspci", "lsusb", "w", "who", "last", "lastb", "tr", "seq", "type":
+		"lspci", "lsusb", "w", "who", "last", "lastb", "tr", "seq", "type", "swapon":
 		return true
 	default:
 		return false
@@ -2084,7 +2086,7 @@ func readOnlyCmd(name string) bool {
 		"stat", "df", "du", "free", "uptime", "uname", "ps", "top", "journalctl", "getconf", "nproc",
 		"ss", "netstat", "hostname", "id", "whoami", "which", "whereis", "file",
 		"wc", "sort", "uniq", "date", "echo", "printf", "pwd", "true", "false",
-		":", "env", "printenv", "sysctl", "dmesg", "pidstat", "cut", "tac", "nl", "column":
+		":", "env", "printenv", "sysctl", "dmesg", "pidstat", "cut", "tac", "nl", "column", "swapon":
 		return true
 	default:
 		return anyArgsReader(name)

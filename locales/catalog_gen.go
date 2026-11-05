@@ -12087,11 +12087,11 @@ func (msgs Messages) AiHTTPFailedDetail(status string, detail string) string {
 	return Catalog.Format(msgs.locale, "aiHTTPFailedDetail", map[string]any{"status": status, "detail": detail})
 }
 
-// AiReviewProviderNote says "In Review mode, read-only operations run and the selected model checks every other operation; only explicit approval …"
+// AiReviewProviderNote says "In Review mode, read-only operations run, critical ones always ask you, and the selected model checks the rest agains…"
 // in the language the app shows.
 func AiReviewProviderNote() string { return In(i18n.Locale()).AiReviewProviderNote() }
 
-// AiReviewProviderNote says "In Review mode, read-only operations run and the selected model checks every other operation; only explicit approval …"
+// AiReviewProviderNote says "In Review mode, read-only operations run, critical ones always ask you, and the selected model checks the rest agains…"
 // in the language of msgs.
 func (msgs Messages) AiReviewProviderNote() string {
 	return Catalog.Format(msgs.locale, "aiReviewProviderNote", nil)

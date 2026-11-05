@@ -101,8 +101,12 @@
 // ModeAsk does not offer "allow similar" for a file write, so the diff is
 // shown every time. That is stricter than the spec table and is an open
 // question. Session grants never skip the review model.
-// ModeReview auto-runs ReadOnly and sends every other grade to a
-// configured model, including Unknown. Only an explicit allow runs
+// ModeReview auto-runs ReadOnly and sends every other grade except
+// Critical to a configured model, including Unknown; Critical always asks
+// the user. The model is told to let work that moves the user's task
+// forward run, writes, restarts and clean-ups included, and to stop only
+// for named harms; it sees the current request and the user's earlier
+// messages in the pane, never the assistant's text. Only an explicit allow runs
 // automatically; ask, invalid replies, errors and timeouts ask the user.
 // After the model asks, a session grant still covers one plain command (no
 // list, pipe, redirection or substitution) but never a script. Without a

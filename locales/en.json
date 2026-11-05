@@ -1195,7 +1195,7 @@
   "aiAttachTotal": "Attachments can total at most {limit}.",
   "aiDropFiles": "Drop files to attach them",
   "aiHTTPFailedDetail": "Provider response failed (HTTP {status}): {detail}",
-  "aiReviewProviderNote": "In Review mode, read-only operations run and the selected model checks every other operation; only explicit approval runs it, otherwise you are asked.",
+  "aiReviewProviderNote": "In Review mode, read-only operations run, critical ones always ask you, and the selected model checks the rest against your requests; only explicit approval runs it, otherwise you are asked.",
   "aiReviewCustom": "Custom…",
   "aiReviewWith": "Review provider",
   "aiReviewKind": "Review method",

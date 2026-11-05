@@ -29,7 +29,9 @@ const (
 // use the defaults (5 minutes and 10 seconds).
 // Output, when set, supplies the recent untrusted terminal text the
 // reviewer may see (the gate keeps the last 20 lines). Task, when set,
-// supplies what the user asked for in the current turn.
+// supplies what the user asked for in the current turn, and Earlier the
+// user's previous messages, oldest first (the gate keeps the last
+// maxReviewEarlier).
 type GateConfig struct {
 	Engine        Engine
 	Mode          func() Mode
@@ -44,6 +46,7 @@ type GateConfig struct {
 	HostMeta      string
 	Output        func() string
 	Task          func() string
+	Earlier       func() []string
 	Now           func() time.Time
 	PromptTimeout time.Duration
 	ReviewTimeout time.Duration
@@ -63,6 +66,7 @@ type gate struct {
 	hostMeta      string
 	output        func() string
 	task          func() string
+	earlier       func() []string
 	nowFn         func() time.Time
 	promptTimeout time.Duration
 	reviewTimeout time.Duration
@@ -109,6 +113,7 @@ func NewGate(cfg GateConfig) Gate {
 		prompter:      cfg.Prompter,
 		reviewer:      cfg.Reviewer,
 		task:          cfg.Task,
+		earlier:       cfg.Earlier,
 		auditor:       cfg.Auditor,
 		session:       cfg.SessionID,
 		pane:          cfg.PaneID,
@@ -269,12 +274,23 @@ func (g *gate) reviewInput(a Action, d Decision, diff string) ReviewInput {
 	if g.task != nil {
 		task = g.task()
 	}
+	var earlier []string
+	if g.earlier != nil {
+		all := g.earlier()
+		if len(all) > maxReviewEarlier {
+			all = all[len(all)-maxReviewEarlier:]
+		}
+		for _, m := range all {
+			earlier = append(earlier, Redact(truncRunes(m, maxReviewEarlierRunes)))
+		}
+	}
 	where := a.Where
 	if where == "" {
 		where = Remote
 	}
 	return ReviewInput{
 		Task:     Redact(truncRunes(task, maxReviewTask)),
+		Earlier:  earlier,
 		Category: d.Category,
 		Risk:     d.Risk,
 		Why:      Redact(d.Why),

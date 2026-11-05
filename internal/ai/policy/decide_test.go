@@ -66,7 +66,7 @@ func TestDecide(t *testing.T) {
 		{"review delete no reviewer", ModeReview, del, false, Ask, ByRule, false, false, false},
 		{"review permission", ModeReview, perm, true, Review, ByRule, false, false, false},
 		{"review network", ModeReview, net, true, Review, ByRule, false, false, false},
-		{"review critical red", ModeReview, crit, true, Review, ByRule, false, false, true},
+		{"review critical asks the user", ModeReview, crit, true, Ask, ByRule, false, false, true},
 		{"review unknown", ModeReview, unk, true, Review, ByRule, false, false, false},
 		{"review local low with reviewer", ModeReview, localLow, true, Review, ByRule, true, false, false},
 

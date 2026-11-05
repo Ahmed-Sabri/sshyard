@@ -4,9 +4,9 @@
 // agent says (its reason, its own approval settings, allow_always) changes
 // a decision.
 //
-// In automatic review mode, read-only actions run and a configured review
-// model judges every other action; local risk grades supply metadata and
-// audit context, not approval.
+// In automatic review mode, read-only actions run, Critical ones ask the
+// user, and a configured review model judges every other action; local
+// risk grades supply metadata and audit context, not approval.
 package policy
 
 import (
@@ -153,8 +153,11 @@ type Prompter interface {
 // only as bounded, marked untrusted data (last 20 lines).
 type ReviewInput struct {
 	// Task is what the user asked for in this turn, against which the
-	// reviewer judges whether the action belongs.
+	// reviewer judges whether the action belongs. Earlier holds the
+	// user's previous messages in the pane, oldest first, for the task
+	// a short "continue" or "fix it" refers to.
 	Task     string
+	Earlier  []string
 	Category Category
 	Risk     Risk
 	Why      string // the local rule that set the risk, e.g. "unlisted command: atop"

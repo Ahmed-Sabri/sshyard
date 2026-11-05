@@ -43,8 +43,9 @@ func verifiedReadArgs(name string, args []arg) bool {
 			return false
 		}
 	}
-	// uniq's second operand is an output file; hostname's operand changes it.
-	return !(name == "uniq" && len(operands) > 1 || name == "hostname" && len(operands) > 0)
+	// uniq's second operand is an output file; hostname's operand changes
+	// it, and swapon's turns on swap.
+	return !(name == "uniq" && len(operands) > 1 || (name == "hostname" || name == "swapon") && len(operands) > 0)
 }
 
 // anyArgsReader is a reporting tool with no option that writes, runs a
@@ -126,6 +127,9 @@ func readOperands(name string, args []arg) (operands []arg, seen map[string]bool
 		long += " all values names binary ignore quiet pattern="
 	case "pidstat":
 		short, values = "dhIlrRstuvwH", "pCGT"
+	case "swapon":
+		short = "s"
+		long += " show show= summary noheadings raw bytes"
 	case "ss", "netstat":
 		short = "alntupxro46"
 	case "stat", "file":
@@ -153,7 +157,9 @@ func readOperands(name string, args []arg) (operands []arg, seen map[string]bool
 		if options && strings.HasPrefix(t, "--") {
 			key, _, attached := strings.Cut(t[2:], "=")
 			seen[key] = true
-			if strings.Contains(" "+long+" ", " "+key+"= ") {
+			// A name listed both bare and with = takes an optional value.
+			plain := strings.Contains(" "+long+" ", " "+key+" ")
+			if strings.Contains(" "+long+" ", " "+key+"= ") && (attached || !plain) {
 				if !attached {
 					i++
 					if i >= len(args) {

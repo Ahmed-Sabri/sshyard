@@ -1195,7 +1195,7 @@
   "aiAttachTotal": "附件總大小不能超過 {limit}。",
   "aiDropFiles": "鬆開即可新增附件",
   "aiHTTPFailedDetail": "服務供應商響應失敗（HTTP {status}）：{detail}",
-  "aiReviewProviderNote": "在“自動審核”下，唯讀操作直接執行，其餘每個操作均交給所選模型審核；模型允許才執行，要求確認或審核失敗時詢問你",
+  "aiReviewProviderNote": "在“自動審核”下，唯讀操作直接執行，高危操作始終詢問你，其餘操作由所選模型對照你的請求審核；模型允許才執行，要求確認或審核失敗時詢問你",
   "aiReviewCustom": "自定義…",
   "aiReviewWith": "審核服務供應商",
   "aiReviewKind": "審核方式",

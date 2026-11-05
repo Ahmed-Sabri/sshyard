@@ -660,11 +660,7 @@ func TestPromptInjectionDoesNotDowngrade(t *testing.T) {
 	for _, mode := range []Mode{ModeAsk, ModeReview} {
 		t.Run(string(mode), func(t *testing.T) {
 			d := eng.Decide(mode, g, true)
-			want := Ask
-			if mode == ModeReview {
-				want = Review
-			}
-			if d.Outcome != want || !d.Red || d.Risk != RiskCritical {
+			if d.Outcome != Ask || !d.Red || d.Risk != RiskCritical {
 				t.Fatalf("%+v", d)
 			}
 		})

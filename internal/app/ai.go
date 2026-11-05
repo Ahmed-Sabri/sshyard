@@ -394,6 +394,7 @@ func (a *App) aiGate(c *conn) policy.Gate {
 			HostMeta:  c.host.Label(),
 			Output:    func() string { return a.aiOutput(c) },
 			Task:      func() string { return a.aiTask(c) },
+			Earlier:   func() []string { return a.aiEarlier(c) },
 		})
 	}
 	return gate

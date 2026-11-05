@@ -107,3 +107,61 @@ func gradePHPFPM(name string, args []arg) partial {
 		return serverService(name)
 	}
 }
+
+// atopFlags are atop options that only choose what a report shows.
+const atopFlags = "gmdnscvoCMDNAupjyY1fFGlkxaRhVHB"
+
+// gradeAtop: atop reports, live or replayed from its raw logs, are
+// read-only. -r reads a raw file, which must be one of atop's own daily
+// logs (a date or y's) or a trusted read; -w writes one, which is Unknown
+// like any other option.
+func (e *shellEnv) gradeAtop(args []arg) partial {
+	g := partial{cat: "read", risk: RiskReadOnly, prefix: "atop", why: "atop"}
+	for i := 1; i < len(args); i++ {
+		if !args[i].ok {
+			return namedUnk("atop", "atop argument")
+		}
+		t := args[i].text
+		if !strings.HasPrefix(t, "-") || t == "-" {
+			if !isDigits(t) {
+				return namedUnk("atop", "atop operand")
+			}
+			continue
+		}
+		for j := 1; j < len(t); j++ {
+			c := t[j]
+			switch {
+			case strings.IndexByte(atopFlags, c) >= 0:
+			case c == 'b' || c == 'e' || c == 'L' || c == 'P' || c == 'r':
+				v := t[j+1:]
+				if v == "" && i+1 < len(args) && (c != 'r' || !strings.HasPrefix(args[i+1].text, "-")) {
+					i++
+					if !args[i].ok {
+						return namedUnk("atop", "atop argument")
+					}
+					v = args[i].text
+				} else if v == "" && c != 'r' {
+					return namedUnk("atop", "atop -"+string(c))
+				}
+				if c == 'r' && v != "" && !atopDailyLog(v) {
+					if e.sensitive(v) {
+						g = better(g, sens(v))
+					} else if !e.trustedRead(v) {
+						g = better(g, partial{cat: "sensitive-read", risk: RiskMedium, why: "unresolved file content read"})
+					}
+				}
+				j = len(t)
+			default:
+				return namedUnk("atop", "atop option -"+string(c))
+			}
+		}
+	}
+	g.prefix = "atop"
+	return g
+}
+
+// atopDailyLog is -r's name for one of atop's own logs: y for yesterday,
+// yy for the day before and so on, or a YYYYMMDD date.
+func atopDailyLog(v string) bool {
+	return strings.Trim(v, "y") == "" || len(v) == 8 && isDigits(v)
+}
