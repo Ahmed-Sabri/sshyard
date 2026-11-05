@@ -37,6 +37,31 @@ func localShell() string {
 	return "cmd.exe"
 }
 
+// localEnv is the environment of the local shell: this app's, with the
+// terminal named. PowerShell 7's update notice is off unless the user
+// chose otherwise: under some languages it miscounts its padding and
+// ends the shell as it starts (PowerShell 7.6.6).
+func localEnv(term string) []string {
+	env := append([]string{"POWERSHELL_UPDATECHECK=Off"}, os.Environ()...)
+	return mergeEnv(append(env, termEnv(term)...), true)
+}
+
+// envBlock is env as CreateProcess takes it: each entry ended by a NUL,
+// the block by another. Entries with a NUL of their own are left out.
+func envBlock(env []string) *uint16 {
+	var b []uint16
+	for _, kv := range env {
+		if u, err := windows.UTF16FromString(kv); err == nil {
+			b = append(b, u...)
+		}
+	}
+	if len(b) == 0 {
+		b = append(b, 0)
+	}
+	b = append(b, 0)
+	return &b[0]
+}
+
 func startLocal(cols, rows int, term string) (localPTY, error) {
 	var inR, inW, outR, outW windows.Handle
 	if err := windows.CreatePipe(&inR, &inW, nil, 0); err != nil {
@@ -58,7 +83,7 @@ func startLocal(cols, rows int, term string) (localPTY, error) {
 		return nil, err
 	}
 	p := &conPTY{hpc: hpc, in: os.NewFile(uintptr(inW), "conpty-in"), out: os.NewFile(uintptr(outR), "conpty-out"), done: make(chan struct{})}
-	if err := p.spawn(); err != nil {
+	if err := p.spawn(localEnv(term)); err != nil {
 		p.closeConsole()
 		return nil, err
 	}
@@ -70,7 +95,7 @@ func startLocal(cols, rows int, term string) (localPTY, error) {
 }
 
 // spawn starts the shell attached to the console, in the user's home.
-func (p *conPTY) spawn() error {
+func (p *conPTY) spawn(env []string) error {
 	attrs, err := windows.NewProcThreadAttributeList(1)
 	if err != nil {
 		return err
@@ -94,7 +119,7 @@ func (p *conPTY) spawn() error {
 		dir, _ = windows.UTF16PtrFromString(home)
 	}
 	var pi windows.ProcessInformation
-	if err := windows.CreateProcess(nil, cmd, nil, nil, false, windows.EXTENDED_STARTUPINFO_PRESENT, nil, dir, &si.StartupInfo, &pi); err != nil {
+	if err := windows.CreateProcess(nil, cmd, nil, nil, false, windows.EXTENDED_STARTUPINFO_PRESENT|windows.CREATE_UNICODE_ENVIRONMENT, envBlock(env), dir, &si.StartupInfo, &pi); err != nil {
 		return err
 	}
 	windows.CloseHandle(pi.Thread)

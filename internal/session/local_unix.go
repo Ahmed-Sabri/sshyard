@@ -34,7 +34,7 @@ func localShell() string {
 // a terminal app does.
 func startLocal(cols, rows int, term string) (localPTY, error) {
 	cmd := exec.Command(localShell(), "-l")
-	cmd.Env = append(os.Environ(), "TERM="+term, "COLORTERM=truecolor", "TERM_PROGRAM=SSHYard")
+	cmd.Env = append(os.Environ(), termEnv(term)...)
 	if home, err := os.UserHomeDir(); err == nil {
 		cmd.Dir = home
 	}

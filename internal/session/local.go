@@ -3,6 +3,7 @@ package session
 import (
 	"context"
 	"io"
+	"strings"
 )
 
 // localPTY is a shell running on this computer in a pseudo-terminal: what
@@ -12,6 +13,35 @@ type localPTY interface {
 	Resize(cols, rows int) error
 	// Wait waits for the shell to end.
 	Wait() error
+}
+
+// termEnv names the terminal to a local shell, as a terminal app does.
+func termEnv(term string) []string {
+	return []string{"TERM=" + term, "COLORTERM=truecolor", "TERM_PROGRAM=SSHYard"}
+}
+
+// mergeEnv keeps the last entry of each name, in the order the names
+// first appear; names fold case when fold is set, as on Windows. A name
+// may start with "=", as Windows' per-drive directories do.
+func mergeEnv(env []string, fold bool) []string {
+	at := map[string]int{}
+	out := make([]string, 0, len(env))
+	for _, kv := range env {
+		name := kv
+		if i := strings.IndexByte(kv[min(1, len(kv)):], '='); i >= 0 {
+			name = kv[:i+1]
+		}
+		if fold {
+			name = strings.ToUpper(name)
+		}
+		if i, ok := at[name]; ok {
+			out[i] = kv
+			continue
+		}
+		at[name] = len(out)
+		out = append(out, kv)
+	}
+	return out
 }
 
 // startPTY starts the local shell; a variable so that tests can stand in.
