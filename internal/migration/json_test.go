@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"path/filepath"
 	"testing"
 )
 
@@ -103,7 +104,7 @@ func TestMigrationTabby(t *testing.T) {
 		t.Fatalf("failed: %v", err)
 	}
 	e := r.Entries[0]
-	if e.User != "groupuser" || e.Port != 2200 || e.Group != "Parent/Child" || e.KeyPath != "/exports/id_ed25519" || e.Jumps[0].Ref != "jump" {
+	if e.User != "groupuser" || e.Port != 2200 || e.Group != "Parent/Child" || e.KeyPath != filepath.FromSlash("/exports/id_ed25519") || e.Jumps[0].Ref != "jump" {
 		t.Fatal("profile defaults or group mismatch")
 	}
 	for _, v := range []string{"profiles: [", "other: []", "profiles: []\n---\nprofiles: []", "profiles: &a [*a]"} {
@@ -120,7 +121,7 @@ func TestMigrationNetcattyCSV(t *testing.T) {
 	}
 	e := r.Entries[0]
 	validateEntry(&e)
-	if e.Address != "2001:db8::1" || e.Group != "A/B" || e.KeyPath != "/exports/@key" || !hasIssue(e.Issues, "unsupported-field", "Tags") {
+	if e.Address != "2001:db8::1" || e.Group != "A/B" || e.KeyPath != filepath.FromSlash("/exports/@key") || !hasIssue(e.Issues, "unsupported-field", "Tags") {
 		t.Fatal("CSV metadata mismatch")
 	}
 	if _, err := parseNetcatty([]byte("Groups,Label\na"), "bad.csv"); err != ErrFormat {
@@ -145,7 +146,7 @@ func TestMigrationExplicitDiagnostics(t *testing.T) {
 		t.Fatal("agent auth misclassified")
 	}
 	r, err = parseNetcatty([]byte(`{"hosts":[{"hostname":"host","identityId":"user"}],"identities":[{"id":"user","username":"alice","keyId":"key"}],"keys":[{"id":"key","filePath":"./id_ed25519"}]}`), "/exports/meta.json")
-	if err != nil || r.Entries[0].User != "alice" || r.Entries[0].KeyPath != "/exports/id_ed25519" {
+	if err != nil || r.Entries[0].User != "alice" || r.Entries[0].KeyPath != filepath.FromSlash("/exports/id_ed25519") {
 		t.Fatal("identity reference not resolved")
 	}
 	for _, source := range []Source{Electerm, Tabby} {
@@ -176,7 +177,7 @@ func TestMigrationNetcattyAuth(t *testing.T) {
 	}
 	data = []byte(`{"hosts":[{"hostname":"internal","username":"alice","identityId":"i","identityFileId":"k"}],"identities":[{"id":"i","username":""}],"keys":[{"id":"k","filePath":"./id_ed25519"}]}`)
 	r, err = parseNetcatty(data, "/exports/meta.json")
-	if err != nil || r.Entries[0].User != "alice" || r.Entries[0].KeyPath != "/exports/id_ed25519" {
+	if err != nil || r.Entries[0].User != "alice" || r.Entries[0].KeyPath != filepath.FromSlash("/exports/id_ed25519") {
 		t.Fatal("empty identity erased host fallback")
 	}
 }
