@@ -55,7 +55,7 @@ func (c *Client) responsesPayload(req Request) ([]byte, error) {
 
 func (c *Client) responsesInput(in []Message, model string) []any {
 	var out []any
-	for _, m := range in {
+	for _, m := range leadSystem(in) {
 		switch m.Role {
 		case "tool":
 			out = append(out, map[string]any{"type": "function_call_output", "call_id": m.ToolCallID, "output": m.Content})

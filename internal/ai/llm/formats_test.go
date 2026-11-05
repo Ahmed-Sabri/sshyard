@@ -52,6 +52,73 @@ func TestChatLegacyTokensEffortAndParts(t *testing.T) {
 	}
 }
 
+// scatteredSystem has the host context after the prompt and a later system
+// message mid-conversation, as a restored agent session sends them.
+var scatteredSystem = []Message{
+	{Role: "system", Content: "sys"}, {Role: "system", Content: "host"},
+	{Role: "user", Content: "disk?"},
+	{Role: "assistant", ToolCalls: []ToolCall{{ID: "call_1", Name: "run_command", Arguments: `{"command":"df"}`}}},
+	{Role: "tool", ToolCallID: "call_1", Content: "90%"},
+	{Role: "system", Content: "later"},
+	{Role: "user", Content: "and now?"},
+}
+
+func TestChatMergesSystemMessages(t *testing.T) {
+	srv, _, payload := serve(t, "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"},\"finish_reason\":\"stop\"}]}\n\n")
+	c := &Client{BaseURL: srv.URL, APIKey: "k", Model: "qwen"}
+	if _, err := c.Stream(t.Context(), Request{Messages: scatteredSystem}, nil); err != nil {
+		t.Fatal(err)
+	}
+	var body struct {
+		Messages []chatMsg `json:"messages"`
+	}
+	if err := json.Unmarshal(*payload, &body); err != nil {
+		t.Fatal(err)
+	}
+	var roles []string
+	for _, m := range body.Messages {
+		roles = append(roles, m.Role)
+	}
+	if strings.Join(roles, ",") != "system,user,assistant,tool,user" {
+		t.Fatalf("roles %v in %s", roles, *payload)
+	}
+	m := body.Messages
+	if m[0].Content != "sys\n\nhost\n\nlater" || m[1].Content != "disk?" || m[4].Content != "and now?" ||
+		len(m[2].ToolCalls) != 1 || m[2].ToolCalls[0].ID != "call_1" || m[3].ToolCallID != "call_1" || m[3].Content != "90%" {
+		t.Fatalf("messages %s", *payload)
+	}
+}
+
+func TestResponsesMergesSystemMessages(t *testing.T) {
+	srv, _, payload := serve(t, `{"status":"completed","output":[{"type":"message","content":[{"type":"output_text","text":"ok"}]}]}`)
+	c := &Client{Format: FormatResponses, BaseURL: srv.URL, APIKey: "k", Model: "qwen"}
+	if _, err := c.Stream(t.Context(), Request{Messages: scatteredSystem}, nil); err != nil {
+		t.Fatal(err)
+	}
+	var body struct {
+		Input []map[string]any `json:"input"`
+	}
+	if err := json.Unmarshal(*payload, &body); err != nil {
+		t.Fatal(err)
+	}
+	var kinds []string
+	for _, it := range body.Input {
+		k, _ := it["role"].(string)
+		if k == "" {
+			k, _ = it["type"].(string)
+		}
+		kinds = append(kinds, k)
+	}
+	if strings.Join(kinds, ",") != "system,user,function_call,function_call_output,user" {
+		t.Fatalf("input %v in %s", kinds, *payload)
+	}
+	in := body.Input
+	if in[0]["content"] != "sys\n\nhost\n\nlater" || in[1]["content"] != "disk?" || in[2]["call_id"] != "call_1" ||
+		in[3]["call_id"] != "call_1" || in[3]["output"] != "90%" || in[4]["content"] != "and now?" {
+		t.Fatalf("input %s", *payload)
+	}
+}
+
 const respStream = `event: response.created
 data: {"type":"response.created","response":{"status":"in_progress"}}
 

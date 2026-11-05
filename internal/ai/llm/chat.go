@@ -61,6 +61,7 @@ type chatCall struct {
 }
 
 func chatMessages(in []Message) []chatMsg {
+	in = leadSystem(in)
 	out := make([]chatMsg, len(in))
 	for i, m := range in {
 		out[i] = chatMsg{Role: m.Role, ToolCallID: m.ToolCallID}
@@ -78,6 +79,26 @@ func chatMessages(in []Message) []chatMsg {
 		}
 	}
 	return out
+}
+
+// leadSystem joins the system messages into one and puts it first, as chat
+// templates such as Qwen's reject a system message anywhere else.
+func leadSystem(in []Message) []Message {
+	var system []string
+	out := make([]Message, 0, len(in))
+	for _, m := range in {
+		if m.Role != "system" {
+			out = append(out, m)
+			continue
+		}
+		if m.Content != "" {
+			system = append(system, m.Content)
+		}
+	}
+	if len(system) == 0 {
+		return out
+	}
+	return append([]Message{{Role: "system", Content: strings.Join(system, "\n\n")}}, out...)
 }
 
 func chatParts(m Message) []map[string]any {
