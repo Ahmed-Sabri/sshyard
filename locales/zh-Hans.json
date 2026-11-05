@@ -1544,5 +1544,15 @@
   "localKeysMCP": "允许 MCP 连接使用",
   "localKeysMCPNote": "通过 MCP 连接的 AI 智能体可在不询问的情况下用这些密钥登录“自动”主机。加密的密钥需要已记住口令。",
   "rememberedKeyPassphrase": "已记住 {key} 的口令",
-  "forgetKeyPassphrase": "忘记口令"
+  "forgetKeyPassphrase": "忘记口令",
+  "openFilesBelow": "在下方打开文件",
+  "openFilesSplit": "在旁边打开文件",
+  "filesEdge": "从终端打开文件",
+  "filesEdgeNote": "文件面板在终端旁打开的位置",
+  "filesEdgeRight": "右侧",
+  "filesEdgeBelow": "下方",
+  "openLocalOnStart": "启动时打开",
+  "openLocalOnStartNote": "SSHYard 启动时打开一个本地终端",
+  "terminalFallbackFont": "非 ASCII 字体",
+  "terminalFallbackFontNote": "用于绘制终端字体缺少的中日韩等字符"
 }

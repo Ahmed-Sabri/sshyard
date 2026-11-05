@@ -78,7 +78,7 @@ func (a *App) prepareStorage() error {
 	a.unlock.ready.Store(true)
 	a.unlock.secretsReady.Store(kc.Unlocked())
 	a.syncChoices()
-	a.resolveFonts(false, false)
+	a.resolveFonts(false, false, false)
 	a.updateCheck = a.settings.CheckUpdates
 	// The updater keeps its own choice: follow the settings.
 	a.upd.SetAutomatic(a.settings.CheckUpdates)

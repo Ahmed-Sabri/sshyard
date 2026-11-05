@@ -329,6 +329,7 @@ type App struct {
 	// the transfers at once and the size to confirm opening, as edited
 	concChoice, openMBChoice float64
 	osc52Choice              int
+	filesEdgeChoice          int // where a files pane opens, by index
 	chromeMat, contentMat    int // the materials chosen, by materials' index
 	osc52KiB                 float64
 	clip                     clipGate
@@ -507,7 +508,7 @@ func New(p Platform) (*App, error) {
 	err := a.prepareStorage()
 	a.unlock.err = err
 	a.syncChoices()
-	a.resolveFonts(false, false)
+	a.resolveFonts(false, false, false)
 	a.updateCheck = a.settings.CheckUpdates
 	return a, err
 }
@@ -640,8 +641,8 @@ func (a *App) ApplySettings(s settings.Settings) error {
 			}
 		}
 	}
-	if uiF, termF := s.UIFont != old.UIFont, s.TerminalFont != old.TerminalFont; uiF || termF {
-		a.resolveFonts(uiF, termF)
+	if uiF, termF, fbF := s.UIFont != old.UIFont, s.TerminalFont != old.TerminalFont, s.TerminalFallbackFont != old.TerminalFallbackFont; uiF || termF || fbF {
+		a.resolveFonts(uiF, termF, fbF)
 	}
 	if s.MCPEnabled != old.MCPEnabled || s.MCPPort != old.MCPPort {
 		a.syncMCP()
@@ -687,6 +688,13 @@ func (a *App) startIndependent() {
 	}
 	a.unlock.started = true
 	// Start with an empty workspace; saved AI layouts contain no session content.
+	if a.settings.OpenLocalOnStart {
+		a.post(func() {
+			if len(a.ws.Tabs) == 0 {
+				a.OpenLocalTerminal()
+			}
+		})
+	}
 	if root, err := a.cacheDir(); err == nil {
 		go cleanCache(root)
 	}

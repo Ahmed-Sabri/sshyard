@@ -14,13 +14,13 @@ var listFonts = fonts.List
 type fontState struct {
 	list            []fonts.Family
 	loading, loaded bool
-	// ui and term are the families in effect: the chosen ones, or ""
-	// (the system's) for one not installed.
-	ui, term string
+	// ui, term and fallback are the families in effect: the chosen ones,
+	// or "" (the system's) for one not installed.
+	ui, term, fallback string
 	// missing are chosen families that are not installed, to tell of.
 	missing []string
 	// the combobox choices
-	uiSel, termSel string
+	uiSel, termSel, fallbackSel string
 }
 
 // loadFonts lists the installed families off the UI thread, once.
@@ -34,7 +34,7 @@ func (a *App) loadFonts() {
 		l := list()
 		a.post(func() {
 			a.fonts.list, a.fonts.loaded = l, true
-			a.resolveFonts(true, true)
+			a.resolveFonts(true, true, true)
 		})
 	}()
 }
@@ -42,7 +42,7 @@ func (a *App) loadFonts() {
 // resolveFonts puts the chosen families in effect, those installed: a
 // family the system lacks falls back to the system's font, and when
 // reportUI or reportTerm, the user hears of it.
-func (a *App) resolveFonts(reportUI, reportTerm bool) {
+func (a *App) resolveFonts(reportUI, reportTerm, reportFallback bool) {
 	pick := func(name string, report bool) string {
 		// Until the list is in, a family is taken as installed: text
 		// falls back glyph by glyph to the system's fonts anyway.
@@ -56,6 +56,7 @@ func (a *App) resolveFonts(reportUI, reportTerm bool) {
 	}
 	a.fonts.ui = pick(a.settings.UIFont, reportUI)
 	a.fonts.term = pick(a.settings.TerminalFont, reportTerm)
+	a.fonts.fallback = pick(a.settings.TerminalFallbackFont, reportFallback)
 	fam := a.termFamily()
 	for _, c := range a.conns {
 		if c.tv != nil {
@@ -64,14 +65,18 @@ func (a *App) resolveFonts(reportUI, reportTerm bool) {
 	}
 }
 
-// termFamily is the terminal's font: the chosen family, then the system's
-// monospaced font for what it lacks (CJK, symbols), then the system's
-// fallbacks.
+// termFamily is the terminal's font: the chosen family, then the chosen
+// fallback family and the system's monospaced font for what it lacks
+// (CJK, symbols), then the system's fallbacks.
 func (a *App) termFamily() string {
-	if a.fonts.term == "" {
-		return "monospace"
+	fam := "monospace"
+	if a.fonts.fallback != "" && a.fonts.fallback != a.fonts.term {
+		fam = a.fonts.fallback + ", " + fam
 	}
-	return a.fonts.term + ", monospace"
+	if a.fonts.term != "" {
+		fam = a.fonts.term + ", " + fam
+	}
+	return fam
 }
 
 // fontToasts tells of chosen families that are not installed.

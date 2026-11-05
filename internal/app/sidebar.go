@@ -287,7 +287,10 @@ func (a *App) hostEntries(m locales.Messages, h assets.Host) []menuEntry {
 		{Icon: icons.SplitRight, Label: m.SplitRight(), Disabled: noTab, Do: beside(func(at openAt) { a.Connect(h.ID, at) })},
 		{Icon: icons.Folder, Label: m.OpenFiles(), Do: func() { a.OpenFiles(h.ID, openAt{}, nil) }},
 		{Icon: icons.Robot, Label: m.OpenAI(), Do: func() { a.OpenAI(h.ID, openAt{}, 0) }},
-		{Icon: icons.OpenFile, Label: m.OpenFilesBeside(), Disabled: noTab, Do: beside(func(at openAt) { a.OpenFiles(h.ID, at, nil) })},
+		{Icon: icons.OpenFile, Label: openFilesLabel(m, a.filesEdge()), Disabled: noTab, Do: beside(func(at openAt) {
+			at.edge = a.filesEdge()
+			a.OpenFiles(h.ID, at, nil)
+		})},
 		menuSep,
 		{Icon: icons.Star, Label: m.Favorite(), Checked: h.Favorite, Do: func() { a.store.SetFavorite(h.ID, !h.Favorite) }},
 		{Icon: icons.MoveTo, Label: m.MoveToGroup(), Sub: groups},

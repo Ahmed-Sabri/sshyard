@@ -14,6 +14,7 @@ import (
 	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/internal/sftpsvc"
 	"github.com/Licoy/sshyard/internal/sshtest"
+	"github.com/Licoy/sshyard/locales"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -633,5 +634,56 @@ func TestFilesClickName(t *testing.T) {
 	waitFor(t, tt, "editor", func() bool { return len(wins.list()) == 1 })
 	if ec := editorConn(a); ec == nil || shown(ec) == nil || shown(ec).name != "inner.txt" || len(fc.fs.transfers.List()) != 0 {
 		t.Fatalf("double click did not open the editor alone: %+v", fc.fs.transfers.List())
+	}
+}
+
+// TestFilesEdgeSetting: a files pane opens on the terminal's right by
+// default, and under it when the files settings say below; the
+// terminal's menu offers the other place too.
+func TestFilesEdgeSetting(t *testing.T) {
+	srv, err := sshtest.Start("127.0.0.1:0", "demo", "secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer srv.Close()
+	a, tt := newTestApp(t)
+	h := addHost(t, a, srv, "box", "secret")
+	a.known.Add(srv.Addr, srv.HostKey.PublicKey())
+	a.Connect(h.ID, openAt{})
+	tab := a.ws.ActiveTab()
+	m := locales.In("en")
+	labels := func() []string {
+		cn := a.focused()
+		var out []string
+		for _, e := range a.termEntries(tab, tab.Pane(tab.Focus), cn, cn.tv, ui.Services{}, m) {
+			out = append(out, e.Label)
+		}
+		return out
+	}
+	if l := labels(); !slices.Contains(l, "Open Files on the Right") || !slices.Contains(l, "Open Files Below") {
+		t.Errorf("terminal menu %q", l)
+	}
+	a.OpenFilesBeside()
+	if tab.Root.Axis != layout.Row {
+		t.Errorf("by default the files pane is not on the right: axis %v", tab.Root.Axis)
+	}
+	a.ToggleFiles()
+
+	a.openSettings(prefFiles)
+	tt.Frame()
+	mustFind(t, tt, "Where the files pane opens beside the terminal")
+	mustClick(t, tt, "Below")
+	tt.Frame()
+	if a.settings.FilesEdge != settings.FilesBelow {
+		t.Fatalf("chose %q, want below", a.settings.FilesEdge)
+	}
+	a.page = pageWorkspace
+	tt.Frame()
+	if !tt.HasText("Open Files Below") {
+		t.Errorf("the rail does not say below: %q", tt.Texts())
+	}
+	a.OpenFilesBeside()
+	if tab.Count(layout.Files) != 1 || tab.Root.Axis != layout.Column {
+		t.Errorf("the files pane is not under the terminal: %d, axis %v", tab.Count(layout.Files), tab.Root.Axis)
 	}
 }

@@ -140,10 +140,10 @@ func TestNormalizeFonts(t *testing.T) {
 		"思源黑体":                   "思源黑体",
 	} {
 		s := Default()
-		s.UIFont, s.TerminalFont = in, in
+		s.UIFont, s.TerminalFont, s.TerminalFallbackFont = in, in, in
 		s.Normalize()
-		if s.UIFont != want || s.TerminalFont != want {
-			t.Errorf("%q: %q %q, want %q", in, s.UIFont, s.TerminalFont, want)
+		if s.UIFont != want || s.TerminalFont != want || s.TerminalFallbackFont != want {
+			t.Errorf("%q: %q %q %q, want %q", in, s.UIFont, s.TerminalFont, s.TerminalFallbackFont, want)
 		}
 	}
 }
@@ -342,5 +342,23 @@ func TestHighlight(t *testing.T) {
 	}
 	if again, _ := Load(path); !reflect.DeepEqual(again.Highlight, h) {
 		t.Errorf("saved %+v, loaded %+v", h, again.Highlight)
+	}
+}
+
+// TestFilesEdge: a files pane opens on the right by default and for any
+// value but below, which is kept.
+func TestFilesEdge(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	os.WriteFile(path, []byte(`{"theme":"dark","filesEdge":"left"}`), 0o600)
+	s, err := Load(path)
+	if err != nil || s.FilesEdge != FilesRight || s.OpenLocalOnStart {
+		t.Fatalf("old file %+v %v", s, err)
+	}
+	s.FilesEdge, s.OpenLocalOnStart = FilesBelow, true
+	if err := Save(path, s); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := Load(path); got.FilesEdge != FilesBelow || !got.OpenLocalOnStart {
+		t.Errorf("saved %+v", got)
 	}
 }

@@ -53,7 +53,7 @@ var actions = []action{
 	{actClosePane, locales.Messages.ClosePane, icons.Close, keymap.Combo{Mods: appMods, Key: ui.KeyW}, false},
 	{actSplitRight, locales.Messages.SplitRight, icons.SplitRight, keymap.Combo{Mods: appMods, Key: ui.KeyD}, false},
 	{actSplitDown, locales.Messages.SplitDown, icons.SplitDown, keymap.Combo{Mods: appMods, Key: ui.KeyE}, false},
-	{actOpenFiles, locales.Messages.OpenFilesBeside, icons.Folder, keymap.Combo{Mods: appMods, Key: ui.KeyO}, false},
+	{actOpenFiles, locales.Messages.OpenFilesSplit, icons.Folder, keymap.Combo{Mods: appMods, Key: ui.KeyO}, false},
 	{actFind, locales.Messages.Find, icons.Search, keymap.Combo{Mods: appMods, Key: ui.KeyF}, false},
 	{actOpenAI, locales.Messages.OpenAIRight, icons.Robot, keymap.Combo{Mods: aiMods, Key: ui.KeyA}, false},
 	{actStopAI, locales.Messages.ShortcutStopAI, icons.Stop, keymap.Combo{Mods: stopMods, Key: ui.KeyPeriod}, false},

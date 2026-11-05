@@ -1,10 +1,12 @@
 package app
 
 import (
+	"path/filepath"
 	"slices"
 	"testing"
 
 	"github.com/Licoy/sshyard/internal/session"
+	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/locales"
 )
@@ -131,5 +133,37 @@ func TestDefaultShellSetting(t *testing.T) {
 	id, err := a.OpenLocalTerminal()
 	if c := shellPane(t, a, id, err); c.host.Name != "Local terminal" {
 		t.Errorf("one shell's pane is named %q", c.host.Name)
+	}
+}
+
+// TestOpenLocalOnStart: off by default, the app starts with no tab; on,
+// it starts with a local terminal, and the terminal settings say so even
+// with one shell.
+func TestOpenLocalOnStart(t *testing.T) {
+	withShells(t, session.Shell{ID: "/bin/sh", Name: "sh", Path: "/bin/sh"})
+	a, tt := newTestApp(t)
+	if len(a.ws.Tabs) != 0 {
+		t.Fatalf("started with %d tabs", len(a.ws.Tabs))
+	}
+	a.openSettings(prefTerminal)
+	tt.SetSize(1200, 2600)
+	tt.Frame()
+	mustFind(t, tt, "Open a local terminal when SSHYard starts")
+
+	dir := t.TempDir()
+	s := settings.Default()
+	s.OpenLocalOnStart = true
+	if err := settings.Save(filepath.Join(dir, "settings.json"), s); err != nil {
+		t.Fatal(err)
+	}
+	a, tt = newTestAppIn(t, dir)
+	tt.Frame()
+	if len(a.ws.Tabs) != 1 || len(a.conns) != 1 {
+		t.Fatalf("%d tabs, %d panes at launch", len(a.ws.Tabs), len(a.conns))
+	}
+	for _, c := range a.conns {
+		if !isLocal(c.host.ID) {
+			t.Errorf("opened %q, want a local terminal", c.host.ID)
+		}
 	}
 }

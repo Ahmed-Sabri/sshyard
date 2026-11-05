@@ -13708,3 +13708,103 @@ func ForgetKeyPassphrase() string { return In(i18n.Locale()).ForgetKeyPassphrase
 func (msgs Messages) ForgetKeyPassphrase() string {
 	return Catalog.Format(msgs.locale, "forgetKeyPassphrase", nil)
 }
+
+// OpenFilesBelow says "Open Files Below"
+// in the language the app shows.
+func OpenFilesBelow() string { return In(i18n.Locale()).OpenFilesBelow() }
+
+// OpenFilesBelow says "Open Files Below"
+// in the language of msgs.
+func (msgs Messages) OpenFilesBelow() string {
+	return Catalog.Format(msgs.locale, "openFilesBelow", nil)
+}
+
+// OpenFilesSplit says "Open Files Beside"
+// in the language the app shows.
+func OpenFilesSplit() string { return In(i18n.Locale()).OpenFilesSplit() }
+
+// OpenFilesSplit says "Open Files Beside"
+// in the language of msgs.
+func (msgs Messages) OpenFilesSplit() string {
+	return Catalog.Format(msgs.locale, "openFilesSplit", nil)
+}
+
+// FilesEdge says "Open files from a terminal"
+// in the language the app shows.
+func FilesEdge() string { return In(i18n.Locale()).FilesEdge() }
+
+// FilesEdge says "Open files from a terminal"
+// in the language of msgs.
+func (msgs Messages) FilesEdge() string {
+	return Catalog.Format(msgs.locale, "filesEdge", nil)
+}
+
+// FilesEdgeNote says "Where the files pane opens beside the terminal"
+// in the language the app shows.
+func FilesEdgeNote() string { return In(i18n.Locale()).FilesEdgeNote() }
+
+// FilesEdgeNote says "Where the files pane opens beside the terminal"
+// in the language of msgs.
+func (msgs Messages) FilesEdgeNote() string {
+	return Catalog.Format(msgs.locale, "filesEdgeNote", nil)
+}
+
+// FilesEdgeRight says "Right"
+// in the language the app shows.
+func FilesEdgeRight() string { return In(i18n.Locale()).FilesEdgeRight() }
+
+// FilesEdgeRight says "Right"
+// in the language of msgs.
+func (msgs Messages) FilesEdgeRight() string {
+	return Catalog.Format(msgs.locale, "filesEdgeRight", nil)
+}
+
+// FilesEdgeBelow says "Below"
+// in the language the app shows.
+func FilesEdgeBelow() string { return In(i18n.Locale()).FilesEdgeBelow() }
+
+// FilesEdgeBelow says "Below"
+// in the language of msgs.
+func (msgs Messages) FilesEdgeBelow() string {
+	return Catalog.Format(msgs.locale, "filesEdgeBelow", nil)
+}
+
+// OpenLocalOnStart says "Open at launch"
+// in the language the app shows.
+func OpenLocalOnStart() string { return In(i18n.Locale()).OpenLocalOnStart() }
+
+// OpenLocalOnStart says "Open at launch"
+// in the language of msgs.
+func (msgs Messages) OpenLocalOnStart() string {
+	return Catalog.Format(msgs.locale, "openLocalOnStart", nil)
+}
+
+// OpenLocalOnStartNote says "Open a local terminal when SSHYard starts"
+// in the language the app shows.
+func OpenLocalOnStartNote() string { return In(i18n.Locale()).OpenLocalOnStartNote() }
+
+// OpenLocalOnStartNote says "Open a local terminal when SSHYard starts"
+// in the language of msgs.
+func (msgs Messages) OpenLocalOnStartNote() string {
+	return Catalog.Format(msgs.locale, "openLocalOnStartNote", nil)
+}
+
+// TerminalFallbackFont says "Non-ASCII font"
+// in the language the app shows.
+func TerminalFallbackFont() string { return In(i18n.Locale()).TerminalFallbackFont() }
+
+// TerminalFallbackFont says "Non-ASCII font"
+// in the language of msgs.
+func (msgs Messages) TerminalFallbackFont() string {
+	return Catalog.Format(msgs.locale, "terminalFallbackFont", nil)
+}
+
+// TerminalFallbackFontNote says "Draws CJK and other characters the terminal font lacks"
+// in the language the app shows.
+func TerminalFallbackFontNote() string { return In(i18n.Locale()).TerminalFallbackFontNote() }
+
+// TerminalFallbackFontNote says "Draws CJK and other characters the terminal font lacks"
+// in the language of msgs.
+func (msgs Messages) TerminalFallbackFontNote() string {
+	return Catalog.Format(msgs.locale, "terminalFallbackFontNote", nil)
+}

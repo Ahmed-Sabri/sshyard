@@ -1544,5 +1544,15 @@
   "localKeysMCP": "MCP 接続に許可",
   "localKeysMCPNote": "MCP 経由で接続する AI エージェントが、確認なしでこれらの鍵を使って「自動」ホストにログインできます。暗号化された鍵には記憶したパスフレーズが必要です。",
   "rememberedKeyPassphrase": "{key} のパスフレーズを記憶済み",
-  "forgetKeyPassphrase": "パスフレーズを消去"
+  "forgetKeyPassphrase": "パスフレーズを消去",
+  "openFilesBelow": "下側でファイルを開く",
+  "openFilesSplit": "横でファイルを開く",
+  "filesEdge": "ターミナルからファイルを開く",
+  "filesEdgeNote": "ファイルパネルをターミナルの横に開く位置",
+  "filesEdgeRight": "右側",
+  "filesEdgeBelow": "下側",
+  "openLocalOnStart": "起動時に開く",
+  "openLocalOnStartNote": "SSHYard の起動時にローカルターミナルを開きます",
+  "terminalFallbackFont": "非 ASCII フォント",
+  "terminalFallbackFontNote": "ターミナルのフォントにない CJK などの文字を描画します"
 }

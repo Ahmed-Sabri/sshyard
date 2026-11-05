@@ -2267,5 +2267,15 @@
   "localKeysMCP": "Allow MCP connections",
   "localKeysMCPNote": "AI agents connecting through MCP may log in to Auto hosts with these keys without asking. Encrypted keys need a remembered passphrase.",
   "rememberedKeyPassphrase": "Passphrase of {key} remembered",
-  "forgetKeyPassphrase": "Forget passphrase"
+  "forgetKeyPassphrase": "Forget passphrase",
+  "openFilesBelow": "Open Files Below",
+  "openFilesSplit": "Open Files Beside",
+  "filesEdge": "Open files from a terminal",
+  "filesEdgeNote": "Where the files pane opens beside the terminal",
+  "filesEdgeRight": "Right",
+  "filesEdgeBelow": "Below",
+  "openLocalOnStart": "Open at launch",
+  "openLocalOnStartNote": "Open a local terminal when SSHYard starts",
+  "terminalFallbackFont": "Non-ASCII font",
+  "terminalFallbackFontNote": "Draws CJK and other characters the terminal font lacks"
 }

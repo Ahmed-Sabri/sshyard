@@ -1544,5 +1544,15 @@
   "localKeysMCP": "允許 MCP 連線使用",
   "localKeysMCPNote": "透過 MCP 連線的 AI 代理可在不詢問的情況下用這些金鑰登入「自動」主機。加密的金鑰需要已記住密碼短語。",
   "rememberedKeyPassphrase": "已記住 {key} 的密碼短語",
-  "forgetKeyPassphrase": "忘記密碼短語"
+  "forgetKeyPassphrase": "忘記密碼短語",
+  "openFilesBelow": "在下方開啟檔案",
+  "openFilesSplit": "在旁邊開啟檔案",
+  "filesEdge": "從終端機開啟檔案",
+  "filesEdgeNote": "檔案面板在終端機旁開啟的位置",
+  "filesEdgeRight": "右側",
+  "filesEdgeBelow": "下方",
+  "openLocalOnStart": "啟動時開啟",
+  "openLocalOnStartNote": "SSHYard 啟動時開啟一個本地終端機",
+  "terminalFallbackFont": "非 ASCII 字型",
+  "terminalFallbackFontNote": "用於繪製終端機字型缺少的中日韓等字元"
 }

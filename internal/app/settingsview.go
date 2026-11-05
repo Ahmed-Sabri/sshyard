@@ -400,6 +400,11 @@ func (a *App) prefTerminal(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 				s.TerminalFont, *changed = f, true
 			}
 		})
+		g.row(m.TerminalFallbackFont(), m.TerminalFallbackFontNote(), func() {
+			if f, ok := a.fontPicker(c, "termfallback", m.TerminalFallbackFont(), m.SystemDefault(), &a.fonts.fallbackSel, s.TerminalFallbackFont, a.fonts.list); ok {
+				s.TerminalFallbackFont, *changed = f, true
+			}
+		})
 		g.row(m.MonospacedOnly(), m.MonospacedOnlyNote(), func() {
 			mono := s.MonospacedOnly
 			if ui.Switch(c.Key("monoonly"), &mono).Label(m.MonospacedOnly()).Changed() {
@@ -415,27 +420,34 @@ func (a *App) prefTerminal(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 		a.termFontPreview(c, tok)
 	})
 	a.highlightSection(c, m, tok, s, changed)
-	if len(a.shells) > 1 {
-		settingsSection(c, tok, icons.LocalShell, tok.TintAt(3), m.LocalTerminal(), func(g *settingsGroup) {
-			g.row(m.DefaultShell(), m.DefaultShellNote(), func() {
-				names := make([]string, len(a.shells))
-				for i, sh := range a.shells {
-					names[i] = sh.Name
-				}
-				cur := names[0]
-				for _, sh := range a.shells {
-					if sh.ID == s.LocalShell {
-						cur = sh.Name
-					}
-				}
-				if ui.Select(c.Key("localshell"), &cur, names).Label(m.DefaultShell()).Width(220).Changed() {
-					if i := slices.Index(names, cur); i >= 0 {
-						s.LocalShell, *changed = a.shells[i].ID, true
-					}
-				}
-			})
+	settingsSection(c, tok, icons.LocalShell, tok.TintAt(3), m.LocalTerminal(), func(g *settingsGroup) {
+		g.row(m.OpenLocalOnStart(), m.OpenLocalOnStartNote(), func() {
+			on := s.OpenLocalOnStart
+			if ui.Switch(c.Key("localstart"), &on).Label(m.OpenLocalOnStart()).Changed() {
+				s.OpenLocalOnStart, *changed = on, true
+			}
 		})
-	}
+		if len(a.shells) < 2 {
+			return
+		}
+		g.row(m.DefaultShell(), m.DefaultShellNote(), func() {
+			names := make([]string, len(a.shells))
+			for i, sh := range a.shells {
+				names[i] = sh.Name
+			}
+			cur := names[0]
+			for _, sh := range a.shells {
+				if sh.ID == s.LocalShell {
+					cur = sh.Name
+				}
+			}
+			if ui.Select(c.Key("localshell"), &cur, names).Label(m.DefaultShell()).Width(220).Changed() {
+				if i := slices.Index(names, cur); i >= 0 {
+					s.LocalShell, *changed = a.shells[i].ID, true
+				}
+			}
+		})
+	})
 	settingsSection(c, tok, icons.Reconnect, tok.TintAt(0), m.ConnectionSection(), func(g *settingsGroup) {
 		g.row(m.KeepAlive(), "", func() {
 			if ui.NumberInput(c.Key("keep"), &a.keepChoice, 0, 600, 5).Changed() {
@@ -520,6 +532,15 @@ func (a *App) prefFiles(c *ui.Context, m locales.Messages, tok theme.Tokens, s *
 			if ui.NumberInput(c.Key("openmb"), &a.openMBChoice, 1, 1024, 1).Changed() {
 				s.OpenConfirmMB = int(a.openMBChoice)
 				*changed = true
+			}
+		})
+		g.row(m.FilesEdge(), m.FilesEdgeNote(), func() {
+			edges := []string{settings.FilesRight, settings.FilesBelow}
+			a.filesEdgeChoice = max(slices.Index(edges, s.FilesEdge), 0)
+			if ui.Segmented(c.Key("filesedge"), &a.filesEdgeChoice, m.FilesEdgeRight(), m.FilesEdgeBelow()).Label(m.FilesEdge()).Changed() {
+				if a.filesEdgeChoice >= 0 && a.filesEdgeChoice < len(edges) {
+					s.FilesEdge, *changed = edges[a.filesEdgeChoice], true
+				}
 			}
 		})
 	})

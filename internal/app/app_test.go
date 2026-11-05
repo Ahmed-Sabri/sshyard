@@ -24,7 +24,13 @@ import (
 
 func newTestApp(t *testing.T) (*App, *ui.Tester) {
 	t.Helper()
-	dir := t.TempDir()
+	return newTestAppIn(t, t.TempDir())
+}
+
+// newTestAppIn is newTestApp on the data in dir, as a settings file
+// written before.
+func newTestAppIn(t *testing.T, dir string) (*App, *ui.Tester) {
+	t.Helper()
 	a, err := New(Platform{DataDir: dir, Secrets: keychain.NewMemory(), HomeDir: dir, CacheDir: filepath.Join(dir, "cache")})
 	if err != nil {
 		t.Fatal(err)
@@ -733,6 +739,23 @@ func TestFontSettings(t *testing.T) {
 	if c.tv.fonts[0].Family != "Test Mono, monospace" {
 		t.Errorf("terminal measured with %q", c.tv.fonts[0].Family)
 	}
+	// The non-ASCII font comes between the terminal's and the system's.
+	a.openSettings(prefTerminal)
+	tt.Frame()
+	if !tt.HasText("Non-ASCII font") {
+		t.Errorf("terminal settings miss the non-ASCII font: %q", tt.Texts())
+	}
+	s.TerminalFallbackFont = "Test Sans"
+	if err := a.ApplySettings(s); err != nil {
+		t.Fatal(err)
+	}
+	if c.tv.family != "Test Mono, Test Sans, monospace" {
+		t.Errorf("with a non-ASCII font: %q", c.tv.family)
+	}
+	s.TerminalFallbackFont = ""
+	a.ApplySettings(s)
+	a.page = pageWorkspace
+	tt.Frame()
 	// They persist.
 	b, _ := os.ReadFile(filepath.Join(a.p.DataDir, "settings.json"))
 	if !strings.Contains(string(b), `"terminalFont": "Test Mono"`) || !strings.Contains(string(b), `"uiFont": "Test Sans"`) {

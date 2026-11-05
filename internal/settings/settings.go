@@ -48,6 +48,10 @@ type Settings struct {
 	// TerminalFont is the terminal's font family, "" for the system's
 	// monospaced font.
 	TerminalFont string `json:"terminalFont,omitempty"`
+	// TerminalFallbackFont is the family the terminal draws what
+	// TerminalFont lacks (CJK and other non-ASCII text) with, before the
+	// system's monospaced font; "" for none.
+	TerminalFallbackFont string `json:"terminalFallbackFont,omitempty"`
 	// TerminalScheme is the terminal's color scheme, the ID of a
 	// built-in (theme.Schemes) or imported one; "" the app's own colors
 	// for the appearance.
@@ -59,6 +63,8 @@ type Settings struct {
 	// LocalShell is the ID of the shell local terminals open by default
 	// (session.Shell); "" or one no longer installed is the first found.
 	LocalShell string `json:"localShell,omitempty"`
+	// OpenLocalOnStart opens a local terminal when the app starts.
+	OpenLocalOnStart bool `json:"openLocalOnStart,omitempty"`
 	// Shortcuts are the shortcuts the user recorded, by the ID of the
 	// app's action, as keymap writes them; the others keep their default.
 	Shortcuts map[string]string `json:"shortcuts,omitempty"`
@@ -78,6 +84,9 @@ type Settings struct {
 	// FilesSplit is the share, in percent, of the first side of a files
 	// pane showing both, 10 to 90.
 	FilesSplit float32 `json:"filesSplit,omitempty"`
+	// FilesEdge is where a files pane opened from a terminal goes:
+	// FilesRight, the default, or FilesBelow.
+	FilesEdge string `json:"filesEdge,omitempty"`
 	// EditorTreeWidth is the width, in DIPs, of the folders beside the
 	// text in an editor window, 140 to 600; EditorTreeHidden hides them.
 	EditorTreeWidth  float32 `json:"editorTreeWidth,omitempty"`
@@ -416,6 +425,13 @@ const (
 
 func materialOK(s string) bool { return s == MaterialTranslucent || s == MaterialOpaque }
 
+// The places a files pane opened from a terminal goes: beside it on the
+// right, or under it.
+const (
+	FilesRight = "right"
+	FilesBelow = "below"
+)
+
 // MCPPortDefault is the MCP endpoint's port unless the user picks one.
 const MCPPortDefault = 47320
 
@@ -432,7 +448,7 @@ var Languages = []string{"en", "zh-Hans", "zh-Hant", "ko", "ja"}
 
 // Default returns the defaults.
 func Default() Settings {
-	return Settings{Theme: theme.Auto, CheckUpdates: true, UpdateIntervalHours: 1, TerminalFontSize: 13, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, FilesSplit: 50, EditorTreeWidth: 240, OSC52Write: OSC52Ask, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
+	return Settings{Theme: theme.Auto, CheckUpdates: true, UpdateIntervalHours: 1, TerminalFontSize: 13, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, FilesSplit: 50, FilesEdge: FilesRight, EditorTreeWidth: 240, OSC52Write: OSC52Ask, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
 		AIDefaultAgent: "builtin", AIDefaultMode: "ask", AIReviewStrictness: AIReviewStandard, AIContextLines: 200, AIAuditRetentionDays: 90, AIRedact: true, MCPPort: MCPPortDefault, LocalKeys: true, Highlight: Highlight{On: true}}
 }
 
@@ -483,6 +499,7 @@ func (s *Settings) Normalize() {
 		s.ContentMaterial = d.ContentMaterial
 	}
 	s.UIFont, s.TerminalFont = fontName(s.UIFont), fontName(s.TerminalFont)
+	s.TerminalFallbackFont = fontName(s.TerminalFallbackFont)
 	if s.SidebarWidth < 160 || s.SidebarWidth > 480 {
 		s.SidebarWidth = d.SidebarWidth
 	}
@@ -494,6 +511,9 @@ func (s *Settings) Normalize() {
 	}
 	if s.FilesSplit < 10 || s.FilesSplit > 90 {
 		s.FilesSplit = d.FilesSplit
+	}
+	if s.FilesEdge != FilesBelow {
+		s.FilesEdge = FilesRight
 	}
 	if s.EditorTreeWidth < 140 || s.EditorTreeWidth > 600 {
 		s.EditorTreeWidth = d.EditorTreeWidth

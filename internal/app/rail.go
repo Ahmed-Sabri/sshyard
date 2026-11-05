@@ -116,7 +116,7 @@ func (a *App) railView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 		// one, which a click closes.
 		t := a.ws.ActiveTab()
 		files, ai := a.tabPane(t, layout.Files) != nil, a.tabPane(t, layout.AI) != nil
-		label := m.OpenFilesBeside()
+		label := openFilesLabel(m, a.filesEdge())
 		if files {
 			label = m.CloseFilesPane()
 		}

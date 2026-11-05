@@ -7,6 +7,7 @@ import (
 	"github.com/Licoy/sshyard/internal/icons"
 	"github.com/Licoy/sshyard/internal/layout"
 	"github.com/Licoy/sshyard/internal/session"
+	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/locales"
 	"github.com/egoist/mygo/ui"
@@ -122,7 +123,24 @@ func (a *App) OpenFilesBeside() {
 	if t == nil || cn == nil {
 		return
 	}
-	a.OpenFiles(cn.host.ID, openAt{pane: t.Focus, edge: layout.Right}, cn)
+	a.OpenFiles(cn.host.ID, openAt{pane: t.Focus, edge: a.filesEdge()}, cn)
+}
+
+// filesEdge is where a files pane opened from a terminal goes, as the
+// settings say.
+func (a *App) filesEdge() layout.Edge {
+	if a.settings.FilesEdge == settings.FilesBelow {
+		return layout.Bottom
+	}
+	return layout.Right
+}
+
+// openFilesLabel names opening a files pane at edge of a pane.
+func openFilesLabel(m locales.Messages, edge layout.Edge) string {
+	if edge == layout.Bottom {
+		return m.OpenFilesBelow()
+	}
+	return m.OpenFilesBeside()
 }
 
 // SplitFocused opens a terminal on the focused pane's host beside it.
@@ -374,7 +392,7 @@ func (a *App) paneView(c *ui.Context, t *layout.Tab, n *layout.Node, tok theme.T
 					}
 					if (IconButton{Icon: icons.Folder, Label: m.OpenFilesHere(), Size: Tiny, Disabled: !remoteOnly(cn)}).Clicked(c, "files") {
 						t.Focus = n.ID
-						a.OpenFiles(cn.host.ID, openAt{pane: n.ID, edge: layout.Right}, cn)
+						a.OpenFiles(cn.host.ID, openAt{pane: n.ID, edge: a.filesEdge()}, cn)
 					}
 				} else {
 					if (IconButton{Icon: icons.LocalDisk, On: icons.LocalDiskOn, Label: m.ShowLocalFiles(), Toggle: true, Active: a.settings.FilesDual, Size: Tiny}).Clicked(c, "dual") {
@@ -521,6 +539,10 @@ func (a *App) termElement(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn
 func (a *App) termEntries(t *layout.Tab, n *layout.Node, cn *conn, tv *termView, svc ui.Services, m locales.Messages) []menuEntry {
 	sel := tv.SelectedText()
 	noAI := !remoteOnly(cn)
+	edge, other := a.filesEdge(), layout.Bottom
+	if edge == layout.Bottom {
+		other = layout.Right
+	}
 	focus := func(do func()) func() {
 		return func() {
 			t.Focus = n.ID
@@ -535,7 +557,10 @@ func (a *App) termEntries(t *layout.Tab, n *layout.Node, cn *conn, tv *termView,
 		menuSep,
 		a.bound(actSplitRight, menuEntry{Icon: icons.SplitRight, Label: m.SplitRight(), Do: focus(func() { a.SplitFocused(layout.Right) })}),
 		a.bound(actSplitDown, menuEntry{Icon: icons.SplitDown, Label: m.SplitDown(), Do: focus(func() { a.SplitFocused(layout.Bottom) })}),
-		a.bound(actOpenFiles, menuEntry{Icon: icons.Folder, Label: m.OpenFilesBeside(), Disabled: noAI, Do: focus(a.OpenFilesBeside)}),
+		a.bound(actOpenFiles, menuEntry{Icon: icons.Folder, Label: openFilesLabel(m, edge), Disabled: noAI, Do: focus(a.OpenFilesBeside)}),
+		{Label: openFilesLabel(m, other), Disabled: noAI, Do: focus(func() {
+			a.OpenFiles(cn.host.ID, openAt{pane: n.ID, edge: other}, cn)
+		})},
 		a.bound(actOpenAI, menuEntry{Icon: icons.Robot, Label: m.OpenAIRight(), Disabled: noAI, Do: focus(func() {
 			a.OpenAI(cn.host.ID, openAt{pane: n.ID, edge: layout.Right}, cn.id)
 		})}),
