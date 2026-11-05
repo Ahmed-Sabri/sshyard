@@ -14,6 +14,28 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
+// TestTitleBarMultipleShells exercises shell-named tabs on every platform,
+// using an installed shell so its local terminal sessions still run.
+func TestTitleBarMultipleShells(t *testing.T) {
+	first := session.Shells()[0]
+	second := first
+	first.ID, first.Name = "test-powershell", "PowerShell"
+	second.ID, second.Name = "test-cmd", "CMD"
+	withShells(t, first, second)
+	for _, tc := range []struct {
+		name string
+		run  func(*testing.T)
+	}{
+		{"TitleBar", TestTitleBar},
+		{"TitleBarLine", TestTitleBarLine},
+		{"Tabs", TestTabs},
+		{"TabsOverflow", TestTabsOverflow},
+		{"TabTipAndMenu", TestTabTipAndMenu},
+	} {
+		t.Run(tc.name, tc.run)
+	}
+}
+
 // TestTitleBar runs one band across the window: the name over the
 // sidebar; at the end the app's buttons, updates, GitHub and the
 // settings, in that order; while the settings show, no tabs, and the
@@ -21,6 +43,7 @@ import (
 // app draws them.
 func TestTitleBar(t *testing.T) {
 	a, tt := newTestApp(t)
+	local := a.localHost(localID).Label()
 	band := float32(toolbarHeight)
 	in := func(s string) bool {
 		r, ok := tt.Find(s)
@@ -97,12 +120,12 @@ func TestTitleBar(t *testing.T) {
 		t.Fatal(err)
 	}
 	tt.Frame()
-	if !in("Local terminal") {
+	if !in(local) {
 		t.Fatalf("no tab in the title bar: %q", tt.Texts())
 	}
 	a.openSettings(a.prefNow())
 	tt.Frame()
-	if in("Local terminal") || in("Close Tab") {
+	if in(local) || in("Close Tab") {
 		t.Errorf("tabs in the title bar over the settings: %q", tt.Texts())
 	}
 	// Just before the window's buttons.
@@ -120,6 +143,7 @@ func TestTitleBar(t *testing.T) {
 // tab's title, the new tab's button, the app's buttons and the window's.
 func TestTitleBarLine(t *testing.T) {
 	a, tt := newTestApp(t)
+	local := a.localHost(localID).Label()
 	a.SetWindow(WindowControls{Minimize: func() {}, Maximize: func() {}, Close: func() {}})
 	if _, err := a.open(localID, layout.Terminal, openAt{}, nil); err != nil {
 		t.Fatal(err)
@@ -128,7 +152,7 @@ func TestTitleBarLine(t *testing.T) {
 		tt.SetTitleBar(ui.TitleBar{Height: band})
 		tt.Frame()
 		tt.Frame()
-		for _, s := range []string{"Local terminal", "Close Tab", "New Tab", "Check for Updates", "GitHub Repository", "Settings", "Minimize", "Close Window"} {
+		for _, s := range []string{local, "Close Tab", "New Tab", "Check for Updates", "GitHub Repository", "Settings", "Minimize", "Close Window"} {
 			r := mustFind(t, tt, s)
 			if mid := r.Y + r.H/2; math.Abs(float64(mid-band/2)) > 0.5 {
 				t.Errorf("band %v: %s centered at %v, not on its middle", band, s, mid)
@@ -175,6 +199,7 @@ func TestPaneGutter(t *testing.T) {
 // between them.
 func TestTabs(t *testing.T) {
 	a, tt := newTestApp(t)
+	local := a.localHost(localID).Label()
 	for range 2 {
 		if _, err := a.open(localID, layout.Terminal, openAt{}, nil); err != nil {
 			t.Fatal(err)
@@ -185,7 +210,7 @@ func TestTabs(t *testing.T) {
 	if len(a.ws.Tabs) != 2 || a.ws.Active != 1 {
 		t.Fatalf("tabs %d, active %d", len(a.ws.Tabs), a.ws.Active)
 	}
-	first, ok := tt.Find("Local terminal")
+	first, ok := tt.Find(local)
 	if !ok {
 		t.Fatalf("no tabs in %q", tt.Texts())
 	}
@@ -301,6 +326,7 @@ func TestHostActions(t *testing.T) {
 // actions beside the tabs.
 func TestTabsOverflow(t *testing.T) {
 	a, tt := newTestApp(t)
+	local := a.localHost(localID).Label()
 	for range 12 {
 		if _, err := a.open(localID, layout.Terminal, openAt{}, nil); err != nil {
 			t.Fatal(err)
@@ -318,7 +344,7 @@ func TestTabsOverflow(t *testing.T) {
 	}
 	shown := 0
 	for _, s := range tt.Texts() {
-		if s == "Local terminal" {
+		if s == local {
 			shown++
 		}
 	}
@@ -332,7 +358,7 @@ func TestTabsOverflow(t *testing.T) {
 	if a.ws.Active != 11 || a.tabStart+a.tabRoomShown() != 12 {
 		t.Errorf("active %d not shown: from %d", a.ws.Active, a.tabStart)
 	}
-	before := textCount(tt, "Local terminal")
+	before := textCount(tt, local)
 	if err := tt.Click(strconv.Itoa(12-a.tabRoomShown()) + " more tabs"); err != nil {
 		t.Fatal(err)
 	}
@@ -341,7 +367,7 @@ func TestTabsOverflow(t *testing.T) {
 	if !a.tabsOpen || menuOf(a) != nil {
 		t.Fatalf("no popover: open %v, menu %q", a.tabsOpen, menuOf(a))
 	}
-	if n := textCount(tt, "Local terminal") - before; n < 12-a.tabRoomShown() {
+	if n := textCount(tt, local) - before; n < 12-a.tabRoomShown() {
 		t.Fatalf("%d rows for %d tabs: %q", n, 12-a.tabRoomShown(), tt.Texts())
 	}
 	// Its first row, under the button and level with its end.
@@ -389,6 +415,7 @@ func TestTabsShown(t *testing.T) {
 // menu.
 func TestTabTipAndMenu(t *testing.T) {
 	a, tt := newTestApp(t)
+	local := a.localHost(localID).Label()
 	h, err := a.Store().Add(assets.Host{Name: "web", Address: "127.0.0.1", Port: 1, User: "root", Auth: assets.AuthAgent})
 	if err != nil {
 		t.Fatal(err)
@@ -473,17 +500,17 @@ func TestTabTipAndMenu(t *testing.T) {
 	}
 	open(localID, 2) // WLL
 	open(h.ID, 1)    // WLLW
-	menu("Local terminal", "Close All Tabs of This Host")
+	menu(local, "Close All Tabs of This Host")
 	if hosts() != "WW" {
 		t.Fatalf("the host's closed: %s", hosts())
 	}
 	open(localID, 1) // WWL
-	menu("Local terminal", "Close Tabs to the Left")
+	menu(local, "Close Tabs to the Left")
 	if hosts() != "L" {
 		t.Fatalf("left closed: %s", hosts())
 	}
 	open(localID, 2) // LLL
-	menu("Local terminal", "Close Other Tabs")
+	menu(local, "Close Other Tabs")
 	if len(a.ws.Tabs) != 1 {
 		t.Fatalf("others closed: %s", hosts())
 	}
