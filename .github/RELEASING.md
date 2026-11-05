@@ -27,7 +27,7 @@ Issuer ID 从 [App Store Connect](https://appstoreconnect.apple.com/access/integ
 
 ## 工作流行为
 
-1. `release.yml` 先检查标签与 `mygo.json` 版本一致、六项 Secrets 非空，已有正式发布会拒绝覆盖；同时按 `cliff.toml` 用 git-cliff 生成上一个正式标签以来的发布说明，并等待同一标签上的 `ci.yml` 通过
+1. `release.yml` 先检查标签与 `mygo.json` 版本一致、六项 Secrets 非空，已有正式发布会拒绝覆盖；同时按 `cliff.toml` 用 git-cliff 生成上一个正式标签以来的发布说明，并等待同一标签上的 `ci.yml` 通过；`bump.sh` 的版本号提交之前的提交已在 main 上通过完整 CI 时（仍在运行则等它结束），标签上的 `ci.yml` 直接复用该结果，不再重复测试和构建
 2. macOS runner 先解码 Base64 格式的证书和 Apple API 私钥，再导入证书到临时钥匙串，自动选择其中唯一有效的 Developer ID Application 签名身份；解码失败、找不到或存在多个身份时直接失败，无需单独配置签名身份；然后设置无人值守签名权限，并通过 `notarytool store-credentials` 校验、保存 Apple API 凭据
 3. 仅在 runner 工作目录中改写 `mygo.json` 的 `macos.signingIdentity` 和 `macos.notarize`；仓库配置与 beta CI 不变
 4. `go tool mygo build` 签署 App、DMG，向 Apple 提交公证并等待通过，再给 DMG 和用于更新的 App 装订公证票据

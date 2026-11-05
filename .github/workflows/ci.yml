@@ -5,7 +5,7 @@ name: CI
 # Markdown or the licence are skipped (path filters never apply to tags).
 # The repository is private and Actions minutes are billed: other branches
 # and pull requests run nothing, a newer push to main cancels the run in
-# progress, and bump.sh's release commit runs only once, on its tag.
+# progress, and a release tag reuses the run on main before it (see plan).
 on:
   push:
     branches: [main]
@@ -21,16 +21,60 @@ on:
 permissions:
   contents: read
 
+# bump.sh's release commit has a group of its own: pushing it must not
+# cancel the run on the commit before it, which its tag may reuse.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: "ci-${{ github.ref }}${{ github.ref_type == 'branch' && startsWith(github.event.head_commit.message, 'chore(release): bump version to ') && '-release' || '' }}"
   cancel-in-progress: true
 
 jobs:
+  # What this run has to do. A push to main does everything, except for
+  # bump.sh's release commit, which its tag takes care of. A tag reuses a
+  # passed run on main when its commit differs from that run's only in the
+  # version and in skipped files (.github/ci-reuse.sh): it runs no tests,
+  # and a stable tag no builds either, which release.yml makes signed; a
+  # beta still makes its artifacts here.
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      test: ${{ steps.plan.outputs.test }}
+      build: ${{ steps.plan.outputs.build }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 25
+      - id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          test=true build=true
+          if [ "$GITHUB_EVENT_NAME" = push ] && [ "$GITHUB_REF_TYPE" = branch ] &&
+            [[ "$HEAD_MESSAGE" == "chore(release): bump version to "* ]]; then
+            echo "Release commit: its tag runs the checks."
+            test=false build=false
+          elif [ "$GITHUB_EVENT_NAME" = push ] && [ "$GITHUB_REF_TYPE" = tag ]; then
+            # A failed check only means testing the tag again
+            tested="$(bash .github/ci-reuse.sh "$GITHUB_REPOSITORY" "$GITHUB_SHA")" ||
+              { echo "::warning::Could not check for a CI run to reuse; testing $GITHUB_REF_NAME."; tested=""; }
+            if [ -n "$tested" ]; then
+              echo "$GITHUB_REF_NAME reuses the passed CI run on main for $tested."
+              test=false
+              if [ "$GITHUB_REF_NAME" = "v$(jq -r .version mygo.json)" ]; then build=false; fi
+            fi
+          fi
+          echo "test=$test build=$build"
+          echo "test=$test" >> "$GITHUB_OUTPUT"
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+
   check:
     name: gofmt, vet, test (race)
-    # bump.sh pushes its release commit to main, then the tag: the tag's
-    # run checks that same commit, so the run on main is skipped.
-    if: "${{ !(github.ref_type == 'branch' && startsWith(github.event.head_commit.message, 'chore(release): bump version to ')) }}"
+    needs: plan
+    if: needs.plan.outputs.test == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -46,7 +90,8 @@ jobs:
 
   test:
     name: test (${{ matrix.os }})
-    if: "${{ !(github.ref_type == 'branch' && startsWith(github.event.head_commit.message, 'chore(release): bump version to ')) }}"
+    needs: plan
+    if: needs.plan.outputs.test == 'true'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -61,7 +106,8 @@ jobs:
 
   build:
     name: build ${{ matrix.goos }}/${{ matrix.goarch }}
-    if: "${{ !(github.ref_type == 'branch' && startsWith(github.event.head_commit.message, 'chore(release): bump version to ')) }}"
+    needs: plan
+    if: needs.plan.outputs.build == 'true'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
