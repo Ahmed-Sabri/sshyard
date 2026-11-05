@@ -167,3 +167,28 @@ func TestOpenLocalOnStart(t *testing.T) {
 		}
 	}
 }
+
+// TestLocalTerminalTabOrSplit: the local terminal of the tabs' "+" opens
+// in a new tab, the one of the status bar splits the focused pane.
+func TestLocalTerminalTabOrSplit(t *testing.T) {
+	withShells(t, session.Shell{ID: "/bin/sh", Name: "sh", Path: "/bin/sh"})
+	a, tt := newTestApp(t)
+	if _, err := a.OpenLocalTerminal(); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	mustClick(t, tt, "New Tab")
+	qc, nh := mustFind(t, tt, "Quick Connect…"), mustFind(t, tt, "New Host")
+	tt.ClickAt(nh.X+nh.W/2, nh.Y+nh.H/2+(nh.Y-qc.Y))
+	tt.Frame()
+	if len(a.ws.Tabs) != 2 || len(a.conns) != 2 || a.menu.key != "" {
+		t.Fatalf("%d tabs, %d panes, menu %q: the + did not open a tab", len(a.ws.Tabs), len(a.conns), a.menu.key)
+	}
+
+	th := mustFind(t, tt, "Theme")
+	tt.ClickAt(th.X-float32(theme.Space(1))-th.W/2, th.Y+th.H/2)
+	tt.Frame()
+	if len(a.ws.Tabs) != 2 || len(a.conns) != 3 {
+		t.Fatalf("%d tabs, %d panes: the status bar did not split", len(a.ws.Tabs), len(a.conns))
+	}
+}

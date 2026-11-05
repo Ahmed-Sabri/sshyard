@@ -126,11 +126,11 @@ func (a *App) paletteItems(m locales.Messages, tok theme.Tokens) []paletteItem {
 	}
 	cmd("newhost", icons.Host, locales.Messages.NewHost, func() { a.openEditor(nil) })
 	cmd("newgroup", icons.NewFolder, locales.Messages.NewGroup, func() { a.openGroupForm("", "") })
-	cmd("localterm", icons.LocalShell, locales.Messages.LocalTerminal, func() { a.openLocal(m, "") })
+	cmd("localterm", icons.LocalShell, locales.Messages.LocalTerminal, func() { a.openLocal(m, "", false) })
 	if len(a.shells) > 1 {
 		for _, sh := range a.shells {
 			add(paletteItem{key: "localterm:" + sh.ID, icon: icons.LocalShell, title: m.LocalTerminalWith(sh.Name), sub: m.PaletteCommand(),
-				also: en.LocalTerminalWith(sh.Name), run: func() { a.openLocal(m, sh.ID) }})
+				also: en.LocalTerminalWith(sh.Name), run: func() { a.openLocal(m, sh.ID, false) }})
 		}
 	}
 	if a.store.Len() > 0 {

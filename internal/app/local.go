@@ -67,35 +67,39 @@ func (a *App) localHost(id string) assets.Host {
 func (a *App) OpenLocalTerminal() (int, error) { return a.OpenLocalShell(a.shell(localID).ID) }
 
 // OpenLocalShell opens the shell of id as OpenLocalTerminal does.
-func (a *App) OpenLocalShell(id string) (int, error) {
+func (a *App) OpenLocalShell(id string) (int, error) { return a.openShell(id, true) }
+
+// openShell opens the shell of id in a new tab, or with split under the
+// focused pane when there is one.
+func (a *App) openShell(id string, split bool) (int, error) {
 	var at openAt
-	if t := a.ws.ActiveTab(); t != nil && t.Focus != 0 {
+	if t := a.ws.ActiveTab(); split && t != nil && t.Focus != 0 {
 		at = openAt{pane: t.Focus, edge: layout.Bottom}
 	}
 	return a.open(localID+id, layout.Terminal, at, nil)
 }
 
-// openLocal opens the shell of id, "" the default one, and says why it
-// could not.
-func (a *App) openLocal(m locales.Messages, id string) {
+// openLocal opens the shell of id, "" the default one, in a new tab or
+// with split under the focused pane, and says why it could not.
+func (a *App) openLocal(m locales.Messages, id string, split bool) {
 	if id == "" {
 		id = a.shell(localID).ID
 	}
-	if _, err := a.OpenLocalShell(id); err != nil {
+	if _, err := a.openShell(id, split); err != nil {
 		a.toastError(m.ErrGeneric(err.Error()))
 	}
 }
 
 // localEntry is the menu entry of local terminals: it opens the default
-// shell, or with several shells has a submenu of them.
+// shell in a new tab, or with several shells has a submenu of them.
 func (a *App) localEntry(m locales.Messages) menuEntry {
-	e := menuEntry{Icon: icons.LocalShell, Label: m.LocalTerminal(), Do: func() { a.openLocal(m, "") }}
+	e := menuEntry{Icon: icons.LocalShell, Label: m.LocalTerminal(), Do: func() { a.openLocal(m, "", false) }}
 	if len(a.shells) < 2 {
 		return e
 	}
 	def := a.shell(localID).ID
 	for _, sh := range a.shells {
-		sub := menuEntry{Icon: icons.LocalShell, Label: sh.Name, Do: func() { a.openLocal(m, sh.ID) }}
+		sub := menuEntry{Icon: icons.LocalShell, Label: sh.Name, Do: func() { a.openLocal(m, sh.ID, false) }}
 		if sh.ID == def {
 			sub.InlineNote = m.ShellDefault()
 		}
