@@ -15,7 +15,6 @@ import (
 	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/internal/updater"
-	_ "github.com/Licoy/sshyard/locales"
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 )
@@ -33,6 +32,7 @@ func themeSource(m theme.Mode) mygo.ThemeSource {
 // platform is the app's hooks into MyGo.
 func platform() app.Platform {
 	return app.Platform{
+		Post:           postUI,
 		ResolveStorage: storagePaths,
 		Version:        mygo.App.Version(),
 		Secrets:        keychain.System{},
@@ -111,7 +111,10 @@ func main() {
 		// Linux: size the window buttons' bar to its buttons (see gtkfix).
 		gtkfix.Apply()
 		// Startup failures are presented with safe, localized diagnostics in the UI.
-		a, _ := app.New(platform())
+		var d *desktop
+		p := platform()
+		p.SetTrayIcon = func(style string) error { return d.setTrayIcon(style) }
+		a, _ := app.New(p)
 		mygo.App.OnQuit(a.Close)
 		w := mygo.NewWindow(mygo.WindowOptions{
 			Title:     "SSHYard",
@@ -135,6 +138,7 @@ func main() {
 			// Native UI only: no web view anywhere in SSHYard.
 			Content: ui.View(a.View),
 		})
+		d = newDesktop(a, w)
 		a.Start()
 		w.OnMinimize(func() { a.SetMinimized(true) })
 		w.OnRestore(func() { a.SetMinimized(false) })

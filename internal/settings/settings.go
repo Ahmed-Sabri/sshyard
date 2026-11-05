@@ -23,7 +23,11 @@ import (
 type Settings struct {
 	Theme theme.Mode `json:"theme"`
 	// Language is "" to follow the system, else one of Languages.
-	Language     string `json:"language"`
+	Language string `json:"language"`
+	// CloseBehavior controls whether closing the main window hides it or quits.
+	CloseBehavior string `json:"closeBehavior"`
+	// TrayIcon selects the monochrome or colorful application logo.
+	TrayIcon     string `json:"trayIcon"`
 	CheckUpdates bool   `json:"checkUpdates"`
 	// UpdateIntervalHours is the time between automatic checks for
 	// updates, one of UpdateIntervals. The updater reads it at launch.
@@ -532,9 +536,17 @@ var UIZooms = []int{80, 90, 100, 110, 125, 150, 175, 200}
 // Languages are the languages SSHYard ships, besides following the system.
 var Languages = []string{"en", "zh-Hans", "zh-Hant", "ko", "ja"}
 
+// Main-window close behaviors.
+const (
+	CloseToTray   = "tray"
+	CloseQuit     = "quit"
+	TrayIconMono  = "mono"
+	TrayIconColor = "color"
+)
+
 // Default returns the defaults.
 func Default() Settings {
-	return Settings{Theme: theme.Auto, CheckUpdates: true, UpdateIntervalHours: 1, TerminalFontSize: 13, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, FilesSplit: 50, FilesEdge: FilesRight, TerminalRightClick: RightClickMenu, EditorTreeWidth: 240, OSC52Write: OSC52Ask, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
+	return Settings{Theme: theme.Auto, CloseBehavior: CloseToTray, TrayIcon: TrayIconColor, CheckUpdates: true, UpdateIntervalHours: 1, TerminalFontSize: 13, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, FilesSplit: 50, FilesEdge: FilesRight, TerminalRightClick: RightClickMenu, EditorTreeWidth: 240, OSC52Write: OSC52Ask, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
 		AIDefaultAgent: "builtin", AIDefaultMode: "ask", AIReviewStrictness: AIReviewStandard, AIContextLines: 200, AIAuditRetentionDays: 90, AIRedact: true, MCPPort: MCPPortDefault, LocalKeys: true, Highlight: Highlight{On: true}}
 }
 
@@ -556,6 +568,12 @@ func ResolveOSC52Write(global, host string) string {
 // Normalize replaces invalid values with defaults.
 func (s *Settings) Normalize() {
 	d := Default()
+	if s.TrayIcon != TrayIconMono && s.TrayIcon != TrayIconColor {
+		s.TrayIcon = d.TrayIcon
+	}
+	if s.CloseBehavior != CloseToTray && s.CloseBehavior != CloseQuit {
+		s.CloseBehavior = d.CloseBehavior
+	}
 	if !s.Theme.Valid() {
 		s.Theme = d.Theme
 	}

@@ -1,0 +1,174 @@
+package main
+
+import (
+	"errors"
+	"log"
+	"runtime"
+
+	"github.com/Licoy/sshyard/icon"
+	"github.com/Licoy/sshyard/internal/app"
+	"github.com/Licoy/sshyard/internal/settings"
+	"github.com/Licoy/sshyard/locales"
+	"github.com/egoist/mygo"
+)
+
+// postUI never runs fn inline: callers may still hold application locks.
+// RunOnMain itself is synchronous, including when called from the UI thread.
+func postUI(fn func()) { go mygo.RunOnMain(fn) }
+
+// desktop owns only native lifecycle state; hiding retains the same App and view.
+// Its callbacks and all settings reads run on MyGo's UI thread.
+type desktop struct {
+	app                *app.App
+	window             *mygo.Window
+	tray               *mygo.Tray
+	trayErr            error
+	quitting           bool
+	changingVisibility bool
+}
+
+func newDesktop(a *app.App, w *mygo.Window) *desktop {
+	d := &desktop{app: a, window: w}
+	d.createTray()
+	w.OnClose(d.close)
+	mygo.App.OnBeforeQuit(d.beforeQuit)
+	mygo.App.OnActivate(func(bool) {
+		// A user reopening the app restores it even while its Dock is hidden.
+		if d.changingVisibility {
+			return
+		}
+		if !w.IsVisible() || w.IsMinimized() {
+			d.show()
+		}
+	})
+	if d.trayErr != nil {
+		log.Printf("create tray: %v", d.trayErr)
+		if a.Settings().CloseBehavior == settings.CloseToTray {
+			d.reportTrayError()
+		}
+		return d
+	}
+	d.updateMenu()
+	mygo.App.OnLocaleChanged(func(string) { d.updateMenu() })
+	if runtime.GOOS != "linux" {
+		d.tray.OnClick(d.show)
+		d.tray.OnRightClick(func() {
+			d.tray.SetMenu(d.menu())
+			defer d.tray.SetMenu(nil)
+			d.tray.PopUpMenu()
+		})
+	}
+	mygo.App.OnQuit(d.tray.Destroy)
+	d.tray.OnAppearanceChange(d.refreshTrayIcon)
+	d.refreshTrayIcon()
+	return d
+}
+
+func (d *desktop) createTray() {
+	png, template := icon.TrayPNG(d.app.Settings().TrayIcon, false)
+	d.tray, d.trayErr = mygo.NewTray(mygo.TrayOptions{
+		ID: "sshyard.main", Icon: png, IconIsTemplate: template, ToolTip: "SSHYard",
+	})
+}
+
+func (d *desktop) setTrayIcon(style string) error {
+	err := d.trayErr
+	if err == nil {
+		png, template := icon.TrayPNG(style, d.tray.Dark())
+		err = d.tray.SetIcon(png, template)
+	}
+	if err != nil {
+		log.Printf("update tray icon: %v", err)
+		return errors.New(locales.TrayIconFailed())
+	}
+	return nil
+}
+
+func (d *desktop) refreshTrayIcon() {
+	if err := d.setTrayIcon(d.app.Settings().TrayIcon); err != nil {
+		d.reportError(err.Error())
+	}
+}
+
+func (d *desktop) menu() *mygo.Menu {
+	return mygo.NewMenu([]*mygo.MenuItem{
+		{Label: locales.TrayShowWindow(), Click: func(*mygo.MenuItem, *mygo.Window) { d.show() }},
+		mygo.Separator(),
+		{Label: locales.TrayQuit(), Click: func(*mygo.MenuItem, *mygo.Window) { mygo.App.Quit() }},
+	})
+}
+
+func (d *desktop) updateMenu() {
+	// AppIndicator has no direct click event; its menu is the primary action.
+	if runtime.GOOS == "linux" {
+		d.tray.SetMenu(d.menu())
+	}
+}
+
+func (d *desktop) show() {
+	d.changingVisibility = true
+	defer func() { d.changingVisibility = false }()
+	if runtime.GOOS == "darwin" {
+		mygo.App.Dock.Show()
+	} else {
+		d.window.SetSkipTaskbar(false)
+	}
+	d.window.Restore()
+	d.window.Show()
+	d.app.SetMinimized(false)
+}
+
+func (d *desktop) close(e *mygo.CloseEvent) {
+	if d.quitting {
+		return
+	}
+	e.PreventDefault()
+	if d.app.Settings().CloseBehavior == settings.CloseQuit {
+		// Quit the whole app, including secondary windows; a cancelled editor
+		// close must keep the main window and its drafts alive too.
+		mygo.App.Quit()
+		return
+	}
+	if d.trayErr != nil {
+		d.reportTrayError()
+		return
+	}
+	d.app.SetMinimized(true)
+	d.changingVisibility = true
+	defer func() { d.changingVisibility = false }()
+	d.window.Hide()
+	if runtime.GOOS == "darwin" {
+		mygo.App.Dock.Hide()
+	} else {
+		d.window.SetSkipTaskbar(true)
+	}
+}
+
+func (d *desktop) beforeQuit(e *mygo.QuitEvent) {
+	// MyGo closes windows in map order and exposes no quit-cancel callback,
+	// so ask editors first, while the main window can still be retained.
+	for _, w := range mygo.Windows() {
+		if w == d.window {
+			continue
+		}
+		w.Close()
+		if !w.IsDestroyed() {
+			e.PreventDefault()
+			d.show()
+			return
+		}
+	}
+	d.quitting = true
+	// A later before/will-quit listener may cancel; reset after this native
+	// quit sequence rather than leaving future window closes in quit mode.
+	postUI(func() { d.quitting = false })
+}
+
+func (d *desktop) reportTrayError() {
+	d.reportError(locales.TrayUnavailable())
+}
+
+func (d *desktop) reportError(message string) {
+	d.show()
+	d.app.ReportError(message)
+}
