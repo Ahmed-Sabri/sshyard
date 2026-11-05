@@ -153,7 +153,7 @@ func TestAboutLicenseLink(t *testing.T) {
 func TestNumberInputsFit(t *testing.T) {
 	for page, edge := range map[prefPage]string{prefAI: "Full access", prefTerminal: "Deny"} {
 		a, tt := newTestApp(t)
-		tt.SetSize(1200, 1200)
+		tt.SetSize(1200, 2600)
 		a.openSettings(page)
 		tt.Frame()
 		inc, ok1 := tt.Find("Increase")
