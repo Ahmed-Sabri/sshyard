@@ -464,6 +464,21 @@ func (a *App) prefTerminal(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 		})
 	})
 	settingsSection(c, tok, icons.Paste, tok.TintAt(1), m.ClipboardSection(), func(g *settingsGroup) {
+		g.row(m.RightClick(), m.RightClickNote(), func() {
+			codes := []string{settings.RightClickMenu, settings.RightClickPaste, settings.RightClickCopyPaste}
+			a.rightClickChoice = max(slices.Index(codes, s.TerminalRightClick), 0)
+			if ui.Segmented(c.Key("rightclick"), &a.rightClickChoice, m.RightClickMenu(), m.Paste(), m.RightClickCopyPaste()).Label(m.RightClick()).Changed() {
+				if a.rightClickChoice >= 0 && a.rightClickChoice < len(codes) {
+					s.TerminalRightClick, *changed = codes[a.rightClickChoice], true
+				}
+			}
+		})
+		g.row(m.CopyOnSelect(), m.CopyOnSelectNote(), func() {
+			on := s.CopyOnSelect
+			if ui.Switch(c.Key("copyonselect"), &on).Label(m.CopyOnSelect()).Changed() {
+				s.CopyOnSelect, *changed = on, true
+			}
+		})
 		g.row(m.Osc52Title(), m.Osc52Note(), func() {
 			codes := []string{settings.OSC52Allow, settings.OSC52Ask, settings.OSC52Deny}
 			a.osc52Choice = 0

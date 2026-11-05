@@ -88,6 +88,9 @@ func stateColor(tok theme.Tokens, st session.State) ui.Color {
 
 // tabLabel names a tab by its focused pane's host.
 func (a *App) tabLabel(t *layout.Tab) string {
+	if t.Title != "" {
+		return t.Title
+	}
 	cn := a.conns[t.Focused().ID]
 	if cn == nil {
 		return ""
@@ -523,6 +526,7 @@ func (a *App) termElement(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn
 			}
 		}
 		tv.shortcuts = a.settings.Shortcuts
+		tv.rightClick, tv.copyOnSelect = a.settings.TerminalRightClick, a.settings.CopyOnSelect
 		// A program reading the mouse takes the right click too.
 		return tv.input(ev, svc) || a.contextPress(tb, ev, entries)
 	})

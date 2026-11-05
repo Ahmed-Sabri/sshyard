@@ -91,6 +91,14 @@ type Settings struct {
 	// text in an editor window, 140 to 600; EditorTreeHidden hides them.
 	EditorTreeWidth  float32 `json:"editorTreeWidth,omitempty"`
 	EditorTreeHidden bool    `json:"editorTreeHidden,omitempty"`
+	// TerminalRightClick is what a right click in a terminal does:
+	// RightClickMenu (the default), RightClickPaste or
+	// RightClickCopyPaste. A program reading the mouse takes it first,
+	// and Shift+right-click always opens the menu.
+	TerminalRightClick string `json:"terminalRightClick,omitempty"`
+	// CopyOnSelect copies text to the clipboard as it is selected in a
+	// terminal.
+	CopyOnSelect bool `json:"copyOnSelect,omitempty"`
 	// OSC52Write is whether a remote program may copy to the local
 	// clipboard: allow (the default), ask or deny.
 	OSC52Write string `json:"osc52Write"`
@@ -425,6 +433,14 @@ const (
 
 func materialOK(s string) bool { return s == MaterialTranslucent || s == MaterialOpaque }
 
+// What a right click in a terminal does: open its menu, paste, or copy
+// the selection and paste without one.
+const (
+	RightClickMenu      = "menu"
+	RightClickPaste     = "paste"
+	RightClickCopyPaste = "copyPaste"
+)
+
 // The places a files pane opened from a terminal goes: beside it on the
 // right, or under it.
 const (
@@ -448,7 +464,7 @@ var Languages = []string{"en", "zh-Hans", "zh-Hant", "ko", "ja"}
 
 // Default returns the defaults.
 func Default() Settings {
-	return Settings{Theme: theme.Auto, CheckUpdates: true, UpdateIntervalHours: 1, TerminalFontSize: 13, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, FilesSplit: 50, FilesEdge: FilesRight, EditorTreeWidth: 240, OSC52Write: OSC52Ask, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
+	return Settings{Theme: theme.Auto, CheckUpdates: true, UpdateIntervalHours: 1, TerminalFontSize: 13, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, FilesSplit: 50, FilesEdge: FilesRight, TerminalRightClick: RightClickMenu, EditorTreeWidth: 240, OSC52Write: OSC52Ask, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
 		AIDefaultAgent: "builtin", AIDefaultMode: "ask", AIReviewStrictness: AIReviewStandard, AIContextLines: 200, AIAuditRetentionDays: 90, AIRedact: true, MCPPort: MCPPortDefault, LocalKeys: true, Highlight: Highlight{On: true}}
 }
 
@@ -517,6 +533,11 @@ func (s *Settings) Normalize() {
 	}
 	if s.EditorTreeWidth < 140 || s.EditorTreeWidth > 600 {
 		s.EditorTreeWidth = d.EditorTreeWidth
+	}
+	switch s.TerminalRightClick {
+	case RightClickMenu, RightClickPaste, RightClickCopyPaste:
+	default:
+		s.TerminalRightClick = RightClickMenu
 	}
 	switch s.OSC52Write {
 	case OSC52Allow, OSC52Ask, OSC52Deny:

@@ -425,7 +425,10 @@ func (a *App) tabEntries(m locales.Messages, i int) []menuEntry {
 	closing := func(close func(j int, t *layout.Tab) bool) func() {
 		return func() { a.closeTabs(close) }
 	}
+	t := a.ws.Tabs[i]
 	return []menuEntry{
+		{Icon: icons.Rename, Label: m.RenameTabEllipsis(), Do: func() { a.openTabRename(t) }},
+		menuSep,
 		{Icon: icons.Close, Label: m.CloseTab(), Do: closing(func(j int, _ *layout.Tab) bool { return j == i })},
 		{Label: m.CloseOtherTabs(), Disabled: n < 2, Do: closing(func(j int, _ *layout.Tab) bool { return j != i })},
 		{Label: m.CloseTabsLeft(), Disabled: i == 0, Do: closing(func(j int, _ *layout.Tab) bool { return j < i })},
@@ -448,5 +451,71 @@ func (a *App) closeTabs(close func(i int, t *layout.Tab) bool) {
 	}
 	for _, t := range gone {
 		a.closeTab(t)
+	}
+}
+
+// tabRenameForm is the tab rename sheet: the tab, by its ID, and the name
+// typed.
+type tabRenameForm struct {
+	tab  int
+	name string
+}
+
+func (a *App) openTabRename(t *layout.Tab) {
+	a.tabRename, a.renaming = &tabRenameForm{tab: t.ID, name: t.Title}, true
+}
+
+// RenameTab names the tab of id for as long as it is open; "" gives it
+// back its host's name.
+func (a *App) RenameTab(id int, name string) {
+	for _, t := range a.ws.Tabs {
+		if t.ID == id {
+			t.Title = strings.TrimSpace(name)
+		}
+	}
+}
+
+// saveTabRename names the sheet's tab and closes the sheet.
+func (a *App) saveTabRename() {
+	if f := a.tabRename; f != nil {
+		a.RenameTab(f.tab, f.name)
+	}
+	a.renaming = false
+}
+
+func (a *App) tabRenameView(c *ui.Context, m locales.Messages) {
+	f := a.tabRename
+	if f == nil {
+		return
+	}
+	tok := currentTokens(c)
+	sheet(ui.Modal(c, &a.renaming, func() {
+		ui.Column(c).Gap(18).Width(380).Children(func() {
+			ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
+				tile(c, icons.Rename, theme.Brand, 36)
+				sheetTitle(c, m.RenameTab())
+			})
+			ui.Form(c, func() {
+				ui.Field(c, m.TabName(), func() {
+					in := ui.TextInput(c.Key("tabname"), &f.name).Placeholder(m.TabNamePlaceholder()).AutoFocus()
+					a.tabRenameHold.apply(c, f, in)
+					if in.Submitted() {
+						a.saveTabRename()
+					}
+				})
+			})
+			ui.Row(c).Gap(8).Children(func() {
+				ui.Spacer(c)
+				if pill(c, m.Cancel(), false, false, false) {
+					a.renaming = false
+				}
+				if pill(c, m.Save(), true, false, false) {
+					a.saveTabRename()
+				}
+			})
+		})
+	}), tok)
+	if !a.renaming {
+		a.tabRename = nil
 	}
 }

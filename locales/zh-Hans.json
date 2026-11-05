@@ -1554,5 +1554,15 @@
   "openLocalOnStart": "启动时打开",
   "openLocalOnStartNote": "SSHYard 启动时打开一个本地终端",
   "terminalFallbackFont": "非 ASCII 字体",
-  "terminalFallbackFontNote": "用于绘制终端字体缺少的中日韩等字符"
+  "terminalFallbackFontNote": "用于绘制终端字体缺少的中日韩等字符",
+  "renameTabEllipsis": "重命名标签页…",
+  "renameTab": "重命名标签页",
+  "tabName": "标签页名称",
+  "tabNamePlaceholder": "留空则使用主机名称",
+  "rightClick": "右键",
+  "rightClickNote": "「复制或粘贴」在有选中文本时复制，否则粘贴。按住 Shift 右键始终打开菜单。",
+  "rightClickMenu": "菜单",
+  "rightClickCopyPaste": "复制或粘贴",
+  "copyOnSelect": "选中即复制",
+  "copyOnSelectNote": "在终端中选中的文本会自动复制到剪贴板"
 }

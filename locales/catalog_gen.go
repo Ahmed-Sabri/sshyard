@@ -13808,3 +13808,103 @@ func TerminalFallbackFontNote() string { return In(i18n.Locale()).TerminalFallba
 func (msgs Messages) TerminalFallbackFontNote() string {
 	return Catalog.Format(msgs.locale, "terminalFallbackFontNote", nil)
 }
+
+// RenameTabEllipsis says "Rename Tab…"
+// in the language the app shows.
+func RenameTabEllipsis() string { return In(i18n.Locale()).RenameTabEllipsis() }
+
+// RenameTabEllipsis says "Rename Tab…"
+// in the language of msgs.
+func (msgs Messages) RenameTabEllipsis() string {
+	return Catalog.Format(msgs.locale, "renameTabEllipsis", nil)
+}
+
+// RenameTab says "Rename Tab"
+// in the language the app shows.
+func RenameTab() string { return In(i18n.Locale()).RenameTab() }
+
+// RenameTab says "Rename Tab"
+// in the language of msgs.
+func (msgs Messages) RenameTab() string {
+	return Catalog.Format(msgs.locale, "renameTab", nil)
+}
+
+// TabName says "Tab name"
+// in the language the app shows.
+func TabName() string { return In(i18n.Locale()).TabName() }
+
+// TabName says "Tab name"
+// in the language of msgs.
+func (msgs Messages) TabName() string {
+	return Catalog.Format(msgs.locale, "tabName", nil)
+}
+
+// TabNamePlaceholder says "Empty uses the host's name"
+// in the language the app shows.
+func TabNamePlaceholder() string { return In(i18n.Locale()).TabNamePlaceholder() }
+
+// TabNamePlaceholder says "Empty uses the host's name"
+// in the language of msgs.
+func (msgs Messages) TabNamePlaceholder() string {
+	return Catalog.Format(msgs.locale, "tabNamePlaceholder", nil)
+}
+
+// RightClick says "Right-click"
+// in the language the app shows.
+func RightClick() string { return In(i18n.Locale()).RightClick() }
+
+// RightClick says "Right-click"
+// in the language of msgs.
+func (msgs Messages) RightClick() string {
+	return Catalog.Format(msgs.locale, "rightClick", nil)
+}
+
+// RightClickNote says "Copy or paste copies the selection, or pastes without one. Shift-right-click always opens the menu."
+// in the language the app shows.
+func RightClickNote() string { return In(i18n.Locale()).RightClickNote() }
+
+// RightClickNote says "Copy or paste copies the selection, or pastes without one. Shift-right-click always opens the menu."
+// in the language of msgs.
+func (msgs Messages) RightClickNote() string {
+	return Catalog.Format(msgs.locale, "rightClickNote", nil)
+}
+
+// RightClickMenu says "Menu"
+// in the language the app shows.
+func RightClickMenu() string { return In(i18n.Locale()).RightClickMenu() }
+
+// RightClickMenu says "Menu"
+// in the language of msgs.
+func (msgs Messages) RightClickMenu() string {
+	return Catalog.Format(msgs.locale, "rightClickMenu", nil)
+}
+
+// RightClickCopyPaste says "Copy or paste"
+// in the language the app shows.
+func RightClickCopyPaste() string { return In(i18n.Locale()).RightClickCopyPaste() }
+
+// RightClickCopyPaste says "Copy or paste"
+// in the language of msgs.
+func (msgs Messages) RightClickCopyPaste() string {
+	return Catalog.Format(msgs.locale, "rightClickCopyPaste", nil)
+}
+
+// CopyOnSelect says "Copy on select"
+// in the language the app shows.
+func CopyOnSelect() string { return In(i18n.Locale()).CopyOnSelect() }
+
+// CopyOnSelect says "Copy on select"
+// in the language of msgs.
+func (msgs Messages) CopyOnSelect() string {
+	return Catalog.Format(msgs.locale, "copyOnSelect", nil)
+}
+
+// CopyOnSelectNote says "Text selected in the terminal is copied to the clipboard"
+// in the language the app shows.
+func CopyOnSelectNote() string { return In(i18n.Locale()).CopyOnSelectNote() }
+
+// CopyOnSelectNote says "Text selected in the terminal is copied to the clipboard"
+// in the language of msgs.
+func (msgs Messages) CopyOnSelectNote() string {
+	return Catalog.Format(msgs.locale, "copyOnSelectNote", nil)
+}

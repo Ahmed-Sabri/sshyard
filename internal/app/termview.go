@@ -12,6 +12,7 @@ import (
 
 	"github.com/Licoy/sshyard/internal/highlight"
 	"github.com/Licoy/sshyard/internal/session"
+	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/internal/vt"
 	"github.com/egoist/mygo/ui"
@@ -40,6 +41,11 @@ type termView struct {
 	// shortcuts are the shortcuts recorded (settings.Shortcuts), whose
 	// keys the terminal leaves to the app
 	shortcuts map[string]string
+	// rightClick is what a right click does (settings.TerminalRightClick)
+	// when no program reads the mouse; copyOnSelect copies a selection as
+	// it is made (settings.CopyOnSelect).
+	rightClick   string
+	copyOnSelect bool
 	// clear leaves the background to the pane's translucent fill, for a
 	// content area on the window's material (settings.ContentMaterial)
 	clear bool
@@ -681,7 +687,7 @@ func (v *termView) input(ev ui.InputEvent, cb clipboard) bool {
 			return true
 		}
 		if ev.Button == 1 {
-			return false // the context menu
+			return v.rightPress(ev.Mods, cb)
 		}
 		if ev.Button == 2 {
 			v.Paste(cb.ReadClipboard())
@@ -736,6 +742,11 @@ func (v *termView) input(ev ui.InputEvent, cb clipboard) bool {
 		}
 		if v.selecting {
 			v.selecting = false
+			if v.copyOnSelect && v.selected {
+				if s := v.SelectedText(); s != "" {
+					cb.WriteClipboard(s)
+				}
+			}
 			return true
 		}
 		return false
@@ -793,6 +804,29 @@ func (v *termView) input(ev ui.InputEvent, cb clipboard) bool {
 			return true
 		}
 		v.offset = max(v.offset-lines, 0)
+		return true
+	}
+	return false
+}
+
+// rightPress handles a right press no program reads, as rightClick
+// says; it reports false to leave it to the context menu, as always
+// with Shift.
+func (v *termView) rightPress(mods ui.Modifiers, cb clipboard) bool {
+	if mods&ui.Shift != 0 {
+		return false
+	}
+	switch v.rightClick {
+	case settings.RightClickPaste:
+		v.Paste(cb.ReadClipboard())
+		return true
+	case settings.RightClickCopyPaste:
+		if s := v.SelectedText(); v.selected && s != "" {
+			cb.WriteClipboard(s)
+			v.selected = false
+		} else {
+			v.Paste(cb.ReadClipboard())
+		}
 		return true
 	}
 	return false

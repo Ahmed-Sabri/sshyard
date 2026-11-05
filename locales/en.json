@@ -2277,5 +2277,15 @@
   "openLocalOnStart": "Open at launch",
   "openLocalOnStartNote": "Open a local terminal when SSHYard starts",
   "terminalFallbackFont": "Non-ASCII font",
-  "terminalFallbackFontNote": "Draws CJK and other characters the terminal font lacks"
+  "terminalFallbackFontNote": "Draws CJK and other characters the terminal font lacks",
+  "renameTabEllipsis": "Rename Tab…",
+  "renameTab": "Rename Tab",
+  "tabName": "Tab name",
+  "tabNamePlaceholder": "Empty uses the host's name",
+  "rightClick": "Right-click",
+  "rightClickNote": "Copy or paste copies the selection, or pastes without one. Shift-right-click always opens the menu.",
+  "rightClickMenu": "Menu",
+  "rightClickCopyPaste": "Copy or paste",
+  "copyOnSelect": "Copy on select",
+  "copyOnSelectNote": "Text selected in the terminal is copied to the clipboard"
 }

@@ -1554,5 +1554,15 @@
   "openLocalOnStart": "啟動時開啟",
   "openLocalOnStartNote": "SSHYard 啟動時開啟一個本地終端機",
   "terminalFallbackFont": "非 ASCII 字型",
-  "terminalFallbackFontNote": "用於繪製終端機字型缺少的中日韓等字元"
+  "terminalFallbackFontNote": "用於繪製終端機字型缺少的中日韓等字元",
+  "renameTabEllipsis": "重新命名分頁…",
+  "renameTab": "重新命名分頁",
+  "tabName": "分頁名稱",
+  "tabNamePlaceholder": "留空則使用主機名稱",
+  "rightClick": "右鍵",
+  "rightClickNote": "「複製或貼上」在有選取文字時複製，否則貼上。按住 Shift 右鍵一律開啟選單。",
+  "rightClickMenu": "選單",
+  "rightClickCopyPaste": "複製或貼上",
+  "copyOnSelect": "選取即複製",
+  "copyOnSelectNote": "在終端機中選取的文字會自動複製到剪貼簿"
 }

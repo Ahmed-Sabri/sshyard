@@ -77,6 +77,8 @@ type Tab struct {
 	ID    int
 	Root  *Node
 	Focus int // the focused pane
+	// Title is the name the user gave the tab, "" for its host's.
+	Title string
 }
 
 // Panes lists the tab's panes in reading order.

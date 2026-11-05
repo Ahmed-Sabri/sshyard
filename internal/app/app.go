@@ -330,6 +330,7 @@ type App struct {
 	concChoice, openMBChoice float64
 	osc52Choice              int
 	filesEdgeChoice          int // where a files pane opens, by index
+	rightClickChoice         int // what a terminal's right click does, by index
 	chromeMat, contentMat    int // the materials chosen, by materials' index
 	osc52KiB                 float64
 	clip                     clipGate
@@ -466,6 +467,10 @@ type App struct {
 	groupHold     focusHold
 	groupDeleting bool
 	groupDelete   string
+	// renaming is the tab rename sheet open, tabRename its tab and name
+	tabRename     *tabRenameForm
+	renaming      bool
+	tabRenameHold focusHold
 	// backup is the backup sheet open, to export or to restore; kdf is
 	// what its password is derived with (cheaper in tests)
 	backup     *backupForm

@@ -1554,5 +1554,15 @@
   "openLocalOnStart": "起動時に開く",
   "openLocalOnStartNote": "SSHYard の起動時にローカルターミナルを開きます",
   "terminalFallbackFont": "非 ASCII フォント",
-  "terminalFallbackFontNote": "ターミナルのフォントにない CJK などの文字を描画します"
+  "terminalFallbackFontNote": "ターミナルのフォントにない CJK などの文字を描画します",
+  "renameTabEllipsis": "タブ名を変更…",
+  "renameTab": "タブ名を変更",
+  "tabName": "タブ名",
+  "tabNamePlaceholder": "空欄にするとホスト名を使います",
+  "rightClick": "右クリック",
+  "rightClickNote": "「コピーまたは貼り付け」は選択中のテキストがあればコピーし、なければ貼り付けます。Shift を押しながら右クリックすると常にメニューを開きます。",
+  "rightClickMenu": "メニュー",
+  "rightClickCopyPaste": "コピーまたは貼り付け",
+  "copyOnSelect": "選択時にコピー",
+  "copyOnSelectNote": "ターミナルで選択したテキストをクリップボードにコピーします"
 }

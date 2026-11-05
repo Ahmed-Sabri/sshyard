@@ -2277,5 +2277,15 @@
   "openLocalOnStart": "시작할 때 열기",
   "openLocalOnStartNote": "SSHYard가 시작될 때 로컬 터미널을 엽니다",
   "terminalFallbackFont": "비 ASCII 글꼴",
-  "terminalFallbackFontNote": "터미널 글꼴에 없는 한중일 등의 문자를 그립니다"
+  "terminalFallbackFontNote": "터미널 글꼴에 없는 한중일 등의 문자를 그립니다",
+  "renameTabEllipsis": "탭 이름 바꾸기…",
+  "renameTab": "탭 이름 바꾸기",
+  "tabName": "탭 이름",
+  "tabNamePlaceholder": "비워 두면 호스트 이름을 사용합니다",
+  "rightClick": "오른쪽 클릭",
+  "rightClickNote": "'복사 또는 붙여넣기'는 선택한 텍스트가 있으면 복사하고, 없으면 붙여넣습니다. Shift를 누른 채 오른쪽 클릭하면 항상 메뉴가 열립니다.",
+  "rightClickMenu": "메뉴",
+  "rightClickCopyPaste": "복사 또는 붙여넣기",
+  "copyOnSelect": "선택 시 복사",
+  "copyOnSelectNote": "터미널에서 선택한 텍스트를 클립보드에 복사합니다"
 }
