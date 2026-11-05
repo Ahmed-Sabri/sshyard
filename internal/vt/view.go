@@ -117,6 +117,8 @@ func (t *Terminal) Text(a, b Pos) string {
 		}
 		if n == b.Line {
 			to = min(b.Col+1, to)
+		} else if l.Wrapped && l.widePad {
+			to = max(from, to-1) // the blank a wide character left
 		}
 		seg := Line{Cells: l.Cells[from:to]}.text(n == b.Line || !l.Wrapped)
 		sb.WriteString(seg)

@@ -75,6 +75,9 @@ func blank(pen Cell) Cell {
 type Line struct {
 	Cells   []Cell
 	Wrapped bool
+	// widePad is set on a wrapped line whose last cell is the blank left
+	// where a wide character did not fit: it is not part of the text.
+	widePad bool
 }
 
 func newLine(cols int, pen Cell) Line {
@@ -87,7 +90,7 @@ func newLine(cols int, pen Cell) Line {
 }
 
 func (l Line) clone() Line {
-	return Line{Cells: append([]Cell(nil), l.Cells...), Wrapped: l.Wrapped}
+	return Line{Cells: append([]Cell(nil), l.Cells...), Wrapped: l.Wrapped, widePad: l.widePad}
 }
 
 // Text is the cell's text: its rune and what joins it.

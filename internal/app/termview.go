@@ -245,6 +245,10 @@ func (v *termView) paint(p *ui.Painter, r ui.Rect, pal *theme.Terminal, focused 
 	v.metrics(p.Scale())
 	cols, rows := v.gridSize(r.W, r.H)
 	if !v.sized || cols != v.cols || rows != v.rows {
+		if v.sized && cols != v.cols {
+			// The lines are reflowed: the selection's are not where it was.
+			v.selected, v.selecting = false, false
+		}
 		v.cols, v.rows, v.sized = cols, rows, true
 		v.target.Resize(cols, rows)
 	}

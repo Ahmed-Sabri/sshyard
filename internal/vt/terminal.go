@@ -60,6 +60,9 @@ type Terminal struct {
 	// dropped counts the lines that fell off the top of the scrollback,
 	// so that absolute line numbers stay stable as it is trimmed.
 	dropped int
+	// pushed counts the lines a resize pushed from the screen into the
+	// scrollback, which a later resize that makes room brings back.
+	pushed int
 
 	cur        cursor
 	saved      cursor
@@ -238,9 +241,13 @@ func (t *Terminal) Generation() uint64 {
 	return t.gen
 }
 
-// Resize changes the terminal's size. Lines are cut or padded, not
-// reflowed; when the screen shrinks, the lines above the cursor go to the
-// scrollback, and when it grows they come back from it.
+// Resize changes the terminal's size. On the primary screen lines are
+// reflowed: a line that wrapped is joined with the lines it continued on
+// and wrapped again at the new width, so narrowing and widening again
+// loses nothing. When the screen gets too short, the blank lines below
+// the cursor go first, then the lines at the top go to the scrollback;
+// when it gets taller, they come back from it. The alternate screen,
+// which its program redraws, is only cut or padded.
 func (t *Terminal) Resize(cols, rows int) {
 	cols, rows = max(cols, 1), max(rows, 1)
 	t.mu.Lock()
@@ -249,59 +256,203 @@ func (t *Terminal) Resize(cols, rows int) {
 		return
 	}
 	t.gen++
-	fit := func(ls []Line) []Line {
-		for i := range ls {
-			ls[i] = fitLine(ls[i], cols)
-		}
-		return ls
-	}
-	t.scrollback = fit(t.scrollback)
-	resizeScreen := func(s *screen, c *cursor, history bool) {
-		ls := fit(s.lines)
-		switch {
-		case rows < len(ls):
-			// Drop blank lines below the cursor first, then push lines
-			// off the top.
-			for len(ls) > rows && len(ls)-1 > c.y && ls[len(ls)-1].String() == "" {
-				ls = ls[:len(ls)-1]
-			}
-			if n := len(ls) - rows; n > 0 {
-				if history {
-					t.scrollback = append(t.scrollback, ls[:n]...)
-				}
-				ls = ls[n:]
-				c.y -= n
-			}
-		case rows > len(ls):
-			add := rows - len(ls)
-			if history {
-				n := min(add, len(t.scrollback))
-				back := t.scrollback[len(t.scrollback)-n:]
-				t.scrollback = t.scrollback[:len(t.scrollback)-n]
-				ls = append(append([]Line(nil), back...), ls...)
-				c.y += n
-				add -= n
-			}
-			for range add {
-				ls = append(ls, newLine(cols, Cell{}))
-			}
-		}
-		s.lines = ls
-		c.x = min(c.x, cols-1)
-		c.y = max(0, min(c.y, rows-1))
-		c.wrapPending = false
-	}
+	primary, alt := &t.cur, &t.savedAlt
 	if t.altActive {
-		resizeScreen(&t.primary, &t.saved, true)
-		resizeScreen(&t.alt, &t.cur, false)
-	} else {
-		resizeScreen(&t.primary, &t.cur, true)
-		resizeScreen(&t.alt, &t.savedAlt, false)
+		primary, alt = &t.saved, &t.cur
 	}
+	t.resizePrimary(cols, rows, primary)
+	ls := t.alt.lines
+	for i := range ls {
+		ls[i] = fitLine(ls[i], cols)
+	}
+	if len(ls) > rows {
+		// Drop blank lines below the cursor first, then lines at the top.
+		for len(ls) > rows && len(ls)-1 > alt.y && ls[len(ls)-1].String() == "" {
+			ls = ls[:len(ls)-1]
+		}
+		if n := len(ls) - rows; n > 0 {
+			ls = ls[n:]
+			alt.y -= n
+		}
+	}
+	for len(ls) < rows {
+		ls = append(ls, newLine(cols, Cell{}))
+	}
+	t.alt.lines = ls
+	alt.x = min(alt.x, cols-1)
+	alt.y = max(0, min(alt.y, rows-1))
+	alt.wrapPending = false
 	t.cols, t.rows = cols, rows
 	t.top, t.bot = 0, rows-1
 	t.resetTabs()
 	t.trimScrollback()
+}
+
+// resizePrimary reflows the scrollback and the primary screen to cols
+// columns and fits them to rows lines. c is the primary screen's cursor;
+// it stays on the cell it was on.
+func (t *Terminal) resizePrimary(cols, rows int, c *cursor) {
+	old := make([]Line, 0, len(t.scrollback)+len(t.primary.lines))
+	old = append(append(old, t.scrollback...), t.primary.lines...)
+	top, y := len(t.scrollback), len(t.scrollback)+c.y
+	ls, x := old, c.x
+	if cols != t.cols {
+		var pending bool
+		ls, top, y, x, pending = reflow(old, cols, top, y, c.x, c.wrapPending)
+		if c.wrapPending {
+			// The cursor was past the last character: it is again, at
+			// the margin or just after the character.
+			if x == cols-1 {
+				pending = true
+			} else {
+				x++
+			}
+		}
+		c.wrapPending = pending
+	} else {
+		for i := range ls {
+			ls[i] = fitLine(ls[i], cols)
+		}
+		c.wrapPending = false
+	}
+	switch n := len(ls) - top; {
+	case n > rows:
+		// Drop blank lines below the cursor first, then push lines off
+		// the top, keeping the cursor on the screen.
+		for len(ls)-top > rows && len(ls)-1 > y && ls[len(ls)-1].String() == "" {
+			ls = ls[:len(ls)-1]
+		}
+		if extra := len(ls) - top - rows; extra > 0 {
+			push := min(extra, y-top)
+			top += push
+			t.pushed += push
+			ls = ls[:top+rows]
+		}
+	case n < rows:
+		// Bring back as many lines as the screen grew, and those that
+		// narrowing it pushed into the scrollback.
+		back := min(rows-n, top, max(rows-t.rows, 0)+t.pushed)
+		top -= back
+		t.pushed = max(t.pushed-back, 0)
+		for len(ls)-top < rows {
+			ls = append(ls, newLine(cols, Cell{}))
+		}
+	}
+	t.scrollback = ls[:top:top]
+	t.primary.lines = ls[top:]
+	t.pushed = min(t.pushed, top)
+	c.x = min(x, cols-1)
+	c.y = max(0, min(y-top, rows-1))
+}
+
+// reflow wraps lines again at cols columns. top is the index of the
+// screen's first line and (x, y) the cursor; it returns the lines and
+// where those are now. Blanks at the end of a line are dropped, except
+// up to the cursor. A cursor just after the text that would start a row
+// of its own is put on the margin with the wrap pending instead, unless
+// it was pending already (pending): it then stays on its character.
+func reflow(old []Line, cols, top, y, x int, pending bool) (out []Line, ntop, ny, nx int, wrap bool) {
+	out = make([]Line, 0, len(old))
+	ntop = len(old)
+	for i := 0; i < len(old); {
+		j := i
+		for j < len(old)-1 && old[j].Wrapped {
+			j++
+		}
+		// The cells of the cursor and of the screen's first line in the
+		// joined line, or -1.
+		cur, first := -1, -1
+		if i == y {
+			cur = x
+		}
+		if i == top {
+			ntop = len(out)
+		}
+		if i == j && trimmedLen(old[i].Cells) <= cols && cur < cols {
+			// The usual case: a line that fits as it is.
+			if cur >= 0 {
+				ny, nx = len(out), cur
+			}
+			l := fitLine(old[i], cols)
+			l.Wrapped, l.widePad = false, false
+			out = append(out, l)
+			i++
+			continue
+		}
+		var cells []Cell
+		for k := i; k <= j; k++ {
+			cs := old[k].Cells
+			if k == y {
+				cur = len(cells) + x
+			}
+			if k == top {
+				first = len(cells)
+			}
+			if k < j && old[k].widePad && len(cs) > 0 && isBlank(cs[len(cs)-1]) {
+				cs = cs[:len(cs)-1]
+			}
+			cells = append(cells, cs...)
+		}
+		text := trimmedLen(cells)
+		n := max(text, cur+1)
+		for len(cells) < n {
+			cells = append(cells, blank(Cell{}))
+		}
+		line := Line{Cells: make([]Cell, 0, cols)}
+		for k := 0; k < n; {
+			w := 1
+			if cells[k].Width == 2 && k+1 < n && cells[k+1].Width == 0 {
+				w = 2
+			}
+			c := cells[k : k+w]
+			if w > cols {
+				// A wide character in a one-column terminal.
+				c = []Cell{cells[k]}
+				c[0].Width = 1
+			}
+			if len(line.Cells)+len(c) > cols {
+				if !pending && k == cur && k == n-1 && k >= text {
+					ny, nx, wrap = len(out), cols-1, true
+					break
+				}
+				line.widePad = len(line.Cells) < cols
+				for len(line.Cells) < cols {
+					line.Cells = append(line.Cells, blank(Cell{}))
+				}
+				line.Wrapped = true
+				out = append(out, line)
+				line = Line{Cells: make([]Cell, 0, cols)}
+			}
+			if cur >= k && cur < k+w {
+				ny, nx = len(out), len(line.Cells)+min(cur-k, len(c)-1)
+			}
+			if first >= k && first < k+w {
+				ntop = len(out)
+			}
+			line.Cells = append(line.Cells, c...)
+			k += w
+		}
+		if first >= n {
+			ntop = len(out)
+		}
+		out = append(out, fitLine(line, cols))
+		i = j + 1
+	}
+	return out, min(ntop, ny), ny, nx, wrap
+}
+
+// isBlank reports a cell that only erased.
+func isBlank(c Cell) bool {
+	return (c.Rune == ' ' || c.Rune == 0) && c.Width == 1 && c.Comb == "" && c.Attr == 0
+}
+
+// trimmedLen is the length of cells without the blanks at the end.
+func trimmedLen(cells []Cell) int {
+	n := len(cells)
+	for n > 0 && isBlank(cells[n-1]) {
+		n--
+	}
+	return n
 }
 
 func fitLine(l Line, cols int) Line {
@@ -310,7 +461,7 @@ func fitLine(l Line, cols int) Line {
 		if cols > 0 && l.Cells[cols-1].Width == 2 {
 			l.Cells[cols-1] = blank(Cell{})
 		}
-		l.Wrapped = false
+		l.Wrapped, l.widePad = false, false
 	}
 	for len(l.Cells) < cols {
 		l.Cells = append(l.Cells, blank(Cell{}))

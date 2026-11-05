@@ -296,6 +296,102 @@ func TestResize(t *testing.T) {
 	}
 }
 
+func TestResizeReflows(t *testing.T) {
+	long := strings.Repeat("0123456789", 5)
+	term := New(20, 8)
+	term.WriteString("$ ps\r\n" + long + "\r\n$ ")
+	before := rows(term)
+	term.Resize(10, 8)
+	got := rows(term)
+	if got[0] != "$ ps" || got[1] != "0123456789" || got[5] != "0123456789" || got[6] != "$" {
+		t.Fatalf("narrowed %q", got)
+	}
+	cursorAt(t, term, 2, 6)
+	if s := term.Snapshot(0); s.Scrollback != 0 {
+		t.Errorf("narrowing pushed %d lines into the scrollback, with blank lines below the cursor", s.Scrollback)
+	}
+	if text := term.Text(Pos{1, 0}, Pos{5, 9}); text != long {
+		t.Errorf("text of the reflowed line %q", text)
+	}
+	term.Resize(20, 8)
+	if got := rows(term); strings.Join(got, "\n") != strings.Join(before, "\n") {
+		t.Fatalf("widened %q, want %q", got, before)
+	}
+	cursorAt(t, term, 2, 4)
+	term.WriteString("x")
+	if got := rows(term)[4]; got != "$ x" {
+		t.Errorf("typing after the resize %q", got)
+	}
+}
+
+func TestResizeReflowsAtTheBottom(t *testing.T) {
+	term := New(10, 3)
+	term.WriteString("a\r\n0123456789\r\n$ ")
+	term.Resize(5, 3)
+	if got := rows(term); got[0] != "01234" || got[1] != "56789" || got[2] != "$" {
+		t.Fatalf("narrowed %q", got)
+	}
+	cursorAt(t, term, 2, 2)
+	term.Resize(10, 3)
+	if got := rows(term); got[0] != "a" || got[1] != "0123456789" || got[2] != "$" {
+		t.Fatalf("widened %q", got)
+	}
+	cursorAt(t, term, 2, 2)
+	if s := term.Snapshot(0); s.Scrollback != 0 {
+		t.Errorf("scrollback %d after widening", s.Scrollback)
+	}
+}
+
+func TestResizeReflowsWideAndPending(t *testing.T) {
+	term := New(5, 3)
+	term.WriteString("ab中文字")
+	if got := rows(term); got[0] != "ab中" || got[1] != "文字" {
+		t.Fatalf("%q", got)
+	}
+	term.Resize(7, 3)
+	if got := rows(term); got[0] != "ab中文" || got[1] != "字" {
+		t.Fatalf("widened %q", got)
+	}
+	term.Resize(4, 3)
+	if got := term.Text(Pos{0, 0}, Pos{1, 3}); got != "ab中文字" {
+		t.Errorf("text %q", got)
+	}
+	term.Resize(1, 4)
+	term.Resize(12, 3)
+	if got := rows(term)[0]; got != "ab中文字" {
+		t.Errorf("after one column %q", got)
+	}
+
+	// A wrap pending at the margin stays pending, or the cursor moves
+	// just after the character when there is room.
+	term = New(5, 2)
+	term.WriteString("abcde")
+	term.Resize(10, 2)
+	cursorAt(t, term, 5, 0)
+	term.WriteString("f")
+	if got := rows(term)[0]; got != "abcdef" {
+		t.Errorf("after widening %q", got)
+	}
+	term.Resize(6, 2)
+	cursorAt(t, term, 5, 0)
+	term.WriteString("g")
+	if got := rows(term); got[0] != "abcdef" || got[1] != "g" {
+		t.Errorf("pending after narrowing %q", got)
+	}
+}
+
+func TestResizeReflowsUnderTheAltScreen(t *testing.T) {
+	term := New(10, 3)
+	term.WriteString("0123456789\r\n$ \x1b[?1049h\x1b[2Jvim")
+	term.Resize(5, 3)
+	term.Resize(10, 3)
+	term.WriteString("\x1b[?1049l")
+	if got := rows(term); got[0] != "0123456789" || got[1] != "$" {
+		t.Fatalf("%q", got)
+	}
+	cursorAt(t, term, 2, 1)
+}
+
 func TestTextAndFind(t *testing.T) {
 	term := New(6, 4)
 	term.WriteString("Hello World\r\nfoo hello")

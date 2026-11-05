@@ -66,7 +66,7 @@ func (t *Terminal) print(r rune) {
 	ls := t.lines()
 	if t.cur.wrapPending {
 		if t.modes.AutoWrap {
-			ls[t.cur.y].Wrapped = true
+			ls[t.cur.y].Wrapped, ls[t.cur.y].widePad = true, false
 			t.cur.x = 0
 			t.index()
 		}
@@ -75,7 +75,7 @@ func (t *Terminal) print(r rune) {
 	if w == 2 && t.cur.x == t.cols-1 {
 		if t.modes.AutoWrap {
 			t.clearCell(t.cur.y, t.cur.x)
-			ls[t.cur.y].Wrapped = true
+			ls[t.cur.y].Wrapped, ls[t.cur.y].widePad = true, true
 			t.cur.x = 0
 			t.index()
 		} else {
