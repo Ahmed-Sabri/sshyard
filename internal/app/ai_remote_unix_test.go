@@ -286,15 +286,6 @@ func bashHost(t *testing.T) (*App, *ui.Tester, *sshtest.Server, assets.Host) {
 	return a, tt, srv, h
 }
 
-func openAIPane(t *testing.T, a *App, hostID string) int {
-	t.Helper()
-	id, err := a.OpenAI(hostID, openAt{}, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return id
-}
-
 func scripted(calls ...llm.Message) func(*conn) agent.Streamer {
 	return func(*conn) agent.Streamer { return &replyModel{replies: calls} }
 }

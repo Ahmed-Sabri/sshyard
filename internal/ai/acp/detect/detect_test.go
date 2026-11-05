@@ -182,7 +182,8 @@ func TestVarsPassesProxyAndTheAgentsOwn(t *testing.T) {
 
 func TestMergePathKeepsFirstAbsolute(t *testing.T) {
 	sep := string(filepath.ListSeparator)
-	abs := func(p string) string { return filepath.Join(string(filepath.Separator), p) }
+	root := t.TempDir()
+	abs := func(p string) string { return filepath.Join(root, p) }
 	got := mergePath(strings.Join([]string{abs("a"), "rel", abs("b")}, sep), strings.Join([]string{abs("b") + string(filepath.Separator), abs("c")}, sep), "")
 	if want := strings.Join([]string{abs("a"), abs("b"), abs("c")}, sep); got != want {
 		t.Fatalf("got %q, want %q", got, want)

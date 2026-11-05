@@ -55,6 +55,15 @@ func savedHost(t *testing.T, a *App, name, addr string) assets.Host {
 	return h
 }
 
+func openAIPane(t *testing.T, a *App, hostID string) int {
+	t.Helper()
+	id, err := a.OpenAI(hostID, openAt{}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
 func consentHost(t *testing.T, a *App, id string) {
 	t.Helper()
 	s := a.Settings()
