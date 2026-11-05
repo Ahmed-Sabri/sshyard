@@ -102,6 +102,13 @@ func (a *App) QuickConnect(m locales.Messages) bool {
 		return false
 	}
 	f.err = ""
+	if sh, ok, err := assets.ParseStreamURL(f.target); ok {
+		if err != nil {
+			f.err = m.QuickStreamInvalid()
+			return false
+		}
+		return a.quickStream(m, f, sh)
+	}
 	hop, err := sshconfig.ParseQuick(f.target)
 	if err != nil {
 		f.err = m.QuickInvalid()
@@ -138,8 +145,14 @@ func (a *App) QuickConnect(m locales.Messages) bool {
 		f.err = fieldError(m, err)
 		return false
 	}
+	return a.quickOpen(m, f, h)
+}
+
+// quickOpen connects to the temporary host h, with the password typed
+// in the sheet when it asks for one.
+func (a *App) quickOpen(m locales.Messages, f *quickForm, h assets.Host) bool {
 	a.temps[h.ID] = h
-	if ch.method == assets.AuthAsk && f.password != "" {
+	if h.Auth == assets.AuthAsk && f.password != "" {
 		a.mu.Lock()
 		a.typed["ask/"+h.ID] = f.password
 		a.typedGen["ask/"+h.ID]++
@@ -153,6 +166,43 @@ func (a *App) QuickConnect(m locales.Messages) bool {
 	}
 	a.quick, a.quicking = nil, false
 	return true
+}
+
+// quickStream connects to a Telnet or serial destination. It logs in
+// with the password typed or the password credential chosen, by hand
+// otherwise.
+func (a *App) quickStream(m locales.Messages, f *quickForm, h assets.Host) bool {
+	choices := a.quickChoices(m)
+	ch := choices[0]
+	for _, c := range choices {
+		if c.label == f.auth {
+			ch = c
+		}
+	}
+	switch ch.method {
+	case assets.AuthAsk:
+		if f.password != "" {
+			h.Auth = assets.AuthAsk
+		}
+	case assets.AuthCredential:
+		cr, ok := a.store.Credential(ch.cred)
+		if !ok || cr.Kind != assets.CredPassword {
+			f.err = m.CredentialPasswordOnly()
+			return false
+		}
+		h.Auth, h.CredentialID = assets.AuthCredential, cr.ID
+		if h.User == "" {
+			h.User = cr.User
+		}
+	}
+	a.nextTemp++
+	h.ID = tempPrefix + strconv.Itoa(a.nextTemp)
+	h.Normalize()
+	if err := h.Validate(); err != nil {
+		f.err = fieldError(m, err)
+		return false
+	}
+	return a.quickOpen(m, f, h)
 }
 
 // SaveTempAs opens the host editor on the temporary host of the pane id,
@@ -207,11 +257,14 @@ func (a *App) quickView(c *ui.Context, m locales.Messages) {
 			}
 			ui.Form(c, func() {
 				ui.Field(c, m.QuickTarget(), func() {
-					in := ui.TextInput(c.Key("q:target"), &f.target).Placeholder("user@host:22").AutoFocus()
-					a.quickHold.apply(c, f, in)
-					if in.Submitted() {
-						a.QuickConnect(m)
-					}
+					ui.Column(c).Gap(4).FillWidth().Children(func() {
+						in := ui.TextInput(c.Key("q:target"), &f.target).Placeholder("user@host:22").AutoFocus()
+						a.quickHold.apply(c, f, in)
+						if in.Submitted() {
+							a.QuickConnect(m)
+						}
+						ui.Text(c, m.QuickStreamHint()).FontSize(theme.Caption).TextColor(tok.TextMuted)
+					})
 				})
 				ui.Field(c, m.FieldAuth(), func() {
 					var labels []string

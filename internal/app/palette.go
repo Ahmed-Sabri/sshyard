@@ -146,7 +146,11 @@ func (a *App) paletteItems(m locales.Messages, tok theme.Tokens) []paletteItem {
 
 	for _, h := range a.store.List() {
 		id := h.ID
-		add(paletteItem{key: "host:" + id, icon: icons.Host, title: h.Label(), sub: a.pv(h.Address), run: func() { a.Connect(id, openAt{}) }})
+		sub := h.Address
+		if !h.SSH() {
+			sub = h.Target()
+		}
+		add(paletteItem{key: "host:" + id, icon: icons.Host, title: h.Label(), sub: a.pv(sub), run: func() { a.Connect(id, openAt{}) }})
 	}
 	for _, n := range a.store.Snippets() {
 		add(paletteItem{key: "snippet:" + n.ID, icon: icons.Send, title: n.Name, sub: m.Snippets(), also: n.Group,

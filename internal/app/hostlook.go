@@ -18,6 +18,9 @@ func lookSeed(h assets.Host) string {
 	if a := strings.ToLower(strings.TrimSpace(h.Address)); a != "" {
 		return a
 	}
+	if h.Serial != nil && h.Serial.Device != "" {
+		return strings.ToLower(h.Serial.Device)
+	}
 	return h.ID
 }
 
@@ -45,6 +48,12 @@ func hostIcon(h assets.Host) (*icons.Icon, string) {
 	} else if h.Icon != "" {
 		return nil, h.Icon
 	}
+	switch h.Protocol {
+	case assets.ProtoTelnet:
+		return icons.TelnetHost, ""
+	case assets.ProtoSerial:
+		return icons.SerialHost, ""
+	}
 	f := fnv.New32a()
 	f.Write([]byte(lookSeed(h)))
 	return icons.HostIcons[f.Sum32()%icons.AutoHostIcons].Icon, ""
@@ -68,7 +77,11 @@ func hostAvatar(c *ui.Context, tok theme.Tokens, h assets.Host, size float32) ui
 func (f *hostForm) look() assets.Host {
 	h := f.orig
 	h.Address, h.Icon, h.Color = f.address, f.icon, f.color
-	if f.isNew && h.Address == "" {
+	h.Protocol, h.Serial = f.protocol(), nil
+	if h.Protocol == assets.ProtoSerial {
+		h.Address, h.Serial = "", &assets.SerialLine{Device: strings.TrimSpace(f.device)}
+	}
+	if f.isNew && lookSeed(h) == "" {
 		h.ID = "new"
 	}
 	return h

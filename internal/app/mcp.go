@@ -325,14 +325,21 @@ type mcpHostInfo struct {
 	Group   string `json:"group"`
 	Address string `json:"address"`
 	Port    int    `json:"port"`
+	// Protocol is "ssh", "telnet" or "serial": agents connect to SSH
+	// hosts only.
+	Protocol string `json:"protocol"`
 }
 
 func mcpHostOf(h assets.Host) mcpHostInfo {
 	port := h.Port
 	if port == 0 {
-		port = 22
+		port = h.Protocol.DefaultPort()
 	}
-	return mcpHostInfo{ID: h.ID, Name: h.Label(), Group: h.Group, Address: h.Address, Port: port}
+	proto := string(h.Protocol)
+	if h.SSH() {
+		proto = "ssh"
+	}
+	return mcpHostInfo{ID: h.ID, Name: h.Label(), Group: h.Group, Address: h.Address, Port: port, Protocol: proto}
 }
 
 func (a *App) mcpGroups() string {
@@ -453,6 +460,9 @@ func (a *App) mcpConnect(ctx context.Context, raw json.RawMessage) (string, erro
 	h, ok := a.store.Get(args.HostID)
 	if !ok {
 		return "", fmt.Errorf("no host %q; see list_hosts", args.HostID)
+	}
+	if !h.SSH() {
+		return "", fmt.Errorf("host %q is a %s host; agents connect to SSH hosts only", args.HostID, h.Protocol)
 	}
 	if err := a.mcpLogin(h); err != nil {
 		return "", err

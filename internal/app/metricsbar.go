@@ -26,7 +26,7 @@ const metricsProbe = 5 * time.Second
 // metricsWanted reports whether this host shows a bar. The global switch
 // hides every host. Off hides one host while the global switch is on.
 func (a *App) metricsWanted(h assets.Host) bool {
-	if !a.settings.MetricsEnabled || h.Metrics == assets.MetricsOff || isLocal(h.ID) {
+	if !a.settings.MetricsEnabled || h.Metrics == assets.MetricsOff || !hasSSH(h) {
 		return false
 	}
 	return true

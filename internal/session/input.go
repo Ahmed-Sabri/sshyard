@@ -24,6 +24,9 @@ func (s *Session) CaptureInput() (io.Writer, error) {
 
 type serializedInput struct {
 	io.WriteCloser
+	// reply, when set, takes what the terminal and the login answer
+	// instead of WriteCloser, which treats input as typed.
+	reply io.Writer
 	// mu is held for the whole of each write to the shell.
 	mu sync.Mutex
 	// queued is the input Send has taken that a goroutine, holding mu
@@ -91,10 +94,20 @@ func (s *Session) replyInput(p []byte) {
 	if w == nil {
 		return
 	}
+	w.answer(p)
+}
+
+// answer writes p, not as typed, after the input being written, in a
+// goroutine of its own.
+func (w *serializedInput) answer(p []byte) {
 	p = append([]byte(nil), p...)
 	go func() {
 		w.mu.Lock()
 		defer w.mu.Unlock()
+		if w.reply != nil {
+			w.reply.Write(p)
+			return
+		}
 		w.WriteCloser.Write(p)
 	}()
 }

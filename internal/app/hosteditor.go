@@ -56,6 +56,7 @@ type hostForm struct {
 	// promote is the temporary host being saved, whose panes then show
 	// the new host
 	promote string
+	streamForm
 }
 
 // authChoice is one option of the editor's auth select.
@@ -89,10 +90,14 @@ func (a *App) authChoices(m locales.Messages) []authChoice {
 }
 
 func (a *App) authLabel(m locales.Messages, h assets.Host) string {
-	for _, ch := range a.hostAuthChoices(m) {
+	choices := a.protoAuthChoices(m, h.Protocol)
+	for _, ch := range choices {
 		if ch.method == h.Auth && ch.cred == h.CredentialID {
 			return ch.label
 		}
+	}
+	if !h.SSH() {
+		return choices[0].label
 	}
 	return a.askLabel(m)
 }
@@ -104,6 +109,7 @@ func (a *App) openEditor(h *assets.Host) {
 	}
 
 	f := &hostForm{isNew: h == nil, port: "22", cwdFollow: true}
+	f.loadStream(h)
 	if h != nil {
 		f.orig = *h
 		f.name, f.address, f.port = h.Name, h.Address, strconv.Itoa(h.Port)
@@ -185,9 +191,20 @@ func fieldError(m locales.Messages, err error) string {
 		return m.ErrGeneric(secretStoreErrorText(m, err))
 	}
 	label := map[string]string{"name": m.FieldName(), "address": m.FieldHost(), "port": m.FieldPort(),
-		"user": m.FieldUser(), "auth": m.FieldAuth(), "credential": m.FieldAuth()}[fe.Field]
-	if fe.Field == "port" {
+		"user": m.FieldUser(), "auth": m.FieldAuth(), "credential": m.FieldAuth(), "device": m.FieldDevice()}[fe.Field]
+	switch {
+	case fe.Field == "port":
 		return m.InvalidPort()
+	case fe.Field == "serial":
+		return m.InvalidSerialSettings()
+	case fe.Field == "jump" && fe.Reason == "not ssh":
+		return m.JumpNotSSH()
+	case fe.Field == "host" && fe.Reason == "not ssh":
+		return m.ForwardNotSSH()
+	case fe.Field == "credential" && fe.Reason == "password only":
+		return m.CredentialPasswordOnly()
+	case fe.Field == "kind" && fe.Reason == "password only":
+		return m.CredentialKeepPassword()
 	}
 	if fe.Reason == "taken" {
 		return m.NameTaken()
@@ -201,20 +218,28 @@ func (a *App) SaveForm(m locales.Messages) bool {
 	if f == nil {
 		return false
 	}
-	port, err := strconv.Atoi(strings.TrimSpace(f.port))
-	if err != nil || port < 1 || port > 65535 {
-		f.err = m.InvalidPort()
-		return false
+	// A serial host has no port: its line is its address.
+	port, err := 0, error(nil)
+	if f.protocol() != assets.ProtoSerial {
+		port, err = strconv.Atoi(strings.TrimSpace(f.port))
+		if err != nil || port < 1 || port > 65535 {
+			f.err = m.InvalidPort()
+			return false
+		}
 	}
 	h := f.orig
 	h.Name, h.Address, h.Port, h.User, h.Group = f.name, f.address, port, f.user, f.group
 	h.Favorite, h.CwdFollow, h.Metrics = f.favorite, f.cwdFollow, metricsMode(f.metricsIdx)
 	h.Icon, h.Color = f.icon, f.color
+	f.applyStream(&h)
 	if f.auth == "" {
-		f.auth = a.authLabel(m, f.orig)
+		f.auth = a.authLabel(m, h)
 	}
 	h.Auth, h.CredentialID = assets.AuthAsk, ""
-	for _, ch := range a.hostAuthChoices(m) {
+	if !h.SSH() {
+		h.Auth = assets.AuthNone
+	}
+	for _, ch := range a.protoAuthChoices(m, h.Protocol) {
 		if ch.label == f.auth {
 			h.Auth, h.CredentialID = ch.method, ch.cred
 		}
@@ -361,8 +386,17 @@ func (a *App) editorView(c *ui.Context, m locales.Messages) {
 							in := ui.TextInput(c.Key("f:name"), &f.name).Placeholder("web-01").AutoFocus()
 							a.editorHold.apply(c, f, in)
 						})
-						ui.Field(c, m.FieldHost(), func() { ui.TextInput(c.Key("f:addr"), &f.address).Placeholder("example.com") })
-						ui.Field(c, m.FieldPort(), func() { ui.TextInput(c.Key("f:port"), &f.port).Width(90) })
+						a.protocolField(c, m, f)
+						proto := f.protocol()
+						if proto == assets.ProtoTelnet {
+							ui.Field(c, "", func() { notice(c, "f:plain", icons.Warning, tok.Warning, m.TelnetPlaintext()) })
+						}
+						if proto == assets.ProtoSerial {
+							a.serialFields(c, m, tok, f)
+						} else {
+							ui.Field(c, m.FieldHost(), func() { ui.TextInput(c.Key("f:addr"), &f.address).Placeholder("example.com") })
+							ui.Field(c, m.FieldPort(), func() { ui.TextInput(c.Key("f:port"), &f.port).Width(90) })
+						}
 						ui.Field(c, m.FieldUser(), func() { ui.TextInput(c.Key("f:user"), &f.user).Placeholder("root") })
 						ui.Field(c, m.FieldGroup(), func() { ui.TextInput(c.Key("f:group"), &f.group) })
 						ui.Field(c, m.FieldAppearance(), func() { a.lookFields(c, m, tok, f) })
@@ -371,7 +405,7 @@ func (a *App) editorView(c *ui.Context, m locales.Messages) {
 								f.auth = a.authLabel(m, f.orig)
 							}
 							var labels []string
-							for _, ch := range a.hostAuthChoices(m) {
+							for _, ch := range a.protoAuthChoices(m, proto) {
 								labels = append(labels, ch.label)
 							}
 							labels = append(labels, m.NewCredentialChoice())
@@ -385,19 +419,28 @@ func (a *App) editorView(c *ui.Context, m locales.Messages) {
 							}
 						})
 						a.hostSecretFields(c, m, tok, f)
-						ui.Field(c, "", func() {
-							ui.Collapsible(c.Key("f:net"), m.Network(), &f.netOpen, func() {
-								a.networkFields(c, m, tok, f)
+						if proto != assets.ProtoSSH && f.auth != m.AuthManual() {
+							ui.Field(c, "", func() { ui.Text(c, m.AutoLoginHint()).FontSize(theme.Caption).TextColor(tok.TextMuted) })
+						}
+						if proto != assets.ProtoSerial {
+							ui.Field(c, "", func() {
+								ui.Collapsible(c.Key("f:net"), m.Network(), &f.netOpen, func() {
+									a.networkFields(c, m, tok, f)
+								})
 							})
-						})
-						ui.Field(c, m.MetricsBar(), func() {
-							ui.Column(c).Gap(4).Children(func() {
-								ui.Segmented(c.Key("f:met"), &f.metricsIdx, m.MetricsFollow(), m.MetricsHostOn(), m.MetricsHostOff()).Label(m.MetricsBar()).Disabled(!a.settings.MetricsEnabled)
-								if !a.settings.MetricsEnabled {
-									ui.Text(c, m.MetricsDisabledGlobally()).FontSize(theme.Caption).TextColor(tok.TextMuted)
-								}
+						}
+						if proto == assets.ProtoSSH {
+							ui.Field(c, m.MetricsBar(), func() {
+								ui.Column(c).Gap(4).Children(func() {
+									ui.Segmented(c.Key("f:met"), &f.metricsIdx, m.MetricsFollow(), m.MetricsHostOn(), m.MetricsHostOff()).Label(m.MetricsBar()).Disabled(!a.settings.MetricsEnabled)
+									if !a.settings.MetricsEnabled {
+										ui.Text(c, m.MetricsDisabledGlobally()).FontSize(theme.Caption).TextColor(tok.TextMuted)
+									}
+								})
 							})
-						})
+						} else {
+							a.streamTermFields(c, m, tok, f)
+						}
 						ui.Field(c, "", func() {
 							ui.Collapsible(c.Key("f:adv"), m.Advanced(), &f.advOpen, func() {
 								labels := syncOSC52Label(m, f)
@@ -407,13 +450,17 @@ func (a *App) editorView(c *ui.Context, m locales.Messages) {
 								})
 							})
 						})
-						ui.Field(c, "", func() {
-							a.aiHostFields(c, m, tok, f)
-						})
+						if proto == assets.ProtoSSH {
+							ui.Field(c, "", func() {
+								a.aiHostFields(c, m, tok, f)
+							})
+						}
 						ui.Field(c, "", func() {
 							ui.Column(c).Gap(6).Children(func() {
-								ui.Checkbox(c.Key("f:cwd"), &f.cwdFollow, m.CwdFollow())
-								ui.Text(c, m.HostCwdFollowHint()).FontSize(theme.Caption).TextColor(tok.TextMuted)
+								if proto == assets.ProtoSSH {
+									ui.Checkbox(c.Key("f:cwd"), &f.cwdFollow, m.CwdFollow())
+									ui.Text(c, m.HostCwdFollowHint()).FontSize(theme.Caption).TextColor(tok.TextMuted)
+								}
 								ui.Checkbox(c.Key("f:fav"), &f.favorite, m.Favorite())
 							})
 						})
@@ -475,6 +522,10 @@ func (a *App) networkFields(c *ui.Context, m locales.Messages, tok theme.Tokens,
 				a.editing = false
 			}
 		})
+		// Telnet goes through a proxy only: jump hosts are SSH.
+		if f.protocol() != assets.ProtoSSH {
+			return
+		}
 		ui.Text(c, m.FieldJumpHosts()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
 		if len(f.jumps) == 0 {
 			ui.Text(c, m.NoJumpHosts()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
@@ -502,7 +553,7 @@ func (a *App) networkFields(c *ui.Context, m locales.Messages, tok theme.Tokens,
 		var pick []string
 		var pickIDs []string
 		for _, h := range a.store.List() {
-			if h.ID != f.orig.ID && !slices.Contains(f.jumps, h.ID) {
+			if h.ID != f.orig.ID && h.SSH() && !slices.Contains(f.jumps, h.ID) {
 				pick, pickIDs = append(pick, h.Label()), append(pickIDs, h.ID)
 			}
 		}

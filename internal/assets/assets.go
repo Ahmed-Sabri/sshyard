@@ -53,13 +53,19 @@ const (
 	// AuthAsk keeps nothing: the password is asked at each connection
 	// and held in memory only.
 	AuthAsk AuthMethod = "ask"
+	// AuthNone is a Telnet or serial host logged in to by hand, in the
+	// terminal: its prompts are not answered.
+	AuthNone AuthMethod = "none"
 )
 
-// Host is a saved SSH host: where it is and how to reach it. It holds no
-// secret; host-owned and reusable secrets live in the encrypted store.
+// Host is a saved host, an SSH or Telnet server or a serial device:
+// where it is and how to reach it. It holds no secret; host-owned and
+// reusable secrets live in the encrypted store.
 type Host struct {
-	ID       string     `json:"id"`
-	Name     string     `json:"name"`
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	// Protocol is how the host is reached; empty is SSH.
+	Protocol Protocol   `json:"protocol,omitempty"`
 	Address  string     `json:"address"`
 	Port     int        `json:"port"`
 	User     string     `json:"user"`
@@ -95,10 +101,17 @@ type Host struct {
 	Metrics MetricsMode `json:"metrics,omitempty"`
 	// AIPolicy is the host's AI permission override. An empty mode
 	// inherits the global default.
-	AIPolicy AIPolicy  `json:"aiPolicy,omitempty"`
-	Created  time.Time `json:"created"`
-	Updated  time.Time `json:"updated"`
-	LastUsed time.Time `json:"lastUsed,omitzero"`
+	AIPolicy AIPolicy `json:"aiPolicy,omitempty"`
+	// Serial is a serial host's port and its settings.
+	Serial *SerialLine `json:"serial,omitempty"`
+	// NewLine is what Enter sends to a Telnet or serial host.
+	NewLine NewLine `json:"newline,omitempty"`
+	// LocalEcho shows what is typed to a Telnet or serial host that
+	// does not echo it.
+	LocalEcho bool      `json:"localEcho,omitempty"`
+	Created   time.Time `json:"created"`
+	Updated   time.Time `json:"updated"`
+	LastUsed  time.Time `json:"lastUsed,omitzero"`
 }
 
 // AIPolicy is how an AI pane on this host may act. Paths are remote
@@ -114,11 +127,18 @@ func (h Host) Label() string {
 	if h.Name != "" {
 		return h.Name
 	}
+	if h.Protocol == ProtoSerial && h.Serial != nil {
+		return h.Serial.Device
+	}
 	return h.Address
 }
 
-// Target is user@address, with :port when it is not 22.
+// Target is user@address, with :port when it is not 22; a Telnet URL,
+// or a serial port with its speed and frame.
 func (h Host) Target() string {
+	if !h.SSH() {
+		return h.streamTarget()
+	}
 	s := h.Address
 	if h.User != "" {
 		s = h.User + "@" + s
@@ -133,7 +153,7 @@ func (h Host) Target() string {
 func (h Host) Addr() string {
 	port := h.Port
 	if port == 0 {
-		port = 22
+		port = h.Protocol.DefaultPort()
 	}
 	addr := h.Address
 	if strings.Contains(addr, ":") && !strings.HasPrefix(addr, "[") {
@@ -160,8 +180,14 @@ func (h *Host) Normalize() {
 	if _, ok := theme.LightTokens().TintNamed(h.Color); !ok {
 		h.Color = ""
 	}
+	h.NewLine = NewLine(strings.TrimSpace(string(h.NewLine)))
 	if h.Port == 0 {
-		h.Port = 22
+		h.Port = h.Protocol.DefaultPort()
+	}
+	if !h.SSH() {
+		h.normalizeStream()
+	} else {
+		h.Serial, h.NewLine, h.LocalEcho = nil, "", false
 	}
 	if h.Auth == "" {
 		h.Auth = AuthAsk
@@ -232,6 +258,9 @@ func cleanRemotePaths(in []string) []string {
 
 // Validate checks a normalized host.
 func (h Host) Validate() error {
+	if !h.SSH() {
+		return h.validateStream()
+	}
 	switch {
 	case h.Address == "":
 		return &FieldError{"address", "required"}
@@ -448,15 +477,29 @@ func (s *Store) Get(id string) (Host, bool) {
 // checkRefs checks what a host refers to: its credential, its proxy and
 // the hosts of its jump chain, which must exist and not loop back.
 func (s *Store) checkRefs(h Host) error {
-	if h.Auth == AuthCredential && s.credIndex(h.CredentialID) < 0 {
-		return &FieldError{"credential", "unknown"}
+	if h.Auth == AuthCredential {
+		i := s.credIndex(h.CredentialID)
+		if i < 0 {
+			return &FieldError{"credential", "unknown"}
+		}
+		// A Telnet or serial host types a password; it has no use for a key.
+		if !h.SSH() && s.creds[i].Kind != CredPassword {
+			return &FieldError{"credential", "password only"}
+		}
 	}
 	if h.ProxyID != "" && s.proxyIndex(h.ProxyID) < 0 {
 		return &FieldError{"proxy", "unknown"}
 	}
 	for _, j := range h.JumpChain {
-		if j != h.ID && s.index(j) < 0 {
+		if j == h.ID {
+			continue
+		}
+		i := s.index(j)
+		if i < 0 {
 			return &FieldError{"jump", "unknown"}
+		}
+		if !s.hosts[i].SSH() {
+			return &FieldError{"jump", "not ssh"}
 		}
 	}
 	// Walk every chain from h, with h as it is to be saved.
@@ -572,6 +615,12 @@ func (s *Store) Update(h Host) (Host, error) {
 		return Host{}, err
 	}
 	old := s.hosts[i]
+	// What jumps through it, or forwards by it, needs it to be SSH.
+	if old.SSH() && !h.SSH() {
+		if use := s.users(h.ID); use != nil {
+			return Host{}, use
+		}
+	}
 	h.Created, h.Updated = old.Created, s.now()
 	if h.LastUsed.IsZero() {
 		h.LastUsed = old.LastUsed
@@ -591,6 +640,15 @@ func (s *Store) Delete(id string) error {
 	if i < 0 {
 		return ErrNotFound
 	}
+	if use := s.users(id); use != nil {
+		return use
+	}
+	return s.commit(func() { s.hosts = slices.Delete(s.hosts, i, i+1) })
+}
+
+// users are the hosts that jump through the host of id and the port
+// forwards that enter by it; nil for none.
+func (s *Store) users(id string) *InUseError {
 	use := &InUseError{}
 	for _, h := range s.hosts {
 		if slices.Contains(h.JumpChain, id) && h.ID != id {
@@ -602,10 +660,10 @@ func (s *Store) Delete(id string) error {
 			use.Forwards = append(use.Forwards, f.ID)
 		}
 	}
-	if len(use.Hosts)+len(use.Forwards) > 0 {
-		return use
+	if len(use.Hosts)+len(use.Forwards) == 0 {
+		return nil
 	}
-	return s.commit(func() { s.hosts = slices.Delete(s.hosts, i, i+1) })
+	return use
 }
 
 func (s *Store) modify(id string, fn func(h *Host)) error {

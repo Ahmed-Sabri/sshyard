@@ -802,6 +802,12 @@ func (a *App) open(hostID string, kind layout.Kind, at openAt, from *conn) (int,
 		return a.reuse(ex, hostID, 0)
 	}
 	c, err := a.makeConn(hostID, kind, 0)
+	var inUse *serialInUseError
+	if errors.As(err, &inUse) {
+		// A serial port opens once: its pane is the host's terminal.
+		a.showPane(inUse.pane)
+		return inUse.pane.id, nil
+	}
 	if err != nil {
 		return 0, err
 	}
@@ -822,6 +828,12 @@ func (a *App) makeConn(hostID string, kind layout.Kind, link int) (*conn, error)
 	if isLocal(h.ID) && kind != layout.Terminal {
 		return nil, errLocalTerminalOnly
 	}
+	if isStream(h) && kind != layout.Terminal {
+		return nil, errTerminalOnly
+	}
+	if ex := a.serialPane(h); ex != nil {
+		return nil, &serialInUseError{ex}
+	}
 	a.nextConn++
 	c := &conn{id: a.nextConn, kind: kind, host: h}
 	if isTemp(h.ID) {
@@ -836,15 +848,18 @@ func (a *App) makeConn(hostID string, kind layout.Kind, link int) (*conn, error)
 		a.conns[c.id] = c
 		return c, nil
 	}
-	var cfg session.Config
-	if !isLocal(h.ID) {
-		cfg = a.hostConfig(h, c, func(ctx context.Context) (session.Credentials, error) { return a.credentials(c, h) })
-	}
 	opts := session.Options{
 		KeepAlive:     time.Duration(a.settings.KeepAliveSeconds) * time.Second,
 		AutoReconnect: a.settings.AutoReconnect,
 		NoShell:       kind != layout.Terminal,
 		Local:         isLocal(h.ID),
+	}
+	var cfg session.Config
+	switch {
+	case isStream(h):
+		cfg = a.streamSession(h, c, &opts)
+	case !isLocal(h.ID):
+		cfg = a.hostConfig(h, c, func(ctx context.Context) (session.Credentials, error) { return a.credentials(c, h) })
 	}
 	if opts.Local {
 		opts.Shell = a.shell(h.ID)
@@ -1127,7 +1142,8 @@ func (a *App) credentials(c *conn, h assets.Host) (session.Credentials, error) {
 		// the password is asked when none of them logs in.
 		out.Password = typed("ask/" + h.ID)
 		if out.Password == "" {
-			if !a.lkOn.Load() {
+			// A Telnet or serial host has no keys to offer.
+			if !a.lkOn.Load() || !h.SSH() {
 				return out, session.ErrNoCredentials
 			}
 			a.localKeyCredentials(&out, h, typed)

@@ -2,15 +2,13 @@ package session
 
 import (
 	"context"
-	"io"
 	"strings"
 )
 
 // localPTY is a shell running on this computer in a pseudo-terminal: what
 // it prints is read, what is typed written. Close ends it.
 type localPTY interface {
-	io.ReadWriteCloser
-	Resize(cols, rows int) error
+	Stream
 	// Wait waits for the shell to end.
 	Wait() error
 }
@@ -49,44 +47,20 @@ var startPTY = startLocal
 
 // connectLocal starts the shell of a local session.
 func (s *Session) connectLocal() error {
-	s.mu.Lock()
-	cols, rows := s.cols, s.rows
-	s.mu.Unlock()
 	sh := s.opts.Shell
 	if sh.Path == "" {
 		sh = Shells()[0]
 	}
-	p, err := startPTY(sh, cols, rows, s.opts.Term)
-	if err != nil {
-		return err
-	}
-	s.Term.ResetOutputStream()
-	s.Term.ResetInputModes(true)
-	s.mu.Lock()
-	if s.closed {
-		s.mu.Unlock()
-		p.Close()
-		return context.Canceled
-	}
-	outputDone := make(chan struct{})
-	s.localOutputDone = outputDone
-	go func() {
-		io.Copy(&termWriter{s}, p)
-		close(outputDone)
-	}()
-	s.local, s.stdin = p, &serializedInput{WriteCloser: p}
-	s.status.State, s.status.Err, s.status.Attempt = Connected, nil, 0
-	s.status.Connects++
-	s.mu.Unlock()
-	s.changed()
-	return nil
+	return s.connectStream(func(cols, rows int) (Stream, error) {
+		return startPTY(sh, cols, rows, s.opts.Term)
+	}, nil)
 }
 
 // serveLocal waits for the local shell to end, which is never a lost
 // connection: it is not reconnected by itself.
 func (s *Session) serveLocal(ctx context.Context, p localPTY) error {
 	s.mu.Lock()
-	outputDone := s.localOutputDone
+	out := s.streamOut
 	s.mu.Unlock()
 	waited := make(chan struct{})
 	go func() {
@@ -99,9 +73,9 @@ func (s *Session) serveLocal(ctx context.Context, p localPTY) error {
 	}
 	s.Term.ResetInputModes(false)
 	p.Close()
-	<-outputDone
+	<-out.done
 	s.mu.Lock()
-	s.local, s.stdin, s.localOutputDone = nil, nil, nil
+	s.stream, s.streamOut, s.stdin = nil, nil, nil
 	s.mu.Unlock()
 	return nil
 }

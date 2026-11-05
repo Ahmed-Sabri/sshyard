@@ -30,6 +30,7 @@ const (
 	actZoomIn         = "zoomIn"
 	actZoomOut        = "zoomOut"
 	actZoomReset      = "zoomReset"
+	actSendBreak      = "sendBreak"
 )
 
 // action is an action with a shortcut: what it is called, its icon in the
@@ -62,6 +63,7 @@ var actions = []action{
 	{actZoomIn, locales.Messages.ZoomIn, icons.ZoomIn, keymap.Combo{Mods: appMods, Key: ui.KeyEqual}, false},
 	{actZoomOut, locales.Messages.ZoomOut, icons.ZoomOut, keymap.Combo{Mods: appMods, Key: ui.KeyMinus}, false},
 	{actZoomReset, locales.Messages.ZoomReset, icons.Reset, keymap.Combo{Mods: appMods, Key: ui.Key0}, false},
+	{actSendBreak, locales.Messages.SendBreak, icons.SendBreak, keymap.Combo{Mods: appMods, Key: ui.KeyB}, false},
 }
 
 // actionOf is the action with id.
@@ -263,5 +265,9 @@ func (a *App) runAction(id string) {
 		a.stepZoom(-1)
 	case actZoomReset:
 		a.stepZoom(0)
+	case actSendBreak:
+		if cn := a.focused(); a.page == pageWorkspace && cn != nil {
+			a.sendBreak(cn)
+		}
 	}
 }

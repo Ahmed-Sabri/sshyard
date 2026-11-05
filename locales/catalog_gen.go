@@ -14128,3 +14128,375 @@ func OutputEncodingError(error string) string { return In(i18n.Locale()).OutputE
 func (msgs Messages) OutputEncodingError(error string) string {
 	return Catalog.Format(msgs.locale, "outputEncodingError", map[string]any{"error": error})
 }
+
+// ErrSerialNotFound says "{device} isn’t connected. Plug in the device or choose another port."
+// in the language the app shows.
+func ErrSerialNotFound(device string) string { return In(i18n.Locale()).ErrSerialNotFound(device) }
+
+// ErrSerialNotFound says "{device} isn’t connected. Plug in the device or choose another port."
+// in the language of msgs.
+func (msgs Messages) ErrSerialNotFound(device string) string {
+	return Catalog.Format(msgs.locale, "errSerialNotFound", map[string]any{"device": device})
+}
+
+// ErrSerialBusy says "{device} is in use by another program."
+// in the language the app shows.
+func ErrSerialBusy(device string) string { return In(i18n.Locale()).ErrSerialBusy(device) }
+
+// ErrSerialBusy says "{device} is in use by another program."
+// in the language of msgs.
+func (msgs Messages) ErrSerialBusy(device string) string {
+	return Catalog.Format(msgs.locale, "errSerialBusy", map[string]any{"device": device})
+}
+
+// ErrSerialPermission says "Not allowed to open {device}. On Linux, add your user to the dialout group."
+// in the language the app shows.
+func ErrSerialPermission(device string) string { return In(i18n.Locale()).ErrSerialPermission(device) }
+
+// ErrSerialPermission says "Not allowed to open {device}. On Linux, add your user to the dialout group."
+// in the language of msgs.
+func (msgs Messages) ErrSerialPermission(device string) string {
+	return Catalog.Format(msgs.locale, "errSerialPermission", map[string]any{"device": device})
+}
+
+// ErrSerialDisconnected says "{device} was disconnected."
+// in the language the app shows.
+func ErrSerialDisconnected(device string) string {
+	return In(i18n.Locale()).ErrSerialDisconnected(device)
+}
+
+// ErrSerialDisconnected says "{device} was disconnected."
+// in the language of msgs.
+func (msgs Messages) ErrSerialDisconnected(device string) string {
+	return Catalog.Format(msgs.locale, "errSerialDisconnected", map[string]any{"device": device})
+}
+
+// ErrSerialSettings says "{device} doesn’t accept these serial settings."
+// in the language the app shows.
+func ErrSerialSettings(device string) string { return In(i18n.Locale()).ErrSerialSettings(device) }
+
+// ErrSerialSettings says "{device} doesn’t accept these serial settings."
+// in the language of msgs.
+func (msgs Messages) ErrSerialSettings(device string) string {
+	return Catalog.Format(msgs.locale, "errSerialSettings", map[string]any{"device": device})
+}
+
+// MonitorStream says "Metrics need SSH. This pane is a Telnet or serial terminal."
+// in the language the app shows.
+func MonitorStream() string { return In(i18n.Locale()).MonitorStream() }
+
+// MonitorStream says "Metrics need SSH. This pane is a Telnet or serial terminal."
+// in the language of msgs.
+func (msgs Messages) MonitorStream() string {
+	return Catalog.Format(msgs.locale, "monitorStream", nil)
+}
+
+// AuthManual says "Log in manually"
+// in the language the app shows.
+func AuthManual() string { return In(i18n.Locale()).AuthManual() }
+
+// AuthManual says "Log in manually"
+// in the language of msgs.
+func (msgs Messages) AuthManual() string {
+	return Catalog.Format(msgs.locale, "authManual", nil)
+}
+
+// AutoLoginHint says "SSHYard answers the login and password prompts for you."
+// in the language the app shows.
+func AutoLoginHint() string { return In(i18n.Locale()).AutoLoginHint() }
+
+// AutoLoginHint says "SSHYard answers the login and password prompts for you."
+// in the language of msgs.
+func (msgs Messages) AutoLoginHint() string {
+	return Catalog.Format(msgs.locale, "autoLoginHint", nil)
+}
+
+// FieldProtocol says "Protocol"
+// in the language the app shows.
+func FieldProtocol() string { return In(i18n.Locale()).FieldProtocol() }
+
+// FieldProtocol says "Protocol"
+// in the language of msgs.
+func (msgs Messages) FieldProtocol() string {
+	return Catalog.Format(msgs.locale, "fieldProtocol", nil)
+}
+
+// ProtocolSSH says "SSH"
+// in the language the app shows.
+func ProtocolSSH() string { return In(i18n.Locale()).ProtocolSSH() }
+
+// ProtocolSSH says "SSH"
+// in the language of msgs.
+func (msgs Messages) ProtocolSSH() string {
+	return Catalog.Format(msgs.locale, "protocolSSH", nil)
+}
+
+// ProtocolTelnet says "Telnet"
+// in the language the app shows.
+func ProtocolTelnet() string { return In(i18n.Locale()).ProtocolTelnet() }
+
+// ProtocolTelnet says "Telnet"
+// in the language of msgs.
+func (msgs Messages) ProtocolTelnet() string {
+	return Catalog.Format(msgs.locale, "protocolTelnet", nil)
+}
+
+// ProtocolSerial says "Serial"
+// in the language the app shows.
+func ProtocolSerial() string { return In(i18n.Locale()).ProtocolSerial() }
+
+// ProtocolSerial says "Serial"
+// in the language of msgs.
+func (msgs Messages) ProtocolSerial() string {
+	return Catalog.Format(msgs.locale, "protocolSerial", nil)
+}
+
+// FieldDevice says "Serial port"
+// in the language the app shows.
+func FieldDevice() string { return In(i18n.Locale()).FieldDevice() }
+
+// FieldDevice says "Serial port"
+// in the language of msgs.
+func (msgs Messages) FieldDevice() string {
+	return Catalog.Format(msgs.locale, "fieldDevice", nil)
+}
+
+// RefreshPorts says "Refresh serial ports"
+// in the language the app shows.
+func RefreshPorts() string { return In(i18n.Locale()).RefreshPorts() }
+
+// RefreshPorts says "Refresh serial ports"
+// in the language of msgs.
+func (msgs Messages) RefreshPorts() string {
+	return Catalog.Format(msgs.locale, "refreshPorts", nil)
+}
+
+// NoSerialPorts says "No serial ports found. Type the device name instead."
+// in the language the app shows.
+func NoSerialPorts() string { return In(i18n.Locale()).NoSerialPorts() }
+
+// NoSerialPorts says "No serial ports found. Type the device name instead."
+// in the language of msgs.
+func (msgs Messages) NoSerialPorts() string {
+	return Catalog.Format(msgs.locale, "noSerialPorts", nil)
+}
+
+// FieldBaud says "Baud rate"
+// in the language the app shows.
+func FieldBaud() string { return In(i18n.Locale()).FieldBaud() }
+
+// FieldBaud says "Baud rate"
+// in the language of msgs.
+func (msgs Messages) FieldBaud() string {
+	return Catalog.Format(msgs.locale, "fieldBaud", nil)
+}
+
+// FieldDataBits says "Data bits"
+// in the language the app shows.
+func FieldDataBits() string { return In(i18n.Locale()).FieldDataBits() }
+
+// FieldDataBits says "Data bits"
+// in the language of msgs.
+func (msgs Messages) FieldDataBits() string {
+	return Catalog.Format(msgs.locale, "fieldDataBits", nil)
+}
+
+// FieldParity says "Parity"
+// in the language the app shows.
+func FieldParity() string { return In(i18n.Locale()).FieldParity() }
+
+// FieldParity says "Parity"
+// in the language of msgs.
+func (msgs Messages) FieldParity() string {
+	return Catalog.Format(msgs.locale, "fieldParity", nil)
+}
+
+// FieldStopBits says "Stop bits"
+// in the language the app shows.
+func FieldStopBits() string { return In(i18n.Locale()).FieldStopBits() }
+
+// FieldStopBits says "Stop bits"
+// in the language of msgs.
+func (msgs Messages) FieldStopBits() string {
+	return Catalog.Format(msgs.locale, "fieldStopBits", nil)
+}
+
+// ParityNone says "None"
+// in the language the app shows.
+func ParityNone() string { return In(i18n.Locale()).ParityNone() }
+
+// ParityNone says "None"
+// in the language of msgs.
+func (msgs Messages) ParityNone() string {
+	return Catalog.Format(msgs.locale, "parityNone", nil)
+}
+
+// ParityOdd says "Odd"
+// in the language the app shows.
+func ParityOdd() string { return In(i18n.Locale()).ParityOdd() }
+
+// ParityOdd says "Odd"
+// in the language of msgs.
+func (msgs Messages) ParityOdd() string {
+	return Catalog.Format(msgs.locale, "parityOdd", nil)
+}
+
+// ParityEven says "Even"
+// in the language the app shows.
+func ParityEven() string { return In(i18n.Locale()).ParityEven() }
+
+// ParityEven says "Even"
+// in the language of msgs.
+func (msgs Messages) ParityEven() string {
+	return Catalog.Format(msgs.locale, "parityEven", nil)
+}
+
+// ParityMark says "Mark"
+// in the language the app shows.
+func ParityMark() string { return In(i18n.Locale()).ParityMark() }
+
+// ParityMark says "Mark"
+// in the language of msgs.
+func (msgs Messages) ParityMark() string {
+	return Catalog.Format(msgs.locale, "parityMark", nil)
+}
+
+// ParitySpace says "Space"
+// in the language the app shows.
+func ParitySpace() string { return In(i18n.Locale()).ParitySpace() }
+
+// ParitySpace says "Space"
+// in the language of msgs.
+func (msgs Messages) ParitySpace() string {
+	return Catalog.Format(msgs.locale, "paritySpace", nil)
+}
+
+// FieldNewLine says "Return sends"
+// in the language the app shows.
+func FieldNewLine() string { return In(i18n.Locale()).FieldNewLine() }
+
+// FieldNewLine says "Return sends"
+// in the language of msgs.
+func (msgs Messages) FieldNewLine() string {
+	return Catalog.Format(msgs.locale, "fieldNewLine", nil)
+}
+
+// LocalEcho says "Local echo"
+// in the language the app shows.
+func LocalEcho() string { return In(i18n.Locale()).LocalEcho() }
+
+// LocalEcho says "Local echo"
+// in the language of msgs.
+func (msgs Messages) LocalEcho() string {
+	return Catalog.Format(msgs.locale, "localEcho", nil)
+}
+
+// LocalEchoHint says "Show what you type when the other end doesn’t echo it."
+// in the language the app shows.
+func LocalEchoHint() string { return In(i18n.Locale()).LocalEchoHint() }
+
+// LocalEchoHint says "Show what you type when the other end doesn’t echo it."
+// in the language of msgs.
+func (msgs Messages) LocalEchoHint() string {
+	return Catalog.Format(msgs.locale, "localEchoHint", nil)
+}
+
+// TelnetPlaintext says "Telnet is unencrypted: everything, passwords included, crosses the network in plain text. Use it only on networks you…"
+// in the language the app shows.
+func TelnetPlaintext() string { return In(i18n.Locale()).TelnetPlaintext() }
+
+// TelnetPlaintext says "Telnet is unencrypted: everything, passwords included, crosses the network in plain text. Use it only on networks you…"
+// in the language of msgs.
+func (msgs Messages) TelnetPlaintext() string {
+	return Catalog.Format(msgs.locale, "telnetPlaintext", nil)
+}
+
+// SerialSettings says "Serial settings"
+// in the language the app shows.
+func SerialSettings() string { return In(i18n.Locale()).SerialSettings() }
+
+// SerialSettings says "Serial settings"
+// in the language of msgs.
+func (msgs Messages) SerialSettings() string {
+	return Catalog.Format(msgs.locale, "serialSettings", nil)
+}
+
+// SendBreak says "Send Break"
+// in the language the app shows.
+func SendBreak() string { return In(i18n.Locale()).SendBreak() }
+
+// SendBreak says "Send Break"
+// in the language of msgs.
+func (msgs Messages) SendBreak() string {
+	return Catalog.Format(msgs.locale, "sendBreak", nil)
+}
+
+// InvalidSerialSettings says "Check the serial settings."
+// in the language the app shows.
+func InvalidSerialSettings() string { return In(i18n.Locale()).InvalidSerialSettings() }
+
+// InvalidSerialSettings says "Check the serial settings."
+// in the language of msgs.
+func (msgs Messages) InvalidSerialSettings() string {
+	return Catalog.Format(msgs.locale, "invalidSerialSettings", nil)
+}
+
+// JumpNotSSH says "Jump hosts must be SSH hosts."
+// in the language the app shows.
+func JumpNotSSH() string { return In(i18n.Locale()).JumpNotSSH() }
+
+// JumpNotSSH says "Jump hosts must be SSH hosts."
+// in the language of msgs.
+func (msgs Messages) JumpNotSSH() string {
+	return Catalog.Format(msgs.locale, "jumpNotSSH", nil)
+}
+
+// ForwardNotSSH says "Port forwards go through SSH hosts only."
+// in the language the app shows.
+func ForwardNotSSH() string { return In(i18n.Locale()).ForwardNotSSH() }
+
+// ForwardNotSSH says "Port forwards go through SSH hosts only."
+// in the language of msgs.
+func (msgs Messages) ForwardNotSSH() string {
+	return Catalog.Format(msgs.locale, "forwardNotSSH", nil)
+}
+
+// CredentialPasswordOnly says "Telnet and serial hosts log in with a password: choose a password credential."
+// in the language the app shows.
+func CredentialPasswordOnly() string { return In(i18n.Locale()).CredentialPasswordOnly() }
+
+// CredentialPasswordOnly says "Telnet and serial hosts log in with a password: choose a password credential."
+// in the language of msgs.
+func (msgs Messages) CredentialPasswordOnly() string {
+	return Catalog.Format(msgs.locale, "credentialPasswordOnly", nil)
+}
+
+// CredentialKeepPassword says "Telnet or serial hosts log in with this credential, so it must stay a password."
+// in the language the app shows.
+func CredentialKeepPassword() string { return In(i18n.Locale()).CredentialKeepPassword() }
+
+// CredentialKeepPassword says "Telnet or serial hosts log in with this credential, so it must stay a password."
+// in the language of msgs.
+func (msgs Messages) CredentialKeepPassword() string {
+	return Catalog.Format(msgs.locale, "credentialKeepPassword", nil)
+}
+
+// QuickStreamHint says "Also telnet://host:23 or serial://COM3?baud=9600"
+// in the language the app shows.
+func QuickStreamHint() string { return In(i18n.Locale()).QuickStreamHint() }
+
+// QuickStreamHint says "Also telnet://host:23 or serial://COM3?baud=9600"
+// in the language of msgs.
+func (msgs Messages) QuickStreamHint() string {
+	return Catalog.Format(msgs.locale, "quickStreamHint", nil)
+}
+
+// QuickStreamInvalid says "Type telnet://[user@]host[:port], or serial://DEVICE with baud, data, parity and stop settings."
+// in the language the app shows.
+func QuickStreamInvalid() string { return In(i18n.Locale()).QuickStreamInvalid() }
+
+// QuickStreamInvalid says "Type telnet://[user@]host[:port], or serial://DEVICE with baud, data, parity and stop settings."
+// in the language of msgs.
+func (msgs Messages) QuickStreamInvalid() string {
+	return Catalog.Format(msgs.locale, "quickStreamInvalid", nil)
+}

@@ -57,6 +57,19 @@ type Options struct {
 	// Shell is the shell a local session runs; zero is the first of
 	// Shells.
 	Shell Shell
+	// Open, when set, opens the terminal's stream instead of an SSH
+	// shell: a Telnet connection or a serial port. The session has no
+	// Client; it ends, Exited, when the other end closes the stream, and
+	// is reconnected when the stream is lost.
+	Open func(ctx context.Context, cols, rows int, term string) (Stream, error)
+	// Login answers an opened stream's login and password prompts with
+	// the Config's User and Credentials, read before it is opened.
+	Login bool
+	// NewLine is what Enter sends on an opened stream; "" is "\r".
+	NewLine string
+	// LocalEcho shows what is typed on an opened stream, for a device
+	// that does not echo it.
+	LocalEcho bool
 }
 
 // Status is a session's state, for the UI.
@@ -89,17 +102,18 @@ type Session struct {
 	client  *ssh.Client
 	release func() // lets go of client: closes it, or hands it back to the pool
 	shell   *ssh.Session
-	local   localPTY
-	stdin   *serializedInput
-	cols    int
-	rows    int
-	cancel  context.CancelFunc
-	wake    chan struct{}
-	closed  bool
-	started bool
-	done    chan struct{}
-	// localOutputDone closes after the current local shell's output is drained.
-	localOutputDone chan struct{}
+	// stream is the terminal of a local or Options.Open session, its
+	// output copied to the terminal by streamOut.
+	stream    Stream
+	streamOut *streamOut
+	stdin     *serializedInput
+	cols      int
+	rows      int
+	cancel    context.CancelFunc
+	wake      chan struct{}
+	closed    bool
+	started   bool
+	done      chan struct{}
 
 	// probe, when set, is how often to measure keepalive round trip
 	// while a metrics bar is on screen. Zero uses KeepAlive.
@@ -264,7 +278,7 @@ func (s *Session) Close() {
 		return
 	}
 	s.closed = true
-	cancel, shell, local := s.cancel, s.shell, s.local
+	cancel, shell, stream := s.cancel, s.shell, s.stream
 	s.status.State = Closed
 	s.mu.Unlock()
 	if cancel != nil {
@@ -274,8 +288,8 @@ func (s *Session) Close() {
 		// Only this session's channel: the connection may serve others.
 		shell.Close()
 	}
-	if local != nil {
-		local.Close()
+	if stream != nil {
+		stream.Close()
 	}
 	s.changed()
 }
@@ -320,14 +334,14 @@ func (s *Session) Resize(cols, rows int) {
 		return
 	}
 	s.cols, s.rows = cols, rows
-	shell, local := s.shell, s.local
+	shell, stream := s.shell, s.stream
 	s.mu.Unlock()
 	s.Term.Resize(cols, rows)
 	if shell != nil {
 		shell.WindowChange(rows, cols)
 	}
-	if local != nil {
-		local.Resize(cols, rows)
+	if stream != nil {
+		stream.Resize(cols, rows)
 	}
 	s.changed()
 }
@@ -433,6 +447,9 @@ func (s *Session) connect(ctx context.Context) error {
 	if s.opts.Local {
 		return s.connectLocal()
 	}
+	if s.opts.Open != nil {
+		return s.connectOpen(ctx)
+	}
 	client, release, err := s.dial(ctx)
 	if err != nil {
 		return err
@@ -477,7 +494,7 @@ func (s *Session) connect(ctx context.Context) error {
 	if err != nil {
 		return fail(err)
 	}
-	out := &termWriter{s}
+	out := &termWriter{s: s}
 	shell.Stdout = out
 	shell.Stderr = out
 	// A new shell starts with the terminal's input as at a reset: the
@@ -504,14 +521,21 @@ func (s *Session) connect(ctx context.Context) error {
 // and the error when the connection was lost.
 func (s *Session) serve(ctx context.Context) error {
 	s.mu.Lock()
-	client, shell, local := s.client, s.shell, s.local
+	client, shell, stream := s.client, s.shell, s.stream
 	s.mu.Unlock()
-	if local != nil {
-		return s.serveLocal(ctx, local)
+	if p, ok := stream.(localPTY); ok && s.opts.Local {
+		return s.serveLocal(ctx, p)
+	}
+	if stream != nil {
+		return s.serveStream(ctx, stream)
 	}
 
 	lost := make(chan error, 1)
-	go s.keepAlive(ctx, client, lost)
+	ping := func() error {
+		_, _, err := client.SendRequest("keepalive@openssh.com", true, nil)
+		return err
+	}
+	go s.keepAlive(ctx, ping, false, lost)
 	waited := make(chan error, 1)
 	if shell != nil {
 		go func() { waited <- shell.Wait() }()
@@ -572,7 +596,11 @@ var errConnectionLost = errors.New("session: connection lost (EOF)")
 // ErrKeepAliveTimeout reports a server that stopped answering keepalives.
 var ErrKeepAliveTimeout = errors.New("session: server stopped responding (keepalive timeout)")
 
-func (s *Session) keepAlive(ctx context.Context, client *ssh.Client, lost chan<- error) {
+// keepAlive pings every probe period and reports the connection lost
+// when a ping fails, or KeepAliveMax in a row go unanswered. lenient
+// stops pinging instead while none was ever answered: a server that does
+// not take them.
+func (s *Session) keepAlive(ctx context.Context, ping func() error, lenient bool, lost chan<- error) {
 	var timer *time.Timer
 	var timed <-chan time.Time
 	stopTimer := func() {
@@ -600,6 +628,7 @@ func (s *Session) keepAlive(ctx context.Context, client *ssh.Client, lost chan<-
 	arm()
 	defer stopTimer()
 	misses := 0
+	answered := false
 	for {
 		select {
 		case <-ctx.Done():
@@ -620,17 +649,14 @@ func (s *Session) keepAlive(ctx context.Context, client *ssh.Client, lost chan<-
 		}
 		start := time.Now()
 		reply := make(chan error, 1)
-		go func() {
-			_, _, err := client.SendRequest("keepalive@openssh.com", true, nil)
-			reply <- err
-		}()
+		go func() { reply <- ping() }()
 		select {
 		case err := <-reply:
 			if err != nil {
 				lost <- errors.Join(errConnectionLost, err)
 				return
 			}
-			misses = 0
+			misses, answered = 0, true
 			s.mu.Lock()
 			s.latency = time.Since(start)
 			s.latencyOK = true
@@ -638,6 +664,9 @@ func (s *Session) keepAlive(ctx context.Context, client *ssh.Client, lost chan<-
 			s.changed()
 		case <-time.After(every):
 			misses++
+			if lenient && !answered {
+				return
+			}
 			if misses >= s.opts.KeepAliveMax {
 				lost <- ErrKeepAliveTimeout
 				return
@@ -649,10 +678,21 @@ func (s *Session) keepAlive(ctx context.Context, client *ssh.Client, lost chan<-
 	}
 }
 
-type termWriter struct{ s *Session }
+// termWriter writes output to the terminal, answering the login prompts
+// in it when it logs in.
+type termWriter struct {
+	s     *Session
+	login *login
+	in    *serializedInput
+}
 
 func (w *termWriter) Write(p []byte) (int, error) {
 	n, err := w.s.Term.Write(p)
 	w.s.changed()
+	if w.login != nil {
+		if answer := w.login.feed(p, time.Now()); answer != nil {
+			w.in.answer(answer)
+		}
+	}
 	return n, err
 }

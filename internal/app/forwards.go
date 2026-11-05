@@ -411,7 +411,9 @@ func fwdProtoLabels(m locales.Messages) []string {
 // hostChoices are the hosts a forward can go through, by label.
 func (a *App) hostChoices() (labels, ids []string) {
 	for _, h := range a.store.List() {
-		labels, ids = append(labels, h.Label()), append(ids, h.ID)
+		if h.SSH() {
+			labels, ids = append(labels, h.Label()), append(ids, h.ID)
+		}
 	}
 	return
 }
@@ -541,7 +543,7 @@ func (a *App) SaveFwdForm(m locales.Messages) bool {
 
 func fwdFieldError(m locales.Messages, err error) string {
 	var fe *assets.FieldError
-	if errors.As(err, &fe) {
+	if errors.As(err, &fe) && fe.Reason != "not ssh" {
 		switch fe.Field {
 		case "host":
 			return m.RequiredField(m.FwdHost())

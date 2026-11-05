@@ -48,7 +48,7 @@ type usageState struct {
 // sshConn is the session of the focused pane's host that holds an SSH
 // connection: the pane's own, else one of its tab on that host.
 func (a *App) sshConn(cn *conn) *conn {
-	if cn == nil || isLocal(cn.host.ID) {
+	if cn == nil || !hasSSH(cn.host) {
 		return nil
 	}
 	if cn.s != nil {
@@ -72,6 +72,8 @@ func (a *App) usageNote(m locales.Messages, cn, tc *conn) string {
 		return m.InspectorEmpty()
 	case isLocal(cn.host.ID):
 		return m.MonitorLocal()
+	case !cn.host.SSH():
+		return m.MonitorStream()
 	case tc == nil:
 		return m.MonitorNoTerminal()
 	case tc.s.Status().State != session.Connected:

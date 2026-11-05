@@ -290,6 +290,14 @@ func (s *Store) saveCredential(c Credential, add bool) (Credential, error) {
 	}
 	now := s.now()
 	i := s.credIndex(c.ID)
+	if i >= 0 && c.Kind != CredPassword {
+		// Telnet and serial hosts using it type its password.
+		for _, h := range s.hosts {
+			if !h.SSH() && h.Auth == AuthCredential && h.CredentialID == c.ID {
+				return Credential{}, &FieldError{"kind", "password only"}
+			}
+		}
+	}
 	switch {
 	case add && i >= 0:
 		return Credential{}, ErrExists
@@ -478,8 +486,10 @@ func (s *Store) saveForward(f Forward, add bool) (Forward, error) {
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.index(f.HostID) < 0 {
+	if i := s.index(f.HostID); i < 0 {
 		return Forward{}, &FieldError{"host", "unknown"}
+	} else if !s.hosts[i].SSH() {
+		return Forward{}, &FieldError{"host", "not ssh"}
 	}
 	now := s.now()
 	i := -1

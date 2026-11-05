@@ -134,6 +134,9 @@ var (
 	PrivacyOn    = load("eye-off-fill")
 	Transfers    = Network
 	LocalShell   = load("terminal-window-line")
+	TelnetHost   = load("terminal-line")
+	SerialHost   = load("usb-line")
+	SendBreak    = load("pause-circle-line")
 	// The window's own buttons, where the view draws them (Linux, Windows).
 	WinMinimize = load("subtract-line")
 	WinMaximize = load("checkbox-blank-line")

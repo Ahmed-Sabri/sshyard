@@ -238,7 +238,7 @@ func (a *App) hostItem(c *ui.Context, m locales.Messages, h assets.Host, prefix 
 			acts.Invisible()
 		}
 		acts.Children(func() {
-			if (IconButton{Icon: icons.Folder, Label: m.OpenFiles(), Size: Small}).Clicked(c, "files") {
+			if (IconButton{Icon: icons.Folder, Label: m.OpenFiles(), Size: Small, Disabled: !h.SSH()}).Clicked(c, "files") {
 				a.OpenFiles(h.ID, openAt{}, nil)
 			}
 			a.menuButton(c, more, IconButton{Icon: icons.More, Label: m.MoreActions(), Size: Small}, func() []menuEntry {
@@ -256,6 +256,8 @@ func (a *App) hostItem(c *ui.Context, m locales.Messages, h assets.Host, prefix 
 // menu, and the menu of its "more" button.
 func (a *App) hostEntries(m locales.Messages, h assets.Host) []menuEntry {
 	noTab := a.ws.ActiveTab() == nil
+	// Telnet and serial hosts have a terminal only.
+	noSSH := !h.SSH()
 	beside := func(open func(at openAt)) func() {
 		return func() {
 			if t := a.ws.ActiveTab(); t != nil {
@@ -285,9 +287,9 @@ func (a *App) hostEntries(m locales.Messages, h assets.Host) []menuEntry {
 	return []menuEntry{
 		{Icon: icons.Run, Label: m.Connect(), Do: func() { a.Connect(h.ID, openAt{}) }},
 		{Icon: icons.SplitRight, Label: m.SplitRight(), Disabled: noTab, Do: beside(func(at openAt) { a.Connect(h.ID, at) })},
-		{Icon: icons.Folder, Label: m.OpenFiles(), Do: func() { a.OpenFiles(h.ID, openAt{}, nil) }},
-		{Icon: icons.Robot, Label: m.OpenAI(), Do: func() { a.OpenAI(h.ID, openAt{}, 0) }},
-		{Icon: icons.OpenFile, Label: openFilesLabel(m, a.filesEdge()), Disabled: noTab, Do: beside(func(at openAt) {
+		{Icon: icons.Folder, Label: m.OpenFiles(), Disabled: noSSH, Do: func() { a.OpenFiles(h.ID, openAt{}, nil) }},
+		{Icon: icons.Robot, Label: m.OpenAI(), Disabled: noSSH, Do: func() { a.OpenAI(h.ID, openAt{}, 0) }},
+		{Icon: icons.OpenFile, Label: openFilesLabel(m, a.filesEdge()), Disabled: noTab || noSSH, Do: beside(func(at openAt) {
 			at.edge = a.filesEdge()
 			a.OpenFiles(h.ID, at, nil)
 		})},
@@ -298,8 +300,8 @@ func (a *App) hostEntries(m locales.Messages, h assets.Host) []menuEntry {
 			hh := h
 			a.openEditor(&hh)
 		}},
-		{Icon: icons.InstallKey, Label: m.InstallPublicKey(), Do: func() { a.openInstall(h.ID) }},
-		{Icon: icons.Forward, Label: m.NewForwardMenu(), Do: func() { a.openFwdForm(m, nil, h.ID) }},
+		{Icon: icons.InstallKey, Label: m.InstallPublicKey(), Disabled: noSSH, Do: func() { a.openInstall(h.ID) }},
+		{Icon: icons.Forward, Label: m.NewForwardMenu(), Disabled: noSSH, Do: func() { a.openFwdForm(m, nil, h.ID) }},
 		{Icon: icons.Delete, Label: m.Delete(), Danger: true, Do: func() { a.deleteID, a.deleting = h.ID, true }},
 	}
 }

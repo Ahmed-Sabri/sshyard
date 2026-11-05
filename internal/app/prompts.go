@@ -146,6 +146,9 @@ func errText(m locales.Messages, h assets.Host, err error) string {
 	if errors.Is(err, netproxy.ErrClientLimit) || errors.Is(err, netproxy.ErrHandshakeTooLarge) {
 		return m.ErrGeneric(securityErrorText(m, err))
 	}
+	if t := serialErrText(m, h, err); t != "" {
+		return t
+	}
 	name := h.Label()
 	switch session.Classify(err) {
 	case session.KindAuth:

@@ -104,5 +104,6 @@ func (a *App) localEntry(m locales.Messages) menuEntry {
 	return e
 }
 
-// remoteOnly says a pane is on a server, where files and AI can open.
-func remoteOnly(cn *conn) bool { return cn != nil && !isLocal(cn.host.ID) }
+// remoteOnly says a pane is on an SSH server, where files and AI can
+// open.
+func remoteOnly(cn *conn) bool { return cn != nil && hasSSH(cn.host) }

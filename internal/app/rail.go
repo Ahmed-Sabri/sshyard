@@ -377,6 +377,10 @@ func (a *App) monitorPanel(c *ui.Context, m locales.Messages, tok theme.Tokens) 
 		panelNote(c, tok, m.MonitorLocal())
 		return
 	}
+	if !h.SSH() {
+		panelNote(c, tok, m.MonitorStream())
+		return
+	}
 	panelCard(c, tok, "sys", icons.Host, hostTint(tok, h), m.SysSection(), "", func() {
 		osName, lat, up := dash, dash, dash
 		if rd.OS != "" {
@@ -580,11 +584,16 @@ func (a *App) authText(m locales.Messages, h assets.Host) string {
 	case assets.AuthAgent:
 		return m.AuthAgent()
 	case assets.AuthAsk:
+		if !h.SSH() {
+			return m.AuthAsk()
+		}
 		return a.askLabel(m)
 	case assets.AuthCredential:
 		if cr, ok := a.store.Credential(h.CredentialID); ok {
 			return m.AuthLabelCredential(cr.Name)
 		}
+	case assets.AuthNone:
+		return m.AuthManual()
 	}
 	return m.MetricsDash()
 }
@@ -622,7 +631,7 @@ func (a *App) hostPanel(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 				a.Connect(h.ID, openAt{})
 			}
 			ui.Spacer(c)
-			if (IconButton{Icon: icons.Folder, Label: m.OpenFiles(), Disabled: local}).Clicked(c, "hfiles") {
+			if (IconButton{Icon: icons.Folder, Label: m.OpenFiles(), Disabled: local || !h.SSH()}).Clicked(c, "hfiles") {
 				a.OpenFiles(h.ID, openAt{}, nil)
 			}
 			fav := m.AddFavorite()
@@ -665,6 +674,10 @@ func (a *App) hostPanel(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 		}
 	}
 	panelCard(c, tok, "hostinfo", icons.Proxy, tok.TintAt(7), m.ConnectionSection(), "", func() {
+		if !h.SSH() {
+			a.streamFacts(c, m, tok, h, proxy, panes, or)
+			return
+		}
 		facts(c, tok, "",
 			m.SysAddress(), a.pv(h.Address), m.FieldPort(), strconv.Itoa(h.Port),
 			m.FieldUser(), or(h.User), m.FieldGroup(), or(h.Group),
