@@ -47,6 +47,126 @@ func (msgs Messages) AppName() string {
 	return Catalog.Format(msgs.locale, "appName", nil)
 }
 
+// TrayIconStyle says "Tray icon"
+// in the language the app shows.
+func TrayIconStyle() string { return In(i18n.Locale()).TrayIconStyle() }
+
+// TrayIconStyle says "Tray icon"
+// in the language of msgs.
+func (msgs Messages) TrayIconStyle() string {
+	return Catalog.Format(msgs.locale, "trayIconStyle", nil)
+}
+
+// TrayIconMono says "Monochrome logo"
+// in the language the app shows.
+func TrayIconMono() string { return In(i18n.Locale()).TrayIconMono() }
+
+// TrayIconMono says "Monochrome logo"
+// in the language of msgs.
+func (msgs Messages) TrayIconMono() string {
+	return Catalog.Format(msgs.locale, "trayIconMono", nil)
+}
+
+// TrayIconColor says "Colorful logo"
+// in the language the app shows.
+func TrayIconColor() string { return In(i18n.Locale()).TrayIconColor() }
+
+// TrayIconColor says "Colorful logo"
+// in the language of msgs.
+func (msgs Messages) TrayIconColor() string {
+	return Catalog.Format(msgs.locale, "trayIconColor", nil)
+}
+
+// TrayIconStyleNote says "Choose a monochrome or colorful version of the SSHYard logo."
+// in the language the app shows.
+func TrayIconStyleNote() string { return In(i18n.Locale()).TrayIconStyleNote() }
+
+// TrayIconStyleNote says "Choose a monochrome or colorful version of the SSHYard logo."
+// in the language of msgs.
+func (msgs Messages) TrayIconStyleNote() string {
+	return Catalog.Format(msgs.locale, "trayIconStyleNote", nil)
+}
+
+// TrayIconFailed says "Could not update the system tray icon."
+// in the language the app shows.
+func TrayIconFailed() string { return In(i18n.Locale()).TrayIconFailed() }
+
+// TrayIconFailed says "Could not update the system tray icon."
+// in the language of msgs.
+func (msgs Messages) TrayIconFailed() string {
+	return Catalog.Format(msgs.locale, "trayIconFailed", nil)
+}
+
+// CloseBehavior says "When closing the window"
+// in the language the app shows.
+func CloseBehavior() string { return In(i18n.Locale()).CloseBehavior() }
+
+// CloseBehavior says "When closing the window"
+// in the language of msgs.
+func (msgs Messages) CloseBehavior() string {
+	return Catalog.Format(msgs.locale, "closeBehavior", nil)
+}
+
+// CloseToTray says "Hide to system tray"
+// in the language the app shows.
+func CloseToTray() string { return In(i18n.Locale()).CloseToTray() }
+
+// CloseToTray says "Hide to system tray"
+// in the language of msgs.
+func (msgs Messages) CloseToTray() string {
+	return Catalog.Format(msgs.locale, "closeToTray", nil)
+}
+
+// CloseQuit says "Quit SSHYard"
+// in the language the app shows.
+func CloseQuit() string { return In(i18n.Locale()).CloseQuit() }
+
+// CloseQuit says "Quit SSHYard"
+// in the language of msgs.
+func (msgs Messages) CloseQuit() string {
+	return Catalog.Format(msgs.locale, "closeQuit", nil)
+}
+
+// CloseBehaviorNote says "Hiding to the tray keeps sessions and background services running."
+// in the language the app shows.
+func CloseBehaviorNote() string { return In(i18n.Locale()).CloseBehaviorNote() }
+
+// CloseBehaviorNote says "Hiding to the tray keeps sessions and background services running."
+// in the language of msgs.
+func (msgs Messages) CloseBehaviorNote() string {
+	return Catalog.Format(msgs.locale, "closeBehaviorNote", nil)
+}
+
+// TrayShowWindow says "Show SSHYard"
+// in the language the app shows.
+func TrayShowWindow() string { return In(i18n.Locale()).TrayShowWindow() }
+
+// TrayShowWindow says "Show SSHYard"
+// in the language of msgs.
+func (msgs Messages) TrayShowWindow() string {
+	return Catalog.Format(msgs.locale, "trayShowWindow", nil)
+}
+
+// TrayQuit says "Quit SSHYard"
+// in the language the app shows.
+func TrayQuit() string { return In(i18n.Locale()).TrayQuit() }
+
+// TrayQuit says "Quit SSHYard"
+// in the language of msgs.
+func (msgs Messages) TrayQuit() string {
+	return Catalog.Format(msgs.locale, "trayQuit", nil)
+}
+
+// TrayUnavailable says "The system tray is unavailable, so SSHYard cannot hide the window."
+// in the language the app shows.
+func TrayUnavailable() string { return In(i18n.Locale()).TrayUnavailable() }
+
+// TrayUnavailable says "The system tray is unavailable, so SSHYard cannot hide the window."
+// in the language of msgs.
+func (msgs Messages) TrayUnavailable() string {
+	return Catalog.Format(msgs.locale, "trayUnavailable", nil)
+}
+
 // Hosts says "Hosts"
 // in the language the app shows.
 func Hosts() string { return In(i18n.Locale()).Hosts() }

@@ -14,20 +14,23 @@ func (a *App) View(c *ui.Context) {
 	a.mu.Lock()
 	a.svc, a.live = c.Services(), true
 	a.mu.Unlock()
-	// The same clock as the toasts, so a snapshot and its Undo end together.
-	a.clip.now = func() time.Time { return c.Now() }
+	// Native callbacks run between frames and use the real clock; the Tester
+	// uses its frame clock so clipboard snapshots and toast Undo expire together.
+	if a.p.Post == nil {
+		a.clip.now = func() time.Time { return c.Now() }
+	}
 	a.drain()
 	a.applyZoom(c, true)
+	for _, t := range a.toasts {
+		c.AddToast(t(locales.In(c.Locale())))
+	}
+	a.toasts = nil
 	if !a.ready() {
 		a.unlockView(c)
 		return
 	}
 	a.commitMetricsMount()
 	a.syncMetrics()
-	for _, t := range a.toasts {
-		c.AddToast(t(locales.In(c.Locale())))
-	}
-	a.toasts = nil
 	a.wakeUndo(c)
 	a.followCwd(c)
 	a.sendStartCmds()

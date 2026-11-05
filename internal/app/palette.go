@@ -65,6 +65,8 @@ type paletteSetting struct {
 var paletteSettings = []paletteSetting{
 	{prefAppearance, locales.Messages.Theme},
 	{prefAppearance, locales.Messages.Language},
+	{prefAppearance, locales.Messages.CloseBehavior},
+	{prefAppearance, locales.Messages.TrayIconStyle},
 	{prefAppearance, locales.Messages.MaterialChrome},
 	{prefAppearance, locales.Messages.MaterialContent},
 	{prefAppearance, locales.Messages.InterfaceFont},

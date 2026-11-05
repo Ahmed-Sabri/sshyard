@@ -337,6 +337,32 @@ func (a *App) prefAppearance(c *ui.Context, m locales.Messages, tok theme.Tokens
 				*changed = true
 			}
 		})
+		g.row(m.CloseBehavior(), m.CloseBehaviorNote(), func() {
+			cur := m.CloseToTray()
+			if s.CloseBehavior == settings.CloseQuit {
+				cur = m.CloseQuit()
+			}
+			if ui.Select(c.Key("closebehavior"), &cur, []string{m.CloseToTray(), m.CloseQuit()}).Label(m.CloseBehavior()).Width(180).Changed() {
+				s.CloseBehavior = settings.CloseToTray
+				if cur == m.CloseQuit() {
+					s.CloseBehavior = settings.CloseQuit
+				}
+				*changed = true
+			}
+		})
+		g.row(m.TrayIconStyle(), m.TrayIconStyleNote(), func() {
+			cur := m.TrayIconMono()
+			if s.TrayIcon == settings.TrayIconColor {
+				cur = m.TrayIconColor()
+			}
+			if ui.Select(c.Key("trayicon"), &cur, []string{m.TrayIconMono(), m.TrayIconColor()}).Label(m.TrayIconStyle()).Width(180).Changed() {
+				s.TrayIcon = settings.TrayIconMono
+				if cur == m.TrayIconColor() {
+					s.TrayIcon = settings.TrayIconColor
+				}
+				*changed = true
+			}
+		})
 		g.row(m.UiZoom(), m.UiZoomDesc(), func() {
 			opts := []string{m.ZoomSystem()}
 			for _, z := range settings.UIZooms {

@@ -44,6 +44,12 @@ import (
 // Platform is what the app needs from the system, including an explicit
 // system keychain and a persistent data directory for encrypted secrets.
 type Platform struct {
+	// Post asynchronously schedules a callback on the application UI thread,
+	// even with every window hidden; it must never run the callback inline.
+	// When nil, queued callbacks run before the next View frame (ui.Tester).
+	Post func(func())
+	// SetTrayIcon changes the system tray icon immediately; an error leaves it unchanged.
+	SetTrayIcon func(style string) error
 	// OpenPath opens a file in its default app; nil can't.
 	OpenPath func(path string) error
 	// CacheDir is where files opened in another app are copied, the
@@ -250,10 +256,12 @@ type App struct {
 	lkOn, lkMCP atomic.Bool
 	upd         updater.Backend
 
-	mu    sync.Mutex
-	queue []func()
-	svc   ui.Services
-	live  bool
+	mu     sync.Mutex
+	queue  []func()
+	posted bool
+	closed bool
+	svc    ui.Services
+	live   bool
 
 	attachmentPreview *aiAttachmentPreview
 
@@ -599,12 +607,21 @@ func (a *App) ApplySettings(s settings.Settings) error {
 		return keychain.ErrLocked
 	}
 	s.Normalize()
-	if a.p.DataDir != "" {
-		if err := settings.Save(filepath.Join(a.p.DataDir, "settings.json"), s); err != nil {
+	old := a.settings
+	iconChanged := s.TrayIcon != old.TrayIcon && a.p.SetTrayIcon != nil
+	if iconChanged {
+		if err := a.p.SetTrayIcon(s.TrayIcon); err != nil {
 			return err
 		}
 	}
-	old := a.settings
+	if a.p.DataDir != "" {
+		if err := settings.Save(filepath.Join(a.p.DataDir, "settings.json"), s); err != nil {
+			if iconChanged {
+				err = errors.Join(err, a.p.SetTrayIcon(old.TrayIcon))
+			}
+			return err
+		}
+	}
 	a.settings = s
 	for _, c := range a.conns {
 		if c.ai == nil {
@@ -709,11 +726,28 @@ func (a *App) startIndependent() {
 	}
 }
 
-// post runs fn on the UI thread before the next frame.
+// post runs fn on the UI thread, without requiring a visible window.
 func (a *App) post(fn func()) {
 	a.mu.Lock()
+	if a.closed {
+		a.mu.Unlock()
+		return
+	}
 	a.queue = append(a.queue, fn)
+	schedule := a.p.Post != nil && !a.posted
+	if schedule {
+		a.posted = true
+	}
 	a.mu.Unlock()
+	if schedule {
+		a.p.Post(func() {
+			a.mu.Lock()
+			a.posted = false
+			a.mu.Unlock()
+			a.drain()
+			a.invalidate()
+		})
+	}
 	a.invalidate()
 }
 
@@ -739,12 +773,22 @@ func (a *App) drain() {
 	a.queue = nil
 	a.mu.Unlock()
 	for _, fn := range q {
+		a.mu.Lock()
+		closed := a.closed
+		a.mu.Unlock()
+		if closed {
+			return
+		}
 		fn()
 	}
 }
 
 // Close ends every session and port forward.
 func (a *App) Close() {
+	a.mu.Lock()
+	a.closed = true
+	a.queue = nil
+	a.mu.Unlock()
 	a.unlock.mu.Lock()
 	defer a.unlock.mu.Unlock()
 	a.unlock.closed = true
