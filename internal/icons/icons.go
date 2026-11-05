@@ -65,6 +65,8 @@ var (
 	Edit         = load("edit-line")
 	Delete       = load("delete-bin-line")
 	Search       = load("search-line")
+	ZoomIn       = load("zoom-in-line")
+	ZoomOut      = load("zoom-out-line")
 	Mouse        = load("mouse-line")
 	NewFolder    = load("folder-add-line")
 	Reconnect    = load("restart-line")

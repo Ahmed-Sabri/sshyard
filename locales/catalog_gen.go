@@ -6383,11 +6383,11 @@ func (msgs Messages) AboutSection() string {
 	return Catalog.Format(msgs.locale, "aboutSection", nil)
 }
 
-// AppearanceDesc says "How SSHYard looks: theme, language, translucency and the interface font."
+// AppearanceDesc says "How SSHYard looks: theme, language, translucency, zoom and the interface font."
 // in the language the app shows.
 func AppearanceDesc() string { return In(i18n.Locale()).AppearanceDesc() }
 
-// AppearanceDesc says "How SSHYard looks: theme, language, translucency and the interface font."
+// AppearanceDesc says "How SSHYard looks: theme, language, translucency, zoom and the interface font."
 // in the language of msgs.
 func (msgs Messages) AppearanceDesc() string {
 	return Catalog.Format(msgs.locale, "appearanceDesc", nil)
@@ -6671,6 +6671,76 @@ func ShortcutSaveFile() string { return In(i18n.Locale()).ShortcutSaveFile() }
 // in the language of msgs.
 func (msgs Messages) ShortcutSaveFile() string {
 	return Catalog.Format(msgs.locale, "shortcutSaveFile", nil)
+}
+
+// ZoomIn says "Zoom in"
+// in the language the app shows.
+func ZoomIn() string { return In(i18n.Locale()).ZoomIn() }
+
+// ZoomIn says "Zoom in"
+// in the language of msgs.
+func (msgs Messages) ZoomIn() string {
+	return Catalog.Format(msgs.locale, "zoomIn", nil)
+}
+
+// ZoomOut says "Zoom out"
+// in the language the app shows.
+func ZoomOut() string { return In(i18n.Locale()).ZoomOut() }
+
+// ZoomOut says "Zoom out"
+// in the language of msgs.
+func (msgs Messages) ZoomOut() string {
+	return Catalog.Format(msgs.locale, "zoomOut", nil)
+}
+
+// ZoomReset says "Reset zoom"
+// in the language the app shows.
+func ZoomReset() string { return In(i18n.Locale()).ZoomReset() }
+
+// ZoomReset says "Reset zoom"
+// in the language of msgs.
+func (msgs Messages) ZoomReset() string {
+	return Catalog.Format(msgs.locale, "zoomReset", nil)
+}
+
+// ZoomNow says "Interface zoom: {zoom}"
+// in the language the app shows.
+func ZoomNow(zoom string) string { return In(i18n.Locale()).ZoomNow(zoom) }
+
+// ZoomNow says "Interface zoom: {zoom}"
+// in the language of msgs.
+func (msgs Messages) ZoomNow(zoom string) string {
+	return Catalog.Format(msgs.locale, "zoomNow", map[string]any{"zoom": zoom})
+}
+
+// ZoomSystem says "Follow system"
+// in the language the app shows.
+func ZoomSystem() string { return In(i18n.Locale()).ZoomSystem() }
+
+// ZoomSystem says "Follow system"
+// in the language of msgs.
+func (msgs Messages) ZoomSystem() string {
+	return Catalog.Format(msgs.locale, "zoomSystem", nil)
+}
+
+// UiZoom says "Interface zoom"
+// in the language the app shows.
+func UiZoom() string { return In(i18n.Locale()).UiZoom() }
+
+// UiZoom says "Interface zoom"
+// in the language of msgs.
+func (msgs Messages) UiZoom() string {
+	return Catalog.Format(msgs.locale, "uiZoom", nil)
+}
+
+// UiZoomDesc says "Makes everything in the window larger or smaller. Following the system uses its text size setting."
+// in the language the app shows.
+func UiZoomDesc() string { return In(i18n.Locale()).UiZoomDesc() }
+
+// UiZoomDesc says "Makes everything in the window larger or smaller. Following the system uses its text size setting."
+// in the language of msgs.
+func (msgs Messages) UiZoomDesc() string {
+	return Catalog.Format(msgs.locale, "uiZoomDesc", nil)
 }
 
 // SystemMonitor says "System Monitor"

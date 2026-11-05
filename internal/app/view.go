@@ -17,6 +17,7 @@ func (a *App) View(c *ui.Context) {
 	// The same clock as the toasts, so a snapshot and its Undo end together.
 	a.clip.now = func() time.Time { return c.Now() }
 	a.drain()
+	a.applyZoom(c, true)
 	if !a.ready() {
 		a.unlockView(c)
 		return

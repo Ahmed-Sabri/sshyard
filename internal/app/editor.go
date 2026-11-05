@@ -511,6 +511,7 @@ func (a *App) editorWindowView(c *ui.Context, cn *conn) {
 	if !ew.local {
 		a.ensureSFTP(cn)
 	}
+	a.applyZoom(c, false)
 	base := *c.Theme()
 	base.Font = a.fonts.ui
 	tok := theme.For(a.settings.Theme, base.Dark)

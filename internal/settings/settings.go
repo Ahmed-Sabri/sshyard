@@ -39,6 +39,9 @@ type Settings struct {
 	// opaque by default.
 	ChromeMaterial  string `json:"chromeMaterial,omitempty"`
 	ContentMaterial string `json:"contentMaterial,omitempty"`
+	// UIZoom is how large the interface shows, in percent, one of
+	// UIZooms; 0, the default, follows the system's text size.
+	UIZoom int `json:"uiZoom,omitempty"`
 	// UIFont is the interface's font family, "" for the system's.
 	UIFont string `json:"uiFont,omitempty"`
 	// TerminalFont is the terminal's font family, "" for the system's
@@ -368,6 +371,10 @@ const MCPPortDefault = 47320
 // user can choose.
 var UpdateIntervals = []int{1, 2, 6, 12, 24}
 
+// UIZooms are the interface zooms, in percent, the user can choose
+// besides following the system, smallest first.
+var UIZooms = []int{80, 90, 100, 110, 125, 150, 175, 200}
+
 // Languages are the languages SSHYard ships, besides following the system.
 var Languages = []string{"en", "zh-Hans", "zh-Hant", "ko", "ja"}
 
@@ -407,6 +414,9 @@ func (s *Settings) Normalize() {
 	}
 	if !slices.Contains(UpdateIntervals, s.UpdateIntervalHours) {
 		s.UpdateIntervalHours = d.UpdateIntervalHours
+	}
+	if s.UIZoom != 0 && !slices.Contains(UIZooms, s.UIZoom) {
+		s.UIZoom = d.UIZoom
 	}
 	if s.TerminalFontSize < 8 || s.TerminalFontSize > 32 {
 		s.TerminalFontSize = d.TerminalFontSize

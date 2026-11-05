@@ -336,6 +336,22 @@ func (a *App) prefAppearance(c *ui.Context, m locales.Messages, tok theme.Tokens
 				*changed = true
 			}
 		})
+		g.row(m.UiZoom(), m.UiZoomDesc(), func() {
+			opts := []string{m.ZoomSystem()}
+			for _, z := range settings.UIZooms {
+				opts = append(opts, zoomLabel(m, z))
+			}
+			cur := zoomLabel(m, s.UIZoom)
+			if ui.Select(c.Key("uizoom"), &cur, opts).Label(m.UiZoom()).Width(180).Changed() {
+				s.UIZoom = 0
+				for _, z := range settings.UIZooms {
+					if zoomLabel(m, z) == cur {
+						s.UIZoom = z
+					}
+				}
+				*changed = true
+			}
+		})
 	})
 	a.materialSection(c, m, tok, s, changed)
 	settingsSection(c, tok, icons.Edit, tok.TintAt(4), m.FontsSection(), func(g *settingsGroup) {

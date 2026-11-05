@@ -27,6 +27,9 @@ const (
 	actStopAI         = "stopAI"
 	actStopAllAI      = "stopAllAI"
 	actSaveFile       = "saveFile"
+	actZoomIn         = "zoomIn"
+	actZoomOut        = "zoomOut"
+	actZoomReset      = "zoomReset"
 )
 
 // action is an action with a shortcut: what it is called, its icon in the
@@ -56,6 +59,9 @@ var actions = []action{
 	{actStopAI, locales.Messages.ShortcutStopAI, icons.Stop, keymap.Combo{Mods: stopMods, Key: ui.KeyPeriod}, false},
 	{actStopAllAI, locales.Messages.StopAllAI, icons.Stop, keymap.Combo{Mods: stopAllMods, Key: ui.KeyPeriod}, false},
 	{actSaveFile, locales.Messages.ShortcutSaveFile, icons.Save, keymap.Combo{Mods: saveMods, Key: ui.KeyS}, true},
+	{actZoomIn, locales.Messages.ZoomIn, icons.ZoomIn, keymap.Combo{Mods: appMods, Key: ui.KeyEqual}, false},
+	{actZoomOut, locales.Messages.ZoomOut, icons.ZoomOut, keymap.Combo{Mods: appMods, Key: ui.KeyMinus}, false},
+	{actZoomReset, locales.Messages.ZoomReset, icons.Reset, keymap.Combo{Mods: appMods, Key: ui.Key0}, false},
 }
 
 // actionOf is the action with id.
@@ -251,5 +257,11 @@ func (a *App) runAction(id string) {
 		a.stopShortcut()
 	case actStopAllAI:
 		a.StopAllAI()
+	case actZoomIn:
+		a.stepZoom(1)
+	case actZoomOut:
+		a.stepZoom(-1)
+	case actZoomReset:
+		a.stepZoom(0)
 	}
 }

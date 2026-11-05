@@ -306,3 +306,15 @@ func TestShortcutsNormalize(t *testing.T) {
 		t.Errorf("shortcuts %v", s.Shortcuts)
 	}
 }
+
+// TestUIZoom: the interface zoom follows the system by default, and
+// keeps only a zoom the user can choose.
+func TestUIZoom(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	for in, want := range map[string]int{`{}`: 0, `{"uiZoom":150}`: 150, `{"uiZoom":80}`: 80, `{"uiZoom":133}`: 0, `{"uiZoom":-5}`: 0, `{"uiZoom":500}`: 0} {
+		os.WriteFile(path, []byte(in), 0o600)
+		if s, err := Load(path); err != nil || s.UIZoom != want {
+			t.Errorf("%s: %d %v, want %d", in, s.UIZoom, err, want)
+		}
+	}
+}

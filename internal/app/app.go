@@ -354,6 +354,7 @@ type App struct {
 	// LocalKeysMCP.
 	lkChoice, lkMCPChoice bool
 	fonts                 fontState
+	zoom                  zoomState
 	// paneBounds are where the panes were last frame, by session
 	paneBounds map[int]ui.Rect
 	// dropPreview is where a drag in progress would land, nil for none
@@ -643,6 +644,7 @@ func (a *App) ApplySettings(s settings.Settings) error {
 // Start applies the saved theme and language to the window.
 func (a *App) Start() {
 	a.loadFonts()
+	a.probeDesktop()
 	if a.p.SetTheme != nil {
 		a.p.SetTheme(a.settings.Theme)
 	}
