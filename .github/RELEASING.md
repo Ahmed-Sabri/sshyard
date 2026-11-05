@@ -45,6 +45,10 @@ Windows 的普通 CI、beta 与正式 Release 都额外按架构提供 `sshyard-
 
 发布用 `./bump.sh -v <x.y.z> -p`：只修改 `mygo.json` 的版本，提交 `chore(release): bump version to <x.y.z>`（不进入发布说明），创建 `v<x.y.z>` 标签并推送分支与标签；不加 `-p` 只在本地提交和打标签；`v<version>-beta-<yyyymmddhhmmss>` 继续只运行 `ci.yml`，不会触发正式签名发布
 
+允许工作区存在其他已暂存、未暂存或未跟踪改动，版本提交只包含 `mygo.json`，其他文件及其暂存状态保持不变；`mygo.json` 本身已有的其他编辑会随该文件一并提交
+
+本地可运行 `python3 .github/bump-test.py`，在临时 Git 仓库中验证版本提交、混合改动保留和推送流程，推送目标仅为测试创建的本地裸仓库
+
 无凭据的失败路径检查可本地运行 `bash .github/macos-release-test.sh`，覆盖缺少 Secrets、签名身份解析与零个或多个身份的拒绝、钥匙串删除失败仍清理文件并保留失败状态
 
 本地静态检查无法代替真实 Apple 签名、公证和 Gatekeeper 验收，首次完整验收需要配置上述 Secrets 后运行正式发布工作流

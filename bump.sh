@@ -32,12 +32,6 @@ shift $((OPTIND - 1))
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 
-if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
-  printf 'Tracked working tree is not clean. Commit or stash changes first.\n' >&2
-  git status --short --untracked-files=no >&2
-  exit 1
-fi
-
 CONFIG="mygo.json"
 TAG="v$VERSION"
 
@@ -78,9 +72,9 @@ print(current)
 PY
 )"
 
-git add "$CONFIG"
 # cliff.toml skips this exact subject, keeping it out of the release notes
-git commit -m "chore(release): bump version to $VERSION"
+# Leave unrelated working-tree edits and staged changes as they are.
+git commit --only -m "chore(release): bump version to $VERSION" -- "$CONFIG"
 git tag -a "$TAG" -m "Release $TAG"
 
 if [[ "$PUSH" -eq 1 ]]; then
