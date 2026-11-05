@@ -135,6 +135,28 @@ func sheet(el ui.Element, tok theme.Tokens) ui.Element {
 	return tok.Lift.On(el)
 }
 
+// stickyModal is ui.Modal for a sheet holding typing or choices worth
+// keeping: a click on the dimmed window around it, easily a slip, leaves
+// it open, while Escape and its own buttons still close it.
+func stickyModal(c *ui.Context, open *bool, fn func()) ui.Element {
+	t := c.Theme()
+	w, h := c.Size()
+	missed := false
+	panel := ui.DialogBase(c, open, func(back, panel ui.Element) {
+		missed = back.Clicked()
+		// Modal's own look.
+		back.Background(ui.RGBA(0, 0, 0, 0.4))
+		panel.Padding(t.Space(5)).Gap(t.Space(3)).Radius(t.Space(2.5)).Background(t.Background).
+			MaxWidth(w - t.Space(10)).MaxHeight(h - t.Space(10))
+		panel.Shadow(0, 10, 30, 0, ui.RGBA(0, 0, 0, 0.3))
+		fn()
+	})
+	if missed {
+		*open = true
+	}
+	return panel
+}
+
 // scrollGutter is the room a vertical Scroll keeps at its end for its
 // scroll bar, which MyGo draws over the content (the theme's 8 DIPs, 3 in
 // from the edge) and some space before it: the bar never covers or

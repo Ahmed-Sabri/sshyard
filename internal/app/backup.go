@@ -596,7 +596,7 @@ func (a *App) backupView(c *ui.Context, m locales.Messages) {
 		return
 	}
 	tok := currentTokens(c)
-	sheet(ui.Modal(c, &a.backingUp, func() {
+	sheet(stickyModal(c, &a.backingUp, func() {
 		ui.Column(c).Gap(18).Width(460).Children(func() {
 			title, sub := m.ExportBackup(), ""
 			if f.restore {

@@ -212,7 +212,7 @@ func (a *App) defaultPasswordView(c *ui.Context, m locales.Messages) {
 		return
 	}
 	tok := currentTokens(c)
-	sheet(ui.Modal(c, &a.settingDefaultPw, func() {
+	sheet(stickyModal(c, &a.settingDefaultPw, func() {
 		ui.Column(c).Gap(18).Width(420).Children(func() {
 			ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
 				tile(c, icons.Password, tok.TintAt(6), 36)

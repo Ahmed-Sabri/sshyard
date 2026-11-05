@@ -69,7 +69,7 @@ func (a *App) migrationView(c *ui.Context, m locales.Messages) {
 	if f.editable() && previewing {
 		k = a.checkMigration(m, f)
 	}
-	sheet(ui.Modal(c, &a.migrationOpen, func() {
+	sheet(stickyModal(c, &a.migrationOpen, func() {
 		// The rows scroll between the controls and the buttons when the
 		// window is too short for them. A text import's table takes most of
 		// the window.

@@ -908,7 +908,7 @@ func (a *App) targetView(c *ui.Context, m locales.Messages) {
 	}
 	tok := currentTokens(c)
 	kind := targetKinds[f.kind]
-	sheet(ui.Modal(c, &a.targetEditing, func() {
+	sheet(stickyModal(c, &a.targetEditing, func() {
 		ui.Column(c).Gap(18).Width(480).Shrink(1).MinHeight(0).Children(func() {
 			title := m.EditBackupTarget()
 			if f.isNew {
@@ -1072,7 +1072,7 @@ func (a *App) remoteListView(c *ui.Context, m locales.Messages) {
 		return
 	}
 	tok := currentTokens(c)
-	sheet(ui.Modal(c, &a.listingRemote, func() {
+	sheet(stickyModal(c, &a.listingRemote, func() {
 		ui.Column(c).Gap(18).Width(480).Shrink(1).MinHeight(0).Children(func() {
 			ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
 				tile(c, targetIcon(l.target.Kind), tok.Tint(l.target.ID), 36)
