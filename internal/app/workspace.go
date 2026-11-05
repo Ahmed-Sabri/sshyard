@@ -513,6 +513,7 @@ func (a *App) termElement(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn
 	}
 	term.TextCaret(tv.caret())
 	tv.clear = a.clearContent
+	tv.hl, tv.hlOverride, tv.hlFullScreen = a.highlighter(), a.settings.Highlight.Override, a.settings.Highlight.FullScreen
 	term.Draw(func(p *ui.Painter, r ui.Rect) { tv.paint(p, r, pal, has) })
 }
 

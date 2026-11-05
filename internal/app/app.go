@@ -26,6 +26,7 @@ import (
 	"github.com/Licoy/sshyard/internal/ai/policy"
 	"github.com/Licoy/sshyard/internal/assets"
 	"github.com/Licoy/sshyard/internal/forward"
+	"github.com/Licoy/sshyard/internal/highlight"
 	"github.com/Licoy/sshyard/internal/keychain"
 	"github.com/Licoy/sshyard/internal/layout"
 	"github.com/Licoy/sshyard/internal/localkeys"
@@ -355,6 +356,14 @@ type App struct {
 	lkChoice, lkMCPChoice bool
 	fonts                 fontState
 	zoom                  zoomState
+	// hl colors the keywords of the terminals' output as settings.Highlight
+	// says; nil until built, again after it changes.
+	hl *highlight.Highlighter
+	// hlForm is the keyword highlighting rule sheet's draft while
+	// hlEditing; hlHold keeps its pattern focused as it opens.
+	hlForm    *hlRuleForm
+	hlEditing bool
+	hlHold    focusHold
 	// paneBounds are where the panes were last frame, by session
 	paneBounds map[int]ui.Rect
 	// dropPreview is where a drag in progress would land, nil for none
@@ -606,6 +615,9 @@ func (a *App) ApplySettings(s settings.Settings) error {
 	}
 	if s.Language != old.Language && a.p.SetLocale != nil {
 		a.p.SetLocale(s.Language)
+	}
+	if !reflect.DeepEqual(s.Highlight, old.Highlight) {
+		a.hl = nil
 	}
 	if s.TerminalFontSize != old.TerminalFontSize {
 		for _, c := range a.conns {

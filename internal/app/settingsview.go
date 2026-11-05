@@ -414,6 +414,7 @@ func (a *App) prefTerminal(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 		})
 		a.termFontPreview(c, tok)
 	})
+	a.highlightSection(c, m, tok, s, changed)
 	if len(a.shells) > 1 {
 		settingsSection(c, tok, icons.LocalShell, tok.TintAt(3), m.LocalTerminal(), func(g *settingsGroup) {
 			g.row(m.DefaultShell(), m.DefaultShellNote(), func() {

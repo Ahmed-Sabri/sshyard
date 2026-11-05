@@ -123,6 +123,7 @@ func (a *App) View(c *ui.Context) {
 	a.defaultPasswordView(c, m)
 	a.fwdView(c, m)
 	a.fwdDeleteView(c, m)
+	a.highlightView(c, m)
 	a.installView(c, m)
 	a.quickView(c, m)
 	a.paletteView(c, m)

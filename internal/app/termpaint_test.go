@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Licoy/sshyard/internal/highlight"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/internal/vt"
 	"github.com/egoist/mygo/ui"
@@ -69,7 +70,7 @@ func TestRowMarks(t *testing.T) {
 }
 
 // BenchmarkTerminalPaint is a frame of a full, colored terminal with a
-// selection and a search, as output streams
+// selection, a search and the keywords highlighted, as output streams
 // into it.
 func BenchmarkTerminalPaint(b *testing.B) {
 	term := vt.New(150, 50)
@@ -78,6 +79,7 @@ func BenchmarkTerminalPaint(b *testing.B) {
 	}
 	v := newTermView(paintTarget{term}, 13)
 	v.selA, v.selB, v.selected = vt.Pos{Line: 160, Col: 3}, vt.Pos{Line: 170, Col: 40}, true
+	v.hl = highlight.New(nil, highlight.PresetIDs())
 	tok := theme.DarkTokens()
 	pal := &tok.Terminal
 	tt := ui.NewTester(func(c *ui.Context) {

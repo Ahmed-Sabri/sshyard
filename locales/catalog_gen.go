@@ -6393,11 +6393,11 @@ func (msgs Messages) AppearanceDesc() string {
 	return Catalog.Format(msgs.locale, "appearanceDesc", nil)
 }
 
-// TerminalDesc says "Fonts, connection behaviour and the remote clipboard of terminal panes."
+// TerminalDesc says "Fonts, keyword highlighting, connection behaviour and the remote clipboard of terminal panes."
 // in the language the app shows.
 func TerminalDesc() string { return In(i18n.Locale()).TerminalDesc() }
 
-// TerminalDesc says "Fonts, connection behaviour and the remote clipboard of terminal panes."
+// TerminalDesc says "Fonts, keyword highlighting, connection behaviour and the remote clipboard of terminal panes."
 // in the language of msgs.
 func (msgs Messages) TerminalDesc() string {
 	return Catalog.Format(msgs.locale, "terminalDesc", nil)
@@ -6741,6 +6741,406 @@ func UiZoomDesc() string { return In(i18n.Locale()).UiZoomDesc() }
 // in the language of msgs.
 func (msgs Messages) UiZoomDesc() string {
 	return Catalog.Format(msgs.locale, "uiZoomDesc", nil)
+}
+
+// HighlightSection says "Keyword Highlighting"
+// in the language the app shows.
+func HighlightSection() string { return In(i18n.Locale()).HighlightSection() }
+
+// HighlightSection says "Keyword Highlighting"
+// in the language of msgs.
+func (msgs Messages) HighlightSection() string {
+	return Catalog.Format(msgs.locale, "highlightSection", nil)
+}
+
+// HighlightOn says "Highlight keywords"
+// in the language the app shows.
+func HighlightOn() string { return In(i18n.Locale()).HighlightOn() }
+
+// HighlightOn says "Highlight keywords"
+// in the language of msgs.
+func (msgs Messages) HighlightOn() string {
+	return Catalog.Format(msgs.locale, "highlightOn", nil)
+}
+
+// HighlightOnNote says "Colors errors, warnings, addresses, links and times in the output. Text a program colored keeps its colors."
+// in the language the app shows.
+func HighlightOnNote() string { return In(i18n.Locale()).HighlightOnNote() }
+
+// HighlightOnNote says "Colors errors, warnings, addresses, links and times in the output. Text a program colored keeps its colors."
+// in the language of msgs.
+func (msgs Messages) HighlightOnNote() string {
+	return Catalog.Format(msgs.locale, "highlightOnNote", nil)
+}
+
+// HighlightOverride says "Recolor colored text"
+// in the language the app shows.
+func HighlightOverride() string { return In(i18n.Locale()).HighlightOverride() }
+
+// HighlightOverride says "Recolor colored text"
+// in the language of msgs.
+func (msgs Messages) HighlightOverride() string {
+	return Catalog.Format(msgs.locale, "highlightOverride", nil)
+}
+
+// HighlightOverrideNote says "Also highlights text the program has already colored."
+// in the language the app shows.
+func HighlightOverrideNote() string { return In(i18n.Locale()).HighlightOverrideNote() }
+
+// HighlightOverrideNote says "Also highlights text the program has already colored."
+// in the language of msgs.
+func (msgs Messages) HighlightOverrideNote() string {
+	return Catalog.Format(msgs.locale, "highlightOverrideNote", nil)
+}
+
+// HighlightFullScreen says "In full-screen programs"
+// in the language the app shows.
+func HighlightFullScreen() string { return In(i18n.Locale()).HighlightFullScreen() }
+
+// HighlightFullScreen says "In full-screen programs"
+// in the language of msgs.
+func (msgs Messages) HighlightFullScreen() string {
+	return Catalog.Format(msgs.locale, "highlightFullScreen", nil)
+}
+
+// HighlightFullScreenNote says "Also highlights programs such as vim, less and top."
+// in the language the app shows.
+func HighlightFullScreenNote() string { return In(i18n.Locale()).HighlightFullScreenNote() }
+
+// HighlightFullScreenNote says "Also highlights programs such as vim, less and top."
+// in the language of msgs.
+func (msgs Messages) HighlightFullScreenNote() string {
+	return Catalog.Format(msgs.locale, "highlightFullScreenNote", nil)
+}
+
+// HighlightPreview says "Preview"
+// in the language the app shows.
+func HighlightPreview() string { return In(i18n.Locale()).HighlightPreview() }
+
+// HighlightPreview says "Preview"
+// in the language of msgs.
+func (msgs Messages) HighlightPreview() string {
+	return Catalog.Format(msgs.locale, "highlightPreview", nil)
+}
+
+// HighlightPresets says "Built-in Rules"
+// in the language the app shows.
+func HighlightPresets() string { return In(i18n.Locale()).HighlightPresets() }
+
+// HighlightPresets says "Built-in Rules"
+// in the language of msgs.
+func (msgs Messages) HighlightPresets() string {
+	return Catalog.Format(msgs.locale, "highlightPresets", nil)
+}
+
+// HighlightErrors says "Errors"
+// in the language the app shows.
+func HighlightErrors() string { return In(i18n.Locale()).HighlightErrors() }
+
+// HighlightErrors says "Errors"
+// in the language of msgs.
+func (msgs Messages) HighlightErrors() string {
+	return Catalog.Format(msgs.locale, "highlightErrors", nil)
+}
+
+// HighlightWarnings says "Warnings"
+// in the language the app shows.
+func HighlightWarnings() string { return In(i18n.Locale()).HighlightWarnings() }
+
+// HighlightWarnings says "Warnings"
+// in the language of msgs.
+func (msgs Messages) HighlightWarnings() string {
+	return Catalog.Format(msgs.locale, "highlightWarnings", nil)
+}
+
+// HighlightInfo says "Info and debug"
+// in the language the app shows.
+func HighlightInfo() string { return In(i18n.Locale()).HighlightInfo() }
+
+// HighlightInfo says "Info and debug"
+// in the language of msgs.
+func (msgs Messages) HighlightInfo() string {
+	return Catalog.Format(msgs.locale, "highlightInfo", nil)
+}
+
+// HighlightSuccess says "Success"
+// in the language the app shows.
+func HighlightSuccess() string { return In(i18n.Locale()).HighlightSuccess() }
+
+// HighlightSuccess says "Success"
+// in the language of msgs.
+func (msgs Messages) HighlightSuccess() string {
+	return Catalog.Format(msgs.locale, "highlightSuccess", nil)
+}
+
+// HighlightNetwork says "IP and MAC addresses"
+// in the language the app shows.
+func HighlightNetwork() string { return In(i18n.Locale()).HighlightNetwork() }
+
+// HighlightNetwork says "IP and MAC addresses"
+// in the language of msgs.
+func (msgs Messages) HighlightNetwork() string {
+	return Catalog.Format(msgs.locale, "highlightNetwork", nil)
+}
+
+// HighlightURLs says "Links"
+// in the language the app shows.
+func HighlightURLs() string { return In(i18n.Locale()).HighlightURLs() }
+
+// HighlightURLs says "Links"
+// in the language of msgs.
+func (msgs Messages) HighlightURLs() string {
+	return Catalog.Format(msgs.locale, "highlightURLs", nil)
+}
+
+// HighlightDateTime says "Dates and times"
+// in the language the app shows.
+func HighlightDateTime() string { return In(i18n.Locale()).HighlightDateTime() }
+
+// HighlightDateTime says "Dates and times"
+// in the language of msgs.
+func (msgs Messages) HighlightDateTime() string {
+	return Catalog.Format(msgs.locale, "highlightDateTime", nil)
+}
+
+// HighlightHTTP says "HTTP methods and status codes"
+// in the language the app shows.
+func HighlightHTTP() string { return In(i18n.Locale()).HighlightHTTP() }
+
+// HighlightHTTP says "HTTP methods and status codes"
+// in the language of msgs.
+func (msgs Messages) HighlightHTTP() string {
+	return Catalog.Format(msgs.locale, "highlightHTTP", nil)
+}
+
+// HighlightIDs says "UUIDs and hashes"
+// in the language the app shows.
+func HighlightIDs() string { return In(i18n.Locale()).HighlightIDs() }
+
+// HighlightIDs says "UUIDs and hashes"
+// in the language of msgs.
+func (msgs Messages) HighlightIDs() string {
+	return Catalog.Format(msgs.locale, "highlightIDs", nil)
+}
+
+// HighlightRules says "Custom Rules"
+// in the language the app shows.
+func HighlightRules() string { return In(i18n.Locale()).HighlightRules() }
+
+// HighlightRules says "Custom Rules"
+// in the language of msgs.
+func (msgs Messages) HighlightRules() string {
+	return Catalog.Format(msgs.locale, "highlightRules", nil)
+}
+
+// HighlightNoRules says "No custom rules. They match before the built-in ones."
+// in the language the app shows.
+func HighlightNoRules() string { return In(i18n.Locale()).HighlightNoRules() }
+
+// HighlightNoRules says "No custom rules. They match before the built-in ones."
+// in the language of msgs.
+func (msgs Messages) HighlightNoRules() string {
+	return Catalog.Format(msgs.locale, "highlightNoRules", nil)
+}
+
+// HighlightAdd says "Add Rule"
+// in the language the app shows.
+func HighlightAdd() string { return In(i18n.Locale()).HighlightAdd() }
+
+// HighlightAdd says "Add Rule"
+// in the language of msgs.
+func (msgs Messages) HighlightAdd() string {
+	return Catalog.Format(msgs.locale, "highlightAdd", nil)
+}
+
+// HighlightEdit says "Edit Rule"
+// in the language the app shows.
+func HighlightEdit() string { return In(i18n.Locale()).HighlightEdit() }
+
+// HighlightEdit says "Edit Rule"
+// in the language of msgs.
+func (msgs Messages) HighlightEdit() string {
+	return Catalog.Format(msgs.locale, "highlightEdit", nil)
+}
+
+// HighlightDelete says "Delete Rule"
+// in the language the app shows.
+func HighlightDelete() string { return In(i18n.Locale()).HighlightDelete() }
+
+// HighlightDelete says "Delete Rule"
+// in the language of msgs.
+func (msgs Messages) HighlightDelete() string {
+	return Catalog.Format(msgs.locale, "highlightDelete", nil)
+}
+
+// HighlightUse says "Use rule"
+// in the language the app shows.
+func HighlightUse() string { return In(i18n.Locale()).HighlightUse() }
+
+// HighlightUse says "Use rule"
+// in the language of msgs.
+func (msgs Messages) HighlightUse() string {
+	return Catalog.Format(msgs.locale, "highlightUse", nil)
+}
+
+// HighlightPattern says "Text or pattern"
+// in the language the app shows.
+func HighlightPattern() string { return In(i18n.Locale()).HighlightPattern() }
+
+// HighlightPattern says "Text or pattern"
+// in the language of msgs.
+func (msgs Messages) HighlightPattern() string {
+	return Catalog.Format(msgs.locale, "highlightPattern", nil)
+}
+
+// HighlightPatternPlaceholder says "e.g. connection reset"
+// in the language the app shows.
+func HighlightPatternPlaceholder() string { return In(i18n.Locale()).HighlightPatternPlaceholder() }
+
+// HighlightPatternPlaceholder says "e.g. connection reset"
+// in the language of msgs.
+func (msgs Messages) HighlightPatternPlaceholder() string {
+	return Catalog.Format(msgs.locale, "highlightPatternPlaceholder", nil)
+}
+
+// HighlightRegex says "Regular expression"
+// in the language the app shows.
+func HighlightRegex() string { return In(i18n.Locale()).HighlightRegex() }
+
+// HighlightRegex says "Regular expression"
+// in the language of msgs.
+func (msgs Messages) HighlightRegex() string {
+	return Catalog.Format(msgs.locale, "highlightRegex", nil)
+}
+
+// HighlightCase says "Match case"
+// in the language the app shows.
+func HighlightCase() string { return In(i18n.Locale()).HighlightCase() }
+
+// HighlightCase says "Match case"
+// in the language of msgs.
+func (msgs Messages) HighlightCase() string {
+	return Catalog.Format(msgs.locale, "highlightCase", nil)
+}
+
+// HighlightWord says "Whole word"
+// in the language the app shows.
+func HighlightWord() string { return In(i18n.Locale()).HighlightWord() }
+
+// HighlightWord says "Whole word"
+// in the language of msgs.
+func (msgs Messages) HighlightWord() string {
+	return Catalog.Format(msgs.locale, "highlightWord", nil)
+}
+
+// HighlightColor says "Color"
+// in the language the app shows.
+func HighlightColor() string { return In(i18n.Locale()).HighlightColor() }
+
+// HighlightColor says "Color"
+// in the language of msgs.
+func (msgs Messages) HighlightColor() string {
+	return Catalog.Format(msgs.locale, "highlightColor", nil)
+}
+
+// HighlightBackground says "Color the background"
+// in the language the app shows.
+func HighlightBackground() string { return In(i18n.Locale()).HighlightBackground() }
+
+// HighlightBackground says "Color the background"
+// in the language of msgs.
+func (msgs Messages) HighlightBackground() string {
+	return Catalog.Format(msgs.locale, "highlightBackground", nil)
+}
+
+// HighlightBold says "Bold"
+// in the language the app shows.
+func HighlightBold() string { return In(i18n.Locale()).HighlightBold() }
+
+// HighlightBold says "Bold"
+// in the language of msgs.
+func (msgs Messages) HighlightBold() string {
+	return Catalog.Format(msgs.locale, "highlightBold", nil)
+}
+
+// HighlightUnderline says "Underline"
+// in the language the app shows.
+func HighlightUnderline() string { return In(i18n.Locale()).HighlightUnderline() }
+
+// HighlightUnderline says "Underline"
+// in the language of msgs.
+func (msgs Messages) HighlightUnderline() string {
+	return Catalog.Format(msgs.locale, "highlightUnderline", nil)
+}
+
+// HighlightBadRegex says "Invalid regular expression: {error}"
+// in the language the app shows.
+func HighlightBadRegex(error string) string { return In(i18n.Locale()).HighlightBadRegex(error) }
+
+// HighlightBadRegex says "Invalid regular expression: {error}"
+// in the language of msgs.
+func (msgs Messages) HighlightBadRegex(error string) string {
+	return Catalog.Format(msgs.locale, "highlightBadRegex", map[string]any{"error": error})
+}
+
+// HighlightEmpty says "Enter the text or pattern to highlight."
+// in the language the app shows.
+func HighlightEmpty() string { return In(i18n.Locale()).HighlightEmpty() }
+
+// HighlightEmpty says "Enter the text or pattern to highlight."
+// in the language of msgs.
+func (msgs Messages) HighlightEmpty() string {
+	return Catalog.Format(msgs.locale, "highlightEmpty", nil)
+}
+
+// HighlightSample says "Sample text"
+// in the language the app shows.
+func HighlightSample() string { return In(i18n.Locale()).HighlightSample() }
+
+// HighlightSample says "Sample text"
+// in the language of msgs.
+func (msgs Messages) HighlightSample() string {
+	return Catalog.Format(msgs.locale, "highlightSample", nil)
+}
+
+// ColorYellow says "Yellow"
+// in the language the app shows.
+func ColorYellow() string { return In(i18n.Locale()).ColorYellow() }
+
+// ColorYellow says "Yellow"
+// in the language of msgs.
+func (msgs Messages) ColorYellow() string {
+	return Catalog.Format(msgs.locale, "colorYellow", nil)
+}
+
+// ColorMagenta says "Magenta"
+// in the language the app shows.
+func ColorMagenta() string { return In(i18n.Locale()).ColorMagenta() }
+
+// ColorMagenta says "Magenta"
+// in the language of msgs.
+func (msgs Messages) ColorMagenta() string {
+	return Catalog.Format(msgs.locale, "colorMagenta", nil)
+}
+
+// ColorCyan says "Cyan"
+// in the language the app shows.
+func ColorCyan() string { return In(i18n.Locale()).ColorCyan() }
+
+// ColorCyan says "Cyan"
+// in the language of msgs.
+func (msgs Messages) ColorCyan() string {
+	return Catalog.Format(msgs.locale, "colorCyan", nil)
+}
+
+// ColorBright says "Bright {color}"
+// in the language the app shows.
+func ColorBright(color string) string { return In(i18n.Locale()).ColorBright(color) }
+
+// ColorBright says "Bright {color}"
+// in the language of msgs.
+func (msgs Messages) ColorBright(color string) string {
+	return Catalog.Format(msgs.locale, "colorBright", map[string]any{"color": color})
 }
 
 // SystemMonitor says "System Monitor"

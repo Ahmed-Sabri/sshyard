@@ -67,6 +67,7 @@ var (
 	Search       = load("search-line")
 	ZoomIn       = load("zoom-in-line")
 	ZoomOut      = load("zoom-out-line")
+	Highlight    = load("mark-pen-line")
 	Mouse        = load("mouse-line")
 	NewFolder    = load("folder-add-line")
 	Reconnect    = load("restart-line")

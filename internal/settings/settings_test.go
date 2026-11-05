@@ -4,9 +4,11 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
+	"github.com/Licoy/sshyard/internal/highlight"
 	"github.com/Licoy/sshyard/internal/theme"
 )
 
@@ -316,5 +318,29 @@ func TestUIZoom(t *testing.T) {
 		if s, err := Load(path); err != nil || s.UIZoom != want {
 			t.Errorf("%s: %d %v, want %d", in, s.UIZoom, err, want)
 		}
+	}
+}
+
+func TestHighlight(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	os.WriteFile(path, []byte(`{}`), 0o600)
+	s, err := Load(path)
+	if err != nil || !s.Highlight.On || len(s.Highlight.PresetsOn()) != len(highlight.Presets) {
+		t.Fatalf("defaults: %+v %v", s.Highlight, err)
+	}
+	os.WriteFile(path, []byte(`{"highlight":{"on":false,"presetsOff":["errors","gone"],"rules":[{"pattern":"x","color":40},{"pattern":""},{"pattern":"y","regex":true,"color":3,"bold":true}]}}`), 0o600)
+	s, err = Load(path)
+	h := s.Highlight
+	if err != nil || h.On || !slices.Equal(h.PresetsOff, []string{"errors"}) || slices.Contains(h.PresetsOn(), "errors") {
+		t.Fatalf("loaded: %+v %v", h, err)
+	}
+	if len(h.Rules) != 2 || h.Rules[0].Color != 1 || h.Rules[1].Pattern != "y" || !h.Rules[1].Bold || !h.Rules[1].Regex {
+		t.Errorf("rules %+v", h.Rules)
+	}
+	if err := Save(path, s); err != nil {
+		t.Fatal(err)
+	}
+	if again, _ := Load(path); !reflect.DeepEqual(again.Highlight, h) {
+		t.Errorf("saved %+v, loaded %+v", h, again.Highlight)
 	}
 }

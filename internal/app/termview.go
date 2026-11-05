@@ -10,6 +10,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/Licoy/sshyard/internal/highlight"
 	"github.com/Licoy/sshyard/internal/session"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/internal/vt"
@@ -42,6 +43,11 @@ type termView struct {
 	// clear leaves the background to the pane's translucent fill, for a
 	// content area on the window's material (settings.ContentMaterial)
 	clear bool
+	// hl colors the keywords of the output (settings.Highlight), nil for
+	// none; hlOverride colors those the program colored too, and
+	// hlFullScreen those of a full-screen program.
+	hl                       *highlight.Highlighter
+	hlOverride, hlFullScreen bool
 
 	// font
 	fontSize            float32
@@ -306,6 +312,9 @@ func (v *termView) paint(p *ui.Painter, r ui.Rect, pal *theme.Terminal, focused 
 	t := v.target.Terminal()
 	t.SnapshotInto(&v.snap, v.offset)
 	snap := &v.snap
+	if v.hl != nil && (v.hlFullScreen || !snap.Modes.AltScreen) {
+		v.hl.Apply(snap.Lines, v.hlOverride)
+	}
 	v.offset, v.first = snap.Offset, snap.First
 	if !v.clear {
 		p.Fill(r, pal.Background, 0)

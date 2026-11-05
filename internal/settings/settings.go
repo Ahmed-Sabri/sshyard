@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Licoy/sshyard/internal/highlight"
 	"github.com/Licoy/sshyard/internal/keymap"
 	"github.com/Licoy/sshyard/internal/session"
 	"github.com/Licoy/sshyard/internal/theme"
@@ -53,6 +54,8 @@ type Settings struct {
 	TerminalScheme string `json:"terminalScheme,omitempty"`
 	// TerminalSchemes are the color schemes the user imported.
 	TerminalSchemes []theme.Scheme `json:"terminalSchemes,omitempty"`
+	// Highlight is how the terminal colors keywords in its output.
+	Highlight Highlight `json:"highlight"`
 	// LocalShell is the ID of the shell local terminals open by default
 	// (session.Shell); "" or one no longer installed is the first found.
 	LocalShell string `json:"localShell,omitempty"`
@@ -148,6 +151,55 @@ type Settings struct {
 	// derived from it is in the keychain (keychain.DefaultBackupKey). It
 	// belongs to this device too.
 	DefaultBackupPassword bool `json:"defaultBackupPassword,omitempty"`
+}
+
+// Highlight is how the terminal colors keywords in its output.
+type Highlight struct {
+	// On colors them at all.
+	On bool `json:"on"`
+	// PresetsOff are the IDs of the built-in rules (highlight.Presets)
+	// turned off; the others are on.
+	PresetsOff []string `json:"presetsOff,omitempty"`
+	// Rules are the user's own, matched before the built-in ones.
+	Rules []highlight.Rule `json:"rules,omitempty"`
+	// Override colors the text programs colored too.
+	Override bool `json:"override,omitempty"`
+	// FullScreen colors full-screen programs (the alternate screen) too.
+	FullScreen bool `json:"fullScreen,omitempty"`
+}
+
+// PresetsOn are the IDs of the built-in rules on.
+func (h Highlight) PresetsOn() []string {
+	var on []string
+	for _, id := range highlight.PresetIDs() {
+		if !slices.Contains(h.PresetsOff, id) {
+			on = append(on, id)
+		}
+	}
+	return on
+}
+
+// normalize keeps the presets that exist and the rules with a pattern,
+// in new slices: the ones held may be shared with the settings in force.
+func (h *Highlight) normalize() {
+	var off []string
+	for _, id := range highlight.PresetIDs() {
+		if slices.Contains(h.PresetsOff, id) {
+			off = append(off, id)
+		}
+	}
+	h.PresetsOff = off
+	var rules []highlight.Rule
+	for _, r := range h.Rules {
+		if r.Pattern == "" || len(r.Pattern) > highlight.MaxPattern || len(rules) == highlight.MaxRules {
+			continue
+		}
+		if r.Color > 15 {
+			r.Color = 1
+		}
+		rules = append(rules, r)
+	}
+	h.Rules = rules
 }
 
 // The kinds of BackupTarget.
@@ -381,7 +433,7 @@ var Languages = []string{"en", "zh-Hans", "zh-Hant", "ko", "ja"}
 // Default returns the defaults.
 func Default() Settings {
 	return Settings{Theme: theme.Auto, CheckUpdates: true, UpdateIntervalHours: 1, TerminalFontSize: 13, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, FilesSplit: 50, EditorTreeWidth: 240, OSC52Write: OSC52Ask, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
-		AIDefaultAgent: "builtin", AIDefaultMode: "ask", AIReviewStrictness: AIReviewStandard, AIContextLines: 200, AIAuditRetentionDays: 90, AIRedact: true, MCPPort: MCPPortDefault, LocalKeys: true}
+		AIDefaultAgent: "builtin", AIDefaultMode: "ask", AIReviewStrictness: AIReviewStandard, AIContextLines: 200, AIAuditRetentionDays: 90, AIRedact: true, MCPPort: MCPPortDefault, LocalKeys: true, Highlight: Highlight{On: true}}
 }
 
 // ResolveOSC52Write is the write policy in effect. A host value of allow,
@@ -459,6 +511,7 @@ func (s *Settings) Normalize() {
 		s.MetricsMount = ""
 	}
 	s.normalizeSchemes()
+	s.Highlight.normalize()
 	// A new map: the one held may be shared with the settings in force.
 	var keys map[string]string
 	for id, k := range s.Shortcuts {
