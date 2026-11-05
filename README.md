@@ -104,7 +104,7 @@ gofmt -l .
 GOFLAGS=-mod=mod go run github.com/egoist/mygo/cmd/mygo generate
 
 # package into dist/
-go tool mygo build -platform linux/amd64,windows/amd64,darwin/arm64,darwin/amd64 -o dist
+go tool mygo build -platform linux/amd64,linux/arm64,windows/amd64,windows/arm64,darwin/arm64,darwin/amd64 -o dist
 ```
 
 To try it against devsshd, add a host `127.0.0.1`, port `2222`, user `demo`, password `demo`.

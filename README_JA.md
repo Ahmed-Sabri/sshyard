@@ -104,7 +104,7 @@ gofmt -l .
 GOFLAGS=-mod=mod go run github.com/egoist/mygo/cmd/mygo generate
 
 # dist/にパッケージを作成
-go tool mygo build -platform linux/amd64,windows/amd64,darwin/arm64,darwin/amd64 -o dist
+go tool mygo build -platform linux/amd64,linux/arm64,windows/amd64,windows/arm64,darwin/arm64,darwin/amd64 -o dist
 ```
 
 devsshdで試すには、ホスト`127.0.0.1`、ポート`2222`、ユーザー`demo`、パスワード`demo`を追加してください。

@@ -104,7 +104,7 @@ gofmt -l .
 GOFLAGS=-mod=mod go run github.com/egoist/mygo/cmd/mygo generate
 
 # dist/에 패키징
-go tool mygo build -platform linux/amd64,windows/amd64,darwin/arm64,darwin/amd64 -o dist
+go tool mygo build -platform linux/amd64,linux/arm64,windows/amd64,windows/arm64,darwin/arm64,darwin/amd64 -o dist
 ```
 
 devsshd로 테스트하려면 호스트 `127.0.0.1`, 포트 `2222`, 사용자 `demo`, 비밀번호 `demo`를 추가하세요.

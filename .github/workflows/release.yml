@@ -152,7 +152,9 @@ jobs:
       matrix:
         include:
           - { os: ubuntu-latest, goos: linux, goarch: amd64 }
+          - { os: ubuntu-24.04-arm, goos: linux, goarch: arm64 }
           - { os: windows-latest, goos: windows, goarch: amd64 }
+          - { os: windows-11-arm, goos: windows, goarch: arm64 }
           - { os: macos-latest, goos: darwin, goarch: arm64 }
           - { os: macos-latest, goos: darwin, goarch: amd64 }
     defaults:
@@ -199,7 +201,7 @@ jobs:
           jq -e '.notes | length > 0' "$m" > /dev/null || { echo "::error::$m has no release notes"; exit 1; }
       - name: Package Windows portable ZIP
         if: runner.os == 'Windows'
-        run: python .github/windows-portable.py "build/${{ matrix.goos }}-${{ matrix.goarch }}"
+        run: python .github/windows-portable.py "build/${{ matrix.goos }}-${{ matrix.goarch }}" "${{ matrix.goarch }}"
       - name: Verify macOS signature and notarization tickets
         if: runner.os == 'macOS'
         run: bash .github/macos-release.sh verify "${{ matrix.goarch }}"
@@ -209,9 +211,10 @@ jobs:
           dir="build/${{ matrix.goos }}-${{ matrix.goarch }}"
           mkdir -p dist
           files=("$dir"/*.tar.gz "$dir"/*.deb "$dir"/*.dmg "$dir"/*-setup-*.exe "$dir"/*-portable.zip "$dir"/*.delta "$dir"/update-*.json)
-          # install.sh is the same script for every target (macOS makes one
-          # too): the release takes Linux's, so merged assets never clash
-          if [ "${{ matrix.goos }}" = linux ]; then files+=("$dir"/install.sh); fi
+          # install.sh is the same script for every target (it picks the
+          # archive by uname -m; macOS makes one too): the release takes
+          # linux/amd64's, so merged assets never clash
+          if [ "${{ matrix.goos }}/${{ matrix.goarch }}" = linux/amd64 ]; then files+=("$dir"/install.sh); fi
           [ "${#files[@]}" -gt 0 ] || { echo "::error::No release assets found"; exit 1; }
           cp "${files[@]}" dist/
           ls -la dist

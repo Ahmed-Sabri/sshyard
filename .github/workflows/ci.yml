@@ -114,7 +114,9 @@ jobs:
       matrix:
         include:
           - { os: ubuntu-latest, goos: linux, goarch: amd64 }
+          - { os: ubuntu-24.04-arm, goos: linux, goarch: arm64 }
           - { os: windows-latest, goos: windows, goarch: amd64 }
+          - { os: windows-11-arm, goos: windows, goarch: arm64 }
           - { os: macos-latest, goos: darwin, goarch: arm64 }
           - { os: macos-latest, goos: darwin, goarch: amd64 } # cross-compiled on Apple silicon (no cgo)
     defaults:
@@ -185,7 +187,7 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           python .github/windows-portable-test.py
-          python .github/windows-portable.py "build/${{ matrix.goos }}-${{ matrix.goarch }}"
+          python .github/windows-portable.py "build/${{ matrix.goos }}-${{ matrix.goarch }}" "${{ matrix.goarch }}"
       - name: List outputs
         run: ls -la "build/${{ matrix.goos }}-${{ matrix.goarch }}"
       # Builds of main are kept a week; tag and manual builds use the

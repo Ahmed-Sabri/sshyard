@@ -104,7 +104,7 @@ gofmt -l .
 GOFLAGS=-mod=mod go run github.com/egoist/mygo/cmd/mygo generate
 
 # 打包到 dist/
-go tool mygo build -platform linux/amd64,windows/amd64,darwin/arm64,darwin/amd64 -o dist
+go tool mygo build -platform linux/amd64,linux/arm64,windows/amd64,windows/arm64,darwin/arm64,darwin/amd64 -o dist
 ```
 
 連線 devsshd 測試時，新建主機 `127.0.0.1`，連接埠 `2222`，使用者 `demo`，密碼 `demo`。

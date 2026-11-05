@@ -8,10 +8,10 @@ import sys
 import zipfile
 
 
-def package(build_dir, version):
+def package(build_dir, version, arch):
     if not (build_dir / "SSHYard.exe").is_file():
         raise FileNotFoundError(f"Missing MyGo executable: {build_dir / 'SSHYard.exe'}")
-    output = build_dir / f"sshyard-{version}-windows-amd64-portable.zip"
+    output = build_dir / f"sshyard-{version}-windows-{arch}-portable.zip"
     artifacts = (
         "sshyard-setup-*.exe",
         "sshyard-*-windows-*.tar.gz",
@@ -34,7 +34,7 @@ def package(build_dir, version):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        sys.exit("usage: windows-portable.py <windows-amd64-build-dir>")
+    if len(sys.argv) != 3 or sys.argv[2] not in ("amd64", "arm64"):
+        sys.exit("usage: windows-portable.py <windows-build-dir> <amd64|arm64>")
     config = json.loads(Path("mygo.json").read_text(encoding="utf-8"))
-    print(package(Path(sys.argv[1]), config["version"]))
+    print(package(Path(sys.argv[1]), config["version"], sys.argv[2]))
