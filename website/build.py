@@ -87,12 +87,20 @@ ASSETS = {
     "mac_amd64": (r"sshyard-.+-amd64\.dmg", "sshyard-{v}-amd64.dmg"),
     "win_setup": (r"sshyard-setup-.+-amd64\.exe", "sshyard-setup-{v}-amd64.exe"),
     "win_portable": (r"sshyard-.+-windows-amd64-portable\.zip", "sshyard-{v}-windows-amd64-portable.zip"),
+    "win_setup_arm64": (r"sshyard-setup-.+-arm64\.exe", "sshyard-setup-{v}-arm64.exe"),
+    "win_portable_arm64": (r"sshyard-.+-windows-arm64-portable\.zip", "sshyard-{v}-windows-arm64-portable.zip"),
     "linux_deb": (r"sshyard_.+_amd64\.deb", "sshyard_{v}_amd64.deb"),
     "linux_tar": (r"sshyard-.+-linux-amd64\.tar\.gz", "sshyard-{v}-linux-amd64.tar.gz"),
+    "linux_deb_arm64": (r"sshyard_.+_arm64\.deb", "sshyard_{v}_arm64.deb"),
+    "linux_tar_arm64": (r"sshyard-.+-linux-arm64\.tar\.gz", "sshyard-{v}-linux-arm64.tar.gz"),
     "install_sh": (r"install\.sh", "install.sh"),
     "sha256sums": (r"SHA256SUMS", "SHA256SUMS"),
 }
-INSTALLERS = ("mac_arm64", "mac_amd64", "win_setup", "win_portable", "linux_deb", "linux_tar")
+INSTALLERS = ("mac_arm64", "mac_amd64", "win_setup", "win_portable", "win_setup_arm64", "win_portable_arm64",
+              "linux_deb", "linux_tar", "linux_deb_arm64", "linux_tar_arm64")
+# Windows and Linux Arm64 builds start after 0.0.9: a release without them
+# lists none, and the pages show only the files a release has.
+OPTIONAL = {"win_setup_arm64", "win_portable_arm64", "linux_deb_arm64", "linux_tar_arm64"}
 PLATFORM_ICONS = {"macos": "apple-line", "windows": "windows-line", "linux": "ubuntu-line"}
 
 # Screenshots from docs/, keyed as tour.items[].key, and the widths made.
@@ -227,6 +235,8 @@ def read_release(path: str | None, strict: bool) -> dict:
     assets = {}
     for key, (pattern, _) in ASSETS.items():
         found = [a for a in data.get("assets", []) if re.fullmatch(pattern, a["name"])]
+        if not found and key in OPTIONAL:
+            continue
         if len(found) != 1:
             fail(f"release {tag}: expected one asset matching {pattern}, found {len(found)}")
         a = found[0]
@@ -247,7 +257,8 @@ def fallback_release() -> dict:
 
 
 def size_range(release: dict) -> str:
-    sizes = [release["assets"][k]["size"] for k in INSTALLERS if release["assets"][k]["size"]]
+    a = release["assets"]
+    sizes = [a[k]["size"] for k in INSTALLERS if k in a and a[k]["size"]]
     if not sizes:
         return "10 MB"
     lo, hi = math.floor(min(sizes) / 1048576), math.ceil(max(sizes) / 1048576)
@@ -430,7 +441,7 @@ class Site:
     def site_data(self, lang: Lang, page: Page) -> str:
         t = self.cats[lang.code]
         a = self.release["assets"]
-        dl = {k: {"url": a[k]["url"], "size": format_size(a[k]["size"])} for k in INSTALLERS}
+        dl = {k: {"url": a[k]["url"], "size": format_size(a[k]["size"])} for k in INSTALLERS if k in a}
         data = {
             "lang": lang.code,
             "base": self.base_path,
@@ -507,7 +518,7 @@ class Site:
             "description": t["meta"]["description"],
             "applicationCategory": "DeveloperApplication",
             "applicationSubCategory": "SSH client",
-            "operatingSystem": "macOS 12+, Windows (x64), Linux (x64)",
+            "operatingSystem": "macOS 12+, Windows (x64, Arm64), Linux (x64, Arm64)",
             "softwareVersion": self.release["version"],
             "downloadUrl": self.abs(self.path("download", lang)),
             "installUrl": self.abs(self.path("download", lang)),
@@ -630,7 +641,7 @@ class Site:
             info = t["download"]["platforms"][p]
             out.append(f"### {info['name']}\n\n{info['req']}\n")
             out += [f"- [{label}]({a[k]['url']})" + (f" ({format_size(a[k]['size'])})" if a[k]["size"] else "")
-                    for k, label in info["files"].items()]
+                    for k, label in info["files"].items() if k in a]
             out.append("")
         out.append(f"- [{t['download']['checksums']}]({a['sha256sums']['url']})\n")
         out.append(f"## {t['faq']['title']}\n")
@@ -655,7 +666,7 @@ class Site:
         out.append("\n## Downloads\n")
         for p in PLATFORMS:
             info = t["download"]["platforms"][p]
-            out += [f"- [{info['name']} {label}]({a[k]['url']})" for k, label in info["files"].items()]
+            out += [f"- [{info['name']} {label}]({a[k]['url']})" for k, label in info["files"].items() if k in a]
         out.append(f"- [SHA256SUMS]({a['sha256sums']['url']})")
         out.append("\n## Project\n")
         out.append(f"- [Source code on GitHub]({GITHUB})")

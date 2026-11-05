@@ -62,7 +62,7 @@
     "rows": [
       ["価格", "無料"],
       ["ライセンス", "オープンソース、GNU AGPL-3.0"],
-      ["対応プラットフォーム", "macOS 12 以降（Apple シリコンと Intel）、Windows x64、Linux x64"],
+      ["対応プラットフォーム", "macOS 12 以降（Apple シリコンと Intel）、Windows と Linux（x64 と Arm64）"],
       ["インターフェース", "ネイティブ描画、WebView 不使用"],
       ["ダウンロードサイズ", "約 {size}"],
       ["言語", "English、简体中文、繁體中文、日本語、한국어"],
@@ -202,17 +202,17 @@
       },
       "windows": {
         "name": "Windows",
-        "req": "Windows x64 · 管理者権限は不要",
-        "description": "Windows x64 版 SSHYard {version} をダウンロード。アプリ内アップデートに対応したインストーラーと、インストール不要のポータブル ZIP があります。AI アシスタント内蔵の無料 SSH / SFTP クライアント。",
-        "files": {"win_setup": "インストーラー", "win_portable": "ポータブル ZIP"},
+        "req": "Windows x64 または Arm64 · 管理者権限は不要",
+        "description": "Windows x64 / Arm64 版 SSHYard {version} をダウンロード。アプリ内アップデートに対応したインストーラーと、インストール不要のポータブル ZIP があります。AI アシスタント内蔵の無料 SSH / SFTP クライアント。",
+        "files": {"win_setup": "x64 インストーラー", "win_portable": "x64 ポータブル ZIP", "win_setup_arm64": "Arm64 インストーラー", "win_portable_arm64": "Arm64 ポータブル ZIP"},
         "steps": ["インストーラーは現在のユーザー向けに %LOCALAPPDATA%\\Programs へインストールし、アプリ内でアップデートできます。", "ポータブル版は ZIP を書き込み可能なフォルダに展開し、SSHYard.exe を実行してください。アプリのデータは %APPDATA%\\SSHYard に保存されます。"],
         "verify": "Get-FileHash .\\sshyard-setup-{version}-amd64.exe -Algorithm SHA256"
       },
       "linux": {
         "name": "Linux",
-        "req": "x64（amd64）· .deb パッケージまたは .tar.gz アーカイブ",
-        "description": "Linux x64 版 SSHYard {version} を .deb パッケージまたは .tar.gz アーカイブでダウンロード。AI アシスタント内蔵の無料 SSH / SFTP クライアント。",
-        "files": {"linux_deb": ".deb パッケージ", "linux_tar": ".tar.gz アーカイブ"},
+        "req": "x64（amd64）または Arm64（aarch64）· .deb パッケージまたは .tar.gz アーカイブ",
+        "description": "Linux x64 / Arm64 版 SSHYard {version} を .deb パッケージまたは .tar.gz アーカイブでダウンロード。AI アシスタント内蔵の無料 SSH / SFTP クライアント。",
+        "files": {"linux_deb": "x64 .deb パッケージ", "linux_tar": "x64 .tar.gz アーカイブ", "linux_deb_arm64": "Arm64 .deb パッケージ", "linux_tar_arm64": "Arm64 .tar.gz アーカイブ"},
         "steps": [".deb はパッケージマネージャーでインストールします。", "または install.sh を .tar.gz と同じ場所に置いて実行すると、~/.local にインストールされます。"],
         "verify": "sha256sum -c --ignore-missing SHA256SUMS"
       }
@@ -223,7 +223,7 @@
     "items": [
       {"q": "SSHYard とは何ですか？", "a": "SSHYard は macOS・Windows・Linux 向けの無料でオープンソースのネイティブ SSH / SFTP クライアントです。タブと分割に対応したターミナル、SFTP ファイルマネージャー、ポートフォワーディング、ホスト上でコマンドを実行できる AI アシスタントをひとつにまとめています。"},
       {"q": "SSHYard は無料ですか？", "a": "はい。SSHYard は無料でダウンロード・利用でき、アカウントも必要ありません。ソースコードは GNU AGPL-3.0 ライセンスで GitHub に公開されています。"},
-      {"q": "対応している OS は？", "a": "macOS 12 以降（Apple シリコンと Intel Mac）、Windows x64、Linux x64（.deb パッケージと .tar.gz アーカイブ）に対応しています。"},
+      {"q": "対応している OS は？", "a": "macOS 12 以降（Apple シリコンと Intel Mac）、Windows x64 / Arm64、Linux x64 / Arm64（.deb パッケージと .tar.gz アーカイブ）に対応しています。"},
       {"q": "SSHYard は Electron や WebView で作られていますか？", "a": "いいえ。インターフェースはすべてネイティブに描画しており、WebView もブラウザーも同梱していません。そのためダウンロードサイズは約 {size} に収まっています。"},
       {"q": "パスワードや鍵はどこに保存されますか？", "a": "あなたのデバイスに暗号化して保存されます。システムのキーチェーンにはランダムなマスターキーだけを置き、パスワード、秘密鍵、パスフレーズ、API キーはそのキーで暗号化してローカルファイルに保存します。バックアップを作らない限りデバイスの外には出ず、バックアップも暗号化してから送られます。"},
       {"q": "AI アシスタントはどう動き、どこまで制御できますか？", "a": "ホストごとのアシスタントがターミナルの文脈を読み取り、SSH 接続でコマンドを実行し、ファイルを編集します。確認モードではあなたの許可を待ち、自動レビューモードではレビューモデルがすべての操作をチェックし、フルアクセスは明示的にオンにしたときだけ有効になります。AI プロバイダーと API キーは自分で設定したものを使います。"},

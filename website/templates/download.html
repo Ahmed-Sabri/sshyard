@@ -41,7 +41,7 @@
       <table class="files">
         <thead><tr><th scope="col">{{ t.download.file }}</th><th scope="col">{{ t.download.size }}</th><th scope="col"><span class="sr">{{ t.download["get"] }}</span></th></tr></thead>
         <tbody>
-          {% for k, label in info.files.items() %}
+          {% for k, label in info.files.items() if k in release.assets %}
           {% set a = release.assets[k] %}
           <tr>
             <td><strong>{{ label }}</strong><code>{{ a.name }}</code></td>

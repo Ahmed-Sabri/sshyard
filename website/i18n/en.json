@@ -62,7 +62,7 @@
     "rows": [
       ["Price", "Free"],
       ["License", "Open source, GNU AGPL-3.0"],
-      ["Platforms", "macOS 12 or later (Apple Silicon and Intel), Windows x64, Linux x64"],
+      ["Platforms", "macOS 12 or later (Apple Silicon and Intel), Windows and Linux (x64 and Arm64)"],
       ["Interface", "Native, drawn without a web view"],
       ["Download size", "About {size}"],
       ["Languages", "English, 简体中文, 繁體中文, 日本語, 한국어"],
@@ -202,17 +202,17 @@
       },
       "windows": {
         "name": "Windows",
-        "req": "Windows x64 · no administrator rights needed",
-        "description": "Download SSHYard {version} for Windows x64: an installer with in-app updates or a portable ZIP. Free SSH and SFTP client with an AI assistant.",
-        "files": {"win_setup": "Installer", "win_portable": "Portable ZIP"},
+        "req": "Windows x64 or Arm64 · no administrator rights needed",
+        "description": "Download SSHYard {version} for Windows x64 and Arm64: an installer with in-app updates or a portable ZIP. Free SSH and SFTP client with an AI assistant.",
+        "files": {"win_setup": "x64 installer", "win_portable": "x64 portable ZIP", "win_setup_arm64": "Arm64 installer", "win_portable_arm64": "Arm64 portable ZIP"},
         "steps": ["The installer installs for the current user into %LOCALAPPDATA%\\Programs and updates from inside the app.", "For the portable version, extract the ZIP into a writable folder and run SSHYard.exe. App data is kept in %APPDATA%\\SSHYard."],
         "verify": "Get-FileHash .\\sshyard-setup-{version}-amd64.exe -Algorithm SHA256"
       },
       "linux": {
         "name": "Linux",
-        "req": "x64 (amd64) · .deb package or .tar.gz archive",
-        "description": "Download SSHYard {version} for Linux x64 as a .deb package or a .tar.gz archive. Free SSH and SFTP client with an AI assistant.",
-        "files": {"linux_deb": ".deb package", "linux_tar": ".tar.gz archive"},
+        "req": "x64 (amd64) or Arm64 (aarch64) · .deb package or .tar.gz archive",
+        "description": "Download SSHYard {version} for Linux x64 and Arm64 as a .deb package or a .tar.gz archive. Free SSH and SFTP client with an AI assistant.",
+        "files": {"linux_deb": "x64 .deb package", "linux_tar": "x64 .tar.gz archive", "linux_deb_arm64": "Arm64 .deb package", "linux_tar_arm64": "Arm64 .tar.gz archive"},
         "steps": ["Install the .deb with your package manager.", "Or put install.sh next to the .tar.gz and run it to install into ~/.local."],
         "verify": "sha256sum -c --ignore-missing SHA256SUMS"
       }
@@ -223,7 +223,7 @@
     "items": [
       {"q": "What is SSHYard?", "a": "SSHYard is a free, open-source native desktop SSH and SFTP client for macOS, Windows and Linux. It combines tabbed and split terminals, an SFTP file manager, port forwarding and an AI assistant that can run commands on the host."},
       {"q": "Is SSHYard free?", "a": "Yes. SSHYard is free to download and use, and it doesn't need an account. Its source code is on GitHub under the GNU AGPL-3.0 license."},
-      {"q": "Which systems does SSHYard run on?", "a": "macOS 12 or later on Apple Silicon and Intel Macs, Windows on x64, and Linux on x64 as a .deb package or a .tar.gz archive."},
+      {"q": "Which systems does SSHYard run on?", "a": "macOS 12 or later on Apple Silicon and Intel Macs, Windows on x64 and Arm64, and Linux on x64 and Arm64 as a .deb package or a .tar.gz archive."},
       {"q": "Is SSHYard built with Electron or a web view?", "a": "No. Its whole interface is drawn natively, without a web view or a bundled browser, which keeps the download at about {size}."},
       {"q": "Where are my passwords and keys stored?", "a": "On your device, encrypted. The system keychain holds only a random master key, and passwords, private keys, passphrases and API keys are encrypted with it in a local file. Nothing leaves the device unless you make a backup, and backups are encrypted before they do."},
       {"q": "How does the AI assistant work, and can I control it?", "a": "Each host has its own assistant that reads the terminal context, runs commands and edits files over the SSH connection. In Ask mode it waits for your approval, in Review mode a review model checks every action, and Full access has to be turned on explicitly. It uses the AI provider and API key you set up."},

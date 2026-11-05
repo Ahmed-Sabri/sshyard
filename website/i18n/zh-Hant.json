@@ -62,7 +62,7 @@
     "rows": [
       ["價格", "免費"],
       ["授權條款", "開放原始碼，GNU AGPL-3.0"],
-      ["平台", "macOS 12 以上（Apple 晶片與 Intel）、Windows x64、Linux x64"],
+      ["平台", "macOS 12 以上（Apple 晶片與 Intel）、Windows 與 Linux（x64 與 Arm64）"],
       ["介面", "原生繪製，不使用 WebView"],
       ["下載大小", "約 {size}"],
       ["語言", "English、简体中文、繁體中文、日本語、한국어"],
@@ -202,17 +202,17 @@
       },
       "windows": {
         "name": "Windows",
-        "req": "Windows x64 · 無需系統管理員權限",
-        "description": "下載 Windows x64 版 SSHYard {version}：支援應用程式內更新的安裝程式，或免安裝的 ZIP。內建 AI 助理的免費 SSH / SFTP 用戶端。",
-        "files": {"win_setup": "安裝程式", "win_portable": "免安裝 ZIP"},
+        "req": "Windows x64 或 Arm64 · 無需系統管理員權限",
+        "description": "下載 Windows x64 與 Arm64 版 SSHYard {version}：支援應用程式內更新的安裝程式，或免安裝的 ZIP。內建 AI 助理的免費 SSH / SFTP 用戶端。",
+        "files": {"win_setup": "x64 安裝程式", "win_portable": "x64 免安裝 ZIP", "win_setup_arm64": "Arm64 安裝程式", "win_portable_arm64": "Arm64 免安裝 ZIP"},
         "steps": ["安裝程式會為目前使用者安裝到 %LOCALAPPDATA%\\Programs，並支援應用程式內更新。", "免安裝版請將 ZIP 解壓縮到可寫入的資料夾，執行 SSHYard.exe 即可；應用程式資料儲存在 %APPDATA%\\SSHYard。"],
         "verify": "Get-FileHash .\\sshyard-setup-{version}-amd64.exe -Algorithm SHA256"
       },
       "linux": {
         "name": "Linux",
-        "req": "x64（amd64）· .deb 套件或 .tar.gz 壓縮檔",
-        "description": "下載 Linux x64 版 SSHYard {version}，提供 .deb 套件和 .tar.gz 壓縮檔。內建 AI 助理的免費 SSH / SFTP 用戶端。",
-        "files": {"linux_deb": ".deb 套件", "linux_tar": ".tar.gz 壓縮檔"},
+        "req": "x64（amd64）或 Arm64（aarch64）· .deb 套件或 .tar.gz 壓縮檔",
+        "description": "下載 Linux x64 與 Arm64 版 SSHYard {version}，提供 .deb 套件和 .tar.gz 壓縮檔。內建 AI 助理的免費 SSH / SFTP 用戶端。",
+        "files": {"linux_deb": "x64 .deb 套件", "linux_tar": "x64 .tar.gz 壓縮檔", "linux_deb_arm64": "Arm64 .deb 套件", "linux_tar_arm64": "Arm64 .tar.gz 壓縮檔"},
         "steps": ["使用系統的套件管理器安裝 .deb。", "或將 install.sh 放在 .tar.gz 旁邊並執行它，安裝到 ~/.local。"],
         "verify": "sha256sum -c --ignore-missing SHA256SUMS"
       }
@@ -223,7 +223,7 @@
     "items": [
       {"q": "SSHYard 是什麼？", "a": "SSHYard 是一款免費開源的原生桌面 SSH / SFTP 用戶端，支援 macOS、Windows 和 Linux。它集多分頁分割終端機、SFTP 檔案管理、連接埠轉發，以及能在主機上執行命令的 AI 助理於一體。"},
       {"q": "SSHYard 免費嗎？", "a": "免費。SSHYard 可以免費下載和使用，也不需要註冊帳號。原始碼以 GNU AGPL-3.0 授權條款發布在 GitHub 上。"},
-      {"q": "SSHYard 支援哪些系統？", "a": "支援 macOS 12 以上（Apple 晶片和 Intel Mac）、Windows x64，以及 Linux x64（提供 .deb 套件和 .tar.gz 壓縮檔）。"},
+      {"q": "SSHYard 支援哪些系統？", "a": "支援 macOS 12 以上（Apple 晶片和 Intel Mac）、Windows x64 與 Arm64，以及 Linux x64 與 Arm64（提供 .deb 套件和 .tar.gz 壓縮檔）。"},
       {"q": "SSHYard 是用 Electron 或 WebView 做的嗎？", "a": "不是。SSHYard 的整個介面都是原生繪製的，不依賴 WebView，也不內建瀏覽器，所以下載檔只有約 {size}。"},
       {"q": "我的密碼和金鑰儲存在哪裡？", "a": "加密儲存在你自己的裝置上。系統鑰匙圈裡只存一把隨機主金鑰，密碼、私鑰、密語和 API 金鑰都以它加密後存入本機檔案。除非你主動備份，否則這些資料不會離開裝置；備份也會先加密再離開。"},
       {"q": "AI 助理是怎麼運作的？我能控制它嗎？", "a": "可以。每臺主機都有獨立的助理，它讀取終端機上下文，透過 SSH 連線執行命令、編輯檔案。詢問模式下每一步都等你同意，自動審核模式下由審核模型檢查每個操作，完全允許模式必須由你明確開啟。助理使用你自己設定的 AI 服務和 API 金鑰。"},

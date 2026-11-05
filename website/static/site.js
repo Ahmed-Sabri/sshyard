@@ -121,52 +121,57 @@
 
   // Apple Silicon unless the browser says Intel: high-entropy hints where
   // available, else the WebGL renderer (Safari reports "Apple GPU").
-  function macArch() {
-    var hints = navigator.userAgentData && navigator.userAgentData.getHighEntropyValues;
-    var webgl = function () {
+  // Windows and Linux are x64 unless the hints or the user agent say Arm
+  // (x64 builds also run emulated on Windows on Arm).
+  function arch(os) {
+    var guess = os === "macos" ? function () {
       try {
         var gl = document.createElement("canvas").getContext("webgl");
         var ext = gl && gl.getExtension("WEBGL_debug_renderer_info");
         var r = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : "";
         return /Intel|AMD|Radeon|NVIDIA/i.test(r) ? "amd64" : "arm64";
       } catch (e) { return "arm64"; }
+    } : function () {
+      return /aarch64|arm64|armv8/i.test(navigator.userAgent || "") ? "arm64" : "amd64";
     };
-    if (!hints) return Promise.resolve(webgl());
+    var hints = navigator.userAgentData && navigator.userAgentData.getHighEntropyValues;
+    if (!hints) return Promise.resolve(guess());
     return navigator.userAgentData.getHighEntropyValues(["architecture"]).then(function (v) {
       if (v.architecture === "x86") return "amd64";
       if (v.architecture === "arm") return "arm64";
-      return webgl();
-    }, webgl);
+      return guess();
+    }, guess);
   }
 
   (function downloads() {
     var os = detectOS();
     if (!os || !data.downloads) return;
     doc.setAttribute("data-os", os);
-    var pick = os === "windows" ? Promise.resolve("win_setup")
-      : os === "linux" ? Promise.resolve("linux")
-      : macArch().then(function (a) { return a === "amd64" ? "mac_amd64" : "mac_arm64"; });
-    pick.then(function (key) {
-      $$("[data-dl-cta]").forEach(function (a) {
-        var label = a.querySelector("[data-dl-label]");
+    arch(os).then(function (a) {
+      var arm = a === "arm64";
+      var key = os === "linux" ? "linux"
+        : os === "windows" ? (arm && data.downloads.win_setup_arm64 ? "win_setup_arm64" : "win_setup")
+        : arm ? "mac_arm64" : "mac_amd64";
+      $$("[data-dl-cta]").forEach(function (el) {
+        var label = el.querySelector("[data-dl-label]");
         if (label && data.cta[os]) label.textContent = data.cta[os];
-        if (key !== "linux") a.href = data.downloads[key].url; else a.href = data.linuxPage;
+        if (key !== "linux") el.href = data.downloads[key].url; else el.href = data.linuxPage;
       });
       var meta = document.querySelector("[data-dl-meta]");
       if (meta && key !== "linux") {
         var d = data.downloads[key];
         meta.textContent = [data.labels[key], d.size].filter(Boolean).join(" · ");
       }
-      // On macOS, the matching chip leads in each card.
-      if (os === "macos") {
-        $$('[data-platform="macos"] .dl-files').forEach(function (list) {
-          var a = list.querySelector('[data-asset="' + key + '"]');
-          if (a && a !== list.firstElementChild) {
-            list.insertBefore(a, list.firstElementChild);
-            $$("a", list).forEach(function (x, i) { x.className = "btn " + (i === 0 ? "btn-primary" : "btn-quiet"); });
-          }
+      // The visitor's architecture leads in their platform's card.
+      $$('[data-platform="' + os + '"] .dl-files').forEach(function (list) {
+        var chips = $$("[data-asset]", list);
+        var mine = chips.filter(function (x) { return /_arm64$/.test(x.getAttribute("data-asset")) === arm; });
+        if (!mine.length || mine[0] === chips[0]) return;
+        mine.concat(chips.filter(function (x) { return mine.indexOf(x) < 0; })).forEach(function (x, i) {
+          list.appendChild(x);
+          x.className = "btn " + (i === 0 ? "btn-primary" : "btn-quiet");
         });
-      }
+      });
     });
   })();
 

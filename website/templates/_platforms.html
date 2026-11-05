@@ -7,7 +7,7 @@
     <h3>{{ info.name }}</h3>
     <p class="muted">{{ info.req }}</p>
     <div class="dl-files">
-      {% for k, label in info.files.items() %}
+      {% for k, label in info.files.items() if k in release.assets %}
       {% set a = release.assets[k] %}
       <a class="btn {{ 'btn-primary' if loop.first else 'btn-quiet' }}" href="{{ a.url }}" data-asset="{{ k }}">{{ icon('download-2-line') }}<span>{{ label }}</span>{% if a.size %}<span class="size">{{ format_size(a.size) }}</span>{% endif %}</a>
       {% endfor %}
