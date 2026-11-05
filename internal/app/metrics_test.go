@@ -300,9 +300,9 @@ func TestMetricsBarMenu(t *testing.T) {
 	a.page = pageWorkspace
 	tt.Frame()
 	waitSample(t, tt)
-	if ex.running.Load() != 1 {
-		t.Fatal("bar did not resume")
-	}
+	// The sample on screen predates the settings page: wait for the
+	// collector, which settings stops, to come back.
+	waitFor(t, tt, "bar resumes", func() bool { return ex.running.Load() == 1 })
 	if err := tt.RightClick("CPU 50%"); err != nil {
 		t.Fatal(err)
 	}
