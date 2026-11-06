@@ -223,6 +223,7 @@ func TestStartupRestoresSavedAILayout(t *testing.T) {
 	}
 	defer srv.Close()
 	dir := t.TempDir()
+	rememberLayoutIn(t, dir)
 	system := keychain.NewMemory()
 	a, tt := appIn(t, dir, system)
 	term := connected(t, a, tt, srv)
