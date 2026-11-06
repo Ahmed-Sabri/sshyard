@@ -391,6 +391,9 @@ func TestFilesSplit(t *testing.T) {
 	if a.filesSplit != 50 {
 		t.Fatalf("split %v", a.filesSplit)
 	}
+	// The sidebar's own divider would be found first.
+	a.setSidebarHidden(true)
+	tt.Frame()
 	lx, ly := center(t, tt, "Local")
 	rx, _ := center(t, tt, "Remote")
 	r, ok := tt.Find("Divider")
@@ -437,7 +440,8 @@ func TestFilesSplit(t *testing.T) {
 // between them drags up and down.
 func TestFilesSplitStacked(t *testing.T) {
 	a, tt, _, _ := filesPane(t)
-	tt.SetSize(760, 900)
+	a.setSidebarHidden(true)
+	tt.SetSize(520, 900)
 	tt.Frame()
 	tt.Frame()
 	lx, ly := center(t, tt, "Local")

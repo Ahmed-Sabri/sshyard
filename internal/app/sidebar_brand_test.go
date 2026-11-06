@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/Licoy/sshyard/internal/assets"
+	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/locales"
 	"github.com/egoist/mygo/ui"
 )
@@ -32,8 +33,12 @@ func TestSidebarCounts(t *testing.T) {
 						if count.X != 12 || count.Y < 500-statusBarHeight {
 							t.Fatalf("host count is not at the sidebar bottom left: %v", count)
 						}
-						if connections.X+connections.W > width-11 || connections.X+connections.W < width-13 {
-							t.Fatalf("connection count is not at the sidebar right: %v", connections)
+						hide := mustFind(t, tt, locales.In(lang).HideSidebar())
+						if hide.X+hide.W > width-5 || hide.X+hide.W < width-7 {
+							t.Fatalf("hide sidebar is not at the sidebar right: %v", hide)
+						}
+						if connections.X+connections.W > hide.X-theme.Space(2)+1 || connections.X+connections.W < hide.X-theme.Space(2)-1 {
+							t.Fatalf("connection count %v is not just before hide sidebar %v", connections, hide)
 						}
 						if count.X+count.W > connections.X-11 {
 							t.Fatalf("host count %v overlaps connections %v", count, connections)
