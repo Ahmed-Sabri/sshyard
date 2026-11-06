@@ -1687,6 +1687,8 @@
   "outputEncodingCP866": "CP866 · DOS 西里尔字母",
   "outputEncodingGB2312Note": "使用 GBK 兼容解码",
   "outputEncodingError": "无法切换输出编码：{error}",
+  "terminalEncoding": "终端编码",
+  "terminalEncodingHint": "此主机新建的终端将按此编码解码输出。",
   "errSerialNotFound": "{device} 未连接。请插入设备或选择其他端口。",
   "errSerialBusy": "{device} 正被其他程序占用。",
   "errSerialPermission": "没有打开 {device} 的权限。Linux 上请把当前用户加入 dialout 组。",

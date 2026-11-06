@@ -14,6 +14,7 @@ import (
 	"github.com/Licoy/sshyard/internal/session"
 	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/internal/theme"
+	"github.com/Licoy/sshyard/internal/vt"
 	"github.com/Licoy/sshyard/locales"
 	"github.com/egoist/mygo/ui"
 )
@@ -51,6 +52,9 @@ type hostForm struct {
 	dirsOpen                     bool
 	// tmux is the tmux session the host's terminals attach to (Host.Tmux)
 	tmux string
+	// encoding is the output encoding of the host's new terminals
+	// (Host.Encoding)
+	encoding vt.OutputEncoding
 	// osc52 is the override's label once Advanced is open; osc52Code is
 	// the saved policy ("", allow, ask, deny), so a save before that
 	// keeps it. advOpen shows Advanced.
@@ -119,7 +123,7 @@ func (a *App) openEditor(h *assets.Host) {
 		return
 	}
 
-	f := &hostForm{isNew: h == nil, port: "22", cwdFollow: true}
+	f := &hostForm{isNew: h == nil, port: "22", cwdFollow: true, encoding: vt.EncodingUTF8}
 	f.loadStream(h)
 	f.loadRenewal(h, time.Now())
 	if h != nil {
@@ -138,6 +142,9 @@ func (a *App) openEditor(h *assets.Host) {
 		f.netOpen = f.proxy != "" || len(f.jumps) > 0
 		f.termDir, f.remoteDir, f.localDir = h.TerminalDir, h.RemoteDir, h.LocalDir
 		f.tmux = h.Tmux
+		if e := vt.OutputEncoding(h.Encoding); slices.Contains(vt.OutputEncodings(), e) {
+			f.encoding = e
+		}
 		f.dirsOpen = f.termDir != "" || f.remoteDir != "" || f.localDir != ""
 		f.osc52Code = h.OSC52
 		f.advOpen = h.OSC52 != ""
@@ -273,6 +280,7 @@ func (a *App) SaveForm(m locales.Messages) bool {
 	h.JumpChain = slices.Clone(f.jumps)
 	h.TerminalDir, h.RemoteDir, h.LocalDir = f.termDir, f.remoteDir, f.localDir
 	h.Tmux = strings.TrimSpace(f.tmux)
+	h.Encoding = string(f.encoding)
 	if h.SSH() && h.Tmux != "" && !session.TmuxNameOK(h.Tmux) {
 		f.err = m.TmuxNameInvalid()
 		return false
@@ -479,6 +487,7 @@ func (a *App) editorView(c *ui.Context, m locales.Messages) {
 						} else {
 							a.streamTermFields(c, m, tok, f)
 						}
+						encodingField(c, m, tok, f)
 						ui.Field(c, "", func() {
 							ui.Collapsible(c.Key("f:renewal"), m.RenewalSection(), &f.renewOpen, func() {
 								a.renewalFields(c, m, tok, f)
@@ -630,6 +639,27 @@ func (a *App) dirFields(c *ui.Context, m locales.Messages, tok theme.Tokens, f *
 			})
 		}
 		ui.Text(c, m.DefaultDirsHint()).FontSize(theme.Caption).TextColor(tok.TextMuted)
+	})
+}
+
+// encodingField is the output encoding the host's new terminals start
+// with; each open terminal still switches its own.
+func encodingField(c *ui.Context, m locales.Messages, tok theme.Tokens, f *hostForm) {
+	ui.Field(c, m.TerminalEncoding(), func() {
+		ui.Column(c).Gap(4).FillWidth().Children(func() {
+			encodings := vt.OutputEncodings()
+			labels := make([]string, len(encodings))
+			for i, e := range encodings {
+				labels[i] = outputEncodingLabel(m, e)
+			}
+			label := outputEncodingLabel(m, f.encoding)
+			if formSelect(c.Key("f:enc"), &label, labels).Label(m.TerminalEncoding()).FillWidth().Changed() {
+				if i := slices.Index(labels, label); i >= 0 {
+					f.encoding = encodings[i]
+				}
+			}
+			ui.Text(c, m.TerminalEncodingHint()).FontSize(theme.Caption).TextColor(tok.TextMuted)
+		})
 	})
 }
 

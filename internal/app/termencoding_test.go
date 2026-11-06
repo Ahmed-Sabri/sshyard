@@ -389,3 +389,80 @@ func TestOutputEncodingLongMenu(t *testing.T) {
 		t.Fatal("keyboard did not restore UTF-8")
 	}
 }
+
+func TestHostEncodingEditor(t *testing.T) {
+	srv, _ := startScript(t, "ready")
+	a, tt := newTestApp(t)
+	tt.SetSize(1200, 2000)
+	m := locales.In("en")
+	h := addHost(t, a, srv, "box", "secret")
+	a.known.Add(srv.Addr, srv.HostKey.PublicKey())
+	a.openEditor(&h)
+	tt.Frame()
+	if !tt.HasText(m.TerminalEncoding()) || !tt.HasText(m.TerminalEncodingHint()) {
+		t.Fatalf("no encoding field: %q", tt.Texts())
+	}
+	mustClick(t, tt, m.OutputEncodingUTF8())
+	mustClick(t, tt, m.OutputEncodingGBKLabel())
+	tt.Frame()
+	if a.form == nil || a.form.encoding != vt.EncodingGBK {
+		t.Fatalf("form encoding %v", a.form)
+	}
+	mustClick(t, tt, m.Save())
+	tt.Frame()
+	if got, _ := a.Store().Get(h.ID); got.Encoding != string(vt.EncodingGBK) {
+		t.Fatalf("saved %q", got.Encoding)
+	}
+	h, _ = a.Store().Get(h.ID)
+	a.openEditor(&h)
+	tt.Frame()
+	if a.form.encoding != vt.EncodingGBK || !hasExact(tt, m.OutputEncodingGBKLabel()) {
+		t.Fatalf("reopened %q", a.form.encoding)
+	}
+	a.form, a.editing = nil, false
+
+	a.Connect(h.ID, openAt{})
+	cn := a.focused()
+	waitFor(t, tt, "connected", func() bool { return cn.s.Status().State == session.Connected })
+	if cn.s.Term.OutputEncoding() != vt.EncodingGBK {
+		t.Fatalf("new terminal encoding %q", cn.s.Term.OutputEncoding())
+	}
+
+	// Back to UTF-8 is saved as the default, and new terminals follow it.
+	a.openEditor(&h)
+	tt.Frame()
+	mustClick(t, tt, m.OutputEncodingGBKLabel())
+	mustClick(t, tt, m.OutputEncodingUTF8())
+	mustClick(t, tt, m.Save())
+	tt.Frame()
+	if got, _ := a.Store().Get(h.ID); got.Encoding != "" {
+		t.Fatalf("UTF-8 saved as %q", got.Encoding)
+	}
+	if cn.s.Term.OutputEncoding() != vt.EncodingGBK {
+		t.Fatal("saving changed an open terminal")
+	}
+}
+
+func TestHostEncodingUnknown(t *testing.T) {
+	srv, _ := startScript(t, "ready")
+	a, tt := newTestApp(t)
+	h := addHost(t, a, srv, "box", "secret")
+	h.Encoding = "EBCDIC"
+	h, err := a.Store().Update(h)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a.known.Add(srv.Addr, srv.HostKey.PublicKey())
+	a.openEditor(&h)
+	tt.Frame()
+	if a.form.encoding != vt.EncodingUTF8 {
+		t.Fatalf("form encoding %q", a.form.encoding)
+	}
+	a.form, a.editing = nil, false
+	a.Connect(h.ID, openAt{})
+	cn := a.focused()
+	waitFor(t, tt, "connected", func() bool { return cn.s.Status().State == session.Connected })
+	if cn.s.Term.OutputEncoding() != vt.EncodingUTF8 {
+		t.Fatalf("terminal encoding %q", cn.s.Term.OutputEncoding())
+	}
+}

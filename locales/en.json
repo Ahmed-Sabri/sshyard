@@ -2410,6 +2410,8 @@
   "outputEncodingCP866": "CP866 · DOS Cyrillic",
   "outputEncodingGB2312Note": "Decoded with GBK for compatibility",
   "outputEncodingError": "Could not change output encoding: {error}",
+  "terminalEncoding": "Terminal encoding",
+  "terminalEncodingHint": "New terminals of this host decode output with this encoding.",
   "errSerialNotFound": "{device} isn’t connected. Plug in the device or choose another port.",
   "errSerialBusy": "{device} is in use by another program.",
   "errSerialPermission": "Not allowed to open {device}. On Linux, add your user to the dialout group.",

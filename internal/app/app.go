@@ -975,6 +975,10 @@ func (a *App) makeConn(hostID string, kind layout.Kind, link int) (*conn, error)
 		c.fs.transfers.Client = a.transferClient(c)
 		c.fs.transfers.SetConcurrency(a.settings.TransferConcurrency)
 	} else {
+		if h.Encoding != "" {
+			// An encoding this version does not know stays UTF-8.
+			_ = c.s.Term.SetOutputEncoding(vt.OutputEncoding(h.Encoding))
+		}
 		c.tv = newTermView(sessTarget{c.s}, float32(a.settings.TerminalFontSize))
 		c.tv.inputError = a.snippetSendResult
 		c.tv.family = a.termFamily()

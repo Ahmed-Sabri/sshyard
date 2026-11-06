@@ -120,6 +120,9 @@ type Host struct {
 	// LocalEcho shows what is typed to a Telnet or serial host that
 	// does not echo it.
 	LocalEcho bool `json:"localEcho,omitempty"`
+	// Encoding is the output encoding the host's new terminals decode
+	// with, a vt.OutputEncoding; empty is UTF-8.
+	Encoding string `json:"encoding,omitempty"`
 	// Provider is who the server is rented from, as the user names it.
 	Provider string `json:"provider,omitempty"`
 	// Renewal is the host's subscription; its zero value keeps none.
@@ -195,6 +198,9 @@ func (h *Host) Normalize() {
 	h.Group = strings.TrimSpace(h.Group)
 	h.Provider, h.Note = strings.TrimSpace(h.Provider), strings.TrimSpace(h.Note)
 	h.Tmux = strings.TrimSpace(h.Tmux)
+	if h.Encoding = strings.TrimSpace(h.Encoding); h.Encoding == "UTF-8" {
+		h.Encoding = ""
+	}
 	h.Renewal.normalize()
 	h.Icon = IconText(h.Icon)
 	if _, ok := theme.LightTokens().TintNamed(h.Color); !ok {

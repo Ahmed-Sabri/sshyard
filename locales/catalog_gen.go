@@ -15133,6 +15133,26 @@ func (msgs Messages) OutputEncodingError(error string) string {
 	return Catalog.Format(msgs.locale, "outputEncodingError", map[string]any{"error": error})
 }
 
+// TerminalEncoding says "Terminal encoding"
+// in the language the app shows.
+func TerminalEncoding() string { return In(i18n.Locale()).TerminalEncoding() }
+
+// TerminalEncoding says "Terminal encoding"
+// in the language of msgs.
+func (msgs Messages) TerminalEncoding() string {
+	return Catalog.Format(msgs.locale, "terminalEncoding", nil)
+}
+
+// TerminalEncodingHint says "New terminals of this host decode output with this encoding."
+// in the language the app shows.
+func TerminalEncodingHint() string { return In(i18n.Locale()).TerminalEncodingHint() }
+
+// TerminalEncodingHint says "New terminals of this host decode output with this encoding."
+// in the language of msgs.
+func (msgs Messages) TerminalEncodingHint() string {
+	return Catalog.Format(msgs.locale, "terminalEncodingHint", nil)
+}
+
 // ErrSerialNotFound says "{device} isn’t connected. Plug in the device or choose another port."
 // in the language the app shows.
 func ErrSerialNotFound(device string) string { return In(i18n.Locale()).ErrSerialNotFound(device) }

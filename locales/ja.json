@@ -1687,6 +1687,8 @@
   "outputEncodingCP866": "CP866 · DOS キリル文字",
   "outputEncodingGB2312Note": "互換性のため GBK でデコード",
   "outputEncodingError": "出力エンコーディングを変更できません：{error}",
+  "terminalEncoding": "ターミナルのエンコーディング",
+  "terminalEncodingHint": "このホストで新しく開くターミナルは、このエンコーディングで出力をデコードします。",
   "errSerialNotFound": "{device} が接続されていません。デバイスを接続するか、別のポートを選んでください。",
   "errSerialBusy": "{device} は別のプログラムが使用中です。",
   "errSerialPermission": "{device} を開く権限がありません。Linux ではユーザーを dialout グループに追加してください。",
