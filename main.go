@@ -108,8 +108,10 @@ func ownWindowButtons() bool { return runtime.GOOS != "darwin" }
 func main() {
 	mygo.Use(updatePlugin())
 	mygo.App.WhenReady(func() {
-		// Linux: size the window buttons' bar to its buttons (see gtkfix).
+		// Linux: size the window buttons' bar to its buttons, and keep text
+		// in its color with cairo before 1.17.8 (see gtkfix).
 		gtkfix.Apply()
+		gtkfix.TextColor()
 		// Startup failures are presented with safe, localized diagnostics in the UI.
 		var d *desktop
 		p := platform()
