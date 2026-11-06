@@ -39,6 +39,11 @@ type Settings struct {
 	KeepAliveSeconds    int     `json:"keepAliveSeconds"`
 	AutoReconnect       bool    `json:"autoReconnect"`
 	SidebarWidth        float32 `json:"sidebarWidth"`
+	// TerminalLineHeight and TerminalCharWidth are the height of the
+	// terminal's rows and the width of its cells, in percent of the
+	// font's own line and advance.
+	TerminalLineHeight int `json:"terminalLineHeight"`
+	TerminalCharWidth  int `json:"terminalCharWidth"`
 	// SidebarHidden hides the hosts' sidebar beside the workspace.
 	SidebarHidden bool `json:"sidebarHidden,omitempty"`
 	// Privacy masks the IP addresses the app shows, for a screen share
@@ -559,6 +564,12 @@ const (
 	TrayIconColor = "color"
 )
 
+// The bounds of TerminalLineHeight and TerminalCharWidth, in percent.
+const (
+	MinLineHeight, MaxLineHeight = 80, 200
+	MinCharWidth, MaxCharWidth   = 80, 150
+)
+
 // Terminal cursor shapes.
 const (
 	CursorBlock     = "block"
@@ -568,7 +579,7 @@ const (
 
 // Default returns the defaults.
 func Default() Settings {
-	return Settings{Background: DefaultBackground(), RememberLayout: true, Theme: theme.Auto, CloseBehavior: CloseToTray, TrayIcon: TrayIconColor, CheckUpdates: true, UpdateIntervalHours: 1, TerminalFontSize: 13, TerminalCursorStyle: CursorBlock, TerminalCursorBlink: true, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, FilesSplit: 50, FilesEdge: FilesRight, TerminalRightClick: RightClickMenu, EditorTreeWidth: 240, OSC52Write: OSC52Ask, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
+	return Settings{Background: DefaultBackground(), RememberLayout: true, Theme: theme.Auto, CloseBehavior: CloseToTray, TrayIcon: TrayIconColor, CheckUpdates: true, UpdateIntervalHours: 1, TerminalFontSize: 13, TerminalLineHeight: 100, TerminalCharWidth: 100, TerminalCursorStyle: CursorBlock, TerminalCursorBlink: true, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, FilesSplit: 50, FilesEdge: FilesRight, TerminalRightClick: RightClickMenu, EditorTreeWidth: 240, OSC52Write: OSC52Ask, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
 		AIDefaultAgent: "builtin", AIDefaultMode: "ask", AIReviewStrictness: AIReviewStandard, AIContextLines: 200, AIAuditRetentionDays: 90, AIRedact: true, MCPPort: MCPPortDefault, LocalKeys: true, Highlight: Highlight{On: true}, RenewalNotify: true}
 }
 
@@ -620,6 +631,12 @@ func (s *Settings) Normalize() {
 	}
 	if s.TerminalFontSize < 8 || s.TerminalFontSize > 32 {
 		s.TerminalFontSize = d.TerminalFontSize
+	}
+	if s.TerminalLineHeight < MinLineHeight || s.TerminalLineHeight > MaxLineHeight {
+		s.TerminalLineHeight = d.TerminalLineHeight
+	}
+	if s.TerminalCharWidth < MinCharWidth || s.TerminalCharWidth > MaxCharWidth {
+		s.TerminalCharWidth = d.TerminalCharWidth
 	}
 	if s.KeepAliveSeconds < 0 || s.KeepAliveSeconds > 600 {
 		s.KeepAliveSeconds = d.KeepAliveSeconds

@@ -64,7 +64,10 @@ type termView struct {
 
 	// font
 	fontSize            float32
-	family              string // the font family list; "" is "monospace"
+	family              string     // the font family list; "" is "monospace"
+	lineHeight          float32    // the rows' height, a multiple of the font's line; 0 is 1
+	charWidth           float32    // the cells' width, a multiple of the font's advance; 0 is 1
+	spaced              [2]float32 // lineHeight and charWidth, as last measured
 	scale               float32
 	cellW, cellH, base  float32 // DIPs, whole device pixels
 	fonts               [4]ui.Font
@@ -125,10 +128,11 @@ func (v *termView) metrics(scale float32) {
 	if fam == "" {
 		fam = "monospace"
 	}
-	if v.cellW > 0 && v.scale == scale && v.fonts[0].Size == v.fontSize && v.fonts[0].Family == fam {
+	spacing := [2]float32{v.lineHeight, v.charWidth}
+	if v.cellW > 0 && v.scale == scale && v.fonts[0].Size == v.fontSize && v.fonts[0].Family == fam && v.spaced == spacing {
 		return
 	}
-	v.scale = scale
+	v.scale, v.spaced = scale, spacing
 	for i := range v.fonts {
 		f := ui.Font{Family: fam, Size: v.fontSize, Weight: 400}
 		if i&1 != 0 {
@@ -149,6 +153,12 @@ func (v *termView) metrics(scale float32) {
 	if h <= 0 {
 		h = v.fontSize * 1.25
 		m.Ascent = v.fontSize
+	}
+	if v.lineHeight > 0 {
+		h *= v.lineHeight
+	}
+	if v.charWidth > 0 {
+		adv *= v.charWidth
 	}
 	cw := max(float32(math.Ceil(float64(adv*scale-0.05))), 1)
 	ch := max(float32(math.Ceil(float64(h*scale-0.05))), 1)

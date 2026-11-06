@@ -777,6 +777,53 @@ func TestFontSettings(t *testing.T) {
 	}
 }
 
+// TestTerminalSpacing sets the terminal's line height and character
+// width: the open terminal's cells grow, and fewer fit.
+func TestTerminalSpacing(t *testing.T) {
+	srv, err := sshtest.Start("127.0.0.1:0", "demo", "secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer srv.Close()
+	a, tt := newTestApp(t)
+	h := addHost(t, a, srv, "box", "secret")
+	a.known.Add(srv.Addr, srv.HostKey.PublicKey())
+	a.Connect(h.ID, openAt{})
+	c := a.focused()
+	tt.Frame()
+	w, ht, cols, rows := c.tv.cellW, c.tv.cellH, c.tv.cols, c.tv.rows
+	if w == 0 || ht == 0 {
+		t.Fatalf("not measured: %v×%v", w, ht)
+	}
+	a.openSettings(prefTerminal)
+	tt.Frame()
+	for _, s := range []string{"Line height", "Character width"} {
+		if !tt.HasText(s) {
+			t.Errorf("terminal settings miss %q: %q", s, tt.Texts())
+		}
+	}
+	s := a.Settings()
+	s.TerminalLineHeight, s.TerminalCharWidth = 150, 120
+	if err := a.ApplySettings(s); err != nil {
+		t.Fatal(err)
+	}
+	a.page = pageWorkspace
+	tt.Frame()
+	if c.tv.cellH < ht*1.4 || c.tv.cellW < w*1.1 {
+		t.Errorf("cells %v×%v, were %v×%v", c.tv.cellW, c.tv.cellH, w, ht)
+	}
+	if c.tv.cols >= cols || c.tv.rows >= rows {
+		t.Errorf("grid %d×%d, was %d×%d", c.tv.cols, c.tv.rows, cols, rows)
+	}
+	// Back to the font's own.
+	s.TerminalLineHeight, s.TerminalCharWidth = 100, 100
+	a.ApplySettings(s)
+	tt.Frame()
+	if c.tv.cellW != w || c.tv.cellH != ht {
+		t.Errorf("cells %v×%v, want %v×%v", c.tv.cellW, c.tv.cellH, w, ht)
+	}
+}
+
 // TestDragPaneToEdge drags the rightmost pane by its header onto the
 // bottom of the first, as a user does, through the window's pointer.
 func TestDragPaneToEdge(t *testing.T) {

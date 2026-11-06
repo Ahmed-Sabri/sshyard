@@ -356,6 +356,8 @@ type App struct {
 	langChoice   string
 	fontChoice   float64
 	keepChoice   float64
+	// the terminal's row height and cell width, in percent, as edited
+	lineChoice, widthChoice float64
 	// toasts are shown at the next frame, said from outside one
 	toasts []func(m locales.Messages) ui.Toast
 	// chatList are the saved AI conversations of each host, as last read.
@@ -611,6 +613,8 @@ func (a *App) syncChoices() {
 	a.lkMCP.Store(a.settings.LocalKeys && a.settings.LocalKeysMCP)
 	a.langChoice = a.settings.Language
 	a.fontChoice = float64(a.settings.TerminalFontSize)
+	a.lineChoice = float64(a.settings.TerminalLineHeight)
+	a.widthChoice = float64(a.settings.TerminalCharWidth)
 	a.keepChoice = float64(a.settings.KeepAliveSeconds)
 	a.concChoice = float64(a.settings.TransferConcurrency)
 	a.openMBChoice = float64(a.settings.OpenConfirmMB)
@@ -684,10 +688,11 @@ func (a *App) ApplySettings(s settings.Settings) error {
 	if !reflect.DeepEqual(s.Highlight, old.Highlight) {
 		a.hl = nil
 	}
-	if s.TerminalFontSize != old.TerminalFontSize {
+	if s.TerminalFontSize != old.TerminalFontSize || s.TerminalLineHeight != old.TerminalLineHeight || s.TerminalCharWidth != old.TerminalCharWidth {
 		for _, c := range a.conns {
 			if c.tv != nil {
 				c.tv.fontSize = float32(s.TerminalFontSize)
+				a.spaceTerm(c.tv)
 			}
 		}
 	}
@@ -965,6 +970,7 @@ func (a *App) makeConn(hostID string, kind layout.Kind, link int) (*conn, error)
 		c.tv = newTermView(sessTarget{c.s}, float32(a.settings.TerminalFontSize))
 		c.tv.inputError = a.snippetSendResult
 		c.tv.family = a.termFamily()
+		a.spaceTerm(c.tv)
 		a.armOSC52(c)
 		if a.termSeq == nil {
 			a.termSeq = map[string]int{}

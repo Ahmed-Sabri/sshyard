@@ -478,6 +478,16 @@ func (a *App) prefTerminal(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 				*changed = true
 			}
 		})
+		g.row(m.TerminalLineHeight(), m.TerminalLineHeightNote(), func() {
+			if ui.NumberInput(c.Key("lineheight"), &a.lineChoice, settings.MinLineHeight, settings.MaxLineHeight, 5).Label(m.TerminalLineHeight()).Changed() {
+				s.TerminalLineHeight, *changed = int(a.lineChoice), true
+			}
+		})
+		g.row(m.TerminalCharWidth(), m.TerminalCharWidthNote(), func() {
+			if ui.NumberInput(c.Key("charwidth"), &a.widthChoice, settings.MinCharWidth, settings.MaxCharWidth, 5).Label(m.TerminalCharWidth()).Changed() {
+				s.TerminalCharWidth, *changed = int(a.widthChoice), true
+			}
+		})
 		a.termFontPreview(c, tok)
 	})
 	a.highlightSection(c, m, tok, s, changed)

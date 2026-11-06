@@ -129,15 +129,29 @@ func (a *App) uiFontPreview(c *ui.Context, m locales.Messages, tok theme.Tokens)
 	})
 }
 
+// spaceTerm sets the terminal's row height and cell width from the
+// settings.
+func (a *App) spaceTerm(tv *termView) {
+	tv.lineHeight = float32(a.settings.TerminalLineHeight) / 100
+	tv.charWidth = float32(a.settings.TerminalCharWidth) / 100
+}
+
 func (a *App) termFontPreview(c *ui.Context, tok theme.Tokens) {
 	pal := a.termPalette(tok)
 	fam := a.termFamily()
 	size := float32(a.settings.TerminalFontSize)
+	// The rows and the cells as the terminal measures them, the cells'
+	// extra width spread after each character.
+	tv := termView{fontSize: size, family: fam}
+	tv.metrics(1)
+	natural := tv.cellW
+	a.spaceTerm(&tv)
+	tv.metrics(1)
 	line := func(parts ...ui.Span) {
 		for i := range parts {
 			parts[i].Font = fam
 		}
-		ui.RichText(c, parts...).FontSize(size)
+		ui.RichText(c, parts...).FontSize(size).LineHeight(tv.cellH / size).LetterSpacing(tv.cellW - natural)
 	}
 	// The padding is the card's inset: a margin would add to the width.
 	ui.Column(c.Key("termpreview")).FillWidth().Padding(0, 14, 12, 14).Children(func() {

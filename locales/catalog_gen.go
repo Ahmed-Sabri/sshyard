@@ -1173,6 +1173,46 @@ func (msgs Messages) FontSize() string {
 	return Catalog.Format(msgs.locale, "fontSize", nil)
 }
 
+// TerminalLineHeight says "Line height"
+// in the language the app shows.
+func TerminalLineHeight() string { return In(i18n.Locale()).TerminalLineHeight() }
+
+// TerminalLineHeight says "Line height"
+// in the language of msgs.
+func (msgs Messages) TerminalLineHeight() string {
+	return Catalog.Format(msgs.locale, "terminalLineHeight", nil)
+}
+
+// TerminalLineHeightNote says "Percent of the font's own line height"
+// in the language the app shows.
+func TerminalLineHeightNote() string { return In(i18n.Locale()).TerminalLineHeightNote() }
+
+// TerminalLineHeightNote says "Percent of the font's own line height"
+// in the language of msgs.
+func (msgs Messages) TerminalLineHeightNote() string {
+	return Catalog.Format(msgs.locale, "terminalLineHeightNote", nil)
+}
+
+// TerminalCharWidth says "Character width"
+// in the language the app shows.
+func TerminalCharWidth() string { return In(i18n.Locale()).TerminalCharWidth() }
+
+// TerminalCharWidth says "Character width"
+// in the language of msgs.
+func (msgs Messages) TerminalCharWidth() string {
+	return Catalog.Format(msgs.locale, "terminalCharWidth", nil)
+}
+
+// TerminalCharWidthNote says "Percent of the font's own character width"
+// in the language the app shows.
+func TerminalCharWidthNote() string { return In(i18n.Locale()).TerminalCharWidthNote() }
+
+// TerminalCharWidthNote says "Percent of the font's own character width"
+// in the language of msgs.
+func (msgs Messages) TerminalCharWidthNote() string {
+	return Catalog.Format(msgs.locale, "terminalCharWidthNote", nil)
+}
+
 // KeepAlive says "Keepalive interval (seconds)"
 // in the language the app shows.
 func KeepAlive() string { return In(i18n.Locale()).KeepAlive() }
