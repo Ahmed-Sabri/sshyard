@@ -40,7 +40,7 @@ func (a *App) aiPane(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, tok
 	}
 	head := ui.Column(c.Key("aihead")).Shrink(0).FillWidth()
 	head.Children(func() {
-		row := ui.Row(c.Key("head")).Height(paneHeadHeight).Shrink(0).Padding(0, 6, 0, 10).Gap(8).AlignItems(ui.Center).Drag(dragSession{cn.id}).Label(m.PaneActions())
+		row := ui.Row(c.Key("head")).Height(paneHeadHeight).Shrink(0).Padding(0, 6, 0, 10).Gap(8).AlignItems(ui.Center).Drag(dragSession{ID: cn.id}).Label(m.PaneActions())
 		row.Children(func() {
 			softTile(c, kindIcon(layout.AI, t.Focus == n.ID), hostTint(tok, a.liveHost(cn.host)), paneHeadIcon)
 			title := ui.Text(c, m.AiPane(a.pv(cn.host.Label()))).FontWeight(600).FontSize(theme.Footnote).SingleLine().Shrink(1).MinWidth(0)

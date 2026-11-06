@@ -7,6 +7,8 @@
 // out of its old pane. Item IDs are unique across kinds.
 package layout
 
+import "slices"
+
 // Kind is what a pane shows.
 type Kind int
 
@@ -366,6 +368,27 @@ func (w *Workspace) Replace(old int, item Item) bool {
 	p.Item = item
 	w.Activate(item.ID)
 	return true
+}
+
+// MoveTab puts the tab of ID tabID before the tab of ID target, or after
+// it, and keeps the shown tab shown. It reports whether the order changed.
+func (w *Workspace) MoveTab(tabID, target int, after bool) bool {
+	byID := func(id int) func(*Tab) bool { return func(t *Tab) bool { return t.ID == id } }
+	from := slices.IndexFunc(w.Tabs, byID(tabID))
+	if from < 0 || tabID == target || !slices.ContainsFunc(w.Tabs, byID(target)) {
+		return false
+	}
+	shown, t := w.ActiveTab(), w.Tabs[from]
+	w.Tabs = slices.Delete(w.Tabs, from, from+1)
+	to := slices.IndexFunc(w.Tabs, byID(target))
+	if after {
+		to++
+	}
+	w.Tabs = slices.Insert(w.Tabs, to, t)
+	if shown != nil {
+		w.Active = slices.Index(w.Tabs, shown)
+	}
+	return to != from
 }
 
 // TabOf is the tab with the pane of node ID pane, nil for none.

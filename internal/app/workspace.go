@@ -15,8 +15,9 @@ import (
 )
 
 // dragSession is a pane, terminal or files, dragged by its tab or its
-// header.
-type dragSession struct{ ID int }
+// header; Tab is the tab's ID when it is dragged by its tab, which moves
+// the tab when it is dropped on another, 0 by its header.
+type dragSession struct{ ID, Tab int }
 
 // paneDrop is what a pane takes dropped: a dragSession or a dragHost.
 type paneDrop interface{ paneDrop() }
@@ -344,7 +345,7 @@ func (a *App) paneView(c *ui.Context, t *layout.Tab, n *layout.Node, tok theme.T
 				a.aiPane(c, t, n, cn, tok, m)
 				return
 			}
-			head := ui.Row(c.Key("head")).Height(paneHeadHeight).Shrink(0).Padding(0, 6, 0, 10).Gap(8).AlignItems(ui.Center).Drag(dragSession{cn.id}).Label(m.PaneActions())
+			head := ui.Row(c.Key("head")).Height(paneHeadHeight).Shrink(0).Padding(0, 6, 0, 10).Gap(8).AlignItems(ui.Center).Drag(dragSession{ID: cn.id}).Label(m.PaneActions())
 			head.Children(func() {
 				// How its session is first; then a terminal shows its host
 				// as the sidebar does, the others what they are, in its

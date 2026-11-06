@@ -101,6 +101,33 @@ func TestMove(t *testing.T) {
 	}
 }
 
+func TestMoveTab(t *testing.T) {
+	w := New()
+	w.Open(T(1))
+	w.Open(T(2))
+	w.Open(T(3))
+	order := func() (out []int) {
+		for _, tab := range w.Tabs {
+			out = append(out, tab.Focused().ID)
+		}
+		return out
+	}
+	id := func(i int) int { return w.Tabs[i].ID }
+	shown := w.ActiveTab()
+	if !w.MoveTab(id(2), id(0), false) || !slices.Equal(order(), []int{3, 1, 2}) || w.ActiveTab() != shown {
+		t.Fatalf("before: %v, active %d", order(), w.Active)
+	}
+	if !w.MoveTab(id(0), id(2), true) || !slices.Equal(order(), []int{1, 2, 3}) || w.ActiveTab() != shown {
+		t.Fatalf("after: %v, active %d", order(), w.Active)
+	}
+	if w.MoveTab(id(0), id(1), false) || w.MoveTab(id(1), id(0), true) || w.MoveTab(id(1), id(1), true) || w.MoveTab(-1, id(0), false) || w.MoveTab(id(0), -1, false) {
+		t.Errorf("a move that changes nothing reported one: %v", order())
+	}
+	if !slices.Equal(order(), []int{1, 2, 3}) {
+		t.Errorf("order %v", order())
+	}
+}
+
 func TestPlace(t *testing.T) {
 	w := New()
 	tab := w.Open(T(1))

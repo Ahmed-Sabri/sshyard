@@ -176,9 +176,10 @@ func (a *App) tab(c *ui.Context, m locales.Messages, tok theme.Tokens, fill ui.C
 	chip := ui.Row(c.Key("tab:"+strconv.Itoa(t.ID))).Height(tabHeight).Gap(8).Padding(0, 6, foot, 10).Width(tabWidth).Shrink(1).MinWidth(tabMinWidth).
 		AlignItems(ui.Center).Radius(tabRadius, tabRadius, 0, 0).Cursor(ui.CursorPointer)
 	if cn != nil {
-		chip.Drag(dragSession{cn.id})
+		chip.Drag(dragSession{ID: cn.id, Tab: t.ID})
 	}
-	hovered[j] = chip.Hovered()
+	over := a.tabDrops(c, chip, t, tok, foot)
+	hovered[j] = chip.Hovered() && !over
 	lit := tok.Hover
 	if chip.Pressed() {
 		lit = tok.Press
@@ -236,6 +237,30 @@ func (a *App) tab(c *ui.Context, m locales.Messages, tok theme.Tokens, fill ui.C
 	if hovered[j] && !chip.Pressed() && !chip.Dragging() {
 		a.tabTip(c, m, tok, chip, t)
 	}
+}
+
+// tabDrops makes the tab t, whose chip it is, take another tab dropped on
+// it, which goes before t or after it as the pointer is over t's first half
+// or its second; while one is dragged over, an accent line shows where. It
+// reports whether one is.
+func (a *App) tabDrops(c *ui.Context, chip ui.Element, t *layout.Tab, tok theme.Tokens, foot float32) bool {
+	x, _, _ := chip.PointerPosition()
+	after := x >= chip.Bounds().W/2
+	s, over := ui.DragOver[dragSession](chip)
+	over = over && s.Tab != 0 && s.Tab != t.ID
+	if over {
+		chip.DrawOver(func(p *ui.Painter, r ui.Rect) {
+			if after {
+				r.X += r.W - 2
+			}
+			p.Fill(ui.Rect{X: r.X, Y: r.Y + 6, W: 2, H: r.H - foot - 12}, tok.Accent, 1)
+		})
+	}
+	if s, ok := ui.Drop[dragSession](chip); ok && s.Tab != 0 && a.ws.MoveTab(s.Tab, t.ID, after) {
+		a.saveLayout()
+		c.Invalidate()
+	}
+	return over
 }
 
 // tabEdge draws the active tab in r into the content below it: its flare,
