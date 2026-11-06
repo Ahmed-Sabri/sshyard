@@ -298,9 +298,11 @@ type App struct {
 	// clearContent is set while the content shows the window's material,
 	// as the appearance settings ask (see contentFill)
 	clearContent bool
-	// usage and docker are what the usage and Docker panels read
+	// usage, docker and tmux are what the usage, Docker and tmux panels
+	// read
 	usage       *usageState
 	docker      *dockerState
+	tmux        *tmuxState
 	selected    string // host chosen in the sidebar
 	search      string
 	searchFocus bool // the search field takes the focus next frame

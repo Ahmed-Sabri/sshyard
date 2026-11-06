@@ -27,19 +27,22 @@ const (
 	inspectHost     inspectorKind = "host"
 	inspectDocker   inspectorKind = "docker"
 	inspectSnippets inspectorKind = "snippets"
+	inspectTmux     inspectorKind = "tmux"
 )
 
 // panelOrder is the order the panels stack in, the rail's: opening or
 // closing one leaves the others where they are.
-var panelOrder = []inspectorKind{inspectMonitor, inspectUsage, inspectHost, inspectSnippets, inspectDocker}
+var panelOrder = []inspectorKind{inspectMonitor, inspectUsage, inspectHost, inspectSnippets, inspectDocker, inspectTmux}
 
 // railWidth is the rail's width, the status bar's height; inspectorWidth
 // the panel's, and tableInspectorWidth that of a panel of tables (usage,
-// Docker).
+// Docker); tmuxInspectorWidth the tmux panel's, room for a session's
+// actions.
 const (
 	railWidth           = statusBarHeight
 	inspectorWidth      = 300
 	tableInspectorWidth = 460
+	tmuxInspectorWidth  = 320
 )
 
 // panelWidth is the width panel k wants.
@@ -49,6 +52,8 @@ func panelWidth(k inspectorKind) float32 {
 		return tableInspectorWidth
 	case inspectSnippets:
 		return snippetWidth
+	case inspectTmux:
+		return tmuxInspectorWidth
 	}
 	return inspectorWidth
 }
@@ -124,6 +129,7 @@ func (a *App) railView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 			a.ToggleFiles()
 		}
 		toggle(inspectDocker, icons.Docker, icons.DockerOn, m.DockerManager())
+		toggle(inspectTmux, icons.Tmux, icons.TmuxOn, m.TmuxManager())
 		label = m.OpenAIRight()
 		if ai {
 			label = m.CloseAIPane()
@@ -197,6 +203,8 @@ func (a *App) panelView(c *ui.Context, m locales.Messages, tok theme.Tokens, k i
 		title, tables = m.ProcessUsage(), true
 	case inspectDocker:
 		title, tables = m.DockerManager(), true
+	case inspectTmux:
+		title, tables = m.TmuxManager(), true
 	}
 	ui.Column(c.Key("panel:" + string(k))).Fill().Children(func() {
 		ui.Row(c).Height(40).Shrink(0).Padding(0, 8, 0, 16).Gap(8).AlignItems(ui.Center).Children(func() {
@@ -206,12 +214,16 @@ func (a *App) panelView(c *ui.Context, m locales.Messages, tok theme.Tokens, k i
 			}
 		})
 		if tables {
-			// Its tables scroll themselves: the panel gives them its height.
+			// Its tables (the tmux panel its list) scroll themselves: the
+			// panel gives them its height.
 			ui.Column(c.Key("body")).Grow(1).Shrink(1).MinHeight(0).FillWidth().
 				Padding(0, theme.Space(3), theme.Space(3), theme.Space(3)).Gap(theme.Space(2.5)).Children(func() {
-				if k == inspectUsage {
+				switch k {
+				case inspectUsage:
 					a.usagePanel(c, m, tok)
-				} else {
+				case inspectTmux:
+					a.tmuxPanel(c, m, tok)
+				default:
 					a.dockerPanel(c, m, tok)
 				}
 			})
