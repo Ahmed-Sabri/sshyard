@@ -302,6 +302,20 @@ func (a *App) nodeView(c *ui.Context, t *layout.Tab, n *layout.Node, tok theme.T
 	n.Ratio = *p / 100
 }
 
+// onTokens are the tokens for what is drawn on bg: tok, unless the other
+// appearance's text reads better on it (a dark terminal scheme in light
+// mode, or a light one in dark mode).
+func onTokens(tok theme.Tokens, bg ui.Color) theme.Tokens {
+	other := theme.LightTokens()
+	if !tok.Dark {
+		other = theme.DarkTokens()
+	}
+	if theme.Contrast(other.Text, bg) > theme.Contrast(tok.Text, bg) {
+		return other
+	}
+	return tok
+}
+
 // paneGap is the gutter between two panes, and from the edges of the
 // content: half of it round each pane and half round all.
 const paneGap = 4
@@ -346,89 +360,96 @@ func (a *App) paneView(c *ui.Context, t *layout.Tab, n *layout.Node, tok theme.T
 				a.aiPane(c, t, n, cn, tok, m)
 				return
 			}
-			head := ui.Row(c.Key("head")).Height(paneHeadHeight).Shrink(0).Padding(0, 6, 0, 10).Gap(8).AlignItems(ui.Center).Drag(dragSession{ID: cn.id}).Label(m.PaneActions())
-			head.Children(func() {
-				// How its session is first; then a terminal shows its host
-				// as the sidebar does, the others what they are, in its
-				// color.
-				if cn.s != nil {
-					dot(c, stateColor(tok, st.State))
-				}
-				if cn.kind == layout.Terminal {
-					hostAvatar(c, tok, a.liveHost(cn.host), paneHeadIcon)
-				} else {
-					softTile(c, kindIcon(cn.kind, focused), hostTint(tok, a.liveHost(cn.host)), paneHeadIcon)
-				}
-				title := a.pv(cn.host.Label())
-				switch cn.kind {
-				case layout.Files:
-					title = m.FilesPane(a.pv(cn.host.Label()))
-				}
-				tt := ui.Text(c, title).FontWeight(600).FontSize(theme.Footnote).SingleLine()
-				if !focused && multi {
-					tt.TextColor(tok.TextMuted)
-				}
-				if cn.kind == layout.Terminal && cn.s != nil && cn.s.Term.Modes().MouseTracking {
-					// The program takes the mouse: say so, and how to select.
-					ui.Row(c.Key("mouse")).Shrink(0).AlignItems(ui.Center).Label(m.MouseReporting()).Tooltip(m.MouseReporting()).Children(func() {
-						ui.Icon(c, icons.Mouse.SVG).Size(Tiny, Tiny).TextColor(tok.Accent)
-					})
-				}
-				if isTemp(cn.host.ID) {
-					tempBadge(c, m, tok)
-				}
-				if cn.fs != nil && cn.fs.remote.client != nil && cn.fs.remote.client.SCP() {
-					scpBadge(c, m, tok)
-				}
-				if cn.kind == layout.Terminal {
-					a.paneForwards(c, m, tok, cn.host.ID)
-				}
-				ui.Text(c, a.pv(cn.host.Target())).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine().Shrink(1)
-				ui.Spacer(c)
-				if isTemp(cn.host.ID) {
-					if (IconButton{Icon: icons.Save, Label: m.SaveAsHost(), Size: Tiny}).Clicked(c, "saveas") {
-						t.Focus = n.ID
-						a.SaveTempAs(cn.id)
+			// The header is drawn on the pane's color: on a terminal scheme
+			// of the other appearance it takes that appearance's tokens, so
+			// its text and buttons keep their contrast.
+			headTok := onTokens(tok, bg)
+			ui.Themed(c.Key("headbar"), headTok.Apply(*c.Theme())).Background(ui.Transparent).Shrink(0).FillWidth().Children(func() {
+				tok := headTok
+				head := ui.Row(c.Key("head")).Height(paneHeadHeight).Shrink(0).Padding(0, 6, 0, 10).Gap(8).AlignItems(ui.Center).Drag(dragSession{ID: cn.id}).Label(m.PaneActions())
+				head.Children(func() {
+					// How its session is first; then a terminal shows its host
+					// as the sidebar does, the others what they are, in its
+					// color.
+					if cn.s != nil {
+						dot(c, stateColor(tok, st.State))
 					}
-				}
-				if cn.kind == layout.Terminal {
-					if (IconButton{Icon: icons.Search, Label: m.Find(), Size: Tiny, Active: a.finding && focused}).Clicked(c, "find") {
-						t.Focus = n.ID
-						a.finding = !(a.finding && focused)
+					if cn.kind == layout.Terminal {
+						hostAvatar(c, tok, a.liveHost(cn.host), paneHeadIcon)
+					} else {
+						softTile(c, kindIcon(cn.kind, focused), hostTint(tok, a.liveHost(cn.host)), paneHeadIcon)
 					}
-					if (IconButton{Icon: icons.Folder, Label: m.OpenFilesHere(), Size: Tiny, Disabled: !remoteOnly(cn)}).Clicked(c, "files") {
-						t.Focus = n.ID
-						a.OpenFiles(cn.host.ID, openAt{pane: n.ID, edge: a.filesEdge()}, cn)
+					title := a.pv(cn.host.Label())
+					switch cn.kind {
+					case layout.Files:
+						title = m.FilesPane(a.pv(cn.host.Label()))
 					}
-				} else {
-					if (IconButton{Icon: icons.LocalDisk, On: icons.LocalDiskOn, Label: m.ShowLocalFiles(), Toggle: true, Active: a.settings.FilesDual, Size: Tiny}).Clicked(c, "dual") {
-						t.Focus = n.ID
-						a.toggleDual()
+					tt := ui.Text(c, title).FontWeight(600).FontSize(theme.Footnote).SingleLine()
+					if !focused && multi {
+						tt.TextColor(tok.TextMuted)
 					}
-					a.transfersButton(c, cn, m)
-					a.followButton(c, t, n, cn, m)
-					if (IconButton{Icon: icons.Terminal, Label: m.OpenTerminalBeside(), Size: Tiny}).Clicked(c, "term") {
-						t.Focus = n.ID
-						a.Connect(cn.host.ID, openAt{pane: n.ID, edge: layout.Right})
+					if cn.kind == layout.Terminal && cn.s != nil && cn.s.Term.Modes().MouseTracking {
+						// The program takes the mouse: say so, and how to select.
+						ui.Row(c.Key("mouse")).Shrink(0).AlignItems(ui.Center).Label(m.MouseReporting()).Tooltip(m.MouseReporting()).Children(func() {
+							ui.Icon(c, icons.Mouse.SVG).Size(Tiny, Tiny).TextColor(tok.Accent)
+						})
 					}
-				}
-				if (IconButton{Icon: icons.SplitRight, Label: m.SplitRight(), Size: Tiny}).Clicked(c, "splitright") {
+					if isTemp(cn.host.ID) {
+						tempBadge(c, m, tok)
+					}
+					if cn.fs != nil && cn.fs.remote.client != nil && cn.fs.remote.client.SCP() {
+						scpBadge(c, m, tok)
+					}
+					if cn.kind == layout.Terminal {
+						a.paneForwards(c, m, tok, cn.host.ID)
+					}
+					ui.Text(c, a.pv(cn.host.Target())).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine().Shrink(1)
+					ui.Spacer(c)
+					if isTemp(cn.host.ID) {
+						if (IconButton{Icon: icons.Save, Label: m.SaveAsHost(), Size: Tiny}).Clicked(c, "saveas") {
+							t.Focus = n.ID
+							a.SaveTempAs(cn.id)
+						}
+					}
+					if cn.kind == layout.Terminal {
+						if (IconButton{Icon: icons.Search, Label: m.Find(), Size: Tiny, Active: a.finding && focused}).Clicked(c, "find") {
+							t.Focus = n.ID
+							a.finding = !(a.finding && focused)
+						}
+						if (IconButton{Icon: icons.Folder, Label: m.OpenFilesHere(), Size: Tiny, Disabled: !remoteOnly(cn)}).Clicked(c, "files") {
+							t.Focus = n.ID
+							a.OpenFiles(cn.host.ID, openAt{pane: n.ID, edge: a.filesEdge()}, cn)
+						}
+					} else {
+						if (IconButton{Icon: icons.LocalDisk, On: icons.LocalDiskOn, Label: m.ShowLocalFiles(), Toggle: true, Active: a.settings.FilesDual, Size: Tiny}).Clicked(c, "dual") {
+							t.Focus = n.ID
+							a.toggleDual()
+						}
+						a.transfersButton(c, cn, m)
+						a.followButton(c, t, n, cn, m)
+						if (IconButton{Icon: icons.Terminal, Label: m.OpenTerminalBeside(), Size: Tiny}).Clicked(c, "term") {
+							t.Focus = n.ID
+							a.Connect(cn.host.ID, openAt{pane: n.ID, edge: layout.Right})
+						}
+					}
+					if (IconButton{Icon: icons.SplitRight, Label: m.SplitRight(), Size: Tiny}).Clicked(c, "splitright") {
+						t.Focus = n.ID
+						a.SplitFocused(layout.Right)
+					}
+					if (IconButton{Icon: icons.SplitDown, Label: m.SplitDown(), Size: Tiny}).Clicked(c, "splitdown") {
+						t.Focus = n.ID
+						a.SplitFocused(layout.Bottom)
+					}
+					if (IconButton{Icon: icons.Close, Label: m.ClosePane(), Size: Tiny, Danger: true}).Clicked(c, "close") {
+						a.closeSoon(cn.id)
+					}
+				})
+				if head.Clicked() {
 					t.Focus = n.ID
-					a.SplitFocused(layout.Right)
+					a.focusReq = cn.id
 				}
-				if (IconButton{Icon: icons.SplitDown, Label: m.SplitDown(), Size: Tiny}).Clicked(c, "splitdown") {
-					t.Focus = n.ID
-					a.SplitFocused(layout.Bottom)
-				}
-				if (IconButton{Icon: icons.Close, Label: m.ClosePane(), Size: Tiny, Danger: true}).Clicked(c, "close") {
-					a.closeSoon(cn.id)
-				}
+				ui.Box(c).Height(1).Shrink(0).FillWidth().Background(tok.Line)
 			})
-			if head.Clicked() {
-				t.Focus = n.ID
-				a.focusReq = cn.id
-			}
-			ui.Box(c).Height(1).Shrink(0).FillWidth().Background(tok.Line)
 			switch cn.kind {
 			case layout.Files:
 				a.filesBody(c, t, n, cn, pane.Bounds().W, tok, m)
