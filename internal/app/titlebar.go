@@ -30,8 +30,8 @@ func (a *App) SetMaximized(on bool) { a.post(func() { a.maximized = on }) }
 func (a *App) titleBar(c *ui.Context, m locales.Messages, tok theme.Tokens, clear bool) {
 	bar := c.TitleBar()
 	row := ui.Row(c.Key("titlebar")).Height(bandHeight(c)).Shrink(0).FillWidth().AlignItems(ui.Center).DragWindow()
-	if !clear {
-		row.Background(tok.Sidebar)
+	if a.hasBackground() || !clear {
+		row.Background(a.chromeFill(tok.Sidebar))
 	}
 	// Its foot, which the active tab covers, joining the content.
 	row.Draw(func(p *ui.Painter, r ui.Rect) {

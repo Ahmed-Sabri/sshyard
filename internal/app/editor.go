@@ -516,7 +516,9 @@ func (a *App) editorWindowView(c *ui.Context, cn *conn) {
 	base.Font = a.fonts.ui
 	tok := theme.For(a.settings.Theme, base.Dark)
 	c.SetTheme(tok.Apply(base))
+	a.ensureBackground()
 	c.Root().Background(tok.Canvas)
+	a.drawBackground(c, tok)
 	m := locales.In(c.Locale())
 	for _, t := range ew.toasts {
 		c.AddToast(t(m))
@@ -580,12 +582,14 @@ func (a *App) editorWindowView(c *ui.Context, cn *conn) {
 		ui.Box(c).Height(1).Shrink(0).FillWidth().Background(tok.Line)
 		pane := func() { a.editorPane(c, cn, ed, tok, m) }
 		if a.settings.EditorTreeHidden {
-			ui.Column(c.Key("edpane")).Grow(1).FillWidth().MinHeight(0).Children(pane)
+			ui.Column(c.Key("edpane")).Grow(1).FillWidth().MinHeight(0).Background(a.editorWindowFill(tok.Canvas)).Children(pane)
 			return
 		}
 		ew.treeW = min(max(ew.treeW, 140), 600)
-		ui.Split(c.Key("edsplit"), &ew.treeW, func() { a.treeView(c, cn, tok, m) }, func() {
-			ui.Column(c.Key("edpane")).Fill().MinWidth(0).Children(pane)
+		ui.Split(c.Key("edsplit"), &ew.treeW, func() {
+			ui.Box(c.Key("edtreebg")).Fill().Background(a.editorChromeFill(tok.Sidebar)).Children(func() { a.treeView(c, cn, tok, m) })
+		}, func() {
+			ui.Column(c.Key("edpane")).Fill().MinWidth(0).Background(a.editorWindowFill(tok.Canvas)).Children(pane)
 		}).Grow(1).FillWidth().MinHeight(0)
 		a.saveTreeWidth(c, ew)
 	})
@@ -672,7 +676,7 @@ func (a *App) saveTreeWidth(c *ui.Context, ew *edWin) {
 // folders, then a tab for each file open.
 func (a *App) editorTabs(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages) {
 	ew := cn.ed
-	ui.Row(c.Key("edtabbar")).Height(38).Shrink(0).FillWidth().Padding(0, theme.Space(2)).Gap(theme.Space(2)).AlignItems(ui.Center).Children(func() {
+	ui.Row(c.Key("edtabbar")).Background(a.editorChromeFill(tok.Sidebar)).Height(38).Shrink(0).FillWidth().Padding(0, theme.Space(2)).Gap(theme.Space(2)).AlignItems(ui.Center).Children(func() {
 		if (IconButton{Icon: icons.Folders, On: icons.FoldersOn, Label: m.EditorShowFolders(), Toggle: true, Active: !a.settings.EditorTreeHidden, Size: Small}).Clicked(c, "folders") {
 			st := a.settings
 			st.EditorTreeHidden = !st.EditorTreeHidden
@@ -806,6 +810,16 @@ func (a *App) editorPane(c *ui.Context, cn *conn, ed *editState, tok theme.Token
 			}
 		})
 	} else {
+		if a.hasBackground() {
+			ed.st.Theme = editor.DefaultTheme(c.Theme())
+			// Nonzero RGB with zero alpha avoids the editor's zero-value
+			// default substitution while leaving only its default fill clear.
+			bg := tok.Canvas
+			bg.A = 0
+			ed.st.Theme.Background = bg
+		} else {
+			ed.st.Theme = nil
+		}
 		v := editor.View(c.Key("ed:"+ed.path), ed.st).Grow(1).FillWidth().MinHeight(0)
 		if !ed.focused {
 			v.Focus()

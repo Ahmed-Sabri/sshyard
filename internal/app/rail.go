@@ -106,7 +106,7 @@ func (a *App) togglePanel(k inspectorKind) {
 func (a *App) railView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	cn := a.focused()
 	ui.Column(c.Key("rail")).Width(railWidth).Shrink(0).FillHeight().Padding(theme.Space(2), 0).Gap(theme.Space(1)).
-		AlignItems(ui.Center).Background(tok.Glass).Children(func() {
+		AlignItems(ui.Center).Background(a.chromeFill(tok.Glass)).Children(func() {
 		toggle := func(k inspectorKind, ic, on *icons.Icon, label string) {
 			if (IconButton{Icon: ic, On: on, Label: label, Active: a.panelOpen(k), Toggle: true, Size: Small}).Clicked(c, "insp:"+string(k)) {
 				a.togglePanel(k)
@@ -162,7 +162,7 @@ func (a *App) inspectorView(c *ui.Context, m locales.Messages, tok theme.Tokens)
 	for _, k := range a.panels {
 		width = max(width, panelWidth(k))
 	}
-	ui.Column(c.Key("inspector")).Width(width).Shrink(0).FillHeight().Background(a.contentFill(tok.Canvas, canvasAlpha)).Children(func() {
+	ui.Column(c.Key("inspector")).Width(width).Shrink(0).FillHeight().Background(a.backgroundInspectorFill(tok.Canvas)).Children(func() {
 		a.panelStack(c, m, tok, a.panels)
 	})
 }

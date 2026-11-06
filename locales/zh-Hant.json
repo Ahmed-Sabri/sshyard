@@ -1710,5 +1710,22 @@
   "noteHint": "備註以明文儲存，請勿在此填寫密碼。",
   "lastConnected": "上次連線",
   "renewalNotify": "續費提醒通知",
-  "renewalNotifyNote": "在主機的訂閱續費日前，依該主機設定的提前天數傳送系統通知。"
+  "renewalNotifyNote": "在主機的訂閱續費日前，依該主機設定的提前天數傳送系統通知。",
+  "backgroundSection": "背景",
+  "backgroundChoose": "選擇背景圖片",
+  "backgroundReplace": "更換背景圖片",
+  "backgroundRemove": "移除背景圖片",
+  "backgroundNote": "支援 PNG、JPEG 或 WebP，最大 20 MB、3200 萬像素",
+  "backgroundBusy": "正在載入背景圖片…",
+  "backgroundPreview": "背景預覽",
+  "backgroundFit": "圖片適配",
+  "backgroundCover": "填滿",
+  "backgroundContain": "適應",
+  "backgroundChromeOpacity": "側欄與標題列不透明度",
+  "backgroundContentOpacity": "內容區域不透明度",
+  "backgroundLoadFailed": "無法載入背景：{detail}",
+  "backgroundImportFailed": "無法匯入背景：{detail}",
+  "backgroundUnsupported": "請選擇 PNG、JPEG 或 WebP 圖片",
+  "backgroundTooLarge": "圖片超過 20 MB 或 3200 萬像素",
+  "backgroundStorageUnavailable": "背景儲存空間無法使用"
 }

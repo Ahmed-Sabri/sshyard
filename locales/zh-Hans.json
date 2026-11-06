@@ -1710,5 +1710,22 @@
   "noteHint": "备注以明文保存，请勿在此填写密码。",
   "lastConnected": "上次连接",
   "renewalNotify": "续费提醒通知",
-  "renewalNotifyNote": "在主机的订阅续费日前，按该主机设置的提前天数发送系统通知。"
+  "renewalNotifyNote": "在主机的订阅续费日前，按该主机设置的提前天数发送系统通知。",
+  "backgroundSection": "背景",
+  "backgroundChoose": "选择背景图片",
+  "backgroundReplace": "更换背景图片",
+  "backgroundRemove": "移除背景图片",
+  "backgroundNote": "支持 PNG、JPEG 或 WebP，最大 20 MB、3200 万像素",
+  "backgroundBusy": "正在加载背景图片…",
+  "backgroundPreview": "背景预览",
+  "backgroundFit": "图片适配",
+  "backgroundCover": "填充",
+  "backgroundContain": "适应",
+  "backgroundChromeOpacity": "侧栏与标题栏不透明度",
+  "backgroundContentOpacity": "内容区域不透明度",
+  "backgroundLoadFailed": "无法加载背景：{detail}",
+  "backgroundImportFailed": "无法导入背景：{detail}",
+  "backgroundUnsupported": "请选择 PNG、JPEG 或 WebP 图片",
+  "backgroundTooLarge": "图片超过 20 MB 或 3200 万像素",
+  "backgroundStorageUnavailable": "背景存储不可用"
 }

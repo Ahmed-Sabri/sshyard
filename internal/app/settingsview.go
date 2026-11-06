@@ -94,6 +94,7 @@ func (a *App) openSettings(p prefPage) {
 // closeSettings goes back to the sessions, the focused terminal taking
 // the keyboard again.
 func (a *App) closeSettings() {
+	a.setBackgroundPreview(nil)
 	a.page = pageWorkspace
 	if cn := a.focused(); cn != nil {
 		a.focusReq = cn.id
@@ -219,6 +220,9 @@ func (a *App) settingsPage(c *ui.Context, m locales.Messages, tok theme.Tokens) 
 	s := a.settings
 	changed := false
 	cur := a.prefNow()
+	if cur != prefAppearance {
+		a.setBackgroundPreview(nil)
+	}
 	var item prefItem
 	for _, g := range prefGroups(m, tok) {
 		for _, it := range g.items {
@@ -390,7 +394,10 @@ func (a *App) prefAppearance(c *ui.Context, m locales.Messages, tok theme.Tokens
 			}
 		})
 	})
-	a.materialSection(c, m, tok, s, changed)
+	a.backgroundSection(c, m, tok, s, changed)
+	if !a.hasBackground() {
+		a.materialSection(c, m, tok, s, changed)
+	}
 	settingsSection(c, tok, icons.Edit, tok.TintAt(4), m.FontsSection(), func(g *settingsGroup) {
 		g.row(m.InterfaceFont(), "", func() {
 			if f, ok := a.fontPicker(c, "uifont", m.InterfaceFont(), m.SystemDefault(), &a.fonts.uiSel, s.UIFont, a.fonts.list); ok {

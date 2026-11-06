@@ -2433,5 +2433,22 @@
   "noteHint": "Notes are saved as plain text: do not put passwords here.",
   "lastConnected": "Last connected",
   "renewalNotify": "Subscription reminders",
-  "renewalNotifyNote": "Show a system notification before a host's subscription renews, as many days ahead as the host's reminder."
+  "renewalNotifyNote": "Show a system notification before a host's subscription renews, as many days ahead as the host's reminder.",
+  "backgroundSection": "Background",
+  "backgroundChoose": "Choose background image",
+  "backgroundReplace": "Replace background image",
+  "backgroundRemove": "Remove background image",
+  "backgroundNote": "PNG, JPEG or WebP, up to 20 MB and 32 megapixels",
+  "backgroundBusy": "Loading background image…",
+  "backgroundPreview": "Background preview",
+  "backgroundFit": "Image fit",
+  "backgroundCover": "Cover",
+  "backgroundContain": "Contain",
+  "backgroundChromeOpacity": "Sidebar & title bar opacity",
+  "backgroundContentOpacity": "Content area opacity",
+  "backgroundLoadFailed": "Could not load the background: {detail}",
+  "backgroundImportFailed": "Could not import the background: {detail}",
+  "backgroundUnsupported": "Choose a PNG, JPEG or WebP image",
+  "backgroundTooLarge": "The image exceeds 20 MB or 32 megapixels",
+  "backgroundStorageUnavailable": "Background storage is unavailable"
 }

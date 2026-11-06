@@ -234,6 +234,7 @@ type App struct {
 	p          Platform
 	logo       *ui.Bitmap
 	settings   settings.Settings
+	background backgroundState
 	store      *assets.Store
 	kc         *keychain.Keychain
 	keychainOK bool
@@ -644,6 +645,10 @@ func (a *App) ApplySettings(s settings.Settings) error {
 		}
 	}
 	a.settings = s
+	if old.Background != s.Background {
+		a.background.preview = nil
+		a.invalidate()
+	}
 	for _, c := range a.conns {
 		if c.ai == nil {
 			continue
@@ -807,6 +812,7 @@ func (a *App) drain() {
 
 // Close ends every session and port forward.
 func (a *App) Close() {
+	a.closeBackground()
 	a.mu.Lock()
 	a.closed = true
 	a.queue = nil

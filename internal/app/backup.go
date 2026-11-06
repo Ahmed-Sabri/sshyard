@@ -48,6 +48,7 @@ const (
 
 // packBackup is the archive of p, made on this device.
 func (a *App) packBackup(p backupPayload) ([]byte, error) {
+	p.Settings.Background = settings.DefaultBackground()
 	files := map[string][]byte{}
 	var err error
 	if files[backupAssets], err = json.Marshal(p.Assets); err != nil {
@@ -164,6 +165,7 @@ func backupSecretKeys(snap assets.Snapshot, provs []settings.AIProvider) []strin
 func (a *App) collectBackup(secrets bool) (backupPayload, error) {
 	p := backupPayload{Assets: a.store.Snapshot(), Settings: a.settings}
 	p.Settings.BackupTargets, p.Settings.DefaultBackupPassword = nil, false
+	p.Settings.Background = settings.DefaultBackground()
 	if b, err := a.known.Contents(); err == nil {
 		p.KnownHosts = string(b)
 	}
@@ -300,6 +302,7 @@ func backupIDs(snap assets.Snapshot, provs []settings.AIProvider) []string {
 // that confirmed AI use are joined.
 func mergeSettings(cur, in settings.Settings) settings.Settings {
 	out := in
+	out.Background = cur.Background
 	out.RememberLayout = cur.RememberLayout
 	out.SidebarWidth, out.SidebarHidden = cur.SidebarWidth, cur.SidebarHidden
 	out.ChromeMaterial, out.ContentMaterial = cur.ChromeMaterial, cur.ContentMaterial

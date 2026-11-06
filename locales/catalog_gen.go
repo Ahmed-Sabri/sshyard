@@ -15376,3 +15376,177 @@ func RenewalNotifyNote() string { return In(i18n.Locale()).RenewalNotifyNote() }
 func (msgs Messages) RenewalNotifyNote() string {
 	return Catalog.Format(msgs.locale, "renewalNotifyNote", nil)
 }
+
+// BackgroundSection says "Background"
+// in the language the app shows.
+func BackgroundSection() string { return In(i18n.Locale()).BackgroundSection() }
+
+// BackgroundSection says "Background"
+// in the language of msgs.
+func (msgs Messages) BackgroundSection() string {
+	return Catalog.Format(msgs.locale, "backgroundSection", nil)
+}
+
+// BackgroundChoose says "Choose background image"
+// in the language the app shows.
+func BackgroundChoose() string { return In(i18n.Locale()).BackgroundChoose() }
+
+// BackgroundChoose says "Choose background image"
+// in the language of msgs.
+func (msgs Messages) BackgroundChoose() string {
+	return Catalog.Format(msgs.locale, "backgroundChoose", nil)
+}
+
+// BackgroundReplace says "Replace background image"
+// in the language the app shows.
+func BackgroundReplace() string { return In(i18n.Locale()).BackgroundReplace() }
+
+// BackgroundReplace says "Replace background image"
+// in the language of msgs.
+func (msgs Messages) BackgroundReplace() string {
+	return Catalog.Format(msgs.locale, "backgroundReplace", nil)
+}
+
+// BackgroundRemove says "Remove background image"
+// in the language the app shows.
+func BackgroundRemove() string { return In(i18n.Locale()).BackgroundRemove() }
+
+// BackgroundRemove says "Remove background image"
+// in the language of msgs.
+func (msgs Messages) BackgroundRemove() string {
+	return Catalog.Format(msgs.locale, "backgroundRemove", nil)
+}
+
+// BackgroundNote says "PNG, JPEG or WebP, up to 20 MB and 32 megapixels"
+// in the language the app shows.
+func BackgroundNote() string { return In(i18n.Locale()).BackgroundNote() }
+
+// BackgroundNote says "PNG, JPEG or WebP, up to 20 MB and 32 megapixels"
+// in the language of msgs.
+func (msgs Messages) BackgroundNote() string {
+	return Catalog.Format(msgs.locale, "backgroundNote", nil)
+}
+
+// BackgroundBusy says "Loading background image…"
+// in the language the app shows.
+func BackgroundBusy() string { return In(i18n.Locale()).BackgroundBusy() }
+
+// BackgroundBusy says "Loading background image…"
+// in the language of msgs.
+func (msgs Messages) BackgroundBusy() string {
+	return Catalog.Format(msgs.locale, "backgroundBusy", nil)
+}
+
+// BackgroundPreview says "Background preview"
+// in the language the app shows.
+func BackgroundPreview() string { return In(i18n.Locale()).BackgroundPreview() }
+
+// BackgroundPreview says "Background preview"
+// in the language of msgs.
+func (msgs Messages) BackgroundPreview() string {
+	return Catalog.Format(msgs.locale, "backgroundPreview", nil)
+}
+
+// BackgroundFit says "Image fit"
+// in the language the app shows.
+func BackgroundFit() string { return In(i18n.Locale()).BackgroundFit() }
+
+// BackgroundFit says "Image fit"
+// in the language of msgs.
+func (msgs Messages) BackgroundFit() string {
+	return Catalog.Format(msgs.locale, "backgroundFit", nil)
+}
+
+// BackgroundCover says "Cover"
+// in the language the app shows.
+func BackgroundCover() string { return In(i18n.Locale()).BackgroundCover() }
+
+// BackgroundCover says "Cover"
+// in the language of msgs.
+func (msgs Messages) BackgroundCover() string {
+	return Catalog.Format(msgs.locale, "backgroundCover", nil)
+}
+
+// BackgroundContain says "Contain"
+// in the language the app shows.
+func BackgroundContain() string { return In(i18n.Locale()).BackgroundContain() }
+
+// BackgroundContain says "Contain"
+// in the language of msgs.
+func (msgs Messages) BackgroundContain() string {
+	return Catalog.Format(msgs.locale, "backgroundContain", nil)
+}
+
+// BackgroundChromeOpacity says "Sidebar & title bar opacity"
+// in the language the app shows.
+func BackgroundChromeOpacity() string { return In(i18n.Locale()).BackgroundChromeOpacity() }
+
+// BackgroundChromeOpacity says "Sidebar & title bar opacity"
+// in the language of msgs.
+func (msgs Messages) BackgroundChromeOpacity() string {
+	return Catalog.Format(msgs.locale, "backgroundChromeOpacity", nil)
+}
+
+// BackgroundContentOpacity says "Content area opacity"
+// in the language the app shows.
+func BackgroundContentOpacity() string { return In(i18n.Locale()).BackgroundContentOpacity() }
+
+// BackgroundContentOpacity says "Content area opacity"
+// in the language of msgs.
+func (msgs Messages) BackgroundContentOpacity() string {
+	return Catalog.Format(msgs.locale, "backgroundContentOpacity", nil)
+}
+
+// BackgroundLoadFailed says "Could not load the background: {detail}"
+// in the language the app shows.
+func BackgroundLoadFailed(detail string) string {
+	return In(i18n.Locale()).BackgroundLoadFailed(detail)
+}
+
+// BackgroundLoadFailed says "Could not load the background: {detail}"
+// in the language of msgs.
+func (msgs Messages) BackgroundLoadFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "backgroundLoadFailed", map[string]any{"detail": detail})
+}
+
+// BackgroundImportFailed says "Could not import the background: {detail}"
+// in the language the app shows.
+func BackgroundImportFailed(detail string) string {
+	return In(i18n.Locale()).BackgroundImportFailed(detail)
+}
+
+// BackgroundImportFailed says "Could not import the background: {detail}"
+// in the language of msgs.
+func (msgs Messages) BackgroundImportFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "backgroundImportFailed", map[string]any{"detail": detail})
+}
+
+// BackgroundUnsupported says "Choose a PNG, JPEG or WebP image"
+// in the language the app shows.
+func BackgroundUnsupported() string { return In(i18n.Locale()).BackgroundUnsupported() }
+
+// BackgroundUnsupported says "Choose a PNG, JPEG or WebP image"
+// in the language of msgs.
+func (msgs Messages) BackgroundUnsupported() string {
+	return Catalog.Format(msgs.locale, "backgroundUnsupported", nil)
+}
+
+// BackgroundTooLarge says "The image exceeds 20 MB or 32 megapixels"
+// in the language the app shows.
+func BackgroundTooLarge() string { return In(i18n.Locale()).BackgroundTooLarge() }
+
+// BackgroundTooLarge says "The image exceeds 20 MB or 32 megapixels"
+// in the language of msgs.
+func (msgs Messages) BackgroundTooLarge() string {
+	return Catalog.Format(msgs.locale, "backgroundTooLarge", nil)
+}
+
+// BackgroundStorageUnavailable says "Background storage is unavailable"
+// in the language the app shows.
+func BackgroundStorageUnavailable() string { return In(i18n.Locale()).BackgroundStorageUnavailable() }
+
+// BackgroundStorageUnavailable says "Background storage is unavailable"
+// in the language of msgs.
+func (msgs Messages) BackgroundStorageUnavailable() string {
+	return Catalog.Format(msgs.locale, "backgroundStorageUnavailable", nil)
+}

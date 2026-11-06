@@ -1710,5 +1710,22 @@
   "noteHint": "メモは平文で保存されます。パスワードは書かないでください。",
   "lastConnected": "最終接続",
   "renewalNotify": "契約更新の通知",
-  "renewalNotifyNote": "ホストの契約が更新される前に、ホストに設定した日数だけ前もってシステム通知を表示します。"
+  "renewalNotifyNote": "ホストの契約が更新される前に、ホストに設定した日数だけ前もってシステム通知を表示します。",
+  "backgroundSection": "背景",
+  "backgroundChoose": "背景画像を選択",
+  "backgroundReplace": "背景画像を変更",
+  "backgroundRemove": "背景画像を削除",
+  "backgroundNote": "PNG、JPEG、WebP 対応、最大20 MB・3200万画素",
+  "backgroundBusy": "背景画像を読み込み中…",
+  "backgroundPreview": "背景プレビュー",
+  "backgroundFit": "画像の表示方法",
+  "backgroundCover": "全体を埋める",
+  "backgroundContain": "全体を表示",
+  "backgroundChromeOpacity": "サイドバーとタイトルバーの不透明度",
+  "backgroundContentOpacity": "コンテンツ領域の不透明度",
+  "backgroundLoadFailed": "背景を読み込めませんでした：{detail}",
+  "backgroundImportFailed": "背景を取り込めませんでした：{detail}",
+  "backgroundUnsupported": "PNG、JPEG、WebP 画像を選択してください",
+  "backgroundTooLarge": "画像が20 MBまたは3200万画素を超えています",
+  "backgroundStorageUnavailable": "背景の保存先を利用できません"
 }

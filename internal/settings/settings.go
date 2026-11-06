@@ -21,7 +21,8 @@ import (
 
 // Settings are the user's preferences.
 type Settings struct {
-	Theme theme.Mode `json:"theme"`
+	Background Background `json:"background"`
+	Theme      theme.Mode `json:"theme"`
 	// Language is "" to follow the system, else one of Languages.
 	Language string `json:"language"`
 	// CloseBehavior controls whether closing the main window hides it or quits.
@@ -556,7 +557,7 @@ const (
 
 // Default returns the defaults.
 func Default() Settings {
-	return Settings{RememberLayout: true, Theme: theme.Auto, CloseBehavior: CloseToTray, TrayIcon: TrayIconColor, CheckUpdates: true, UpdateIntervalHours: 1, TerminalFontSize: 13, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, FilesSplit: 50, FilesEdge: FilesRight, TerminalRightClick: RightClickMenu, EditorTreeWidth: 240, OSC52Write: OSC52Ask, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
+	return Settings{Background: DefaultBackground(), RememberLayout: true, Theme: theme.Auto, CloseBehavior: CloseToTray, TrayIcon: TrayIconColor, CheckUpdates: true, UpdateIntervalHours: 1, TerminalFontSize: 13, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, FilesSplit: 50, FilesEdge: FilesRight, TerminalRightClick: RightClickMenu, EditorTreeWidth: 240, OSC52Write: OSC52Ask, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
 		AIDefaultAgent: "builtin", AIDefaultMode: "ask", AIReviewStrictness: AIReviewStandard, AIContextLines: 200, AIAuditRetentionDays: 90, AIRedact: true, MCPPort: MCPPortDefault, LocalKeys: true, Highlight: Highlight{On: true}, RenewalNotify: true}
 }
 
@@ -577,6 +578,7 @@ func ResolveOSC52Write(global, host string) string {
 
 // Normalize replaces invalid values with defaults.
 func (s *Settings) Normalize() {
+	s.Background.normalize()
 	d := Default()
 	if s.TrayIcon != TrayIconMono && s.TrayIcon != TrayIconColor {
 		s.TrayIcon = d.TrayIcon

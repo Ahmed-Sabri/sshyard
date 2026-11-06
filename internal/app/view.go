@@ -58,14 +58,17 @@ func (a *App) View(c *ui.Context) {
 	// Each part shows the material as the appearance settings say: the
 	// sidebar and the title bar (clear), and the content (clearContent),
 	// through a lighter fill of its own.
+	a.ensureBackground()
+	imageBackground := a.hasBackground()
 	vibrant := c.Vibrancy()
 	clear := vibrant && a.settings.ChromeMaterial != settings.MaterialOpaque
-	a.clearContent = vibrant && a.settings.ContentMaterial == settings.MaterialTranslucent
+	a.clearContent = imageBackground || vibrant && a.settings.ContentMaterial == settings.MaterialTranslucent
 	if vibrant {
 		c.Root().Background(ui.Transparent)
 	} else {
 		c.Root().Background(tok.Sidebar)
 	}
+	a.drawBackground(c, tok)
 	ui.Column(c).Fill().TextColor(tok.Text).Children(func() {
 		a.titleBar(c, m, tok, clear)
 		if a.showSecretsStatus() && a.page != pageSettings {
@@ -75,8 +78,8 @@ func (a *App) View(c *ui.Context) {
 		// size the sidebar; hidden, the content takes the whole width.
 		sidebar := func() {
 			sb := ui.Box(c.Key("sidebar")).Fill()
-			if !clear {
-				sb.Background(tok.Sidebar)
+			if imageBackground || !clear {
+				sb.Background(a.chromeFill(tok.Sidebar))
 			}
 			sb.Children(func() {
 				c.SetTheme(tok.SidebarTheme(base, clear))
@@ -86,7 +89,8 @@ func (a *App) View(c *ui.Context) {
 					a.sidebarView(c, m, tok)
 				}
 				c.SetTheme(tok.Apply(base))
-				if vibrant {
+				a.drawBackground(c, tok)
+				if vibrant && !imageBackground {
 					c.Root().Background(ui.Transparent)
 				}
 			})
@@ -94,7 +98,7 @@ func (a *App) View(c *ui.Context) {
 		content := func() {
 			ui.Column(c.Key("main")).Fill().MinWidth(0).Background(a.contentFill(tok.Canvas, canvasAlpha)).Children(func() {
 				ui.Row(c.Key("body")).Grow(1).Shrink(1).MinWidth(0).FillWidth().MinHeight(0).Children(func() {
-					ui.Column(c.Key("content")).Grow(1).Shrink(1).MinWidth(0).FillHeight().Children(func() {
+					ui.Column(c.Key("content")).Grow(1).Shrink(1).MinWidth(0).FillHeight().Background(a.contentRegionFill(tok.Canvas)).Children(func() {
 						switch a.page {
 						case pageSettings:
 							a.settingsPage(c, m, tok)

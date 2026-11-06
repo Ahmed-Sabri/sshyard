@@ -33,6 +33,12 @@ const (
 // contentFill is col, a fill of the content, as it shows: lightened to
 // alpha over the window's material while the content is translucent.
 func (a *App) contentFill(col ui.Color, alpha float32) ui.Color {
+	if a.hasBackground() {
+		if alpha == canvasAlpha {
+			return ui.Transparent
+		}
+		return a.backgroundContentFill(col)
+	}
 	if !a.clearContent {
 		return col
 	}
