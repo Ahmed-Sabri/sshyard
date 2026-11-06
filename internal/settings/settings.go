@@ -38,6 +38,8 @@ type Settings struct {
 	KeepAliveSeconds    int     `json:"keepAliveSeconds"`
 	AutoReconnect       bool    `json:"autoReconnect"`
 	SidebarWidth        float32 `json:"sidebarWidth"`
+	// SidebarHidden hides the hosts' sidebar beside the workspace.
+	SidebarHidden bool `json:"sidebarHidden,omitempty"`
 	// Privacy masks the IP addresses the app shows, for a screen share
 	// or a recording. What is typed in a form is shown as it is.
 	Privacy bool `json:"privacy,omitempty"`

@@ -1685,6 +1685,26 @@ func (msgs Messages) NoTransfers() string {
 	return Catalog.Format(msgs.locale, "noTransfers", nil)
 }
 
+// HideSidebar says "Hide Sidebar"
+// in the language the app shows.
+func HideSidebar() string { return In(i18n.Locale()).HideSidebar() }
+
+// HideSidebar says "Hide Sidebar"
+// in the language of msgs.
+func (msgs Messages) HideSidebar() string {
+	return Catalog.Format(msgs.locale, "hideSidebar", nil)
+}
+
+// ShowSidebar says "Show Sidebar"
+// in the language the app shows.
+func ShowSidebar() string { return In(i18n.Locale()).ShowSidebar() }
+
+// ShowSidebar says "Show Sidebar"
+// in the language of msgs.
+func (msgs Messages) ShowSidebar() string {
+	return Catalog.Format(msgs.locale, "showSidebar", nil)
+}
+
 // ConnectionCount says "{count, plural, one {# connection} other {# connections}}"
 // in the language the app shows.
 func ConnectionCount(count int) string { return In(i18n.Locale()).ConnectionCount(count) }

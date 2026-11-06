@@ -95,7 +95,7 @@ func (a *App) sidebarView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 
 		// The foot of the sidebar: host count and live SSH connections.
 		ui.Box(c).Height(1).Shrink(0).FillWidth().Background(tok.Line)
-		ui.Row(c.Key("sbfoot")).Height(statusBarHeight).Shrink(0).Padding(0, 12).AlignItems(ui.Center).Children(func() {
+		ui.Row(c.Key("sbfoot")).Height(statusBarHeight).Shrink(0).Padding(0, 6, 0, 12).Gap(theme.Space(2)).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, m.HostCount(a.store.Len())).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine().Shrink(1)
 			ui.Spacer(c)
 			n := a.connectedCount()
@@ -107,6 +107,9 @@ func (a *App) sidebarView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 				dot(c, color)
 				ui.Text(c, m.ConnectionCount(n)).FontSize(theme.Caption).TextColor(color).SingleLine()
 			})
+			if (IconButton{Icon: icons.HideSidebar, Label: m.HideSidebar(), Size: Small}).Clicked(c, "hidesidebar") {
+				a.setSidebarHidden(true)
+			}
 		})
 	})
 }

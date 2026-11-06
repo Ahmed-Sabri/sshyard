@@ -71,8 +71,10 @@ func (a *App) View(c *ui.Context) {
 		if a.showSecretsStatus() && a.page != pageSettings {
 			a.secretsBanner(c, m, tok)
 		}
-		ui.Row(c.Key("frame")).Grow(1).Shrink(1).MinHeight(0).FillWidth().Children(func() {
-			sb := ui.Box(c.Key("sidebar")).Width(a.sbWidth).FillHeight()
+		// The sidebar and the content, split at a line the user drags to
+		// size the sidebar; hidden, the content takes the whole width.
+		sidebar := func() {
+			sb := ui.Box(c.Key("sidebar")).Fill()
 			if !clear {
 				sb.Background(tok.Sidebar)
 			}
@@ -88,8 +90,9 @@ func (a *App) View(c *ui.Context) {
 					c.Root().Background(ui.Transparent)
 				}
 			})
-			ui.Box(c).Width(1).FillHeight().Background(tok.Line)
-			ui.Column(c.Key("main")).Grow(1).Shrink(1).MinWidth(0).FillHeight().Background(a.contentFill(tok.Canvas, canvasAlpha)).Children(func() {
+		}
+		content := func() {
+			ui.Column(c.Key("main")).Fill().MinWidth(0).Background(a.contentFill(tok.Canvas, canvasAlpha)).Children(func() {
 				ui.Row(c.Key("body")).Grow(1).Shrink(1).MinWidth(0).FillWidth().MinHeight(0).Children(func() {
 					ui.Column(c.Key("content")).Grow(1).Shrink(1).MinWidth(0).FillHeight().Children(func() {
 						switch a.page {
@@ -113,7 +116,14 @@ func (a *App) View(c *ui.Context) {
 					a.statusBar(c, m, tok)
 				}
 			})
-		})
+		}
+		if a.sidebarHidden() {
+			ui.Row(c.Key("frame")).Grow(1).Shrink(1).MinHeight(0).FillWidth().Children(content)
+			return
+		}
+		a.sbWidth = min(max(a.sbWidth, sidebarMin), sidebarMax)
+		ui.Split(c.Key("frame"), &a.sbWidth, sidebar, content).Grow(1).Shrink(1).MinHeight(0).FillWidth()
+		a.saveSidebarWidth(c)
 	})
 	a.editorView(c, m)
 	a.groupView(c, m)
@@ -140,4 +150,38 @@ func (a *App) View(c *ui.Context) {
 	a.contextMenuView(c)
 	a.unlockModal(c, m, tok)
 	a.observeLayout(c)
+}
+
+// sidebarMin and sidebarMax bound the width the sidebar is dragged to.
+const sidebarMin, sidebarMax = 160, 480
+
+// sidebarHidden reports whether the hosts' sidebar is hidden: the
+// settings' pages always show theirs.
+func (a *App) sidebarHidden() bool {
+	return a.settings.SidebarHidden && a.page != pageSettings
+}
+
+// setSidebarHidden hides the hosts' sidebar, or shows it again.
+func (a *App) setSidebarHidden(on bool) {
+	st := a.settings
+	st.SidebarHidden = on
+	a.ApplySettings(st)
+}
+
+// saveSidebarWidth saves the sidebar's width once it rests where it was
+// dragged to.
+func (a *App) saveSidebarWidth(c *ui.Context) {
+	if a.sbWidth == a.settings.SidebarWidth {
+		return
+	}
+	if a.sbWidth != a.sbSeen {
+		a.sbSeen, a.sbAt = a.sbWidth, c.Now()
+	}
+	if wait := splitRest - c.Now().Sub(a.sbAt); wait > 0 {
+		c.After(wait)
+		return
+	}
+	st := a.settings
+	st.SidebarWidth = a.sbWidth
+	a.ApplySettings(st)
 }

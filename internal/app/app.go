@@ -348,7 +348,10 @@ type App struct {
 	osc52KiB                 float64
 	clip                     clipGate
 	clipAsk                  *oscAsk
-	sbWidth                  float32
+	// sbWidth is the sidebar's width; sbSeen and sbAt are its value last
+	// seen and since when, to save it once it rests.
+	sbWidth, sbSeen float32
+	sbAt            time.Time
 	// filesSplit is the first side's share, in percent, of the files
 	// panes showing both sides; splitSeen and splitAt are its value last
 	// seen and since when, to save it once it rests.

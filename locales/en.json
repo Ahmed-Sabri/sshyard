@@ -164,6 +164,8 @@
   "removeFavorite": "Remove from Favorites",
   "paneActions": "Pane actions",
   "noTransfers": "No transfers yet. Drop files here to upload.",
+  "hideSidebar": "Hide Sidebar",
+  "showSidebar": "Show Sidebar",
   "connectionCount": "{count, plural, one {# connection} other {# connections}}",
   "hostCount": "{count, plural, one {# host} other {# hosts}}",
   "theme": "Theme",

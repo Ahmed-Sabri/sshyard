@@ -164,6 +164,8 @@
   "removeFavorite": "取消收藏",
   "paneActions": "窗格操作",
   "noTransfers": "暂无传输。将文件拖到此处即可上传。",
+  "hideSidebar": "隐藏侧边栏",
+  "showSidebar": "显示侧边栏",
   "connectionCount": "{count, plural, other {# 个连接}}",
   "hostCount": "{count, plural, other {# 台主机}}",
   "theme": "主题",

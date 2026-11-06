@@ -164,6 +164,8 @@
   "removeFavorite": "取消收藏",
   "paneActions": "窗格操作",
   "noTransfers": "暫無傳輸。將檔案拖到此處即可上傳。",
+  "hideSidebar": "隱藏側邊欄",
+  "showSidebar": "顯示側邊欄",
   "connectionCount": "{count, plural, other {# 個連線}}",
   "hostCount": "{count, plural, other {# 臺主機}}",
   "theme": "主題",

@@ -301,7 +301,8 @@ func backupIDs(snap assets.Snapshot, provs []settings.AIProvider) []string {
 func mergeSettings(cur, in settings.Settings) settings.Settings {
 	out := in
 	out.RememberLayout = cur.RememberLayout
-	out.SidebarWidth, out.ChromeMaterial, out.ContentMaterial = cur.SidebarWidth, cur.ChromeMaterial, cur.ContentMaterial
+	out.SidebarWidth, out.SidebarHidden = cur.SidebarWidth, cur.SidebarHidden
+	out.ChromeMaterial, out.ContentMaterial = cur.ChromeMaterial, cur.ContentMaterial
 	out.UIFont, out.TerminalFont = cur.UIFont, cur.TerminalFont
 	out.FilesDual, out.FilesSplit = cur.FilesDual, cur.FilesSplit
 	out.EditorTreeWidth, out.EditorTreeHidden = cur.EditorTreeWidth, cur.EditorTreeHidden

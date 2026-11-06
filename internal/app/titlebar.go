@@ -41,7 +41,11 @@ func (a *App) titleBar(c *ui.Context, m locales.Messages, tok theme.Tokens, clea
 	row.Children(func() {
 		// Level with the sidebar, and its separator, below, so that the
 		// tabs start where the content does.
-		ui.Row(c.Key("tblead")).Width(max(a.sbWidth+1, bar.Left)).Shrink(0).FillHeight().
+		lead := ui.Row(c.Key("tblead"))
+		if !a.sidebarHidden() {
+			lead.Width(max(a.sbWidth+1, bar.Left))
+		}
+		lead.Shrink(0).FillHeight().
 			Padding(0, theme.Space(2), 0, bar.Left+theme.Space(2)).AlignItems(ui.Center).Children(func() {
 			if a.page == pageSettings {
 				a.settingsBack(c, m, tok)

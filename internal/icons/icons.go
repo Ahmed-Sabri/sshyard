@@ -77,6 +77,8 @@ var (
 	LocalDiskOn  = load("computer-fill")
 	Folders      = load("layout-left-line")
 	FoldersOn    = load("layout-left-fill")
+	HideSidebar  = load("sidebar-fold-line")
+	ShowSidebar  = load("sidebar-unfold-line")
 	Warning      = load("error-warning-line")
 	Appearance   = load("palette-line")
 	Key          = load("key-2-line")

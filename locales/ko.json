@@ -164,6 +164,8 @@
   "removeFavorite": "즐겨찾기에서 제거",
   "paneActions": "창 작업",
   "noTransfers": "아직 전송이 없습니다. 업로드할 파일을 여기에 놓으세요.",
+  "hideSidebar": "사이드바 숨기기",
+  "showSidebar": "사이드바 표시",
   "connectionCount": "{count, plural, other {연결 #개}}",
   "hostCount": "{count, plural, other {호스트 #개}}",
   "theme": "테마",
