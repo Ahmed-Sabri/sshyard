@@ -146,7 +146,8 @@ func MetricsMountOK(mount string) bool {
 	return true
 }
 
-func shellQuote(s string) string { return "'" + s + "'" }
+// shellQuote is s as one sh word, a single quote in it included.
+func shellQuote(s string) string { return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'" }
 
 // MetricsCommand starts sh reading the script from stdin, with the interval
 // and mount as arguments. Keeping the script out of exec requests avoids
