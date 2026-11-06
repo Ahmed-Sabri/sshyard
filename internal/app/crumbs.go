@@ -94,9 +94,9 @@ func crumbFit(widths []float32, room, more float32) (shown []int, hidden []int) 
 // The breadcrumbs' measures: the room around a crumb's text, the
 // chevron after it, the root's icon and the ellipsis.
 const (
-	crumbPad     = 12
+	crumbPad     = 8
 	crumbChevron = 16
-	crumbIcon    = 14
+	crumbIcon    = 12
 )
 
 // crumbsBar is the path of a side's folder, between its header and its
@@ -119,7 +119,7 @@ func (a *App) crumbsBar(c *ui.Context, cn *conn, remote bool, tok theme.Tokens, 
 	if remote {
 		key, rootIcon = "rcrumbs", icons.Host
 	}
-	bar := ui.Row(c.Key(key)).Height(26).Shrink(0).FillWidth().MinWidth(0).AlignItems(ui.Center).Padding(0, 2).
+	bar := ui.Row(c.Key(key)).Height(22).Shrink(0).FillWidth().MinWidth(0).AlignItems(ui.Center).Padding(0, 2).
 		Role(ui.RoleGroup).Label(m.CrumbsLabel())
 	// A double click beside the crumbs types a path, as the button does.
 	bar.HandleInput(func(ev ui.InputEvent) bool {
@@ -185,14 +185,14 @@ func (a *App) crumbsBar(c *ui.Context, cn *conn, remote bool, tok theme.Tokens, 
 		if n := sd.chosen.Len(); n > 1 {
 			ui.Text(c, m.ItemsSelected(n)).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine().Shrink(0).MarginStart(theme.Space(3))
 		}
-		if (IconButton{Icon: icons.Edit, Label: m.TypePath(), Size: Small}).Clicked(c, "typepath") {
+		if (IconButton{Icon: icons.Edit, Label: m.TypePath(), Size: Tiny}).Clicked(c, "typepath") {
 			sd.startTyping()
 		}
 	})
 }
 
 // crumbTypeButton is the room the button that types a path takes.
-const crumbTypeButton = 28
+const crumbTypeButton = 20
 
 // startTyping shows the side's path field on the folder shown.
 func (sd *sideList) startTyping() {
@@ -209,7 +209,7 @@ func (a *App) pathField(c *ui.Context, cn *conn, remote bool, m locales.Messages
 	if remote {
 		key = "rpath"
 	}
-	ui.Row(c.Key(key)).MinHeight(26).Shrink(0).FillWidth().MinWidth(0).AlignItems(ui.Center).Padding(0, 2).Children(func() {
+	ui.Row(c.Key(key)).MinHeight(22).Shrink(0).FillWidth().MinWidth(0).AlignItems(ui.Center).Padding(0, 2).Children(func() {
 		in := formTextInput(c.Key("in:"+strconv.Itoa(sd.typings)), &sd.typed).Label(m.CrumbsLabel()).
 			Placeholder(m.PathPlaceholder()).FontSize(theme.Footnote).Grow(1).MinWidth(0).AutoFocus()
 		if sd.typeHold.key != any(sd.typings) {
@@ -283,7 +283,7 @@ func typedPath(typed, dir, home string, remote bool) string {
 // with the icon as its label), lit under the pointer. The last, the
 // folder shown, is in the text's color and bold.
 func crumbButton(c *ui.Context, tok theme.Tokens, key, name string, ic *icons.Icon, last, named bool) ui.Element {
-	b := ui.ButtonBase(c.Key(key)).Label(name).Padding(2, 6).Radius(theme.RadiusSmall).AlignItems(ui.Center).MinWidth(0).Cursor(ui.CursorPointer)
+	b := ui.ButtonBase(c.Key(key)).Label(name).Padding(2, 4).Radius(theme.RadiusSmall).AlignItems(ui.Center).MinWidth(0).Cursor(ui.CursorPointer)
 	fg := tok.TextMuted
 	switch {
 	case b.Pressed():

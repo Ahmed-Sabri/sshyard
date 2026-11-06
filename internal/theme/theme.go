@@ -65,6 +65,18 @@ const SpaceUnit float32 = 4
 // Space is n steps of the spacing scale (4, 8, 12, 16, 20, 24 …).
 func Space(n float32) float32 { return n * SpaceUnit }
 
+// DenseUnit is MyGo's spacing step in dense lists, as a files table: its
+// rows and header are 24 DIPs, not 32.
+const DenseUnit float32 = 3
+
+// Dense is a copy of base for dense lists, for ui.Themed: MyGo's widgets
+// inside take the DenseUnit step and the Footnote size.
+func Dense(base ui.Theme) *ui.Theme {
+	th := base
+	th.Spacing, th.FontSize = DenseUnit, Footnote
+	return &th
+}
+
 // The type scale, in DIPs, after Apple's text styles on the Mac.
 const (
 	Caption  float32 = 11 // details, counts, secondary lines

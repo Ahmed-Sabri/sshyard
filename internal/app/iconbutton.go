@@ -32,7 +32,7 @@ type IconButton struct {
 	// Prominent keeps the accent (or danger tint) visible at rest.
 	Prominent bool
 	// Size is the icon's size; 0 is 16. Small is 14, for dense rows, Tiny
-	// 12, for pane headers.
+	// 12, for pane headers and the files toolbar.
 	Size float32
 	// Badge is a count shown on the button's corner, as transfers to go;
 	// "" shows none. BadgeDanger draws it red, for failures.
@@ -41,7 +41,7 @@ type IconButton struct {
 }
 
 // Small is the icon size of IconButtons in dense rows (tabs, sidebar
-// rows), Tiny in the slimmest (pane headers).
+// rows), Tiny in the slimmest (pane headers, the files toolbar).
 const (
 	Small = 14
 	Tiny  = 12

@@ -99,6 +99,9 @@ func TestScales(t *testing.T) {
 			t.Errorf("type size %d (%v) not above %v", i, types[i], types[i-1])
 		}
 	}
+	if d := Dense(*LightTokens().Apply(ui.Theme{})); d.Spacing != DenseUnit || d.FontSize != Footnote || d.Space(8) != 24 || d.Accent != LightTokens().Accent {
+		t.Errorf("dense theme %v %v %v", d.Spacing, d.FontSize, d.Space(8))
+	}
 	for _, tk := range []Tokens{LightTokens(), DarkTokens()} {
 		if tk.FontSize != Body || tk.Radius != RadiusControl || tk.Spacing != SpaceUnit {
 			t.Errorf("dark=%v metrics %v %v %v", tk.Dark, tk.FontSize, tk.Radius, tk.Spacing)

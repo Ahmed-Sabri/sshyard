@@ -871,76 +871,79 @@ func (a *App) fileTable(c *ui.Context, cn *conn, remote bool, m locales.Messages
 	}
 	extend := -1
 	sd.rows = sd.rows[:0]
-	tb = ui.Table(c.Key(key), list, cols, len(es), func(row, col int) {
-		e := es[row]
-		on := sd.chosen.Has(e.Name)
-		muted := tok.TextMuted
-		if on {
-			muted = tok.AccentText // readable on the choice
-		}
-		switch ids[col] {
-		case colName:
-			ui.Row(c).Grow(1).MinWidth(0).AlignItems(ui.Center).Children(func() {
-				name := ui.Row(c).Gap(6).Shrink(1).MinWidth(0).AlignItems(ui.Center).Children(func() {
-					fileImage(c, entryIcon(e), 16)
-					ui.Text(c, e.Name).SingleLine().Shrink(1)
-				})
-				nb := name.Bounds()
-				if nb.H > 0 {
-					sd.rows = append(sd.rows, rowMark{e.Name, nb.Y, nb.Y + nb.H})
-				} else {
-					c.Invalidate() // a row new here: where it is shows next frame
-				}
-				// The name counts the clicks on it whether its row is chosen
-				// or not, so that a double click opens a row the first
-				// click chose, and takes the right clicks over it.
-				name.HandleInput(func(ev ui.InputEvent) bool {
-					if ev.Kind != ui.InputPointerDown || ev.Button != 1 {
-						return false
+	// The rows are dense, in the Footnote size, so that a pane shows many.
+	ui.Themed(c.Key(key+":dense"), theme.Dense(*c.Theme())).Background(ui.Transparent).Grow(1).FillWidth().MinHeight(0).Children(func() {
+		tb = ui.Table(c.Key(key), list, cols, len(es), func(row, col int) {
+			e := es[row]
+			on := sd.chosen.Has(e.Name)
+			muted := tok.TextMuted
+			if on {
+				muted = tok.AccentText // readable on the choice
+			}
+			switch ids[col] {
+			case colName:
+				ui.Row(c).Grow(1).MinWidth(0).AlignItems(ui.Center).Children(func() {
+					name := ui.Row(c).Gap(6).Shrink(1).MinWidth(0).AlignItems(ui.Center).Children(func() {
+						fileImage(c, entryIcon(e), 14)
+						ui.Text(c, e.Name).SingleLine().Shrink(1)
+					})
+					nb := name.Bounds()
+					if nb.H > 0 {
+						sd.rows = append(sd.rows, rowMark{e.Name, nb.Y, nb.Y + nb.H})
+					} else {
+						c.Invalidate() // a row new here: where it is shows next frame
 					}
-					menu(nb.X+ev.X, nb.Y+ev.Y)
-					return true
-				})
-				if !on {
-					return // the list chooses it, or drags a choice over the rows
-				}
-				// Chosen, the name drags the rows chosen, and takes its clicks.
-				name.Drag(filesDrag{pane: cn.id, remote: remote, paths: chosen})
-				dbl, clk := name.DoubleClicked(), name.Clicked()
-				switch {
-				case dbl:
-					sd.only(row)
-					opened, fs.opening[side] = true, !clk // released yet?
-				case clk && fs.opening[side]:
-					fs.opening[side] = false
-				case clk:
-					switch mods := name.ClickModifiers(); {
-					case mods&ui.Shift != 0:
-						extend = row
-					case mods&toggleMods != 0:
-						sd.chosen.Remove(e.Name)
-						sd.sel = row
-					default:
+					// The name counts the clicks on it whether its row is chosen
+					// or not, so that a double click opens a row the first
+					// click chose, and takes the right clicks over it.
+					name.HandleInput(func(ev ui.InputEvent) bool {
+						if ev.Kind != ui.InputPointerDown || ev.Button != 1 {
+							return false
+						}
+						menu(nb.X+ev.X, nb.Y+ev.Y)
+						return true
+					})
+					if !on {
+						return // the list chooses it, or drags a choice over the rows
+					}
+					// Chosen, the name drags the rows chosen, and takes its clicks.
+					name.Drag(filesDrag{pane: cn.id, remote: remote, paths: chosen})
+					dbl, clk := name.DoubleClicked(), name.Clicked()
+					switch {
+					case dbl:
 						sd.only(row)
+						opened, fs.opening[side] = true, !clk // released yet?
+					case clk && fs.opening[side]:
+						fs.opening[side] = false
+					case clk:
+						switch mods := name.ClickModifiers(); {
+						case mods&ui.Shift != 0:
+							extend = row
+						case mods&toggleMods != 0:
+							sd.chosen.Remove(e.Name)
+							sd.sel = row
+						default:
+							sd.only(row)
+						}
+						list.Focus(c)
 					}
-					list.Focus(c)
-				}
-			})
-		case colSize:
-			ui.Row(c).Grow(1).Justify(ui.End).AlignItems(ui.Center).Children(func() {
-				if !e.IsDir {
-					ui.Text(c, humanSize(e.Size)).TextColor(muted).SingleLine()
-				} else {
-					a.dirSizeCell(c, cn, remote, e.Name, on, tok, m)
-				}
-			})
-		case colModified:
-			ui.Text(c, e.ModTime.Format("2006-01-02 15:04")).TextColor(muted).SingleLine().Grow(1)
-		case colPerm:
-			text, detail := a.permText(fs, remote, e, m)
-			ui.Text(c, text).TextColor(muted).SingleLine().Shrink(1).Grow(1).Tooltip(detail)
-		}
-	}).Grow(1).FillWidth()
+				})
+			case colSize:
+				ui.Row(c).Grow(1).Justify(ui.End).AlignItems(ui.Center).Children(func() {
+					if !e.IsDir {
+						ui.Text(c, humanSize(e.Size)).TextColor(muted).SingleLine()
+					} else {
+						a.dirSizeCell(c, cn, remote, e.Name, on, tok, m)
+					}
+				})
+			case colModified:
+				ui.Text(c, e.ModTime.Format("2006-01-02 15:04")).TextColor(muted).SingleLine().Grow(1)
+			case colPerm:
+				text, detail := a.permText(fs, remote, e, m)
+				ui.Text(c, text).TextColor(muted).SingleLine().Shrink(1).Grow(1).Tooltip(detail)
+			}
+		}).Grow(1).FillWidth()
+	})
 	if extend >= 0 {
 		list.ExtendTo(extend)
 	}
@@ -1126,8 +1129,8 @@ func (a *App) fileKeys(c *ui.Context, cn *conn, remote bool, tb ui.Element, entr
 // side's name and its IconButtons. The folder shows in the breadcrumbs
 // below.
 func sideHeader(c *ui.Context, tok theme.Tokens, ic *icons.Icon, title string, actions func()) {
-	ui.Row(c).Gap(8).Height(32).Padding(0, 2, 0, 4).AlignItems(ui.Center).Children(func() {
-		softTile(c, ic, tok.Accent, 22)
+	ui.Row(c).Gap(6).Height(24).Padding(0, 2, 0, 4).AlignItems(ui.Center).Children(func() {
+		softTile(c, ic, tok.Accent, 18)
 		ui.Text(c, title).FontWeight(600).FontSize(theme.Footnote).SingleLine()
 		ui.Spacer(c)
 		actions()
@@ -1147,7 +1150,7 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 	a.refreshForTransfers(c, cn)
 	l, s := &fs.local, &fs.remote
 	stacked := width > 0 && width < 620
-	body := ui.Column(c.Key("files")).Grow(1).FillWidth().Padding(10).Gap(10)
+	body := ui.Column(c.Key("files")).Grow(1).FillWidth().Padding(8).Gap(8)
 	body.Children(func() {
 		a.unfinishedView(c, cn, tok, m)
 		a.noReportView(c, t, cn, tok, m)
@@ -1171,7 +1174,7 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 		// sideCard is a side's card: its header, the breadcrumbs of its
 		// folder and its rows, kept inside its rounded edge.
 		sideCard := func(key string) ui.Element {
-			return ui.Column(c.Key(key)).Fill().Gap(4).Padding(6, 8, 8, 8).Radius(theme.RadiusCard-2).Border(1, tok.Line).Clip()
+			return ui.Column(c.Key(key)).Fill().Gap(2).Padding(4, 6, 6, 6).Radius(theme.RadiusCard-2).Border(1, tok.Line).Clip()
 		}
 		localPane := func() {
 			ui.Box(c.Key("lpad")).Fill().Padding(gap(true)).Children(func() {
@@ -1179,16 +1182,16 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 				local.Children(func() {
 					picked := l.picked()
 					sideHeader(c, tok, icons.LocalDisk, m.Local(), func() {
-						if iconButton(c, "lup", icons.GoUp, m.LocalUp()) {
+						if (IconButton{Icon: icons.GoUp, Label: m.LocalUp(), Size: Tiny}).Clicked(c, "lup") {
 							a.listLocal(l, filepath.Dir(l.dir))
 						}
-						if iconButton(c, "lrefresh", icons.Refresh, m.LocalRefresh()) {
+						if (IconButton{Icon: icons.Refresh, Label: m.LocalRefresh(), Size: Tiny}).Clicked(c, "lrefresh") {
 							a.listLocal(l, l.dir)
 						}
-						if iconButton(c, "lmkdir", icons.NewFolder, m.LocalNewFolder()) {
+						if (IconButton{Icon: icons.NewFolder, Label: m.LocalNewFolder(), Size: Tiny}).Clicked(c, "lmkdir") {
 							fs.ask, fs.askOpen = &nameAsk{kind: askMkdir}, true
 						}
-						if (IconButton{Icon: icons.Upload, Label: m.UploadSelected(), Disabled: s.client == nil || len(picked) == 0}).Clicked(c, "upload") {
+						if (IconButton{Icon: icons.Upload, Label: m.UploadSelected(), Disabled: s.client == nil || len(picked) == 0, Size: Tiny}).Clicked(c, "upload") {
 							a.Upload(cn, l.paths(false, picked), s.dir)
 						}
 					})
@@ -1221,20 +1224,20 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 			}
 			picked := s.picked()
 			off := s.client == nil
-			if (IconButton{Icon: icons.GoUp, Label: m.RemoteUp(), Disabled: off}).Clicked(c, "rup") && s.dir != "" {
+			if (IconButton{Icon: icons.GoUp, Label: m.RemoteUp(), Disabled: off, Size: Tiny}).Clicked(c, "rup") && s.dir != "" {
 				a.listRemote(s, sftpsvc.RemoteParent(s.dir))
 			}
-			if (IconButton{Icon: icons.Refresh, Label: m.RemoteRefresh(), Disabled: off}).Clicked(c, "rrefresh") {
+			if (IconButton{Icon: icons.Refresh, Label: m.RemoteRefresh(), Disabled: off, Size: Tiny}).Clicked(c, "rrefresh") {
 				a.listRemote(s, s.dir)
 			}
-			if (IconButton{Icon: icons.NewFolder, Label: m.RemoteNewFolder(), Disabled: off}).Clicked(c, "rmkdir") {
+			if (IconButton{Icon: icons.NewFolder, Label: m.RemoteNewFolder(), Disabled: off, Size: Tiny}).Clicked(c, "rmkdir") {
 				fs.ask, fs.askOpen = &nameAsk{kind: askMkdir, remote: true}, true
 			}
 			if !dual {
-				if (IconButton{Icon: icons.Upload, Label: m.UploadFiles(), Disabled: off || a.p.PickFiles == nil}).Clicked(c, "rupfiles") {
+				if (IconButton{Icon: icons.Upload, Label: m.UploadFiles(), Disabled: off || a.p.PickFiles == nil, Size: Tiny}).Clicked(c, "rupfiles") {
 					a.pickUpload(cn, s.dir, false, m)
 				}
-				if (IconButton{Icon: icons.UploadFolder, Label: m.UploadFolder(), Disabled: off || a.p.PickFolder == nil}).Clicked(c, "rupfolder") {
+				if (IconButton{Icon: icons.UploadFolder, Label: m.UploadFolder(), Disabled: off || a.p.PickFolder == nil, Size: Tiny}).Clicked(c, "rupfolder") {
 					a.pickUpload(cn, s.dir, true, m)
 				}
 			}
@@ -1242,7 +1245,7 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 			if !dual {
 				label = m.DownloadTo()
 			}
-			if (IconButton{Icon: icons.Download, Label: label, Disabled: off || len(picked) == 0}).Clicked(c, "download") {
+			if (IconButton{Icon: icons.Download, Label: label, Disabled: off || len(picked) == 0, Size: Tiny}).Clicked(c, "download") {
 				a.downloadTo(cn, s.paths(true, picked), m)
 			}
 		}
@@ -1253,7 +1256,7 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 					if dual {
 						sideHeader(c, tok, icons.Host, m.Remote(), remoteActions)
 					} else {
-						ui.Row(c.Key("rbar")).Gap(2).Height(32).Shrink(0).FillWidth().AlignItems(ui.Center).Children(func() {
+						ui.Row(c.Key("rbar")).Gap(2).MinHeight(24).Shrink(0).FillWidth().AlignItems(ui.Center).Children(func() {
 							ui.Row(c.Key("rcrumbsbox")).Grow(1).Shrink(1).MinWidth(0).AlignItems(ui.Center).Children(func() {
 								if s.client != nil {
 									a.crumbsBar(c, cn, true, tok, m)
