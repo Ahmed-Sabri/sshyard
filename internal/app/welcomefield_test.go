@@ -40,6 +40,17 @@ func TestWelcomeFieldFollowsPointer(t *testing.T) {
 	}
 }
 
+// The page sees every press first, the buttons' too: a button works even
+// when the field's note of where the buttons are is stale.
+func TestWelcomeFieldLeavesButtonPresses(t *testing.T) {
+	a, tt := newTestApp(t)
+	a.field.controls = nil
+	mustClick(t, tt, "Quick Migration")
+	if a.page != pageSettings {
+		t.Fatalf("button press taken by the field: page=%v", a.page)
+	}
+}
+
 func TestWelcomeFieldStillWithReducedMotionOrBackground(t *testing.T) {
 	a, tt := newTestApp(t)
 	tt.SetPreferences(ui.Preferences{ReduceMotion: true})

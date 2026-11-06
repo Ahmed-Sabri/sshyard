@@ -229,9 +229,16 @@ func (a *App) terminalPage(c *ui.Context, m locales.Messages, tok theme.Tokens) 
 		f, still := &a.field, c.Preferences().ReduceMotion
 		page := ui.Column(c.Key("welcome")).Fill().Center().Gap(12)
 		// A background image of the user's own shows without the dots.
+		// The page only watches the pointer: as the innermost handler it
+		// sees the presses on the buttons too, which must stay theirs.
 		if !a.hasBackground() {
 			page.Draw(func(p *ui.Painter, r ui.Rect) { f.draw(p, r, tok, still) }).
-				HandleInput(func(ev ui.InputEvent) bool { return f.handle(ev, still) })
+				HandleInput(func(ev ui.InputEvent) bool {
+					if f.handle(ev, still) {
+						c.Invalidate()
+					}
+					return false
+				})
 		}
 		f.pane, f.content, f.controls = page.Bounds(), ui.Rect{}, f.controls[:0]
 		page.Children(func() {

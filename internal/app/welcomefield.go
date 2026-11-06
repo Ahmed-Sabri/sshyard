@@ -112,7 +112,7 @@ func (f *welcomeField) wake(now time.Time) {
 	}
 }
 
-// handle takes the pointer's moves and primary presses off the buttons,
+// handle notes the pointer's moves and primary presses off the buttons,
 // unless still; it reports whether a frame should follow.
 func (f *welcomeField) handle(ev ui.InputEvent, still bool) bool {
 	if still {
