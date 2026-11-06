@@ -12,6 +12,7 @@ import (
 	"github.com/Licoy/sshyard/internal/app"
 	"github.com/Licoy/sshyard/internal/gtkfix"
 	"github.com/Licoy/sshyard/internal/keychain"
+	"github.com/Licoy/sshyard/internal/macfix"
 	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/internal/updater"
@@ -152,6 +153,9 @@ func main() {
 			Content: ui.View(a.View),
 		})
 		rememberWindow(w, "main")
+		// macOS: right clicks over the title bar reach the tabs (see macfix),
+		// once the window has made MyGo's view class.
+		macfix.TitleBarClicks()
 		d = newDesktop(a, w)
 		a.Start()
 		w.OnMinimize(func() { a.SetMinimized(true) })
