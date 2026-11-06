@@ -95,15 +95,30 @@ func formSegmented(c *ui.Context, selected *int, labels ...string) ui.Element {
 }
 
 func formSegmentedState(c *ui.Context, selected *int, disabled bool, labels ...string) ui.Element {
+	return segmentedControl(c, selected, disabled, labels, theme.Space(3), func(i int, col ui.Color) {
+		ui.Text(c, labels[i]).FontSize(theme.Footnote).FontWeight(500).TextColor(col).SingleLine()
+	})
+}
+
+// segmentedControl is the one look of a segmented choice: a capsule track
+// of the segments, the selected one raised on it. content draws segment i
+// in col; padX is a segment's horizontal padding.
+func segmentedControl(c *ui.Context, selected *int, disabled bool, labels []string, padX float32, content func(i int, col ui.Color)) ui.Element {
+	tok := currentTokens(c)
 	parts := ui.SegmentedBase(c, selected, len(labels))
 	parts.Track.Disabled(disabled)
-	quietControl(c, parts.Track).AlignItems(ui.Stretch).Padding(theme.Space(0.5)).Gap(theme.Space(0.5)).Children(func() {
+	formPointer(parts.Track).AlignItems(ui.Stretch).Padding(theme.Space(0.5)).Gap(theme.Space(0.5)).Radius(theme.Capsule).Background(tok.Fill).Children(func() {
 		for i, label := range labels {
-			segment := quietControl(c, parts.Segment(i)).Label(label).Padding(theme.Space(1.5), theme.Space(3.5))
-			if i == *selected {
-				segment.Background(currentTokens(c).Accent.Alpha(0.12))
+			el := formPointer(parts.Segment(i)).Label(label).Padding(theme.Space(1), padX).Gap(theme.Space(1.5)).Radius(theme.Capsule).AlignItems(ui.Center)
+			col := tok.TextMuted
+			switch {
+			case i == *selected:
+				theme.Shadow(tok.Card).On(el.Background(tok.Inset))
+				col = tok.Text
+			case el.Hovered() && !el.IsDisabled():
+				el.Background(tok.Hover)
 			}
-			segment.Children(func() { ui.Text(c, label).FontSize(theme.Body).TextColor(currentTokens(c).Text).SingleLine() })
+			el.Children(func() { content(i, col) })
 		}
 	})
 	return parts.Track

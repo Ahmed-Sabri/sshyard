@@ -282,38 +282,20 @@ func (a *App) settingsPage(c *ui.Context, m locales.Messages, tok theme.Tokens) 
 
 // themeSwitch chooses the appearance: a capsule track of the modes, each
 // with its icon, the one chosen raised on it.
-func (a *App) themeSwitch(c *ui.Context, m locales.Messages, tok theme.Tokens) (theme.Mode, bool) {
+func (a *App) themeSwitch(c *ui.Context, m locales.Messages) (theme.Mode, bool) {
 	a.themeIdx = 0
 	for i, md := range theme.Modes {
 		if md == a.settings.Theme {
 			a.themeIdx = i
 		}
 	}
-	type seg struct {
-		icon  *icons.Icon
-		label string
-	}
-	segs := []seg{{icons.LocalDisk, m.ThemeAuto()}, {icons.Light, m.ThemeLight()}, {icons.Dark, m.ThemeDark()}}
-	parts := ui.SegmentedBase(c.Key("theme"), &a.themeIdx, len(segs))
-	parts.Track.Label(m.Appearance()).Padding(2).Gap(2).Radius(theme.Capsule).Background(tok.Fill).Children(func() {
-		for i, sg := range segs {
-			el := parts.Segment(i).Padding(4, 12).Gap(6).Radius(theme.Capsule).AlignItems(ui.Center).Cursor(ui.CursorPointer)
-			on := i == a.themeIdx
-			col := tok.TextMuted
-			switch {
-			case on:
-				theme.Shadow(tok.Card).On(el.Background(tok.Inset))
-				col = tok.Text
-			case el.Hovered():
-				el.Background(tok.Hover)
-			}
-			el.Children(func() {
-				ui.Icon(c, sg.icon.SVG).Size(14, 14).TextColor(col)
-				ui.Text(c, sg.label).FontSize(theme.Footnote).FontWeight(500).TextColor(col).SingleLine()
-			})
-		}
-	})
-	if !parts.Track.Changed() {
+	icon := []*icons.Icon{icons.LocalDisk, icons.Light, icons.Dark}
+	labels := []string{m.ThemeAuto(), m.ThemeLight(), m.ThemeDark()}
+	track := segmentedControl(c.Key("theme"), &a.themeIdx, false, labels, theme.Space(3), func(i int, col ui.Color) {
+		ui.Icon(c, icon[i].SVG).Size(14, 14).TextColor(col)
+		ui.Text(c, labels[i]).FontSize(theme.Footnote).FontWeight(500).TextColor(col).SingleLine()
+	}).Label(m.Appearance())
+	if !track.Changed() {
 		return a.settings.Theme, false
 	}
 	return theme.Modes[a.themeIdx], true
@@ -322,7 +304,7 @@ func (a *App) themeSwitch(c *ui.Context, m locales.Messages, tok theme.Tokens) (
 func (a *App) prefAppearance(c *ui.Context, m locales.Messages, tok theme.Tokens, s *settings.Settings, changed *bool) {
 	a.settingsSection(c, tok, nil, ui.Color{}, "", func(g *settingsGroup) {
 		g.row(m.Theme(), "", func() {
-			if md, ok := a.themeSwitch(c, m, tok); ok {
+			if md, ok := a.themeSwitch(c, m); ok {
 				s.Theme, *changed = md, true
 			}
 		})

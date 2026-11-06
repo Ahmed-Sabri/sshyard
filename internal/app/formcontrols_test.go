@@ -4,6 +4,7 @@ import (
 	"image/color"
 	"testing"
 
+	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -205,4 +206,37 @@ func TestFormSelectTranslucentFill(t *testing.T) {
 			t.Fatalf("dark=%v control hides different backgrounds with opaque fill: %v", dark, pixels)
 		}
 	}
+}
+
+func TestFormSegmentedRaisesSelected(t *testing.T) {
+	for _, dark := range []bool{false, true} {
+		tok := theme.LightTokens()
+		if dark {
+			tok = theme.DarkTokens()
+		}
+		selected := 0
+		tt := ui.NewTester(func(c *ui.Context) {
+			ui.Column(c).Fill().Background(tok.Canvas).Padding(20).Children(func() {
+				formSegmented(c, &selected, "One", "Two")
+			})
+		}, 400, 200)
+		tt.SetDark(dark)
+		tt.Frame()
+		one, two := mustFind(t, tt, "One"), mustFind(t, tt, "Two")
+		at := func(r ui.Rect) color.RGBA { return tt.Image().RGBAAt(int(r.X+4), int(r.Y+r.H/2)) }
+		got, want := at(one), tok.Inset
+		if absDiff(got.R, want.R) > 2 || absDiff(got.G, want.G) > 2 || absDiff(got.B, want.B) > 2 {
+			t.Fatalf("dark=%v selected segment fill = %v, want inset %v", dark, got, want)
+		}
+		if at(one) == at(two) {
+			t.Fatalf("dark=%v selected segment is not raised over the track", dark)
+		}
+	}
+}
+
+func absDiff(a, b uint8) uint8 {
+	if a > b {
+		return a - b
+	}
+	return b - a
 }
