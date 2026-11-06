@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Licoy/sshyard/internal/assets"
 	"github.com/Licoy/sshyard/internal/icons"
@@ -63,6 +64,7 @@ type hostForm struct {
 	// the new host
 	promote string
 	streamForm
+	renewalForm
 }
 
 // authChoice is one option of the editor's auth select.
@@ -116,6 +118,7 @@ func (a *App) openEditor(h *assets.Host) {
 
 	f := &hostForm{isNew: h == nil, port: "22", cwdFollow: true}
 	f.loadStream(h)
+	f.loadRenewal(h, time.Now())
 	if h != nil {
 		f.orig = *h
 		f.name, f.address, f.port = h.Name, h.Address, strconv.Itoa(h.Port)
@@ -243,6 +246,7 @@ func (a *App) SaveForm(m locales.Messages) bool {
 	h.Favorite, h.CwdFollow, h.Metrics = f.favorite, f.cwdFollow, metricsMode(f.metricsIdx)
 	h.Icon, h.Color = f.icon, f.color
 	f.applyStream(&h)
+	f.applyRenewal(&h)
 	if f.auth == "" {
 		f.auth = a.authLabel(m, h)
 	}
@@ -460,6 +464,11 @@ func (a *App) editorView(c *ui.Context, m locales.Messages) {
 						} else {
 							a.streamTermFields(c, m, tok, f)
 						}
+						ui.Field(c, "", func() {
+							ui.Collapsible(c.Key("f:renewal"), m.RenewalSection(), &f.renewOpen, func() {
+								a.renewalFields(c, m, tok, f)
+							})
+						})
 						ui.Field(c, "", func() {
 							ui.Collapsible(c.Key("f:adv"), m.Advanced(), &f.advOpen, func() {
 								labels := syncOSC52Label(m, f)

@@ -355,6 +355,11 @@ func (a *App) prefAppearance(c *ui.Context, m locales.Messages, tok theme.Tokens
 				*changed = true
 			}
 		})
+		g.row(m.RenewalNotify(), m.RenewalNotifyNote(), func() {
+			if ui.Switch(c.Key("renewalnotify"), &s.RenewalNotify).Label(m.RenewalNotify()).Changed() {
+				*changed = true
+			}
+		})
 		g.row(m.TrayIconStyle(), m.TrayIconStyleNote(), func() {
 			cur := m.TrayIconMono()
 			if s.TrayIcon == settings.TrayIconColor {

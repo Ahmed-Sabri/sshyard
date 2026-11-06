@@ -207,15 +207,20 @@ func (a *App) selectedHost() string {
 // end of its row: two small IconButtons and the gap between them.
 const hostActionsWidth = 2*24 + 2 + 4
 
+// renewalMarkWidth is the room the mark of a renewal soon takes at the
+// end of a sidebar host's row, in place of its actions.
+var renewalMarkWidth = 14 + 2*theme.Space(2)
+
 // hostItem is a host of the sidebar: its tile, then its name, and while
 // the pointer is over it or it is chosen, what to do with it at the end
 // (files, and the rest in its menu, as on a right click; a double click
-// connects). A dot on the tile's corner tells how its sessions are. The
-// item lays its children out reversed, so that the tile it is given
-// (after its label, as a badge) comes first.
+// connects). A dot on the tile's corner tells how its sessions are, a
+// mark at the end that its subscription renews soon. Resting the pointer
+// on it shows its card. The item lays its children out reversed, so that
+// the tile it is given (after its label, as a badge) comes first.
 func (a *App) hostItem(c *ui.Context, m locales.Messages, h assets.Host, prefix string) {
 	tok := currentTokens(c)
-	it := ui.SidebarItem(c.Key(prefix+h.ID), prefix+h.ID, nil, a.pv(h.Label())).Reverse().Tooltip(a.pv(a.hostTip(m, h))).Drag(dragHost{h.ID})
+	it := ui.SidebarItem(c.Key(prefix+h.ID), prefix+h.ID, nil, a.pv(h.Label())).Reverse().Description(a.pv(a.hostTip(m, h))).Drag(dragHost{h.ID})
 	chosen := a.selected == prefix+h.ID
 	if chosen {
 		// Gray even while the sidebar has the focus, as the actions on
@@ -224,8 +229,12 @@ func (a *App) hostItem(c *ui.Context, m locales.Messages, h assets.Host, prefix 
 	}
 	more := "more:" + prefix + h.ID
 	shown := chosen || it.Hovered() || a.menu.key == more
-	if shown {
+	days, soon := h.Renewal.Reminding(c.Now())
+	switch {
+	case shown:
 		it.Padding(theme.Space(1.5), hostActionsWidth, theme.Space(1.5), theme.Space(2))
+	case soon:
+		it.Padding(theme.Space(1.5), renewalMarkWidth, theme.Space(1.5), theme.Space(2))
 	}
 	it.Children(func() {
 		ui.Box(c.Key("avatar")).Shrink(0).Children(func() {
@@ -235,6 +244,12 @@ func (a *App) hostItem(c *ui.Context, m locales.Messages, h assets.Host, prefix 
 					Label(a.statusText(m, h, session.Status{State: st}, c.Now()))
 			}
 		})
+		if soon && !shown {
+			ui.Row(c.Key("renewal")).Absolute().Top(0).Bottom(0).Right(theme.Space(2)).AlignItems(ui.Center).
+				Label(m.RenewalSoon(renewWhen(m, days))).Children(func() {
+				ui.Icon(c, icons.Renewal.SVG).Size(14, 14).TextColor(renewalColor(tok, h.Renewal, c.Now()))
+			})
+		}
 		// Shown while its menu is open, which outlives the hover.
 		acts := ui.Row(c.Key("acts")).Absolute().Top(0).Bottom(0).Right(4).Gap(2).AlignItems(ui.Center)
 		if !shown {
@@ -249,6 +264,7 @@ func (a *App) hostItem(c *ui.Context, m locales.Messages, h assets.Host, prefix 
 			})
 		})
 	})
+	a.hostCardOn(c, m, tok, it, prefix+h.ID, h)
 	if it.DoubleClicked() {
 		a.Connect(h.ID, openAt{})
 	}

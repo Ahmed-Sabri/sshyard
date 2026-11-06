@@ -33,6 +33,13 @@ type HostMeta struct {
 	Uname   string
 	Distro  string
 	Cwd     string
+	// Provider, Renewal and Note are what the user keeps of the host:
+	// who rents it out, its subscription as a line ("renews every 1
+	// months since 2026-10-01; next renewal 2026-11-01, in 3 days") and
+	// their note, which is sent as untrusted data.
+	Provider string
+	Renewal  string
+	Note     string
 }
 
 func hostMessage(h HostMeta) string {
@@ -40,10 +47,19 @@ func hostMessage(h HostMeta) string {
 	if cwd == "" {
 		cwd = "(unknown)"
 	}
-	return fmt.Sprintf("Host name: %s\nAddress: %s\nUser: %s\nUname: %s\nDistro: %s\nCwd: %s\n"+
-		"This session is bound to this host only. Reuse the host context provided here. "+
-		"Do not guess unknown OS or distro; query them only when needed for the user's task.",
+	msg := fmt.Sprintf("Host name: %s\nAddress: %s\nUser: %s\nUname: %s\nDistro: %s\nCwd: %s\n",
 		h.Name, h.Address, h.User, orUnknown(h.Uname), orUnknown(h.Distro), cwd)
+	if h.Provider != "" {
+		msg += "Provider: " + h.Provider + "\n"
+	}
+	if h.Renewal != "" {
+		msg += "Subscription: " + h.Renewal + "\n"
+	}
+	if h.Note != "" {
+		msg += "The user's note on this host:\n" + WrapUntrusted("host note", h.Note) + "\n"
+	}
+	return msg + "This session is bound to this host only. Reuse the host context provided here. " +
+		"Do not guess unknown OS or distro; query them only when needed for the user's task."
 }
 
 func orUnknown(s string) string {

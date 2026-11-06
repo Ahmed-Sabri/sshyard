@@ -115,6 +115,14 @@ func main() {
 		p := platform()
 		p.SetTrayIcon = func(style string) error { return d.setTrayIcon(style) }
 		p.SetRememberLayout = changeRememberLayout
+		p.Notify = func(id, title, body string, clicked func()) error {
+			n := mygo.NewNotification(mygo.NotificationOptions{ID: id, Title: title, Body: body})
+			n.OnClick(func() {
+				postUI(d.show)
+				clicked()
+			})
+			return n.Show()
+		}
 		a, _ := app.New(p)
 		installWindowStates(a)
 		mygo.App.OnQuit(a.Close)

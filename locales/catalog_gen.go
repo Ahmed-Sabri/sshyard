@@ -14770,3 +14770,265 @@ func QuickStreamInvalid() string { return In(i18n.Locale()).QuickStreamInvalid()
 func (msgs Messages) QuickStreamInvalid() string {
 	return Catalog.Format(msgs.locale, "quickStreamInvalid", nil)
 }
+
+// RenewalSection says "Subscription & notes"
+// in the language the app shows.
+func RenewalSection() string { return In(i18n.Locale()).RenewalSection() }
+
+// RenewalSection says "Subscription & notes"
+// in the language of msgs.
+func (msgs Messages) RenewalSection() string {
+	return Catalog.Format(msgs.locale, "renewalSection", nil)
+}
+
+// FieldProvider says "Provider"
+// in the language the app shows.
+func FieldProvider() string { return In(i18n.Locale()).FieldProvider() }
+
+// FieldProvider says "Provider"
+// in the language of msgs.
+func (msgs Messages) FieldProvider() string {
+	return Catalog.Format(msgs.locale, "fieldProvider", nil)
+}
+
+// FieldStatus says "Status"
+// in the language the app shows.
+func FieldStatus() string { return In(i18n.Locale()).FieldStatus() }
+
+// FieldStatus says "Status"
+// in the language of msgs.
+func (msgs Messages) FieldStatus() string {
+	return Catalog.Format(msgs.locale, "fieldStatus", nil)
+}
+
+// TrackRenewal says "Track subscription renewals"
+// in the language the app shows.
+func TrackRenewal() string { return In(i18n.Locale()).TrackRenewal() }
+
+// TrackRenewal says "Track subscription renewals"
+// in the language of msgs.
+func (msgs Messages) TrackRenewal() string {
+	return Catalog.Format(msgs.locale, "trackRenewal", nil)
+}
+
+// RenewalStart says "Started on"
+// in the language the app shows.
+func RenewalStart() string { return In(i18n.Locale()).RenewalStart() }
+
+// RenewalStart says "Started on"
+// in the language of msgs.
+func (msgs Messages) RenewalStart() string {
+	return Catalog.Format(msgs.locale, "renewalStart", nil)
+}
+
+// RenewalCycle says "Renews"
+// in the language the app shows.
+func RenewalCycle() string { return In(i18n.Locale()).RenewalCycle() }
+
+// RenewalCycle says "Renews"
+// in the language of msgs.
+func (msgs Messages) RenewalCycle() string {
+	return Catalog.Format(msgs.locale, "renewalCycle", nil)
+}
+
+// RenewMonthly says "Every month"
+// in the language the app shows.
+func RenewMonthly() string { return In(i18n.Locale()).RenewMonthly() }
+
+// RenewMonthly says "Every month"
+// in the language of msgs.
+func (msgs Messages) RenewMonthly() string {
+	return Catalog.Format(msgs.locale, "renewMonthly", nil)
+}
+
+// RenewQuarterly says "Every 3 months"
+// in the language the app shows.
+func RenewQuarterly() string { return In(i18n.Locale()).RenewQuarterly() }
+
+// RenewQuarterly says "Every 3 months"
+// in the language of msgs.
+func (msgs Messages) RenewQuarterly() string {
+	return Catalog.Format(msgs.locale, "renewQuarterly", nil)
+}
+
+// RenewHalfYearly says "Every 6 months"
+// in the language the app shows.
+func RenewHalfYearly() string { return In(i18n.Locale()).RenewHalfYearly() }
+
+// RenewHalfYearly says "Every 6 months"
+// in the language of msgs.
+func (msgs Messages) RenewHalfYearly() string {
+	return Catalog.Format(msgs.locale, "renewHalfYearly", nil)
+}
+
+// RenewYearly says "Every year"
+// in the language the app shows.
+func RenewYearly() string { return In(i18n.Locale()).RenewYearly() }
+
+// RenewYearly says "Every year"
+// in the language of msgs.
+func (msgs Messages) RenewYearly() string {
+	return Catalog.Format(msgs.locale, "renewYearly", nil)
+}
+
+// RenewTwoYears says "Every 2 years"
+// in the language the app shows.
+func RenewTwoYears() string { return In(i18n.Locale()).RenewTwoYears() }
+
+// RenewTwoYears says "Every 2 years"
+// in the language of msgs.
+func (msgs Messages) RenewTwoYears() string {
+	return Catalog.Format(msgs.locale, "renewTwoYears", nil)
+}
+
+// RenewThreeYears says "Every 3 years"
+// in the language the app shows.
+func RenewThreeYears() string { return In(i18n.Locale()).RenewThreeYears() }
+
+// RenewThreeYears says "Every 3 years"
+// in the language of msgs.
+func (msgs Messages) RenewThreeYears() string {
+	return Catalog.Format(msgs.locale, "renewThreeYears", nil)
+}
+
+// RenewEveryMonths says "{count, plural, one {Every month} other {Every # months}}"
+// in the language the app shows.
+func RenewEveryMonths(count int) string { return In(i18n.Locale()).RenewEveryMonths(count) }
+
+// RenewEveryMonths says "{count, plural, one {Every month} other {Every # months}}"
+// in the language of msgs.
+func (msgs Messages) RenewEveryMonths(count int) string {
+	return Catalog.Format(msgs.locale, "renewEveryMonths", map[string]any{"count": count})
+}
+
+// RenewalRemind says "Remind"
+// in the language the app shows.
+func RenewalRemind() string { return In(i18n.Locale()).RenewalRemind() }
+
+// RenewalRemind says "Remind"
+// in the language of msgs.
+func (msgs Messages) RenewalRemind() string {
+	return Catalog.Format(msgs.locale, "renewalRemind", nil)
+}
+
+// RemindNever says "Never"
+// in the language the app shows.
+func RemindNever() string { return In(i18n.Locale()).RemindNever() }
+
+// RemindNever says "Never"
+// in the language of msgs.
+func (msgs Messages) RemindNever() string {
+	return Catalog.Format(msgs.locale, "remindNever", nil)
+}
+
+// RemindDaysBefore says "{count, plural, one {# day before} other {# days before}}"
+// in the language the app shows.
+func RemindDaysBefore(count int) string { return In(i18n.Locale()).RemindDaysBefore(count) }
+
+// RemindDaysBefore says "{count, plural, one {# day before} other {# days before}}"
+// in the language of msgs.
+func (msgs Messages) RemindDaysBefore(count int) string {
+	return Catalog.Format(msgs.locale, "remindDaysBefore", map[string]any{"count": count})
+}
+
+// RenewalNextOn says "Next renewal: {date}"
+// in the language the app shows.
+func RenewalNextOn(date string) string { return In(i18n.Locale()).RenewalNextOn(date) }
+
+// RenewalNextOn says "Next renewal: {date}"
+// in the language of msgs.
+func (msgs Messages) RenewalNextOn(date string) string {
+	return Catalog.Format(msgs.locale, "renewalNextOn", map[string]any{"date": date})
+}
+
+// RenewalNext says "Renewal"
+// in the language the app shows.
+func RenewalNext() string { return In(i18n.Locale()).RenewalNext() }
+
+// RenewalNext says "Renewal"
+// in the language of msgs.
+func (msgs Messages) RenewalNext() string {
+	return Catalog.Format(msgs.locale, "renewalNext", nil)
+}
+
+// RenewToday says "today"
+// in the language the app shows.
+func RenewToday() string { return In(i18n.Locale()).RenewToday() }
+
+// RenewToday says "today"
+// in the language of msgs.
+func (msgs Messages) RenewToday() string {
+	return Catalog.Format(msgs.locale, "renewToday", nil)
+}
+
+// RenewInDays says "{count, plural, one {in # day} other {in # days}}"
+// in the language the app shows.
+func RenewInDays(count int) string { return In(i18n.Locale()).RenewInDays(count) }
+
+// RenewInDays says "{count, plural, one {in # day} other {in # days}}"
+// in the language of msgs.
+func (msgs Messages) RenewInDays(count int) string {
+	return Catalog.Format(msgs.locale, "renewInDays", map[string]any{"count": count})
+}
+
+// RenewalSoon says "Subscription renews {when}"
+// in the language the app shows.
+func RenewalSoon(when string) string { return In(i18n.Locale()).RenewalSoon(when) }
+
+// RenewalSoon says "Subscription renews {when}"
+// in the language of msgs.
+func (msgs Messages) RenewalSoon(when string) string {
+	return Catalog.Format(msgs.locale, "renewalSoon", map[string]any{"when": when})
+}
+
+// RenewalNotifyTitle says "{host} renews {when}"
+// in the language the app shows.
+func RenewalNotifyTitle(host string, when string) string {
+	return In(i18n.Locale()).RenewalNotifyTitle(host, when)
+}
+
+// RenewalNotifyTitle says "{host} renews {when}"
+// in the language of msgs.
+func (msgs Messages) RenewalNotifyTitle(host string, when string) string {
+	return Catalog.Format(msgs.locale, "renewalNotifyTitle", map[string]any{"host": host, "when": when})
+}
+
+// NoteHint says "Notes are saved as plain text: do not put passwords here."
+// in the language the app shows.
+func NoteHint() string { return In(i18n.Locale()).NoteHint() }
+
+// NoteHint says "Notes are saved as plain text: do not put passwords here."
+// in the language of msgs.
+func (msgs Messages) NoteHint() string {
+	return Catalog.Format(msgs.locale, "noteHint", nil)
+}
+
+// LastConnected says "Last connected"
+// in the language the app shows.
+func LastConnected() string { return In(i18n.Locale()).LastConnected() }
+
+// LastConnected says "Last connected"
+// in the language of msgs.
+func (msgs Messages) LastConnected() string {
+	return Catalog.Format(msgs.locale, "lastConnected", nil)
+}
+
+// RenewalNotify says "Subscription reminders"
+// in the language the app shows.
+func RenewalNotify() string { return In(i18n.Locale()).RenewalNotify() }
+
+// RenewalNotify says "Subscription reminders"
+// in the language of msgs.
+func (msgs Messages) RenewalNotify() string {
+	return Catalog.Format(msgs.locale, "renewalNotify", nil)
+}
+
+// RenewalNotifyNote says "Show a system notification before a host's subscription renews, as many days ahead as the host's reminder."
+// in the language the app shows.
+func RenewalNotifyNote() string { return In(i18n.Locale()).RenewalNotifyNote() }
+
+// RenewalNotifyNote says "Show a system notification before a host's subscription renews, as many days ahead as the host's reminder."
+// in the language of msgs.
+func (msgs Messages) RenewalNotifyNote() string {
+	return Catalog.Format(msgs.locale, "renewalNotifyNote", nil)
+}

@@ -266,7 +266,7 @@ func (a *App) mcpHandler(token string) *mcp.Handler {
 			},
 			{
 				Name:        "list_hosts",
-				Description: "List saved SSH hosts: id, name, group, address and port. Give group to list one group only (an empty string lists the ungrouped hosts).",
+				Description: "List saved SSH hosts: id, name, group, address and port, with the provider, subscription renewal (start, period, next renewal day and days left) and note the user keeps for them. Give group to list one group only (an empty string lists the ungrouped hosts).",
 				Schema:      schema(`"group":{"type":"string","description":"Only hosts in this group"}`),
 				Call:        a.mcpHosts,
 			},
@@ -328,6 +328,21 @@ type mcpHostInfo struct {
 	// Protocol is "ssh", "telnet" or "serial": agents connect to SSH
 	// hosts only.
 	Protocol string `json:"protocol"`
+	// Provider, Renewal and Note are what the user keeps of the host's
+	// subscription.
+	Provider string      `json:"provider,omitempty"`
+	Renewal  *mcpRenewal `json:"renewal,omitempty"`
+	Note     string      `json:"note,omitempty"`
+}
+
+// mcpRenewal is a host's subscription, with its next renewal as of the
+// call.
+type mcpRenewal struct {
+	Start       string `json:"start"`
+	EveryMonths int    `json:"every_months"`
+	RemindDays  int    `json:"remind_days"`
+	Next        string `json:"next"`
+	DaysLeft    int    `json:"days_left"`
 }
 
 func mcpHostOf(h assets.Host) mcpHostInfo {
@@ -339,7 +354,13 @@ func mcpHostOf(h assets.Host) mcpHostInfo {
 	if h.SSH() {
 		proto = "ssh"
 	}
-	return mcpHostInfo{ID: h.ID, Name: h.Label(), Group: h.Group, Address: h.Address, Port: port, Protocol: proto}
+	info := mcpHostInfo{ID: h.ID, Name: h.Label(), Group: h.Group, Address: h.Address, Port: port, Protocol: proto, Provider: h.Provider, Note: h.Note}
+	now := time.Now()
+	if next, ok := h.Renewal.Next(now); ok {
+		days, _ := h.Renewal.DaysLeft(now)
+		info.Renewal = &mcpRenewal{Start: h.Renewal.Start, EveryMonths: h.Renewal.Months, RemindDays: h.Renewal.Remind, Next: next.Format(assets.DateLayout), DaysLeft: days}
+	}
+	return info
 }
 
 func (a *App) mcpGroups() string {

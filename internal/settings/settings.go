@@ -183,6 +183,12 @@ type Settings struct {
 	// derived from it is in the keychain (keychain.DefaultBackupKey). It
 	// belongs to this device too.
 	DefaultBackupPassword bool `json:"defaultBackupPassword,omitempty"`
+	// RenewalNotify shows a system notification as the renewal of a
+	// host's subscription comes within its reminder. On by default.
+	RenewalNotify bool `json:"renewalNotify"`
+	// RenewalNotified is, by host ID, the renewal day (assets.DateLayout)
+	// this device last notified of, so that each renewal notifies once.
+	RenewalNotified map[string]string `json:"renewalNotified,omitempty"`
 }
 
 // Highlight is how the terminal colors keywords in its output.
@@ -551,7 +557,7 @@ const (
 // Default returns the defaults.
 func Default() Settings {
 	return Settings{RememberLayout: true, Theme: theme.Auto, CloseBehavior: CloseToTray, TrayIcon: TrayIconColor, CheckUpdates: true, UpdateIntervalHours: 1, TerminalFontSize: 13, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, FilesSplit: 50, FilesEdge: FilesRight, TerminalRightClick: RightClickMenu, EditorTreeWidth: 240, OSC52Write: OSC52Ask, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
-		AIDefaultAgent: "builtin", AIDefaultMode: "ask", AIReviewStrictness: AIReviewStandard, AIContextLines: 200, AIAuditRetentionDays: 90, AIRedact: true, MCPPort: MCPPortDefault, LocalKeys: true, Highlight: Highlight{On: true}}
+		AIDefaultAgent: "builtin", AIDefaultMode: "ask", AIReviewStrictness: AIReviewStandard, AIContextLines: 200, AIAuditRetentionDays: 90, AIRedact: true, MCPPort: MCPPortDefault, LocalKeys: true, Highlight: Highlight{On: true}, RenewalNotify: true}
 }
 
 // ResolveOSC52Write is the write policy in effect. A host value of allow,

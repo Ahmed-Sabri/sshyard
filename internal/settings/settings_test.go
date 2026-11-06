@@ -362,3 +362,21 @@ func TestFilesEdge(t *testing.T) {
 		t.Errorf("saved %+v", got)
 	}
 }
+
+func TestRenewalNotifyDefault(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "s.json")
+	// A file from before the setting keeps the notifications on.
+	os.WriteFile(p, []byte(`{"theme":"dark"}`), 0o600)
+	s, err := Load(p)
+	if err != nil || !s.RenewalNotify || s.RenewalNotified != nil {
+		t.Fatalf("loaded %v %v %v", s.RenewalNotify, s.RenewalNotified, err)
+	}
+	s.RenewalNotify, s.RenewalNotified = false, map[string]string{"h1": "2026-11-01"}
+	if err := Save(p, s); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Load(p)
+	if err != nil || got.RenewalNotify || got.RenewalNotified["h1"] != "2026-11-01" {
+		t.Fatalf("reloaded %v %v %v", got.RenewalNotify, got.RenewalNotified, err)
+	}
+}

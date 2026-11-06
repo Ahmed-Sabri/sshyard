@@ -131,6 +131,7 @@ var (
 	Sent         = load("arrow-up-line")
 	Received     = load("arrow-down-line")
 	Uptime       = load("time-line")
+	Renewal      = load("calendar-schedule-line")
 	Load         = load("speed-up-line")
 	Privacy      = load("eye-off-line")
 	PrivacyOn    = load("eye-off-fill")

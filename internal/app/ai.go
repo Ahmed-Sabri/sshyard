@@ -827,7 +827,8 @@ func (a *App) aiMeta(c *conn) agent.HostMeta {
 	if t := a.conns[c.ai.link]; t != nil {
 		cwd = t.cwd
 	}
-	return agent.HostMeta{Name: c.host.Label(), Address: c.host.Addr(), User: c.host.User, Cwd: cwd}
+	return agent.HostMeta{Name: c.host.Label(), Address: c.host.Addr(), User: c.host.User, Cwd: cwd,
+		Provider: c.host.Provider, Renewal: aiRenewal(c.host.Renewal, time.Now()), Note: c.host.Note}
 }
 
 func (a *App) aiTerminal(c *conn) string {

@@ -55,6 +55,10 @@ type Platform struct {
 	SetRememberLayout func(bool) (undo func() error, err error)
 	// OpenPath opens a file in its default app; nil can't.
 	OpenPath func(path string) error
+	// Notify shows a system notification, replacing the one of the same
+	// id, and calls clicked as it is clicked; it may block, and is never
+	// called on a frame. nil can't.
+	Notify func(id, title, body string, clicked func()) error
 	// CacheDir is where files opened in another app are copied, the
 	// user's cache folder when "".
 	CacheDir string
@@ -289,6 +293,8 @@ type App struct {
 	// contextMenu), ctx the context menu's place and entries
 	menu dropMenu
 	ctx  ctxMenu
+	// card is the sidebar host whose card shows, or soon will
+	card cardHover
 	// clearContent is set while the content shows the window's material,
 	// as the appearance settings ask (see contentFill)
 	clearContent bool
@@ -737,6 +743,7 @@ func (a *App) startIndependent() {
 	if root, err := a.cacheDir(); err == nil {
 		go cleanCache(root)
 	}
+	a.startRenewalReminders()
 }
 
 // post runs fn on the UI thread, without requiring a visible window.

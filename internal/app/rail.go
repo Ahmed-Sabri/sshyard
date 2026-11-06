@@ -691,4 +691,34 @@ func (a *App) hostPanel(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 			ui.Text(c, or(strings.Join(jumps, " → "))).FontSize(theme.Footnote)
 		})
 	})
+	a.renewalPanel(c, m, tok, h)
+}
+
+// renewalPanel is the card of the host's provider, subscription and note,
+// shown while it keeps any of them.
+func (a *App) renewalPanel(c *ui.Context, m locales.Messages, tok theme.Tokens, h assets.Host) {
+	if h.Provider == "" && !h.Renewal.On() && h.Note == "" {
+		return
+	}
+	panelCard(c, tok, "hostrenewal", icons.Renewal, tok.TintAt(2), m.RenewalSection(), "", func() {
+		item := func(label, value string, col ui.Color) {
+			ui.Column(c).Gap(2).FillWidth().Children(func() {
+				ui.Text(c, label).FontSize(theme.Caption).TextColor(tok.TextMuted)
+				t := ui.Text(c, value).FontSize(theme.Footnote)
+				if col != (ui.Color{}) {
+					t.TextColor(col)
+				}
+			})
+		}
+		if h.Provider != "" {
+			item(m.FieldProvider(), h.Provider, ui.Color{})
+		}
+		if line, col, ok := renewalLine(m, tok, h.Renewal, c.Now()); ok {
+			item(m.RenewalNext(), line, col)
+			item(m.RenewalRemind(), remindLabel(m, h.Renewal.Remind), ui.Color{})
+		}
+		if h.Note != "" {
+			item(m.FieldNote(), a.pv(h.Note), ui.Color{})
+		}
+	})
 }
