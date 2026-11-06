@@ -113,6 +113,12 @@ func TestReconnectOutputEncoding(t *testing.T) {
 	}{
 		{vt.EncodingUTF8, "\xe4", "@中"},
 		{vt.EncodingGBK, "\xd6", "@\xd6\xd0"},
+		{vt.EncodingGB2312, "\xd6", "@\xd6\xd0"},
+		{vt.EncodingGB18030, "\x81\x30\x81", "@\xd6\xd0"},
+		{vt.EncodingBig5, "\xa4", "@\xa4\xa4"},
+		{vt.EncodingShiftJIS, "\x92", "@\x92\x86"},
+		{vt.EncodingEUCJP, "\x8f\xa2", "@\xc3\xe6"},
+		{vt.EncodingEUCKR, "\xd1", "@\xf1\xe9"},
 	} {
 		t.Run(string(tc.encoding), func(t *testing.T) {
 			srv := server(t)
@@ -141,6 +147,43 @@ func TestReconnectOutputEncoding(t *testing.T) {
 			waitText(t, s, "before�@中")
 			if s.Term.OutputEncoding() != tc.encoding {
 				t.Fatalf("selection changed to %s", s.Term.OutputEncoding())
+			}
+		})
+	}
+}
+
+// Output selection must not transcode bytes typed into the shell.
+func TestOutputEncodingInputRemainsUTF8(t *testing.T) {
+	for _, selected := range vt.OutputEncodings() {
+		t.Run(string(selected), func(t *testing.T) {
+			srv := server(t)
+			received := make(chan string, 1)
+			srv.Shell = func(ch ssh.Channel, _ sshtest.PTY, _ <-chan sshtest.PTY) int {
+				data := make([]byte, len("中文\r"))
+				if _, err := io.ReadFull(ch, data); err != nil {
+					received <- err.Error()
+					return 1
+				}
+				received <- string(data)
+				return 0
+			}
+			s := New(Config{Addr: srv.Addr, User: "demo", Credentials: password("secret"), HostKey: trusted(t, srv).Callback()}, Options{}, 80, 24)
+			defer s.Close()
+			if err := s.Term.SetOutputEncoding(selected); err != nil {
+				t.Fatal(err)
+			}
+			s.Start()
+			waitState(t, s, Connected)
+			if n, err := s.Write([]byte("中文\r")); err != nil || n != len("中文\r") {
+				t.Fatalf("write: %d %v", n, err)
+			}
+			select {
+			case got := <-received:
+				if got != "中文\r" {
+					t.Fatalf("input: %q", got)
+				}
+			case <-time.After(5 * time.Second):
+				t.Fatal("no input received")
 			}
 		})
 	}

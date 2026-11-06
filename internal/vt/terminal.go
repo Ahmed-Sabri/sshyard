@@ -3,6 +3,8 @@ package vt
 import (
 	"sync"
 	"unicode/utf8"
+
+	"golang.org/x/text/encoding"
 )
 
 // DefaultScrollback is how many lines scroll back by default.
@@ -99,7 +101,9 @@ type Terminal struct {
 	utf8buf  []byte
 
 	outputEncoding OutputEncoding
-	gbkLead        byte
+	outputBuf      [4]byte
+	outputLen      int
+	outputDecoder  *encoding.Decoder
 	// onlyOSC is set while a tmux passthrough payload is parsed: OSC 52
 	// and OSC 0/2 apply, and nothing else changes the screen.
 	onlyOSC bool
@@ -488,8 +492,8 @@ func (t *Terminal) Write(p []byte) (int, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.gen++
-	if t.outputEncoding == EncodingGBK {
-		return t.writeGBK(p)
+	if t.outputEncoding != EncodingUTF8 {
+		return t.writeEncoded(p)
 	}
 	for i := 0; i < len(p); i++ {
 		b := p[i]

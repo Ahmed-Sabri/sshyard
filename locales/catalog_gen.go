@@ -14803,6 +14803,206 @@ func (msgs Messages) OutputEncodingGBK() string {
 	return Catalog.Format(msgs.locale, "outputEncodingGBK", nil)
 }
 
+// OutputEncodingGBKLabel says "GBK · Simplified Chinese"
+// in the language the app shows.
+func OutputEncodingGBKLabel() string { return In(i18n.Locale()).OutputEncodingGBKLabel() }
+
+// OutputEncodingGBKLabel says "GBK · Simplified Chinese"
+// in the language of msgs.
+func (msgs Messages) OutputEncodingGBKLabel() string {
+	return Catalog.Format(msgs.locale, "outputEncodingGBKLabel", nil)
+}
+
+// OutputEncodingGB2312 says "GB2312 · Simplified Chinese"
+// in the language the app shows.
+func OutputEncodingGB2312() string { return In(i18n.Locale()).OutputEncodingGB2312() }
+
+// OutputEncodingGB2312 says "GB2312 · Simplified Chinese"
+// in the language of msgs.
+func (msgs Messages) OutputEncodingGB2312() string {
+	return Catalog.Format(msgs.locale, "outputEncodingGB2312", nil)
+}
+
+// OutputEncodingGB18030 says "GB18030 · Simplified Chinese"
+// in the language the app shows.
+func OutputEncodingGB18030() string { return In(i18n.Locale()).OutputEncodingGB18030() }
+
+// OutputEncodingGB18030 says "GB18030 · Simplified Chinese"
+// in the language of msgs.
+func (msgs Messages) OutputEncodingGB18030() string {
+	return Catalog.Format(msgs.locale, "outputEncodingGB18030", nil)
+}
+
+// OutputEncodingBig5 says "Big5 · Traditional Chinese"
+// in the language the app shows.
+func OutputEncodingBig5() string { return In(i18n.Locale()).OutputEncodingBig5() }
+
+// OutputEncodingBig5 says "Big5 · Traditional Chinese"
+// in the language of msgs.
+func (msgs Messages) OutputEncodingBig5() string {
+	return Catalog.Format(msgs.locale, "outputEncodingBig5", nil)
+}
+
+// OutputEncodingShiftJIS says "Shift_JIS · Japanese"
+// in the language the app shows.
+func OutputEncodingShiftJIS() string { return In(i18n.Locale()).OutputEncodingShiftJIS() }
+
+// OutputEncodingShiftJIS says "Shift_JIS · Japanese"
+// in the language of msgs.
+func (msgs Messages) OutputEncodingShiftJIS() string {
+	return Catalog.Format(msgs.locale, "outputEncodingShiftJIS", nil)
+}
+
+// OutputEncodingEUCJP says "EUC-JP · Japanese"
+// in the language the app shows.
+func OutputEncodingEUCJP() string { return In(i18n.Locale()).OutputEncodingEUCJP() }
+
+// OutputEncodingEUCJP says "EUC-JP · Japanese"
+// in the language of msgs.
+func (msgs Messages) OutputEncodingEUCJP() string {
+	return Catalog.Format(msgs.locale, "outputEncodingEUCJP", nil)
+}
+
+// OutputEncodingEUCKR says "EUC-KR · Korean"
+// in the language the app shows.
+func OutputEncodingEUCKR() string { return In(i18n.Locale()).OutputEncodingEUCKR() }
+
+// OutputEncodingEUCKR says "EUC-KR · Korean"
+// in the language of msgs.
+func (msgs Messages) OutputEncodingEUCKR() string {
+	return Catalog.Format(msgs.locale, "outputEncodingEUCKR", nil)
+}
+
+// OutputEncodingWindows1252 says "Windows-1252 · Western European"
+// in the language the app shows.
+func OutputEncodingWindows1252() string { return In(i18n.Locale()).OutputEncodingWindows1252() }
+
+// OutputEncodingWindows1252 says "Windows-1252 · Western European"
+// in the language of msgs.
+func (msgs Messages) OutputEncodingWindows1252() string {
+	return Catalog.Format(msgs.locale, "outputEncodingWindows1252", nil)
+}
+
+// OutputEncodingWindows1250 says "Windows-1250 · Central European"
+// in the language the app shows.
+func OutputEncodingWindows1250() string { return In(i18n.Locale()).OutputEncodingWindows1250() }
+
+// OutputEncodingWindows1250 says "Windows-1250 · Central European"
+// in the language of msgs.
+func (msgs Messages) OutputEncodingWindows1250() string {
+	return Catalog.Format(msgs.locale, "outputEncodingWindows1250", nil)
+}
+
+// OutputEncodingISO88591 says "ISO-8859-1 · Western European"
+// in the language the app shows.
+func OutputEncodingISO88591() string { return In(i18n.Locale()).OutputEncodingISO88591() }
+
+// OutputEncodingISO88591 says "ISO-8859-1 · Western European"
+// in the language of msgs.
+func (msgs Messages) OutputEncodingISO88591() string {
+	return Catalog.Format(msgs.locale, "outputEncodingISO8859_1", nil)
+}
+
+// OutputEncodingISO88592 says "ISO-8859-2 · Central European"
+// in the language the app shows.
+func OutputEncodingISO88592() string { return In(i18n.Locale()).OutputEncodingISO88592() }
+
+// OutputEncodingISO88592 says "ISO-8859-2 · Central European"
+// in the language of msgs.
+func (msgs Messages) OutputEncodingISO88592() string {
+	return Catalog.Format(msgs.locale, "outputEncodingISO8859_2", nil)
+}
+
+// OutputEncodingISO885915 says "ISO-8859-15 · Western European"
+// in the language the app shows.
+func OutputEncodingISO885915() string { return In(i18n.Locale()).OutputEncodingISO885915() }
+
+// OutputEncodingISO885915 says "ISO-8859-15 · Western European"
+// in the language of msgs.
+func (msgs Messages) OutputEncodingISO885915() string {
+	return Catalog.Format(msgs.locale, "outputEncodingISO8859_15", nil)
+}
+
+// OutputEncodingWindows1251 says "Windows-1251 · Cyrillic"
+// in the language the app shows.
+func OutputEncodingWindows1251() string { return In(i18n.Locale()).OutputEncodingWindows1251() }
+
+// OutputEncodingWindows1251 says "Windows-1251 · Cyrillic"
+// in the language of msgs.
+func (msgs Messages) OutputEncodingWindows1251() string {
+	return Catalog.Format(msgs.locale, "outputEncodingWindows1251", nil)
+}
+
+// OutputEncodingKOI8R says "KOI8-R · Cyrillic"
+// in the language the app shows.
+func OutputEncodingKOI8R() string { return In(i18n.Locale()).OutputEncodingKOI8R() }
+
+// OutputEncodingKOI8R says "KOI8-R · Cyrillic"
+// in the language of msgs.
+func (msgs Messages) OutputEncodingKOI8R() string {
+	return Catalog.Format(msgs.locale, "outputEncodingKOI8R", nil)
+}
+
+// OutputEncodingKOI8U says "KOI8-U · Ukrainian"
+// in the language the app shows.
+func OutputEncodingKOI8U() string { return In(i18n.Locale()).OutputEncodingKOI8U() }
+
+// OutputEncodingKOI8U says "KOI8-U · Ukrainian"
+// in the language of msgs.
+func (msgs Messages) OutputEncodingKOI8U() string {
+	return Catalog.Format(msgs.locale, "outputEncodingKOI8U", nil)
+}
+
+// OutputEncodingISO88595 says "ISO-8859-5 · Cyrillic"
+// in the language the app shows.
+func OutputEncodingISO88595() string { return In(i18n.Locale()).OutputEncodingISO88595() }
+
+// OutputEncodingISO88595 says "ISO-8859-5 · Cyrillic"
+// in the language of msgs.
+func (msgs Messages) OutputEncodingISO88595() string {
+	return Catalog.Format(msgs.locale, "outputEncodingISO8859_5", nil)
+}
+
+// OutputEncodingCP437 says "CP437 · DOS US"
+// in the language the app shows.
+func OutputEncodingCP437() string { return In(i18n.Locale()).OutputEncodingCP437() }
+
+// OutputEncodingCP437 says "CP437 · DOS US"
+// in the language of msgs.
+func (msgs Messages) OutputEncodingCP437() string {
+	return Catalog.Format(msgs.locale, "outputEncodingCP437", nil)
+}
+
+// OutputEncodingCP850 says "CP850 · DOS Western European"
+// in the language the app shows.
+func OutputEncodingCP850() string { return In(i18n.Locale()).OutputEncodingCP850() }
+
+// OutputEncodingCP850 says "CP850 · DOS Western European"
+// in the language of msgs.
+func (msgs Messages) OutputEncodingCP850() string {
+	return Catalog.Format(msgs.locale, "outputEncodingCP850", nil)
+}
+
+// OutputEncodingCP866 says "CP866 · DOS Cyrillic"
+// in the language the app shows.
+func OutputEncodingCP866() string { return In(i18n.Locale()).OutputEncodingCP866() }
+
+// OutputEncodingCP866 says "CP866 · DOS Cyrillic"
+// in the language of msgs.
+func (msgs Messages) OutputEncodingCP866() string {
+	return Catalog.Format(msgs.locale, "outputEncodingCP866", nil)
+}
+
+// OutputEncodingGB2312Note says "Decoded with GBK for compatibility"
+// in the language the app shows.
+func OutputEncodingGB2312Note() string { return In(i18n.Locale()).OutputEncodingGB2312Note() }
+
+// OutputEncodingGB2312Note says "Decoded with GBK for compatibility"
+// in the language of msgs.
+func (msgs Messages) OutputEncodingGB2312Note() string {
+	return Catalog.Format(msgs.locale, "outputEncodingGB2312Note", nil)
+}
+
 // OutputEncodingError says "Could not change output encoding: {error}"
 // in the language the app shows.
 func OutputEncodingError(error string) string { return In(i18n.Locale()).OutputEncodingError(error) }

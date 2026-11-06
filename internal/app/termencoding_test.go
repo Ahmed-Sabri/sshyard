@@ -2,7 +2,9 @@ package app
 
 import (
 	"fmt"
+	"slices"
 	"testing"
+	"time"
 
 	"github.com/Licoy/sshyard/internal/assets"
 	"github.com/Licoy/sshyard/internal/layout"
@@ -30,14 +32,19 @@ func TestOutputEncodingToolbar(t *testing.T) {
 				t.Fatalf("not in 30px status bar: %v", r)
 			}
 			mustClick(t, tt, m.OutputEncodingTip(m.OutputEncodingUTF8()))
-			gbk := mustFind(t, tt, m.OutputEncodingGBK())
+			gbk := mustFind(t, tt, m.OutputEncodingGBKLabel())
 			if gbk.Y < 0 || gbk.Y+gbk.H > r.Y || gbk.X+gbk.W > 1200 {
 				t.Fatalf("menu did not flip inside window: %v chip %v", gbk, r)
 			}
-			if inset := gbk.X - r.X; inset < 12 || inset > 15 {
-				t.Fatalf("empty icon gutter remains: label inset %v", inset)
+			// The GB2312 note makes this a multi-line menu, retaining the
+			// shared icon column under the existing drop-menu rules.
+			if first := mustFind(t, tt, m.OutputEncodingGB2312()); first.X != gbk.X {
+				t.Fatalf("multi-line menu labels misaligned: UTF-8 %v GBK %v", first, gbk)
 			}
-			mustClick(t, tt, m.OutputEncodingGBK())
+			if !tt.HasText(m.OutputEncodingGB2312Note()) {
+				t.Fatal("GB2312 compatibility note missing")
+			}
+			mustClick(t, tt, m.OutputEncodingGBKLabel())
 			if cn.s.Term.OutputEncoding() != vt.EncodingGBK || !hasExact(tt, m.OutputEncodingGBK()) {
 				t.Fatal("GBK choice was not applied")
 			}
@@ -70,7 +77,7 @@ func TestOutputEncodingToolbar(t *testing.T) {
 				t.Fatal("encoding shown in settings")
 			}
 			mustClick(t, tt, "Close Settings")
-			if a.menu.key != "" || hasExact(tt, m.OutputEncodingGBK()) {
+			if a.menu.key != "" || hasExact(tt, m.OutputEncodingGBKLabel()) {
 				t.Fatal("encoding menu reopened after settings")
 			}
 		})
@@ -80,54 +87,143 @@ func TestOutputEncodingToolbar(t *testing.T) {
 // Capture the real popover's bounds: Tester can locate text and labels but
 // does not expose a query for an otherwise unnamed menu panel.
 func TestOutputEncodingMenuLayout(t *testing.T) {
-	for _, dark := range []bool{false, true} {
-		t.Run(fmt.Sprint("dark=", dark), func(t *testing.T) {
-			a := &App{menu: dropMenu{focus: 0, sub: -1}}
-			m := locales.In("en")
-			open, chosen := true, false
-			note := ""
-			var menu ui.Rect
-			tt := ui.NewTester(func(c *ui.Context) {
-				anchor := ui.Box(c).Absolute().Left(300).Top(350).Size(80, 24)
-				ui.PopoverBase(c, anchor, &open, func(panel ui.Element) {
-					panel.Margin(4, 0, 0, 0)
-					a.menuPanel(c, currentTokens(c), panel, []menuEntry{
-						{Label: m.OutputEncodingUTF8(), Checked: true, Note: note},
-						{Label: m.OutputEncodingGBK(), Do: func() { chosen, open = true, false }},
-					}, 0, true)
-					menu = panel.Bounds()
-				})
-			}, 500, 400)
-			tt.SetDark(dark)
-			tt.Frame()
-			if menu.W < theme.Space(25) || menu.W > theme.Space(30) || menu.Y < 0 || menu.Y+menu.H > 350 {
-				t.Fatalf("compact popover bounds: %v", menu)
-			}
-			for _, label := range []string{m.OutputEncodingUTF8(), m.OutputEncodingGBK()} {
-				r := mustFind(t, tt, label)
-				if r.X-menu.X < 12 || r.X-menu.X > 15 || r.W < 34 || r.X+r.W > menu.X+menu.W-12 {
-					t.Fatalf("text %q clipped or padded incorrectly: %v menu %v", label, r, menu)
+	for _, locale := range []string{"en", "zh-Hans", "zh-Hant", "ja", "ko"} {
+		for _, viewport := range []struct {
+			dark          bool
+			width, height int
+		}{
+			{false, 500, 400}, {true, 500, 400}, {false, 900, 600}, {true, 900, 600},
+		} {
+			t.Run(fmt.Sprintf("%s/dark=%v/%dx%d", locale, viewport.dark, viewport.width, viewport.height), func(t *testing.T) {
+				a := &App{menu: dropMenu{focus: 0, sub: -1}}
+				cn := &conn{id: 1, s: &session.Session{Term: vt.New(80, 24)}}
+				m := locales.In(locale)
+				want := map[string]string{
+					"en": "GB2312 · Simplified Chinese", "zh-Hans": "GB2312 · 简体中文",
+					"zh-Hant": "GB2312 · 簡體中文", "ja": "GB2312 · 簡体字中国語", "ko": "GB2312 · 중국어 간체",
 				}
-			}
-			if !tt.Focused(m.OutputEncodingUTF8()) {
-				t.Fatal("first menu item did not take focus")
-			}
-			tt.Key(0, ui.KeyDown)
-			tt.Key(0, ui.KeyEnter)
-			if !chosen || open {
-				t.Fatal("keyboard did not choose and dismiss compact menu")
-			}
-			// A multi-line choice keeps the original layout even when compact
-			// was requested; its note must not adjust a missing icon element.
-			note, open = m.OutputEncodingUTF8(), true
-			tt.Frame()
-			if menu.W < menuWidth {
-				t.Fatalf("multi-line menu lost its original width: %v", menu)
-			}
-			if r := mustFind(t, tt, m.OutputEncodingGBK()); r.X-menu.X < 38 {
-				t.Fatalf("multi-line menu lost its shared icon column: %v menu %v", r, menu)
-			}
-		})
+				if m.OutputEncodingGB2312() != want[locale] {
+					t.Fatalf("localized label: %q", m.OutputEncodingGB2312())
+				}
+				open := true
+				var menu ui.Rect
+				var entries []menuEntry
+				widths := map[string]float32{}
+				tt := ui.NewTester(func(c *ui.Context) {
+					anchor := ui.Box(c).Absolute().Left(float32(viewport.width-200)).Top(float32(viewport.height-50)).Size(80, 24)
+					ui.PopoverBase(c, anchor, &open, func(panel ui.Element) {
+						panel.Margin(4, 0, 0, 0)
+						entries = a.outputEncodingEntries(c, cn, m)
+						for _, e := range entries {
+							widths[e.Label], _ = c.MeasureText(0, ui.Span{Text: e.Label, Size: theme.Body})
+							if e.Note != "" {
+								widths[e.Note], _ = c.MeasureText(0, ui.Span{Text: e.Note, Size: theme.Caption})
+							}
+						}
+						a.menuPanel(c, currentTokens(c), panel, entries, 0, menuLayout{compact: true, maxHeight: menuHeightAt(c, anchor.Bounds())})
+						menu = panel.Bounds()
+					})
+				}, viewport.width, viewport.height)
+				tt.SetLocale(locale)
+				tt.SetDark(viewport.dark)
+				tt.Frame()
+				if menu.W < menuWidth || menu.X < 0 || menu.X+menu.W > float32(viewport.width) || menu.Y < 0 || menu.Y+menu.H > float32(viewport.height-50) {
+					t.Fatalf("full encoding popover outside small window: %v", menu)
+				}
+				t.Logf("full menu bounds: %v", menu)
+				encodings := vt.OutputEncodings()
+				var labels []string
+				for _, e := range entries {
+					if !e.Sep {
+						labels = append(labels, e.Label)
+					}
+				}
+				if len(labels) != 20 || len(entries) != 27 {
+					t.Fatalf("choices/separators: %d/%d", len(labels), len(entries)-len(labels))
+				}
+				for i, encoding := range encodings {
+					if labels[i] != outputEncodingLabel(m, encoding) {
+						t.Fatalf("choice %d: %q, want %s", i, labels[i], encoding)
+					}
+				}
+
+				for _, label := range []string{m.OutputEncodingUTF8(), m.OutputEncodingGB2312(), m.OutputEncodingGB2312Note(), m.OutputEncodingGBKLabel()} {
+					r := mustFind(t, tt, label)
+					if inset := r.X - menu.X; inset < 38 || inset > 41 || r.W < 34 || r.X+r.W > menu.X+menu.W-12 || r.Y < menu.Y || r.Y+r.H > menu.Y+menu.H {
+						t.Fatalf("text %q clipped or padded incorrectly: %v menu %v", label, r, menu)
+					}
+				}
+				if !tt.Focused(m.OutputEncodingUTF8()) {
+					t.Fatal("first menu item did not take focus")
+				}
+				// Reveal every real item and measure its full text with its
+				// checkmark present, including the widest localized labels.
+				widest := ""
+				var widestBounds ui.Rect
+				for i, encoding := range encodings {
+					if i > 0 {
+						tt.Key(0, ui.KeyDown)
+					}
+					if err := cn.s.Term.SetOutputEncoding(encoding); err != nil {
+						t.Fatal(err)
+					}
+					tt.Frame()
+					label := outputEncodingLabel(m, encoding)
+					r := mustFind(t, tt, label)
+					if !tt.Focused(label) || r.H <= 0 || r.W+1 < widths[label] || r.X+r.W > menu.X+menu.W-12 {
+						t.Fatalf("checked text %q clipped: measured %v, bounds %v menu %v", label, widths[label], r, menu)
+					}
+					if widths[label] > widths[widest] {
+						widest, widestBounds = label, r
+					}
+					if encoding == vt.EncodingGB2312 {
+						note := mustFind(t, tt, m.OutputEncodingGB2312Note())
+						if note.W+1 < widths[m.OutputEncodingGB2312Note()] {
+							t.Fatalf("GB2312 note clipped: %v", note)
+						}
+					}
+				}
+				t.Logf("widest checked label %q: measured %.2f, bounds %v", widest, widths[widest], widestBounds)
+				tt.Key(0, ui.KeyHome)
+				tt.Key(0, ui.KeyDown)
+				tt.Key(0, ui.KeyEnter)
+				tt.Frame()
+				if cn.s.Term.OutputEncoding() != vt.EncodingGB2312 || a.focusReq != cn.id || a.menu.key != "" {
+					t.Fatal("keyboard did not choose GB2312 across separator")
+				}
+				// Reopen the real full menu and scroll to its last choice.
+				a.menu.focus = 0
+				tt.Frame()
+				before := mustFind(t, tt, m.OutputEncodingCP866())
+				if before.H > 0 {
+					t.Fatalf("long menu did not require scrolling: last %v menu %v", before, menu)
+				}
+				tt.Move(menu.X+menu.W/2, menu.Y+menu.H/2)
+				tt.Scroll(menu.X+menu.W/2, menu.Y+menu.H/2, 0, 1200)
+				tt.Frame()
+				last := mustFind(t, tt, m.OutputEncodingCP866())
+				if last.H <= 0 || last.Y < menu.Y || last.Y+last.H > menu.Y+menu.H-5 {
+					t.Fatalf("last choice not revealed by scrolling: %v before %v menu %v", last, before, menu)
+				}
+				mustClick(t, tt, m.OutputEncodingCP866())
+				tt.Frame()
+				if cn.s.Term.OutputEncoding() != vt.EncodingCP866 || a.focusReq != cn.id {
+					t.Fatal("scrolled CP866 choice was not applied")
+				}
+				checked := 0
+				for _, e := range entries {
+					if e.Checked {
+						checked++
+						if e.Label != m.OutputEncodingCP866() {
+							t.Fatalf("wrong checked encoding: %q", e.Label)
+						}
+					}
+				}
+				if checked != 1 {
+					t.Fatalf("checked choices: %d, want 1", checked)
+				}
+			})
+		}
 	}
 }
 
@@ -149,7 +245,11 @@ func TestOutputEncodingPaneScope(t *testing.T) {
 	var entries []menuEntry
 	capture := ui.NewTester(func(c *ui.Context) { entries = a.outputEncodingEntries(c, second, m) }, 1, 1)
 	capture.Frame()
-	if !entries[0].Checked || entries[1].Checked {
+	gbkIndex := slices.IndexFunc(entries, func(e menuEntry) bool { return e.Label == m.OutputEncodingGBKLabel() })
+	if gbkIndex < 0 {
+		t.Fatal("GBK missing from full menu")
+	}
+	if !entries[0].Checked || entries[gbkIndex].Checked {
 		t.Fatal("default check is not UTF-8")
 	}
 	a.ws.Activate(first.id)
@@ -163,15 +263,25 @@ func TestOutputEncodingPaneScope(t *testing.T) {
 		t.Fatal("menu key shared across panes")
 	}
 	mustClick(t, tt, m.OutputEncodingTip(m.OutputEncodingUTF8()))
-	entries[1].Do()
+	entries[gbkIndex].Do()
 	capture.Frame()
-	if entries[0].Checked || !entries[1].Checked {
+	if entries[0].Checked || !entries[gbkIndex].Checked {
 		t.Fatal("GBK check did not follow selection")
 	}
 	if first.s.Term.OutputEncoding() != vt.EncodingUTF8 || second.s.Term.OutputEncoding() != vt.EncodingGBK || a.focusReq != second.id {
 		t.Fatal("callback did not retain its pane")
 	}
-	// A later terminal starts at UTF-8 even while another pane uses GBK.
+	cp866 := slices.IndexFunc(entries, func(e menuEntry) bool { return e.Label == m.OutputEncodingCP866() })
+	if cp866 < 0 {
+		t.Fatal("CP866 missing from full menu")
+	}
+	entries[cp866].Do()
+	capture.Frame()
+	if !entries[cp866].Checked || entries[gbkIndex].Checked || entries[0].Checked ||
+		first.s.Term.OutputEncoding() != vt.EncodingUTF8 || second.s.Term.OutputEncoding() != vt.EncodingCP866 || a.focusReq != second.id {
+		t.Fatal("CP866 choice or checkmark leaked across panes")
+	}
+	// A later terminal starts at UTF-8 even while another pane uses CP866.
 	a.Connect(first.host.ID, openAt{})
 	fresh := a.focused()
 	waitFor(t, tt, "fresh terminal", func() bool { return fresh.s.Status().State == session.Connected })
@@ -181,7 +291,7 @@ func TestOutputEncodingPaneScope(t *testing.T) {
 	a.CloseSession(fresh.id)
 	a.ws.Activate(second.id)
 	tt.Frame()
-	mustClick(t, tt, m.OutputEncodingTip(m.OutputEncodingGBK()))
+	mustClick(t, tt, m.OutputEncodingTip("CP866"))
 	if a.menu.key != key {
 		t.Fatal("menu key changed for the same pane")
 	}
@@ -213,5 +323,69 @@ func TestOutputEncodingPaneScope(t *testing.T) {
 	tt.Frame()
 	if a.focused().kind != layout.Files || a.menu.key != "" || tt.HasText(m.OutputEncodingTip(m.OutputEncodingUTF8())) {
 		t.Fatal("encoding shown on Files")
+	}
+}
+
+func TestOutputEncodingLongMenu(t *testing.T) {
+	srv, sh := startScript(t, "ready")
+	a, tt := newTestApp(t)
+	settings := a.Settings()
+	settings.AutoReconnect = false
+	if err := a.ApplySettings(settings); err != nil {
+		t.Fatal(err)
+	}
+	cn := connected(t, a, tt, srv)
+	m := locales.In("en")
+	tt.SetSize(900, 600)
+	tt.Frame()
+	mustClick(t, tt, m.OutputEncodingTip("UTF-8"))
+	tt.Key(0, ui.KeyEscape)
+	tt.Frame()
+	if a.menu.key != "" {
+		t.Fatal("Escape did not close encoding menu")
+	}
+	mustClick(t, tt, m.OutputEncodingTip("UTF-8"))
+	r := mustFind(t, tt, m.OutputEncodingGBKLabel())
+	tt.Move(r.X+r.W/2, r.Y+r.H/2)
+	tt.Wheel(r.X+r.W/2, r.Y+r.H/2, 0, 1200)
+	tt.Advance(300 * time.Millisecond)
+	tt.Frame()
+	last := mustFind(t, tt, m.OutputEncodingCP866())
+	if last.H <= 0 || last.Y < 0 || last.Y+last.H > 570 {
+		t.Fatalf("CP866 outside menu above status bar: %v, initial GBK %v", last, r)
+	}
+	mustClick(t, tt, m.OutputEncodingCP866())
+	if cn.s.Term.OutputEncoding() != vt.EncodingCP866 || a.menu.key != "" || !hasExact(tt, "CP866") {
+		t.Fatal("last choice did not update compact chip and dismiss menu")
+	}
+	sh.take()
+	tt.Type("中文")
+	expectRead(t, tt, sh, "中文")
+	srv.Drop()
+	waitFor(t, tt, "disconnected", func() bool { return cn.s.Status().State == session.Disconnected })
+	cn.s.Reconnect()
+	waitFor(t, tt, "reconnected", func() bool {
+		st := cn.s.Status()
+		return st.State == session.Connected && st.Connects >= 2
+	})
+	tt.Frame()
+	if cn.s.Term.OutputEncoding() != vt.EncodingCP866 || !hasExact(tt, "CP866") {
+		t.Fatal("reconnect lost output encoding or chip label")
+	}
+	mustClick(t, tt, m.OutputEncodingTip("CP866"))
+	tt.Key(0, ui.KeyEnd)
+	tt.Frame()
+	if !tt.Focused(m.OutputEncodingCP866()) {
+		t.Fatal("End did not reach last encoding")
+	}
+	tt.Key(0, ui.KeyHome)
+	tt.Frame()
+	if !tt.Focused(m.OutputEncodingUTF8()) {
+		t.Fatal("Home did not reach first encoding")
+	}
+	tt.Key(0, ui.KeyEnter)
+	tt.Frame()
+	if cn.s.Term.OutputEncoding() != vt.EncodingUTF8 || a.menu.key != "" {
+		t.Fatal("keyboard did not restore UTF-8")
 	}
 }

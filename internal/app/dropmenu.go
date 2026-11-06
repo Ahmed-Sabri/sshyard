@@ -174,12 +174,17 @@ func (a *App) menuButton(c *ui.Context, key string, b IconButton, entries func()
 // as menuButton is an IconButton: for a choice that shows what is chosen.
 func (a *App) menuChip(c *ui.Context, key string, ch chip, entries func() []menuEntry) ui.Element {
 	ch.open = a.menu.key == key
-	return a.dropDown(c, key, ch.show(c, key), false, entries, ch.CompactMenu)
+	el := ch.show(c, key)
+	layout := menuLayout{compact: ch.CompactMenu}
+	if ch.FitMenu {
+		layout.maxHeight = menuHeightAt(c, el.Bounds())
+	}
+	return a.dropDown(c, key, el, false, entries, layout)
 }
 
 // dropDown makes el, a button under key, open a drop-down menu of entries
 // below it while it is not disabled.
-func (a *App) dropDown(c *ui.Context, key string, el ui.Element, disabled bool, entries func() []menuEntry, compactMenu ...bool) ui.Element {
+func (a *App) dropDown(c *ui.Context, key string, el ui.Element, disabled bool, entries func() []menuEntry, options ...menuLayout) ui.Element {
 	open := a.menu.key == key
 	el.Role(ui.RoleMenuButton).Expanded(open)
 	if el.Clicked() && !disabled {
@@ -196,7 +201,7 @@ func (a *App) dropDown(c *ui.Context, key string, el ui.Element, disabled bool, 
 	tok := currentTokens(c)
 	ui.PopoverBase(c.Key("menu:"+key), el, &open, func(panel ui.Element) {
 		panel.Margin(4, 0, 0, 0)
-		a.menuPanel(c, tok, panel, entries(), 0, compactMenu...)
+		a.menuPanel(c, tok, panel, entries(), 0, options...)
 	})
 	if !open {
 		a.menu = dropMenu{}
@@ -204,10 +209,29 @@ func (a *App) dropDown(c *ui.Context, key string, el ui.Element, disabled bool, 
 	return el
 }
 
+type menuLayout struct {
+	compact   bool
+	maxHeight float32
+}
+
+// menuHeightAt reserves the popover gap, window margin and panel insets
+// on the roomier side of the anchor, without changing other menus.
+func menuHeightAt(c *ui.Context, anchor ui.Rect) float32 {
+	_, height := c.Size()
+	return min(menuHeight, max(1, max(anchor.Y, height-anchor.Y-anchor.H)-theme.Space(5)))
+}
+
 // menuPanel lays out the panel of a drop-down menu at level, 0 the menu
 // and 1 a submenu of it, with its entries.
-func (a *App) menuPanel(c *ui.Context, tok theme.Tokens, panel ui.Element, entries []menuEntry, level int, compactMenu ...bool) {
-	compact := len(compactMenu) > 0 && compactMenu[0]
+func (a *App) menuPanel(c *ui.Context, tok theme.Tokens, panel ui.Element, entries []menuEntry, level int, options ...menuLayout) {
+	layout := menuLayout{maxHeight: menuHeight}
+	if len(options) > 0 {
+		layout.compact = options[0].compact
+		if options[0].maxHeight > 0 {
+			layout.maxHeight = options[0].maxHeight
+		}
+	}
+	compact := layout.compact
 	for _, e := range entries {
 		if e.Icon != nil || e.Image != nil || e.Lead != nil || e.Note != "" {
 			compact = false // Illustrated or multi-line menus retain their icon column.
@@ -225,7 +249,7 @@ func (a *App) menuPanel(c *ui.Context, tok theme.Tokens, panel ui.Element, entri
 		a.menu.focus = -1
 	}
 	panel.Children(func() {
-		gutterScroll(c, ui.Scroll(c.Key("scroll")).MaxHeight(menuHeight).FillWidth()).Children(func() {
+		gutterScroll(c, ui.Scroll(c.Key("scroll")).MaxHeight(layout.maxHeight).FillWidth()).Children(func() {
 			ui.Column(c).FillWidth().Children(func() {
 				for i, e := range entries {
 					if e.Sep {
@@ -393,6 +417,8 @@ type chip struct {
 	open     bool
 	// CompactMenu narrows a text-only choice menu and omits its empty icon column.
 	CompactMenu bool
+	// FitMenu limits the scroll height to the room above or below this chip.
+	FitMenu bool
 }
 
 // fit is ch at fit, in a pane of controls: bare at aiIcons, its label

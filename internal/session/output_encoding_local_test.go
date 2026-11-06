@@ -78,22 +78,41 @@ func (*encodingPTY) Wait() error                 { return nil }
 func (*encodingPTY) Resize(int, int) error       { return nil }
 
 func TestLocalOutputEncodingStream(t *testing.T) {
-	previous := startPTY
-	t.Cleanup(func() { startPTY = previous })
-	startPTY = func(Shell, int, int, string) (localPTY, error) {
-		return &encodingPTY{strings.NewReader("@\xd6\xd0")}, nil
-	}
-	s := New(Config{}, Options{Local: true}, 80, 24)
-	defer s.Close()
-	if err := s.Term.SetOutputEncoding(vt.EncodingGBK); err != nil {
-		t.Fatal(err)
-	}
-	s.Term.WriteString("old\xd6")
-	if err := s.connectLocal(); err != nil {
-		t.Fatal(err)
-	}
-	waitText(t, s, "old�@中")
-	if s.Term.OutputEncoding() != vt.EncodingGBK {
-		t.Fatal("local shell changed encoding selection")
+	for _, tc := range []struct {
+		encoding             vt.OutputEncoding
+		fragment, wire, want string
+	}{
+		{vt.EncodingGBK, "\xd6", "\xd6\xd0", "中"},
+		{vt.EncodingGB18030, "\x81\x30\x81", "\x90\x30\x81\x30", "𐀀"},
+		{vt.EncodingBig5, "\x88", "\x88\x62", "Ê\u0304"},
+		{vt.EncodingShiftJIS, "\x93", "\x93\xfa\xb6", "日ｶ"},
+		{vt.EncodingEUCJP, "\x8f\xa2", "\x8f\xa2\xaf", "˘"},
+		{vt.EncodingEUCKR, "\xc7", "\xc7\xd1", "한"},
+		{vt.EncodingWindows1252, "", "\x80", "€"},
+	} {
+		t.Run(string(tc.encoding), func(t *testing.T) {
+			previous := startPTY
+			t.Cleanup(func() { startPTY = previous })
+			startPTY = func(Shell, int, int, string) (localPTY, error) {
+				return &encodingPTY{strings.NewReader("@" + tc.wire)}, nil
+			}
+			s := New(Config{}, Options{Local: true}, 80, 24)
+			defer s.Close()
+			if err := s.Term.SetOutputEncoding(tc.encoding); err != nil {
+				t.Fatal(err)
+			}
+			s.Term.WriteString("old" + tc.fragment)
+			if err := s.connectLocal(); err != nil {
+				t.Fatal(err)
+			}
+			want := "old"
+			if tc.fragment != "" {
+				want += "�"
+			}
+			waitText(t, s, want+"@"+tc.want)
+			if s.Term.OutputEncoding() != tc.encoding {
+				t.Fatal("local shell changed encoding selection")
+			}
+		})
 	}
 }

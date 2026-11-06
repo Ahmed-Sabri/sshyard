@@ -151,7 +151,10 @@ func TestOutputEncodingConcurrent(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for i := 0; i < 100; i++ {
-				term.SetOutputEncoding(EncodingGBK)
+				selected := OutputEncodings()[i%len(OutputEncodings())]
+				if err := term.SetOutputEncoding(selected); err != nil {
+					t.Error(err)
+				}
 				term.WriteString("\xd6\xd0")
 				term.OutputEncoding()
 				term.SetOutputEncoding(EncodingUTF8)
