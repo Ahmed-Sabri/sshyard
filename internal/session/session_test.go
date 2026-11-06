@@ -154,7 +154,7 @@ func TestHostKeyChanged(t *testing.T) {
 	kh.Add(srv.Addr, sshtest.NewHostKey().PublicKey()) // some other key
 	_, err := Dial(context.Background(), Config{Addr: srv.Addr, User: "demo", Credentials: password("secret"), HostKey: kh.Callback()})
 	var changed *HostKeyChangedError
-	if !errors.As(err, &changed) || Classify(err) != KindHostChanged || changed.Line != 1 {
+	if !errors.As(err, &changed) || Classify(err) != KindHostChanged || changed.Line != 1 || len(changed.Old) != 1 {
 		t.Fatalf("%v", err)
 	}
 	if Classify(err).Retryable() {

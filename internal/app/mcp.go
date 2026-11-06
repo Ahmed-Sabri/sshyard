@@ -559,7 +559,7 @@ func mcpDialErr(err error) error {
 	case errors.As(err, &unknown):
 		return fmt.Errorf("the host key of %s is not trusted yet; connect to it once in SSHYard and trust the key", unknown.Host)
 	case errors.As(err, &changed):
-		return fmt.Errorf("the host key of %s changed; SSHYard refused to connect", changed.Host)
+		return fmt.Errorf("the host key of %s changed; SSHYard refused to connect. Only the user can review and trust the new key, in SSHYard", changed.Host)
 	case errors.Is(err, errMCPNeedsInput), errors.Is(err, session.ErrNoCredentials),
 		errors.Is(err, session.ErrPassphraseNeeded), errors.Is(err, session.ErrPassphraseWrong),
 		errors.As(err, new(*session.LocalKeyError)), errors.As(err, new(*session.KeysRefusedError)):

@@ -179,6 +179,7 @@ var (
 	API         = load("code-s-slash-line")
 	Skill       = load("tools-line")
 	Certificate = load("shield-keyhole-line")
+	HostKey     = load("shield-keyhole-line")
 	Record      = load("record-circle-line")
 	Reset       = load("arrow-go-back-line")
 	Command     = load("command-line")

@@ -15890,3 +15890,177 @@ func BackgroundStorageUnavailable() string { return In(i18n.Locale()).Background
 func (msgs Messages) BackgroundStorageUnavailable() string {
 	return Catalog.Format(msgs.locale, "backgroundStorageUnavailable", nil)
 }
+
+// HostKeyReview says "Review Host Key"
+// in the language the app shows.
+func HostKeyReview() string { return In(i18n.Locale()).HostKeyReview() }
+
+// HostKeyReview says "Review Host Key"
+// in the language of msgs.
+func (msgs Messages) HostKeyReview() string {
+	return Catalog.Format(msgs.locale, "hostKeyReview", nil)
+}
+
+// HostKeyChanged says "{host} presents a different host key from the one SSHYard saved. This is expected after the server is reinstalled or …"
+// in the language the app shows.
+func HostKeyChanged(host string) string { return In(i18n.Locale()).HostKeyChanged(host) }
+
+// HostKeyChanged says "{host} presents a different host key from the one SSHYard saved. This is expected after the server is reinstalled or …"
+// in the language of msgs.
+func (msgs Messages) HostKeyChanged(host string) string {
+	return Catalog.Format(msgs.locale, "hostKeyChanged", map[string]any{"host": host})
+}
+
+// HostKeySaved says "Saved: {keyType} {fingerprint}"
+// in the language the app shows.
+func HostKeySaved(keyType string, fingerprint string) string {
+	return In(i18n.Locale()).HostKeySaved(keyType, fingerprint)
+}
+
+// HostKeySaved says "Saved: {keyType} {fingerprint}"
+// in the language of msgs.
+func (msgs Messages) HostKeySaved(keyType string, fingerprint string) string {
+	return Catalog.Format(msgs.locale, "hostKeySaved", map[string]any{"keyType": keyType, "fingerprint": fingerprint})
+}
+
+// HostKeyOffered says "Now: {keyType} {fingerprint}"
+// in the language the app shows.
+func HostKeyOffered(keyType string, fingerprint string) string {
+	return In(i18n.Locale()).HostKeyOffered(keyType, fingerprint)
+}
+
+// HostKeyOffered says "Now: {keyType} {fingerprint}"
+// in the language of msgs.
+func (msgs Messages) HostKeyOffered(keyType string, fingerprint string) string {
+	return Catalog.Format(msgs.locale, "hostKeyOffered", map[string]any{"keyType": keyType, "fingerprint": fingerprint})
+}
+
+// HostKeyVerifyHint says "Before trusting the new key, compare its fingerprint with the server's, for example by running ssh-keygen -lf /etc/ss…"
+// in the language the app shows.
+func HostKeyVerifyHint() string { return In(i18n.Locale()).HostKeyVerifyHint() }
+
+// HostKeyVerifyHint says "Before trusting the new key, compare its fingerprint with the server's, for example by running ssh-keygen -lf /etc/ss…"
+// in the language of msgs.
+func (msgs Messages) HostKeyVerifyHint() string {
+	return Catalog.Format(msgs.locale, "hostKeyVerifyHint", nil)
+}
+
+// TrustNewKeyAndConnect says "Trust New Key and Connect"
+// in the language the app shows.
+func TrustNewKeyAndConnect() string { return In(i18n.Locale()).TrustNewKeyAndConnect() }
+
+// TrustNewKeyAndConnect says "Trust New Key and Connect"
+// in the language of msgs.
+func (msgs Messages) TrustNewKeyAndConnect() string {
+	return Catalog.Format(msgs.locale, "trustNewKeyAndConnect", nil)
+}
+
+// KnownHosts says "Known Hosts"
+// in the language the app shows.
+func KnownHosts() string { return In(i18n.Locale()).KnownHosts() }
+
+// KnownHosts says "Known Hosts"
+// in the language of msgs.
+func (msgs Messages) KnownHosts() string {
+	return Catalog.Format(msgs.locale, "knownHosts", nil)
+}
+
+// KnownHostsDesc says "The host keys SSHYard trusts, kept in SSHYard's own file apart from ~/.ssh/known_hosts."
+// in the language the app shows.
+func KnownHostsDesc() string { return In(i18n.Locale()).KnownHostsDesc() }
+
+// KnownHostsDesc says "The host keys SSHYard trusts, kept in SSHYard's own file apart from ~/.ssh/known_hosts."
+// in the language of msgs.
+func (msgs Messages) KnownHostsDesc() string {
+	return Catalog.Format(msgs.locale, "knownHostsDesc", nil)
+}
+
+// KnownHostsEmpty says "No host keys are trusted yet. SSHYard asks the first time it connects to a host."
+// in the language the app shows.
+func KnownHostsEmpty() string { return In(i18n.Locale()).KnownHostsEmpty() }
+
+// KnownHostsEmpty says "No host keys are trusted yet. SSHYard asks the first time it connects to a host."
+// in the language of msgs.
+func (msgs Messages) KnownHostsEmpty() string {
+	return Catalog.Format(msgs.locale, "knownHostsEmpty", nil)
+}
+
+// KnownHostsNoMatch says "No matching hosts"
+// in the language the app shows.
+func KnownHostsNoMatch() string { return In(i18n.Locale()).KnownHostsNoMatch() }
+
+// KnownHostsNoMatch says "No matching hosts"
+// in the language of msgs.
+func (msgs Messages) KnownHostsNoMatch() string {
+	return Catalog.Format(msgs.locale, "knownHostsNoMatch", nil)
+}
+
+// KnownHostsFile says "Stored in {path}"
+// in the language the app shows.
+func KnownHostsFile(path string) string { return In(i18n.Locale()).KnownHostsFile(path) }
+
+// KnownHostsFile says "Stored in {path}"
+// in the language of msgs.
+func (msgs Messages) KnownHostsFile(path string) string {
+	return Catalog.Format(msgs.locale, "knownHostsFile", map[string]any{"path": path})
+}
+
+// KnownHostsHashed says "Hashed host name"
+// in the language the app shows.
+func KnownHostsHashed() string { return In(i18n.Locale()).KnownHostsHashed() }
+
+// KnownHostsHashed says "Hashed host name"
+// in the language of msgs.
+func (msgs Messages) KnownHostsHashed() string {
+	return Catalog.Format(msgs.locale, "knownHostsHashed", nil)
+}
+
+// KnownHostsUsedBy says "Used by {hosts}"
+// in the language the app shows.
+func KnownHostsUsedBy(hosts string) string { return In(i18n.Locale()).KnownHostsUsedBy(hosts) }
+
+// KnownHostsUsedBy says "Used by {hosts}"
+// in the language of msgs.
+func (msgs Messages) KnownHostsUsedBy(hosts string) string {
+	return Catalog.Format(msgs.locale, "knownHostsUsedBy", map[string]any{"hosts": hosts})
+}
+
+// KnownHostsChanged says "The known hosts file changed meanwhile. Try again."
+// in the language the app shows.
+func KnownHostsChanged() string { return In(i18n.Locale()).KnownHostsChanged() }
+
+// KnownHostsChanged says "The known hosts file changed meanwhile. Try again."
+// in the language of msgs.
+func (msgs Messages) KnownHostsChanged() string {
+	return Catalog.Format(msgs.locale, "knownHostsChanged", nil)
+}
+
+// RemoveHostKey says "Remove This Key"
+// in the language the app shows.
+func RemoveHostKey() string { return In(i18n.Locale()).RemoveHostKey() }
+
+// RemoveHostKey says "Remove This Key"
+// in the language of msgs.
+func (msgs Messages) RemoveHostKey() string {
+	return Catalog.Format(msgs.locale, "removeHostKey", nil)
+}
+
+// ForgetHostKey says "Forget Host Key"
+// in the language the app shows.
+func ForgetHostKey() string { return In(i18n.Locale()).ForgetHostKey() }
+
+// ForgetHostKey says "Forget Host Key"
+// in the language of msgs.
+func (msgs Messages) ForgetHostKey() string {
+	return Catalog.Format(msgs.locale, "forgetHostKey", nil)
+}
+
+// HostKeyForgotten says "Forgot the host key of {host}. SSHYard asks to trust it on the next connection."
+// in the language the app shows.
+func HostKeyForgotten(host string) string { return In(i18n.Locale()).HostKeyForgotten(host) }
+
+// HostKeyForgotten says "Forgot the host key of {host}. SSHYard asks to trust it on the next connection."
+// in the language of msgs.
+func (msgs Messages) HostKeyForgotten(host string) string {
+	return Catalog.Format(msgs.locale, "hostKeyForgotten", map[string]any{"host": host})
+}

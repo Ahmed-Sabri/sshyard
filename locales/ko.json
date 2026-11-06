@@ -2484,5 +2484,22 @@
   "backgroundImportFailed": "배경을 가져올 수 없습니다: {detail}",
   "backgroundUnsupported": "PNG, JPEG 또는 WebP 이미지를 선택하세요",
   "backgroundTooLarge": "이미지가 20MB 또는 3,200만 픽셀을 초과합니다",
-  "backgroundStorageUnavailable": "배경 저장소를 사용할 수 없습니다"
+  "backgroundStorageUnavailable": "배경 저장소를 사용할 수 없습니다",
+  "hostKeyReview": "호스트 키 확인",
+  "hostKeyChanged": "{host}가 SSHYard에 저장된 것과 다른 호스트 키를 제시했습니다. 서버를 다시 설치했거나 SSH 키를 다시 생성했다면 정상이며, 그렇지 않다면 누군가 연결을 가로채고 있을 수 있습니다.",
+  "hostKeySaved": "저장된 키: {keyType} {fingerprint}",
+  "hostKeyOffered": "현재 키: {keyType} {fingerprint}",
+  "hostKeyVerifyHint": "새 키를 신뢰하기 전에 지문을 서버의 것과 비교하세요. 예를 들어 서비스 제공업체의 웹 콘솔에서 ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub를 실행합니다.",
+  "trustNewKeyAndConnect": "새 키 신뢰 후 연결",
+  "knownHosts": "알려진 호스트",
+  "knownHostsDesc": "SSHYard가 신뢰하는 호스트 키입니다. ~/.ssh/known_hosts와 별개로 SSHYard 자체 파일에 저장됩니다.",
+  "knownHostsEmpty": "아직 신뢰하는 호스트 키가 없습니다. 호스트에 처음 연결할 때 SSHYard가 확인을 요청합니다.",
+  "knownHostsNoMatch": "일치하는 호스트가 없습니다",
+  "knownHostsFile": "{path}에 저장됨",
+  "knownHostsHashed": "해시된 호스트 이름",
+  "knownHostsUsedBy": "사용 호스트: {hosts}",
+  "knownHostsChanged": "그동안 알려진 호스트 파일이 변경되었습니다. 다시 시도하세요.",
+  "removeHostKey": "이 키 제거",
+  "forgetHostKey": "호스트 키 삭제",
+  "hostKeyForgotten": "{host}의 호스트 키를 삭제했습니다. 다음 연결 때 신뢰할지 묻습니다."
 }

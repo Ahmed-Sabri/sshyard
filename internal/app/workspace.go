@@ -642,8 +642,13 @@ func (a *App) banner(c *ui.Context, cn *conn, st session.Status, tok theme.Token
 		}
 		switch st.State {
 		case session.Failed, session.Disconnected, session.Exited, session.Reconnecting:
-			if session.Classify(st.Err) == session.KindHostChanged && !cn.restoredQuiet {
-				break
+			if session.Classify(st.Err) == session.KindHostChanged {
+				if (IconButton{Icon: icons.HostKey, Label: m.HostKeyReview(), Size: Small}).Clicked(c, "review-host-key") {
+					a.reviewHostKey(cn)
+				}
+				if !cn.restoredQuiet {
+					break
+				}
 			}
 			if (IconButton{Icon: icons.Reconnect, Label: m.Reconnect(), Size: Small}).Clicked(c, "reconnect") {
 				cn.handled = nil

@@ -1761,5 +1761,22 @@
   "backgroundImportFailed": "无法导入背景：{detail}",
   "backgroundUnsupported": "请选择 PNG、JPEG 或 WebP 图片",
   "backgroundTooLarge": "图片超过 20 MB 或 3200 万像素",
-  "backgroundStorageUnavailable": "背景存储不可用"
+  "backgroundStorageUnavailable": "背景存储不可用",
+  "hostKeyReview": "核对主机密钥",
+  "hostKeyChanged": "{host} 出示的主机密钥与 SSHYard 保存的不同。服务器重装系统或重新生成 SSH 密钥后会出现这种情况；否则可能有人正在劫持连接。",
+  "hostKeySaved": "已保存：{keyType} {fingerprint}",
+  "hostKeyOffered": "当前：{keyType} {fingerprint}",
+  "hostKeyVerifyHint": "信任新密钥前，请先核对指纹，例如在服务商的网页控制台中运行 ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub。",
+  "trustNewKeyAndConnect": "信任新密钥并连接",
+  "knownHosts": "已知主机",
+  "knownHostsDesc": "SSHYard 信任的主机密钥，保存在 SSHYard 自己的文件中，与 ~/.ssh/known_hosts 无关。",
+  "knownHostsEmpty": "还没有信任任何主机密钥。首次连接主机时 SSHYard 会询问。",
+  "knownHostsNoMatch": "没有匹配的主机",
+  "knownHostsFile": "保存在 {path}",
+  "knownHostsHashed": "已哈希的主机名",
+  "knownHostsUsedBy": "用于 {hosts}",
+  "knownHostsChanged": "已知主机文件在此期间被修改，请重试。",
+  "removeHostKey": "移除此密钥",
+  "forgetHostKey": "忘记主机密钥",
+  "hostKeyForgotten": "已忘记 {host} 的主机密钥，下次连接时 SSHYard 会询问是否信任。"
 }

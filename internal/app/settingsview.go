@@ -32,6 +32,7 @@ const (
 	prefAgents      prefPage = "agents"
 	prefCredentials prefPage = "credentials"
 	prefProxies     prefPage = "proxies"
+	prefKnownHosts  prefPage = "knownhosts"
 	prefMigration   prefPage = "migration"
 	prefBackup      prefPage = "backup"
 	prefShortcuts   prefPage = "shortcuts"
@@ -66,6 +67,7 @@ func prefGroups(m locales.Messages, tok theme.Tokens) []prefGroup {
 		{m.SettingsGroupManage(), []prefItem{
 			{prefCredentials, icons.Key, tok.TintAt(1), m.Credentials(), m.CredentialsDesc()},
 			{prefProxies, icons.Proxy, tok.TintAt(4), m.Proxies(), m.ProxiesDesc()},
+			{prefKnownHosts, icons.HostKey, tok.TintAt(3), m.KnownHosts(), m.KnownHostsDesc()},
 			{prefMigration, icons.Import, tok.TintAt(2), m.Migration(), m.MigrationDesc()},
 			{prefBackup, icons.Backup, tok.TintAt(6), m.BackupSection(), m.BackupDesc()},
 		}},
@@ -258,6 +260,8 @@ func (a *App) settingsPage(c *ui.Context, m locales.Messages, tok theme.Tokens) 
 				a.localKeysSection(c, m, tok, &s, &changed)
 			case prefProxies:
 				a.proxiesSection(c, m, tok)
+			case prefKnownHosts:
+				a.knownHostsPage(c, m, tok)
 			case prefMigration:
 				a.migrationSection(c, m, tok)
 			case prefBackup:

@@ -1202,6 +1202,11 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 							if s.opening || cn.s.Status().State != session.Connected {
 								ui.Text(c, a.pv(a.statusText(m, cn.host, cn.s.Status(), c.Now()))).TextColor(tok.TextMuted)
 							}
+							if session.Classify(cn.s.Status().Err) == session.KindHostChanged {
+								if (IconButton{Icon: icons.HostKey, Label: m.HostKeyReview()}).Clicked(c, "review-host-key") {
+									a.reviewHostKey(cn)
+								}
+							}
 							if s.err != "" {
 								ui.Text(c, a.pv(m.ErrGeneric(securityText(m, s.err)))).TextColor(tok.Danger).FontSize(theme.Footnote)
 							}

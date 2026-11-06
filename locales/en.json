@@ -2484,5 +2484,22 @@
   "backgroundImportFailed": "Could not import the background: {detail}",
   "backgroundUnsupported": "Choose a PNG, JPEG or WebP image",
   "backgroundTooLarge": "The image exceeds 20 MB or 32 megapixels",
-  "backgroundStorageUnavailable": "Background storage is unavailable"
+  "backgroundStorageUnavailable": "Background storage is unavailable",
+  "hostKeyReview": "Review Host Key",
+  "hostKeyChanged": "{host} presents a different host key from the one SSHYard saved. This is expected after the server is reinstalled or its SSH keys are regenerated; otherwise someone may be intercepting the connection.",
+  "hostKeySaved": "Saved: {keyType} {fingerprint}",
+  "hostKeyOffered": "Now: {keyType} {fingerprint}",
+  "hostKeyVerifyHint": "Before trusting the new key, compare its fingerprint with the server's, for example by running ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub in the provider's web console.",
+  "trustNewKeyAndConnect": "Trust New Key and Connect",
+  "knownHosts": "Known Hosts",
+  "knownHostsDesc": "The host keys SSHYard trusts, kept in SSHYard's own file apart from ~/.ssh/known_hosts.",
+  "knownHostsEmpty": "No host keys are trusted yet. SSHYard asks the first time it connects to a host.",
+  "knownHostsNoMatch": "No matching hosts",
+  "knownHostsFile": "Stored in {path}",
+  "knownHostsHashed": "Hashed host name",
+  "knownHostsUsedBy": "Used by {hosts}",
+  "knownHostsChanged": "The known hosts file changed meanwhile. Try again.",
+  "removeHostKey": "Remove This Key",
+  "forgetHostKey": "Forget Host Key",
+  "hostKeyForgotten": "Forgot the host key of {host}. SSHYard asks to trust it on the next connection."
 }

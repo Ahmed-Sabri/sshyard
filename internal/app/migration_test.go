@@ -65,7 +65,7 @@ func TestMigrationSourcesAndPreviewUI(t *testing.T) {
 						}
 					}
 				}
-				if !reflect.DeepEqual(management, []prefPage{prefCredentials, prefProxies, prefMigration, prefBackup}) {
+				if !reflect.DeepEqual(management, []prefPage{prefCredentials, prefProxies, prefKnownHosts, prefMigration, prefBackup}) {
 					t.Fatalf("manage order %v", management)
 				}
 				if lang == "zh-Hans" {

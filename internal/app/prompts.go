@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Licoy/sshyard/internal/assets"
+	"github.com/Licoy/sshyard/internal/icons"
 	"github.com/Licoy/sshyard/internal/netproxy"
 	"github.com/Licoy/sshyard/internal/session"
 	"github.com/Licoy/sshyard/internal/theme"
@@ -226,6 +227,71 @@ type hostKeyAsk struct {
 	conn int
 	err  *session.UnknownHostError
 	err0 error // the whole failure, which names the hop
+}
+
+// hostKeyChange shows a host's key that changed beside the keys saved for
+// it, for the user to trust in their place once they compared them.
+type hostKeyChange struct {
+	conn int
+	err  *session.HostKeyChangedError
+	err0 error // the whole failure, which names the hop
+}
+
+// reviewHostKey opens the review of the changed host key cn failed with.
+func (a *App) reviewHostKey(cn *conn) {
+	st := cn.s.Status()
+	var e *session.HostKeyChangedError
+	if errors.As(st.Err, &e) {
+		a.keyChange, a.changingKey = &hostKeyChange{conn: cn.id, err: e, err0: st.Err}, true
+	}
+}
+
+// ReplaceHostKey trusts the key under review in place of the saved ones
+// and connects again the panes that failed for it.
+func (a *App) ReplaceHostKey() error {
+	k := a.keyChange
+	a.keyChange, a.changingKey = nil, false
+	if k == nil {
+		return nil
+	}
+	if err := a.known.Replace(k.err.Host, k.err.Key); err != nil {
+		return err
+	}
+	if c := a.conns[k.conn]; c != nil {
+		a.focusReq = c.id
+	}
+	a.reconnectHostKeyChanged(k.err.Host)
+	return nil
+}
+
+// reconnectHostKeyChanged connects again the panes that failed as the key
+// of host (host:port as dialed) changed.
+func (a *App) reconnectHostKeyChanged(host string) {
+	for _, id := range a.promptConns() {
+		cn := a.conns[id]
+		if cn == nil || cn.s == nil {
+			continue
+		}
+		st := cn.s.Status()
+		var e *session.HostKeyChangedError
+		if st.State == session.Failed && errors.As(st.Err, &e) && e.Host == host {
+			cn.handled, cn.restoredQuiet = nil, false
+			cn.s.Reconnect()
+		}
+	}
+}
+
+// hostKeyChangeDetails explains a changed host key: the keys saved for the
+// host, the one it offers now and how to check it.
+func hostKeyChangeDetails(c *ui.Context, m locales.Messages, tok theme.Tokens, name string, e *session.HostKeyChangedError) {
+	ui.Text(c, m.HostKeyChanged(name)).FontSize(theme.Footnote)
+	ui.Column(c).Gap(4).Padding(10, 12).Radius(theme.RadiusControl).Background(tok.Fill).FillWidth().Children(func() {
+		for _, k := range e.Old {
+			ui.Text(c, m.HostKeySaved(k.Type(), ssh.FingerprintSHA256(k))).FontSize(theme.Caption).TextColor(tok.TextMuted)
+		}
+		ui.Text(c, m.HostKeyOffered(e.Key.Type(), e.Fingerprint)).FontSize(theme.Caption).FontWeight(600)
+	})
+	ui.Text(c, m.HostKeyVerifyHint()).FontSize(theme.Caption).TextColor(tok.TextMuted)
 }
 
 // checkFailures opens a prompt for a session that failed for want of what
@@ -482,6 +548,44 @@ func (a *App) promptsView(c *ui.Context, m locales.Messages) {
 			a.hostKey = nil
 		}
 	}
+	if k := a.keyChange; k != nil {
+		name := k.err.Host
+		if cn := a.conns[k.conn]; cn != nil {
+			name = a.failedHost(cn.host, k.err0).Label()
+		}
+		tok := currentTokens(c)
+		sheet(ui.Modal(c, &a.changingKey, func() {
+			ui.Column(c).Gap(14).Width(440).Children(func() {
+				ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
+					tile(c, icons.HostKey, tok.Danger, 36)
+					sheetTitle(c, m.HostKeyChangedTitle())
+				})
+				hostKeyChangeDetails(c, m, tok, a.pv(name), k.err)
+				ui.Row(c).Gap(8).Margin(4, 0, 0, 0).Children(func() {
+					ui.Spacer(c)
+					if pill(c, m.Cancel(), false, false, false) {
+						a.changingKey = false
+					}
+					if pill(c, m.TrustNewKeyAndConnect(), false, true, false) {
+						if err := a.ReplaceHostKey(); err != nil {
+							c.AddToast(ui.Toast{Title: knownHostsErrorText(m, err), Type: "error"})
+						}
+					}
+				})
+			})
+		}), tok)
+		if !a.changingKey {
+			a.keyChange = nil
+		}
+	}
+}
+
+// knownHostsErrorText explains a failed change to known_hosts.
+func knownHostsErrorText(m locales.Messages, err error) string {
+	if errors.Is(err, session.ErrKnownHostsChanged) {
+		return m.KnownHostsChanged()
+	}
+	return m.ErrGeneric(err.Error())
 }
 
 // hostID is the ID of the connection's host, for its tint.

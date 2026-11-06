@@ -30,6 +30,9 @@ type installForm struct {
 	// unknown is the host's key, seen for the first time: the install
 	// goes on once it is trusted
 	unknown *session.UnknownHostError
+	// changed is the host's key, unlike the one saved: the install goes
+	// on once the user trusts it in its place
+	changed *session.HostKeyChangedError
 }
 
 // installResult is how an install went.
@@ -215,16 +218,19 @@ func (a *App) startInstall(m locales.Messages, f *installForm, h assets.Host) {
 	if credID == "" {
 		return
 	}
-	f.busy, f.res, f.unknown = true, nil, nil
+	f.busy, f.res, f.unknown, f.changed = true, nil, nil, nil
 	pw, pp := f.password, f.passphrase
 	go func() {
 		res := a.InstallKey(context.Background(), h, credID, pw, pp)
 		a.post(func() {
 			f.busy = false
 			var u *session.UnknownHostError
+			var ch *session.HostKeyChangedError
 			switch {
 			case errors.As(res.err, &u):
 				f.unknown = u
+			case errors.As(res.err, &ch):
+				f.changed = ch
 			case errors.Is(res.err, keys.ErrPassphraseNeeded):
 				f.needPassphrase = true
 			case errors.Is(res.err, session.ErrNoCredentials) && h.Auth == assets.AuthAsk:
@@ -305,6 +311,9 @@ func (a *App) installView(c *ui.Context, m locales.Messages) {
 			if u := f.unknown; u != nil {
 				ui.Text(c, m.HostKeyUnknown(h.Label(), u.Key.Type(), u.Fingerprint)).FontSize(theme.Footnote)
 			}
+			if ch := f.changed; ch != nil {
+				hostKeyChangeDetails(c, m, tok, a.pv(h.Label()), ch)
+			}
 			a.installResultView(c, m, tok, f, h)
 			ui.Box(c).Height(1).FillWidth().Background(tok.Line)
 			ui.Row(c).Gap(8).Children(func() {
@@ -339,6 +348,17 @@ func (a *App) installView(c *ui.Context, m locales.Messages) {
 							c.AddToast(ui.Toast{Title: m.ErrGeneric(err.Error()), Type: "error"})
 							return
 						}
+						a.startInstall(m, f, h)
+					}
+					return
+				}
+				if ch := f.changed; ch != nil {
+					if pill(c, m.TrustNewKeyAndConnect(), false, true, false) {
+						if err := a.known.Replace(ch.Host, ch.Key); err != nil {
+							c.AddToast(ui.Toast{Title: knownHostsErrorText(m, err), Type: "error"})
+							return
+						}
+						a.reconnectHostKeyChanged(ch.Host)
 						a.startInstall(m, f, h)
 					}
 					return

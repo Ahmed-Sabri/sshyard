@@ -1,11 +1,13 @@
 package session
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 
@@ -27,14 +29,16 @@ func (e *UnknownHostError) Error() string {
 }
 
 // HostKeyChangedError reports a host whose key does not match the one in
-// known_hosts: possibly an attack, so SSHYard refuses to connect and does
-// not offer to replace the key.
+// known_hosts: possibly an attack, so SSHYard refuses to connect. Only the
+// user, having compared the fingerprints, replaces the key (Replace).
 type HostKeyChangedError struct {
 	Host        string
 	Key         ssh.PublicKey
 	Fingerprint string
 	Line        int // the line of known_hosts with the old key
 	File        string
+	// Old are the keys known_hosts has for the host.
+	Old []ssh.PublicKey
 }
 
 func (e *HostKeyChangedError) Error() string {
@@ -45,9 +49,35 @@ func (e *HostKeyChangedError) Error() string {
 // which it adds keys the user trusts to.
 type KnownHosts struct {
 	path string
+	// wmu orders the changes to the file.
+	wmu  sync.Mutex
 	mu   sync.Mutex
 	cb   ssh.HostKeyCallback
+	keys []KnownKey
 }
+
+// KnownKey is a key of the file: the hosts its line names, as written
+// (hashed names stay hashed), and the line.
+type KnownKey struct {
+	Hosts       []string
+	Key         ssh.PublicKey
+	Fingerprint string
+	Line        int
+}
+
+// Hashed reports whether the line names its hosts by their hashes only.
+func (k KnownKey) Hashed() bool {
+	for _, h := range k.Hosts {
+		if !strings.HasPrefix(h, "|") {
+			return false
+		}
+	}
+	return len(k.Hosts) > 0
+}
+
+// ErrKnownHostsChanged reports that known_hosts changed while a key was
+// being removed from it; nothing was written.
+var ErrKnownHostsChanged = errors.New("session: known_hosts changed meanwhile")
 
 // OpenKnownHosts opens the known_hosts file at path, creating it.
 func OpenKnownHosts(path string) (*KnownHosts, error) {
@@ -71,11 +101,71 @@ func (k *KnownHosts) reload() error {
 	if err != nil {
 		return err
 	}
+	data, err := os.ReadFile(k.path)
+	if err != nil {
+		return err
+	}
+	keys := parseKnownKeys(data)
 	k.mu.Lock()
-	k.cb = cb
+	k.cb, k.keys = cb, keys
 	k.mu.Unlock()
 	return nil
 }
+
+// parseKnownKeys are the keys of a known_hosts file, by line.
+func parseKnownKeys(data []byte) []KnownKey {
+	var keys []KnownKey
+	for i, l := range strings.Split(string(data), "\n") {
+		_, hosts, key, _, _, err := ssh.ParseKnownHosts([]byte(l))
+		if err != nil {
+			continue
+		}
+		keys = append(keys, KnownKey{Hosts: hosts, Key: key, Fingerprint: ssh.FingerprintSHA256(key), Line: i + 1})
+	}
+	return keys
+}
+
+// List is the keys of the file, in its order.
+func (k *KnownHosts) List() []KnownKey {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	return append([]KnownKey(nil), k.keys...)
+}
+
+// For is the keys trusted for host (host:port as dialed).
+func (k *KnownHosts) For(host string) []KnownKey {
+	k.mu.Lock()
+	cb, keys := k.cb, k.keys
+	k.mu.Unlock()
+	return keysFor(cb, keys, host)
+}
+
+// keysFor asks cb, the file's check, about a key no line has: the error
+// it gives names the lines that have keys for host.
+func keysFor(cb ssh.HostKeyCallback, keys []KnownKey, host string) []KnownKey {
+	var ke *knownhosts.KeyError
+	if !errors.As(cb(host, probeAddr, probeKey{}), &ke) {
+		return nil
+	}
+	var out []KnownKey
+	for _, w := range ke.Want {
+		for _, kk := range keys {
+			if kk.Line == w.Line {
+				out = append(out, kk)
+			}
+		}
+	}
+	return out
+}
+
+// probeAddr and probeKey ask the file which keys it has for a host.
+var probeAddr = &net.TCPAddr{}
+
+type probeKey struct{}
+
+func (probeKey) Type() string                        { return "sshyard-probe" }
+func (probeKey) Marshal() []byte                     { return []byte("sshyard-probe") }
+func (probeKey) Verify([]byte, *ssh.Signature) error { return errors.New("probe") }
 
 // Callback is the ssh.HostKeyCallback that checks keys against the file.
 func (k *KnownHosts) Callback() ssh.HostKeyCallback {
@@ -90,7 +180,11 @@ func (k *KnownHosts) Callback() ssh.HostKeyCallback {
 			if len(ke.Want) == 0 {
 				return &UnknownHostError{Host: hostname, Key: key, Fingerprint: fp}
 			}
-			return &HostKeyChangedError{Host: hostname, Key: key, Fingerprint: fp, Line: ke.Want[0].Line, File: ke.Want[0].Filename}
+			old := make([]ssh.PublicKey, len(ke.Want))
+			for i, w := range ke.Want {
+				old[i] = w.Key
+			}
+			return &HostKeyChangedError{Host: hostname, Key: key, Fingerprint: fp, Line: ke.Want[0].Line, File: ke.Want[0].Filename, Old: old}
 		}
 		return err
 	}
@@ -103,6 +197,8 @@ func (k *KnownHosts) Contents() ([]byte, error) { return os.ReadFile(k.path) }
 // does not have, and returns how many. Comments, blank lines and lines
 // that do not parse are left out, so the file stays readable.
 func (k *KnownHosts) Merge(data []byte) (int, error) {
+	k.wmu.Lock()
+	defer k.wmu.Unlock()
 	cur, err := os.ReadFile(k.path)
 	if err != nil {
 		return 0, err
@@ -148,6 +244,8 @@ func (k *KnownHosts) Merge(data []byte) (int, error) {
 
 // Add trusts key for host (host:port as dialed).
 func (k *KnownHosts) Add(host string, key ssh.PublicKey) error {
+	k.wmu.Lock()
+	defer k.wmu.Unlock()
 	line := knownhosts.Line([]string{knownhosts.Normalize(host)}, key)
 	f, err := os.OpenFile(k.path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o600)
 	if err != nil {
@@ -161,4 +259,97 @@ func (k *KnownHosts) Add(host string, key ssh.PublicKey) error {
 		return err
 	}
 	return k.reload()
+}
+
+// Replace trusts key for host (host:port as dialed) in place of the keys
+// the file has for it.
+func (k *KnownHosts) Replace(host string, key ssh.PublicKey) error {
+	return k.rewrite(func(cur []KnownKey, cb ssh.HostKeyCallback) ([]KnownKey, string) {
+		return keysFor(cb, cur, host), knownhosts.Line([]string{knownhosts.Normalize(host)}, key)
+	})
+}
+
+// Forget removes the keys the file has for host (host:port as dialed), so
+// the next connection asks to trust its key again.
+func (k *KnownHosts) Forget(host string) error {
+	return k.rewrite(func(cur []KnownKey, cb ssh.HostKeyCallback) ([]KnownKey, string) {
+		return keysFor(cb, cur, host), ""
+	})
+}
+
+// Remove removes the line of key, one of List; ErrKnownHostsChanged when
+// that line no longer has it.
+func (k *KnownHosts) Remove(key KnownKey) error {
+	return k.rewrite(func([]KnownKey, ssh.HostKeyCallback) ([]KnownKey, string) {
+		return []KnownKey{key}, ""
+	})
+}
+
+// rewrite writes the file again without the lines pick names, each of
+// which must still have its hosts and key, and with the line it adds.
+func (k *KnownHosts) rewrite(pick func(cur []KnownKey, cb ssh.HostKeyCallback) (drop []KnownKey, add string)) error {
+	k.wmu.Lock()
+	defer k.wmu.Unlock()
+	data, err := os.ReadFile(k.path)
+	if err != nil {
+		return err
+	}
+	cb, err := knownhosts.New(k.path)
+	if err != nil {
+		return err
+	}
+	drop, add := pick(parseKnownKeys(data), cb)
+	lines := strings.Split(string(data), "\n")
+	gone := map[int]bool{}
+	for _, d := range drop {
+		if d.Line < 1 || d.Line > len(lines) {
+			return ErrKnownHostsChanged
+		}
+		_, hosts, key, _, _, err := ssh.ParseKnownHosts([]byte(lines[d.Line-1]))
+		if err != nil || !bytes.Equal(key.Marshal(), d.Key.Marshal()) || !slices.Equal(hosts, d.Hosts) {
+			return ErrKnownHostsChanged
+		}
+		gone[d.Line-1] = true
+	}
+	var keep []string
+	for i, l := range lines {
+		if !gone[i] {
+			keep = append(keep, l)
+		}
+	}
+	out := strings.Join(keep, "\n")
+	if add != "" {
+		if out != "" && !strings.HasSuffix(out, "\n") {
+			out += "\n"
+		}
+		out += add + "\n"
+	}
+	if err := writeFileAtomic(k.path, []byte(out)); err != nil {
+		return err
+	}
+	return k.reload()
+}
+
+// writeFileAtomic writes data to a file beside path and renames it over
+// path.
+func writeFileAtomic(path string, data []byte) error {
+	f, err := os.CreateTemp(filepath.Dir(path), ".known_hosts-*")
+	if err != nil {
+		return err
+	}
+	tmp := f.Name()
+	if _, err := f.Write(data); err != nil {
+		f.Close()
+		os.Remove(tmp)
+		return err
+	}
+	if err := f.Close(); err != nil {
+		os.Remove(tmp)
+		return err
+	}
+	if err := os.Chmod(tmp, 0o600); err != nil {
+		os.Remove(tmp)
+		return err
+	}
+	return os.Rename(tmp, path)
 }

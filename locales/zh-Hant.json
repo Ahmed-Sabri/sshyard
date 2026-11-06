@@ -1761,5 +1761,22 @@
   "backgroundImportFailed": "無法匯入背景：{detail}",
   "backgroundUnsupported": "請選擇 PNG、JPEG 或 WebP 圖片",
   "backgroundTooLarge": "圖片超過 20 MB 或 3200 萬像素",
-  "backgroundStorageUnavailable": "背景儲存空間無法使用"
+  "backgroundStorageUnavailable": "背景儲存空間無法使用",
+  "hostKeyReview": "核對主機金鑰",
+  "hostKeyChanged": "{host} 出示的主機金鑰與 SSHYard 儲存的不同。伺服器重裝系統或重新產生 SSH 金鑰後會出現這種情況；否則可能有人正在劫持連線。",
+  "hostKeySaved": "已儲存：{keyType} {fingerprint}",
+  "hostKeyOffered": "目前：{keyType} {fingerprint}",
+  "hostKeyVerifyHint": "信任新金鑰前，請先核對指紋，例如在服務商的網頁主控台中執行 ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub。",
+  "trustNewKeyAndConnect": "信任新金鑰並連線",
+  "knownHosts": "已知主機",
+  "knownHostsDesc": "SSHYard 信任的主機金鑰，儲存在 SSHYard 自己的檔案中，與 ~/.ssh/known_hosts 無關。",
+  "knownHostsEmpty": "尚未信任任何主機金鑰。首次連線主機時 SSHYard 會詢問。",
+  "knownHostsNoMatch": "沒有符合的主機",
+  "knownHostsFile": "儲存於 {path}",
+  "knownHostsHashed": "已雜湊的主機名稱",
+  "knownHostsUsedBy": "用於 {hosts}",
+  "knownHostsChanged": "已知主機檔案在此期間被修改，請重試。",
+  "removeHostKey": "移除此金鑰",
+  "forgetHostKey": "忘記主機金鑰",
+  "hostKeyForgotten": "已忘記 {host} 的主機金鑰，下次連線時 SSHYard 會詢問是否信任。"
 }

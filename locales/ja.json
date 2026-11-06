@@ -1761,5 +1761,22 @@
   "backgroundImportFailed": "背景を取り込めませんでした：{detail}",
   "backgroundUnsupported": "PNG、JPEG、WebP 画像を選択してください",
   "backgroundTooLarge": "画像が20 MBまたは3200万画素を超えています",
-  "backgroundStorageUnavailable": "背景の保存先を利用できません"
+  "backgroundStorageUnavailable": "背景の保存先を利用できません",
+  "hostKeyReview": "ホスト鍵を確認",
+  "hostKeyChanged": "{host}は、SSHYardが保存したものとは異なるホスト鍵を提示しています。サーバーを再インストールしたかSSH鍵を再生成した場合は想定どおりですが、そうでなければ接続が傍受されている可能性があります。",
+  "hostKeySaved": "保存済み: {keyType} {fingerprint}",
+  "hostKeyOffered": "現在: {keyType} {fingerprint}",
+  "hostKeyVerifyHint": "新しい鍵を信頼する前に、フィンガープリントをサーバーのものと照合してください。たとえばプロバイダーのWebコンソールで ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub を実行します。",
+  "trustNewKeyAndConnect": "新しい鍵を信頼して接続",
+  "knownHosts": "既知のホスト",
+  "knownHostsDesc": "SSHYardが信頼するホスト鍵です。~/.ssh/known_hostsとは別に、SSHYard独自のファイルに保存されます。",
+  "knownHostsEmpty": "信頼しているホスト鍵はまだありません。ホストに初めて接続するときにSSHYardが確認します。",
+  "knownHostsNoMatch": "一致するホストはありません",
+  "knownHostsFile": "保存先: {path}",
+  "knownHostsHashed": "ハッシュ化されたホスト名",
+  "knownHostsUsedBy": "使用するホスト: {hosts}",
+  "knownHostsChanged": "その間に既知のホストファイルが変更されました。もう一度お試しください。",
+  "removeHostKey": "この鍵を削除",
+  "forgetHostKey": "ホスト鍵を削除",
+  "hostKeyForgotten": "{host}のホスト鍵を削除しました。次回の接続時に信頼するか確認します。"
 }

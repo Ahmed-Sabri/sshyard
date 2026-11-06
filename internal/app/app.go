@@ -344,6 +344,9 @@ type App struct {
 	compressHold focusHold
 	prompting    bool
 	hostKey      *hostKeyAsk
+	keyChange    *hostKeyChange
+	changingKey  bool
+	khQuery      string
 	askingKey    bool
 	finding      bool
 	query        string
