@@ -45,7 +45,7 @@ func formSelectContent(c *ui.Context, selected *string, options []string, conten
 					c.Key(option)
 					item := formDisabled(sel.Item(option), false).Padding(theme.Space(1.5), theme.Space(2)).Gap(theme.Space(1.5)).Radius(theme.RadiusSmall)
 					if item.Highlighted() {
-						item.Background(tok.Accent.Alpha(0.12))
+						item.Background(tok.Press)
 					} else if option == *selected {
 						item.Background(tok.Fill)
 					}
@@ -86,8 +86,17 @@ func formTextArea(c *ui.Context, value *string) ui.Element {
 	return ui.TextArea(c, value).Background(currentTokens(c).Fill).Radius(theme.RadiusControl)
 }
 
+// formCombobox lights its options in the neutral tint the selects use,
+// not MyGo's solid accent: the options take the theme's Accent and
+// AccentText as they build, so those are swapped for the call; the field's
+// focus border and caret read the accent as they paint, after it is back.
 func formCombobox(c *ui.Context, selected *string, options []string) ui.Element {
-	return ui.Combobox(c, selected, options).Background(currentTokens(c).Fill).Radius(theme.RadiusControl)
+	tok := currentTokens(c)
+	th := c.Theme()
+	accent, accentText := th.Accent, th.AccentText
+	th.Accent, th.AccentText = tok.Press, tok.Text
+	defer func() { th.Accent, th.AccentText = accent, accentText }()
+	return ui.Combobox(c, selected, options).Background(tok.Fill).Radius(theme.RadiusControl)
 }
 
 func formSegmented(c *ui.Context, selected *int, disabled bool, labels ...string) ui.Element {

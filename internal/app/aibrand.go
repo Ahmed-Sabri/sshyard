@@ -52,7 +52,7 @@ func brandAutocomplete(c *ui.Context, value *string, models []string, provider s
 					c.Key(model)
 					item := formPointer(cb.Item(model)).Padding(theme.Space(1.5), theme.Space(2)).Gap(theme.Space(1.5)).Radius(theme.RadiusSmall)
 					if item.Highlighted() {
-						item.Background(tok.Accent.Alpha(0.12))
+						item.Background(tok.Press)
 					}
 					item.Children(func() {
 						brandImage(c, aibrands.Model(model, provider), 16)

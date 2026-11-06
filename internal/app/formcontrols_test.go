@@ -1,6 +1,7 @@
 package app
 
 import (
+	"image"
 	"image/color"
 	"testing"
 
@@ -232,6 +233,60 @@ func TestFormSegmentedRaisesSelected(t *testing.T) {
 			t.Fatalf("dark=%v selected segment is not raised over the track", dark)
 		}
 	}
+}
+
+func TestFormPopupsLightNeutral(t *testing.T) {
+	for _, dark := range []bool{false, true} {
+		tok := theme.LightTokens()
+		if dark {
+			tok = theme.DarkTokens()
+		}
+		choice, search := "first", "first"
+		tt := ui.NewTester(func(c *ui.Context) {
+			c.SetTheme(tok.Apply(*c.Theme()))
+			ui.Column(c).Fill().Background(tok.Canvas).Padding(20).Gap(200).Children(func() {
+				formSelect(c.Key("select"), &choice, []string{"first", "second", "third"}).Label("Choice").Width(240)
+				formCombobox(c.Key("combo"), &search, []string{"first", "second", "third"}).Label("Search").Width(240)
+			})
+		}, 400, 500)
+		tt.SetDark(dark)
+		tt.Frame()
+		for _, label := range []string{"Choice", "Search"} {
+			mustClick(t, tt, label)
+			field, second, third := mustFind(t, tt, label), mustFind(t, tt, "second"), mustFind(t, tt, "third")
+			tt.Move(second.X+second.W/2, second.Y+second.H/2)
+			tt.Frame()
+			img := tt.Image()
+			// Left of the text, in the rows' padding.
+			lit := img.RGBAAt(int(second.X-5), int(second.Y+second.H/2))
+			rest := img.RGBAAt(int(third.X-5), int(third.Y+third.H/2))
+			if lit == rest || absDiff(lit.R, lit.B) > 6 || absDiff(lit.R, lit.G) > 6 {
+				t.Fatalf("dark=%v %s highlighted option %v, others %v: want a neutral tint", dark, label, lit, rest)
+			}
+			list := image.Rect(int(field.X), int(second.Y-4), int(field.X+field.W), int(third.Y+third.H+4))
+			if n := bluePixels(img, list); n > 0 {
+				t.Fatalf("dark=%v %s options show %d accent pixels", dark, label, n)
+			}
+			box := image.Rect(int(field.X), int(field.Y), int(field.X+field.W), int(field.Y+field.H))
+			if label == "Search" && bluePixels(img, box) == 0 {
+				t.Fatalf("dark=%v combobox lost its accent focus border", dark)
+			}
+			tt.Key(0, ui.KeyEscape)
+		}
+	}
+}
+
+// bluePixels counts the pixels of img in b tinted with the accent.
+func bluePixels(img *image.RGBA, b image.Rectangle) int {
+	n := 0
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			if p := img.RGBAAt(x, y); int(p.B)-int(p.R) > 24 {
+				n++
+			}
+		}
+	}
+	return n
 }
 
 func absDiff(a, b uint8) uint8 {
