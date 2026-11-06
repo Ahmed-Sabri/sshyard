@@ -138,6 +138,29 @@ func enqueue(t *testing.T, c *Client, ts *Transfers, items []Item, dir Direction
 	}
 }
 
+// A folder dropped from Finder comes with a trailing separator; it still
+// uploads as itself, not just what is in it.
+func TestPlanUploadFolderWithTrailingSeparator(t *testing.T) {
+	r, root := queueServer(t)
+	local := t.TempDir()
+	tree(t, local, "logs")
+	ts := newQueue(r)
+	c, _ := r.get(context.Background())
+	items, err := c.PlanUpload(context.Background(), []string{filepath.Join(local, "logs") + string(filepath.Separator)}, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if it := items[0]; !it.IsDir || it.Rel != "logs" || it.Dst != root+"/logs" {
+		t.Fatalf("first item %+v, want the folder logs", it)
+	}
+	enqueue(t, c, ts, items, Upload)
+	ts.Wait()
+	want := snapshot(t, filepath.Join(local, "logs"))
+	if got := snapshot(t, filepath.Join(root, "logs")); fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("uploaded tree differs: %d vs %d entries", len(got), len(want))
+	}
+}
+
 func TestQueueUploadsAndDownloadsTrees(t *testing.T) {
 	for _, n := range []int{1, 5} {
 		t.Run(fmt.Sprint(n), func(t *testing.T) {

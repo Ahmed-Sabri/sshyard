@@ -32,10 +32,13 @@ type Item struct {
 }
 
 // PlanUpload lists what uploading the local paths into remoteDir copies:
-// folders recursively, folders before what is in them.
+// folders recursively, folders before what is in them. A folder may end
+// in a separator (Finder drops folders as "file:///…/name/"): it is
+// still the folder itself that goes into remoteDir.
 func (c *Client) PlanUpload(ctx context.Context, srcs []string, remoteDir string) ([]Item, error) {
 	var out []Item
 	for _, src := range srcs {
+		src = filepath.Clean(src)
 		base := filepath.Dir(src)
 		err := filepath.WalkDir(src, func(p string, d fs.DirEntry, err error) error {
 			if err != nil {
