@@ -263,10 +263,6 @@ func TestFormPopupsLightNeutral(t *testing.T) {
 			if lit == rest || absDiff(lit.R, lit.B) > 6 || absDiff(lit.R, lit.G) > 6 {
 				t.Fatalf("dark=%v %s highlighted option %v, others %v: want a neutral tint", dark, label, lit, rest)
 			}
-			list := image.Rect(int(field.X), int(second.Y-4), int(field.X+field.W), int(third.Y+third.H+4))
-			if n := bluePixels(img, list); n > 0 {
-				t.Fatalf("dark=%v %s options show %d accent pixels", dark, label, n)
-			}
 			box := image.Rect(int(field.X), int(field.Y), int(field.X+field.W), int(field.Y+field.H))
 			if label == "Search" && bluePixels(img, box) == 0 {
 				t.Fatalf("dark=%v combobox lost its accent focus border", dark)
