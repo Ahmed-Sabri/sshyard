@@ -210,7 +210,7 @@ func (a *App) pathField(c *ui.Context, cn *conn, remote bool, m locales.Messages
 		key = "rpath"
 	}
 	ui.Row(c.Key(key)).MinHeight(26).Shrink(0).FillWidth().MinWidth(0).AlignItems(ui.Center).Padding(0, 2).Children(func() {
-		in := ui.TextInput(c.Key("in:"+strconv.Itoa(sd.typings)), &sd.typed).Label(m.CrumbsLabel()).
+		in := formTextInput(c.Key("in:"+strconv.Itoa(sd.typings)), &sd.typed).Label(m.CrumbsLabel()).
 			Placeholder(m.PathPlaceholder()).FontSize(theme.Footnote).Grow(1).MinWidth(0).AutoFocus()
 		if sd.typeHold.key != any(sd.typings) {
 			in.SetTextSelection(0, utf8.RuneCountInString(sd.typed))
@@ -283,14 +283,14 @@ func typedPath(typed, dir, home string, remote bool) string {
 // with the icon as its label), lit under the pointer. The last, the
 // folder shown, is in the text's color and bold.
 func crumbButton(c *ui.Context, tok theme.Tokens, key, name string, ic *icons.Icon, last, named bool) ui.Element {
-	b := ui.ButtonBase(c.Key(key)).Label(name).Padding(2, 6).Radius(theme.RadiusSmall).AlignItems(ui.Center).MinWidth(0)
+	b := ui.ButtonBase(c.Key(key)).Label(name).Padding(2, 6).Radius(theme.RadiusSmall).AlignItems(ui.Center).MinWidth(0).Cursor(ui.CursorPointer)
 	fg := tok.TextMuted
 	switch {
 	case b.Pressed():
 		b.Background(tok.Text.Alpha(0.14))
 		fg = tok.Text
 	case b.Hovered():
-		b.Background(tok.Text.Alpha(0.08)).Cursor(ui.CursorPointer)
+		b.Background(tok.Text.Alpha(0.08))
 		fg = tok.Text
 	}
 	if last {

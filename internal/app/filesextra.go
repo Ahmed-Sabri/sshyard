@@ -180,10 +180,10 @@ func (a *App) compressView(c *ui.Context, cn *conn, tok theme.Tokens, m locales.
 				softTile(c, icons.Compress, tok.Accent, 30)
 				ui.Text(c, m.CompressTitle()).FontSize(theme.Title3).FontWeight(600).Shrink(1)
 			})
-			in := ui.TextInput(c.Key("archname"), &ask.name).AutoFocus().Label(m.ArchiveName()).Placeholder(m.ArchiveName()).FillWidth()
+			in := formTextInput(c.Key("archname"), &ask.name).AutoFocus().Label(m.ArchiveName()).Placeholder(m.ArchiveName()).FillWidth()
 			a.compressHold.apply(c, ask, in)
 			was := sftpsvc.ArchiveFormat(ask.format)
-			if ui.Segmented(c.Key("archfmt"), &ask.format, "zip", "tar.gz").Label(m.ArchiveFormat()).Changed() {
+			if formSegmented(c.Key("archfmt"), &ask.format, "zip", "tar.gz").Label(m.ArchiveFormat()).Changed() {
 				if base, ok := strings.CutSuffix(ask.name, was.Ext()); ok {
 					ask.name = base + sftpsvc.ArchiveFormat(ask.format).Ext()
 				}

@@ -156,7 +156,7 @@ func (a *App) pickMigrationKey(m locales.Messages, f *migrationForm, set func(pa
 // migrationComposer is the text area the host list is typed or pasted in.
 func (a *App) migrationComposer(c *ui.Context, m locales.Messages, tok theme.Tokens, f *migrationForm, height float32) {
 	ui.Text(c, m.MigrationTextHelp()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
-	in := ui.TextArea(c.Key("migration:text"), &f.text).Label(m.MigrationTextLabel()).Placeholder(migrationTextExample).
+	in := formTextArea(c.Key("migration:text"), &f.text).Label(m.MigrationTextLabel()).Placeholder(migrationTextExample).
 		Font(a.termFamily()).AutoFocus().FillWidth().Height(min(height, theme.Space(80)))
 	a.migrationHold.apply(c, f, in)
 }
@@ -209,10 +209,10 @@ func (a *App) migrationBatchView(c *ui.Context, m locales.Messages, tok theme.To
 			ui.Row(c).Wrap().Gap(theme.Space(3)).AlignItems(ui.End).FillWidth().Children(func() {
 				migrationBatchField(c, tok, m.FieldGroup(), theme.Space(56), func() { a.migrationBatchGroup(c, m, b, groups) })
 				migrationBatchField(c, tok, m.FieldUser(), theme.Space(36), func() {
-					ui.TextInput(c.Key("migration:batch:user"), &b.user).Label(m.FieldUser()).Placeholder(m.MigrationUnchanged()).FillWidth()
+					formTextInput(c.Key("migration:batch:user"), &b.user).Label(m.FieldUser()).Placeholder(m.MigrationUnchanged()).FillWidth()
 				})
 				migrationBatchField(c, tok, m.FieldPort(), theme.Space(24), func() {
-					ui.TextInput(c.Key("migration:batch:port"), &b.port).Label(m.FieldPort()).Placeholder(m.MigrationUnchanged()).Error(b.err).FillWidth()
+					formTextInput(c.Key("migration:batch:port"), &b.port).Label(m.FieldPort()).Placeholder(m.MigrationUnchanged()).Error(b.err).FillWidth()
 				})
 				migrationBatchField(c, tok, m.FieldAuth(), theme.Space(44), func() {
 					labels := []string{m.MigrationUnchanged()}
@@ -223,7 +223,7 @@ func (a *App) migrationBatchView(c *ui.Context, m locales.Messages, tok theme.To
 					if b.auth == "" || label == "" {
 						label = m.MigrationUnchanged()
 					}
-					if ui.Select(c.Key("migration:batch:auth"), &label, labels).Label(m.FieldAuth()).FillWidth().Changed() {
+					if formSelect(c.Key("migration:batch:auth"), &label, labels).Label(m.FieldAuth()).FillWidth().Changed() {
 						b.auth, b.cred = "", ""
 						for _, ch := range choices {
 							if ch.label == label {
@@ -235,14 +235,14 @@ func (a *App) migrationBatchView(c *ui.Context, m locales.Messages, tok theme.To
 				switch b.auth {
 				case assets.AuthPassword:
 					migrationBatchField(c, tok, m.FieldPassword(), theme.Space(44), func() {
-						ui.TextInput(c.Key("migration:batch:password"), &b.password).Password().Label(m.FieldPassword()).Placeholder(m.MigrationUnchanged()).FillWidth()
+						formTextInput(c.Key("migration:batch:password"), &b.password).Password().Label(m.FieldPassword()).Placeholder(m.MigrationUnchanged()).FillWidth()
 					})
 				case assets.AuthKey:
 					migrationBatchField(c, tok, m.FieldPrivateKey(), theme.Space(40), func() {
 						a.migrationKeyField(c, m, tok, f, "migration:batch:key", b.keyPath, m.MigrationUnchanged(), func(path string) { b.keyPath = path })
 					})
 					migrationBatchField(c, tok, m.FieldPassphrase(), theme.Space(40), func() {
-						ui.TextInput(c.Key("migration:batch:pass"), &b.pass).Password().Label(m.FieldPassphrase()).Placeholder(m.FieldPassphrase()).FillWidth()
+						formTextInput(c.Key("migration:batch:pass"), &b.pass).Password().Label(m.FieldPassphrase()).Placeholder(m.FieldPassphrase()).FillWidth()
 					})
 				}
 				selected := slices.ContainsFunc(f.rows, func(r *migrationRow) bool { return r.selected })
@@ -270,7 +270,7 @@ func migrationBatchField(c *ui.Context, tok theme.Tokens, label string, width fl
 func (a *App) migrationBatchGroup(c *ui.Context, m locales.Messages, b *migrationBatch, groups []string) {
 	ui.Row(c).Gap(theme.Space(1)).AlignItems(ui.Center).FillWidth().Children(func() {
 		if b.adding {
-			in := ui.TextInput(c.Key("migration:batch:newgroup"), &b.newGroup).Label(m.NewGroup()).Placeholder(m.NewGroup()).AutoFocus().Grow(1).Shrink(1)
+			in := formTextInput(c.Key("migration:batch:newgroup"), &b.newGroup).Label(m.NewGroup()).Placeholder(m.NewGroup()).AutoFocus().Grow(1).Shrink(1)
 			use := (IconButton{Icon: icons.Check, Label: m.MigrationUseGroup(), Disabled: strings.TrimSpace(b.newGroup) == ""}).Clicked(c, "migration:batch:newgroup:use")
 			if (in.Submitted() || use) && strings.TrimSpace(b.newGroup) != "" {
 				name := strings.TrimSpace(b.newGroup)
@@ -295,7 +295,7 @@ func (a *App) migrationBatchGroup(c *ui.Context, m locales.Messages, b *migratio
 			label = b.group
 		}
 		options := append([]string{m.MigrationUnchanged(), m.NoGroup()}, groups...)
-		if ui.Combobox(c.Key("migration:batch:group"), &label, options).Label(m.FieldGroup()).Grow(1).Shrink(1).Changed() {
+		if formCombobox(c.Key("migration:batch:group"), &label, options).Label(m.FieldGroup()).Grow(1).Shrink(1).Changed() {
 			b.groupSet, b.group = label != m.MigrationUnchanged(), label
 			if label == m.NoGroup() || !b.groupSet {
 				b.group = ""
@@ -363,22 +363,22 @@ func (a *App) migrationTable(c *ui.Context, m locales.Messages, tok theme.Tokens
 		}
 		switch cols[col].ID {
 		case "pick":
-			ui.Checkbox(c.Key(key+":pick"), &r.selected, "").Label(m.ImportPick(r.name))
+			formCheckbox(c.Key(key+":pick"), &r.selected, "").Label(m.ImportPick(r.name))
 		case "name":
-			ui.TextInput(c.Key(key+":name"), &r.name).Label(m.FieldName()).Placeholder(m.FieldName()).Grow(1).MinWidth(0)
+			formTextInput(c.Key(key+":name"), &r.name).Label(m.FieldName()).Placeholder(m.FieldName()).Grow(1).MinWidth(0)
 		case "address":
-			ui.TextInput(c.Key(key+":host"), &r.entry.Address).Label(m.FieldHost()).Placeholder(m.FieldHost()).Error(wrong("address")).Grow(1).MinWidth(0)
+			formTextInput(c.Key(key+":host"), &r.entry.Address).Label(m.FieldHost()).Placeholder(m.FieldHost()).Error(wrong("address")).Grow(1).MinWidth(0)
 		case "port":
-			ui.TextInput(c.Key(key+":port"), &r.port).Label(m.FieldPort()).Placeholder(m.FieldPort()).Error(wrong("port")).Grow(1).MinWidth(0)
+			formTextInput(c.Key(key+":port"), &r.port).Label(m.FieldPort()).Placeholder(m.FieldPort()).Error(wrong("port")).Grow(1).MinWidth(0)
 			r.entry.Port = migrationPort(r.port)
 		case "user":
-			ui.TextInput(c.Key(key+":user"), &r.entry.User).Label(m.FieldUser()).Placeholder(m.FieldUser()).Error(wrong("user")).Grow(1).MinWidth(0)
+			formTextInput(c.Key(key+":user"), &r.entry.User).Label(m.FieldUser()).Placeholder(m.FieldUser()).Error(wrong("user")).Grow(1).MinWidth(0)
 		case "group":
 			group := r.group
 			if group == "" {
 				group = m.NoGroup()
 			}
-			if ui.Select(c.Key(key+":group"), &group, append([]string{m.NoGroup()}, groups...)).Label(m.FieldGroup()).Grow(1).MinWidth(0).Changed() {
+			if formSelect(c.Key(key+":group"), &group, append([]string{m.NoGroup()}, groups...)).Label(m.FieldGroup()).Grow(1).MinWidth(0).Changed() {
 				r.group = group
 				if group == m.NoGroup() {
 					r.group = ""
@@ -393,7 +393,7 @@ func (a *App) migrationTable(c *ui.Context, m locales.Messages, tok theme.Tokens
 			if label == "" {
 				label = a.askLabel(m)
 			}
-			if ui.Select(c.Key(key+":auth"), &label, labels).Label(m.FieldAuth()).Error(wrong("auth", "credential")).Grow(1).MinWidth(0).Changed() {
+			if formSelect(c.Key(key+":auth"), &label, labels).Label(m.FieldAuth()).Error(wrong("auth", "credential")).Grow(1).MinWidth(0).Changed() {
 				for _, ch := range choices {
 					if ch.label == label {
 						r.auth, r.cred, r.problem = ch.method, ch.cred, ""
@@ -433,14 +433,14 @@ func (a *App) migrationSecretCell(c *ui.Context, m locales.Messages, tok theme.T
 	switch r.auth {
 	case assets.AuthPassword:
 		// In the clear, as the list it came from has it, to check it.
-		ui.TextInput(c.Key(key+":password"), &r.password).Label(m.FieldPassword()).Placeholder(password).Error(wrong).Grow(1).MinWidth(0)
+		formTextInput(c.Key(key+":password"), &r.password).Label(m.FieldPassword()).Placeholder(password).Error(wrong).Grow(1).MinWidth(0)
 	case assets.AuthKey:
 		ui.Column(c).Gap(theme.Space(1)).Grow(1).MinWidth(0).Children(func() {
 			a.migrationKeyField(c, m, tok, f, key+":key", r.entry.KeyPath, none, func(path string) {
 				clear(r.entry.PrivateKey)
 				r.entry.KeyPath, r.entry.PrivateKey, r.problem = path, nil, ""
 			})
-			if ui.TextInput(c.Key(key+":pass"), &r.pass).Password().Label(m.FieldPassphrase()).Placeholder(m.FieldPassphrase()).FillWidth().Changed() {
+			if formTextInput(c.Key(key+":pass"), &r.pass).Password().Label(m.FieldPassphrase()).Placeholder(m.FieldPassphrase()).FillWidth().Changed() {
 				r.problem = ""
 			}
 		})

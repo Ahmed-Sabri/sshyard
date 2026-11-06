@@ -613,13 +613,13 @@ func (a *App) importRowView(c *ui.Context, m locales.Messages, tok theme.Tokens,
 	key := "imp:" + strconv.Itoa(i)
 	ui.Column(c.Key(key)).Gap(6).Padding(8, 10).Radius(theme.RadiusControl).Border(1, tok.Line).FillWidth().Children(func() {
 		ui.Row(c).Gap(8).AlignItems(ui.Center).FillWidth().Children(func() {
-			ui.Checkbox(c.Key(key+":pick"), &r.pick, "").Label(m.ImportPick(r.e.Alias))
-			ui.TextInput(c.Key(key+":name"), &r.name).Label(m.FieldName()).Width(170)
+			formCheckbox(c.Key(key+":pick"), &r.pick, "").Label(m.ImportPick(r.e.Alias))
+			formTextInput(c.Key(key+":name"), &r.name).Label(m.FieldName()).Width(170)
 			ui.Text(c, r.target()).FontSize(theme.Footnote).TextColor(tok.TextMuted).SingleLine().Grow(1).Shrink(1)
 			groups := a.groups()
-			ui.Combobox(c.Key(key+":group"), &r.group, groups).Label(m.FieldGroup()).Width(150)
+			formCombobox(c.Key(key+":group"), &r.group, groups).Label(m.FieldGroup()).Width(150)
 			if r.conflict != "" {
-				ui.Select(c.Key(key+":act"), &r.action, importActions(m)).Label(m.ImportConflictAction()).Width(130)
+				formSelect(c.Key(key+":act"), &r.action, importActions(m)).Label(m.ImportConflictAction()).Width(130)
 			}
 		})
 		var notes []string
@@ -678,7 +678,7 @@ func (a *App) importKeysView(c *ui.Context, m locales.Messages, tok theme.Tokens
 			if k.needsPass() {
 				ph = m.ImportPassphraseNeeded()
 			}
-			ui.TextInput(c.Key("imp:pass:"+k.path), &k.pass).Password().Placeholder(ph).Label(m.ImportPassphraseFor(filepath.Base(k.path))).Width(260)
+			formTextInput(c.Key("imp:pass:"+k.path), &k.pass).Password().Placeholder(ph).Label(m.ImportPassphraseFor(filepath.Base(k.path))).Width(260)
 		})
 	}
 }

@@ -278,13 +278,13 @@ func (a *App) installView(c *ui.Context, m locales.Messages) {
 						for _, ch := range choices {
 							labels = append(labels, ch.label)
 						}
-						if ui.Select(c.Key("ik:cred"), &f.cred, labels).Label(m.AuthKey()).Changed() {
+						if formSelect(c.Key("ik:cred"), &f.cred, labels).Label(m.AuthKey()).Changed() {
 							f.res, f.needPassphrase, f.passphrase = nil, false, ""
 						}
 					})
 					if f.needPassword {
 						ui.Field(c, m.FieldPassword(), func() {
-							in := ui.TextInput(c.Key("ik:pw"), &f.password).Password().Placeholder(m.InstallLoginPassword(h.User + "@" + h.Address))
+							in := formTextInput(c.Key("ik:pw"), &f.password).Password().Placeholder(m.InstallLoginPassword(h.User + "@" + h.Address))
 							a.installHold.apply(c, "pw", in)
 							if in.Submitted() && !f.busy {
 								a.startInstall(m, f, h)
@@ -293,7 +293,7 @@ func (a *App) installView(c *ui.Context, m locales.Messages) {
 					}
 					if f.needPassphrase {
 						ui.Field(c, m.FieldPassphrase(), func() {
-							in := ui.TextInput(c.Key("ik:pp"), &f.passphrase).Password()
+							in := formTextInput(c.Key("ik:pp"), &f.passphrase).Password()
 							a.installHold.apply(c, "pp", in)
 							if in.Submitted() && !f.busy {
 								a.startInstall(m, f, h)

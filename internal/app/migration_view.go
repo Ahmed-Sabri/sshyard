@@ -142,7 +142,7 @@ func (a *App) migrationPreview(c *ui.Context, m locales.Messages, tok theme.Toke
 		ui.Text(c, m.MigrationReadOnly()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
 	}
 	ui.Row(c).Gap(theme.Space(2)).AlignItems(ui.Center).FillWidth().Children(func() {
-		in := ui.TextInput(c.Key("migration:search"), &f.search).Label(m.SearchHosts()).Placeholder(m.SearchHosts()).AutoFocus().Grow(1).Shrink(1).MinWidth(0)
+		in := formTextInput(c.Key("migration:search"), &f.search).Label(m.SearchHosts()).Placeholder(m.SearchHosts()).AutoFocus().Grow(1).Shrink(1).MinWidth(0)
 		a.migrationHold.apply(c, f, in)
 		if pill(c, m.MigrationSelectAll(), false, false, false) {
 			f.selectVisible(true)
@@ -161,7 +161,7 @@ func (a *App) migrationPreview(c *ui.Context, m locales.Messages, tok theme.Toke
 		return
 	}
 	ui.Row(c).Gap(theme.Space(2)).FillWidth().Children(func() {
-		ui.TextInput(c.Key("migration:group"), &f.group).Label(m.FieldGroup()).Placeholder(m.FieldGroup()).Grow(1).Shrink(1)
+		formTextInput(c.Key("migration:group"), &f.group).Label(m.FieldGroup()).Placeholder(m.FieldGroup()).Grow(1).Shrink(1)
 		if pill(c, m.MigrationApplyGroup(), false, false, false) {
 			for _, r := range f.rows {
 				if r.selected {
@@ -170,7 +170,7 @@ func (a *App) migrationPreview(c *ui.Context, m locales.Messages, tok theme.Toke
 			}
 		}
 	})
-	ui.Checkbox(c.Key("migration:secrets"), &f.saveSecrets, m.MigrationSaveSecrets())
+	formCheckbox(c.Key("migration:secrets"), &f.saveSecrets, m.MigrationSaveSecrets())
 	ui.Text(c, m.MigrationSecretsNote()).FontSize(theme.Caption).TextColor(tok.TextMuted)
 	sheetScroll(ui.Scroll(c.Key("migration:rows")).MaxHeight(height).Shrink(1).MinHeight(0)).Children(func() {
 		ui.Column(c).Gap(theme.Space(2)).FillWidth().Children(func() {
@@ -192,7 +192,7 @@ func migrationConflictView(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 	ui.Text(c, m.MigrationConflict()).FontSize(theme.Caption).TextColor(tok.Warning)
 	labels := importActions(m)
 	action := labels[int(r.action)]
-	ui.Select(c.Key(key+":action"), &action, labels).Label(m.ImportConflictAction()).FillWidth()
+	formSelect(c.Key(key+":action"), &action, labels).Label(m.ImportConflictAction()).FillWidth()
 	for i, label := range labels {
 		if action == label {
 			r.action = migrationAction(i)
@@ -203,11 +203,11 @@ func (a *App) migrationRowView(c *ui.Context, m locales.Messages, tok theme.Toke
 	key := "migration:row:" + strconv.Itoa(i)
 	ui.Column(c.Key(key)).Padding(theme.Space(2)).Gap(theme.Space(2)).FillWidth().Radius(theme.RadiusControl).Border(1, tok.Line).Children(func() {
 		ui.Row(c).Gap(theme.Space(2)).FillWidth().Children(func() {
-			ui.Checkbox(c.Key(key+":pick"), &r.selected, "").Label(m.ImportPick(r.name))
-			ui.TextInput(c.Key(key+":name"), &r.name).Label(m.FieldName()).Grow(1).Shrink(1)
+			formCheckbox(c.Key(key+":pick"), &r.selected, "").Label(m.ImportPick(r.name))
+			formTextInput(c.Key(key+":name"), &r.name).Label(m.FieldName()).Grow(1).Shrink(1)
 		})
 		ui.Text(c, r.entry.User+"@"+r.entry.Address+":"+strconv.Itoa(r.entry.Port)).FontSize(theme.Footnote).TextColor(tok.TextMuted).SingleLine().Shrink(1)
-		ui.TextInput(c.Key(key+":group"), &r.group).Label(m.FieldGroup()).Placeholder(m.FieldGroup()).FillWidth()
+		formTextInput(c.Key(key+":group"), &r.group).Label(m.FieldGroup()).Placeholder(m.FieldGroup()).FillWidth()
 		conflicts, _ := f.choices()
 		if conflicts[r] {
 			migrationConflictView(c, m, tok, key, r)
@@ -219,7 +219,7 @@ func (a *App) migrationRowView(c *ui.Context, m locales.Messages, tok theme.Toke
 			ui.Text(c, m.MigrationJumpCount(strconv.Itoa(len(r.entry.Jumps)))).FontSize(theme.Footnote).TextColor(tok.TextMuted)
 		}
 		if f.saveSecrets && (len(r.entry.Password) > 0 || len(r.entry.PrivateKey) > 0 || r.entry.KeyPath != "") {
-			ui.Checkbox(c.Key(key+":secret"), &r.saveSecret, m.MigrationSaveRowSecrets())
+			formCheckbox(c.Key(key+":secret"), &r.saveSecret, m.MigrationSaveRowSecrets())
 		}
 		if f.saveSecrets && (len(r.entry.PrivateKey) > 0 || r.entry.KeyPath != "") {
 			ui.Text(c, r.entry.KeyPath).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine().Shrink(1)
@@ -229,7 +229,7 @@ func (a *App) migrationRowView(c *ui.Context, m locales.Messages, tok theme.Toke
 					r.entry.PrivateKey = nil
 				})
 			}
-			ui.TextInput(c.Key(key+":pass"), &r.pass).Password().Label(m.FieldPassphrase()).Placeholder(m.FieldPassphrase()).FillWidth()
+			formTextInput(c.Key(key+":pass"), &r.pass).Password().Label(m.FieldPassphrase()).Placeholder(m.FieldPassphrase()).FillWidth()
 		}
 	})
 }

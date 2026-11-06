@@ -79,7 +79,7 @@ func (a *App) groupView(c *ui.Context, m locales.Messages) {
 				})
 				ui.Form(c, func() {
 					ui.Field(c, m.FieldGroup(), func() {
-						in := ui.TextInput(c.Key("g:name"), &f.name).Placeholder(m.GroupPlaceholder()).AutoFocus()
+						in := formTextInput(c.Key("g:name"), &f.name).Placeholder(m.GroupPlaceholder()).AutoFocus()
 						a.groupHold.apply(c, f, in)
 						if in.Submitted() {
 							a.SaveGroup(m)

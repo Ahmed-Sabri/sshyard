@@ -497,7 +497,7 @@ func (a *App) tabRenameView(c *ui.Context, m locales.Messages) {
 			})
 			ui.Form(c, func() {
 				ui.Field(c, m.TabName(), func() {
-					in := ui.TextInput(c.Key("tabname"), &f.name).Placeholder(m.TabNamePlaceholder()).AutoFocus()
+					in := formTextInput(c.Key("tabname"), &f.name).Placeholder(m.TabNamePlaceholder()).AutoFocus()
 					a.tabRenameHold.apply(c, f, in)
 					if in.Submitted() {
 						a.saveTabRename()

@@ -42,7 +42,7 @@ func (a *App) prefAgents(c *ui.Context, m locales.Messages, tok theme.Tokens, s 
 	a.settingsSection(c, tok, icons.API, tok.TintAt(0), m.ApiSection(), func(g *settingsGroup) {
 		g.row(m.McpEnable(), m.McpEnableNote(), func() {
 			sw := on
-			if ui.Switch(c.Key("mcpon"), &sw).Label(m.McpEnable()).Changed() {
+			if formSwitch(c.Key("mcpon"), &sw).Label(m.McpEnable()).Changed() {
 				if sw {
 					a.mcpAsk = &mcpAsk{open: true}
 				} else {

@@ -150,7 +150,7 @@ func (a *App) renewalFields(c *ui.Context, m locales.Messages, tok theme.Tokens,
 			names[i] = name(v)
 		}
 		cur := name(*value)
-		if ui.Select(c.Key(key), &cur, names).Label(label).Grow(1).Changed() {
+		if formSelect(c.Key(key), &cur, names).Label(label).Grow(1).Changed() {
 			if i := slices.Index(names, cur); i >= 0 {
 				*value = values[i]
 			}
@@ -158,9 +158,9 @@ func (a *App) renewalFields(c *ui.Context, m locales.Messages, tok theme.Tokens,
 	}
 	ui.Column(c).Gap(10).FillWidth().Margin(8, 0, 0, 0).Children(func() {
 		row(m.FieldProvider(), func() {
-			ui.TextInput(c.Key("f:provider"), &f.provider).Placeholder("Vultr").Label(m.FieldProvider()).Grow(1)
+			formTextInput(c.Key("f:provider"), &f.provider).Placeholder("Vultr").Label(m.FieldProvider()).Grow(1)
 		})
-		ui.Checkbox(c.Key("f:renew"), &f.renew, m.TrackRenewal())
+		formCheckbox(c.Key("f:renew"), &f.renew, m.TrackRenewal())
 		if f.renew {
 			row(m.RenewalStart(), func() {
 				ui.DateInput(c.Key("f:rstart"), &f.renewStart).Label(m.RenewalStart()).Grow(1)
@@ -180,7 +180,7 @@ func (a *App) renewalFields(c *ui.Context, m locales.Messages, tok theme.Tokens,
 		}
 		ui.Column(c).Gap(6).FillWidth().Children(func() {
 			ui.Text(c, m.FieldNote()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
-			ui.TextArea(c.Key("f:note"), &f.note).Label(m.FieldNote()).FillWidth().Height(72)
+			formTextArea(c.Key("f:note"), &f.note).Label(m.FieldNote()).FillWidth().Height(72)
 			ui.Text(c, m.NoteHint()).FontSize(theme.Caption).TextColor(tok.TextMuted)
 		})
 	})

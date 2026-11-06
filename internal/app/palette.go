@@ -310,7 +310,7 @@ func (a *App) paletteView(c *ui.Context, m locales.Messages) {
 			var items []paletteItem
 			ui.Row(c).Gap(10).AlignItems(ui.Center).FillWidth().Children(func() {
 				ui.Icon(c, icons.Search.SVG).Size(16, 16).Shrink(0).TextColor(tok.TextMuted)
-				in := ui.TextInput(c.Key("palette:q"), &p.query).Placeholder(m.PalettePlaceholder()).Label(m.CommandPalette()).
+				in := formTextInput(c.Key("palette:q"), &p.query).Placeholder(m.PalettePlaceholder()).Label(m.CommandPalette()).
 					AutoFocus().Grow(1)
 				p.hold.apply(c, p.gen, in)
 				in.OnTextKey(func(k ui.TextKey) bool {

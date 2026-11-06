@@ -108,7 +108,7 @@ func (a *App) confirmSnippetDelete(m locales.Messages) {
 func (a *App) snippetGroupField(c *ui.Context, m locales.Messages, f *snippetForm) {
 	ui.Row(c).FillWidth().Gap(theme.Space(2)).AlignItems(ui.Center).Children(func() {
 		if f.adding {
-			in := ui.TextInput(c.Key("snippet:newGroup"), &f.newGroup).Placeholder(m.SnippetGroupName()).Label(m.SnippetGroupName()).AutoFocus().Grow(1).Shrink(1)
+			in := formTextInput(c.Key("snippet:newGroup"), &f.newGroup).Placeholder(m.SnippetGroupName()).Label(m.SnippetGroupName()).AutoFocus().Grow(1).Shrink(1)
 			add := (IconButton{Icon: icons.Check, Label: m.SnippetAddGroup()}).Clicked(c, "snippet:group:add")
 			if in.Submitted() || add {
 				a.addSnippetGroup(m, f)
@@ -125,7 +125,7 @@ func (a *App) snippetGroupField(c *ui.Context, m locales.Messages, f *snippetFor
 				options = append(options, name)
 			}
 		}
-		if ui.Combobox(c.Key("snippet:group"), &g, options).Label(m.FieldGroup()).Grow(1).Shrink(1).Changed() {
+		if formCombobox(c.Key("snippet:group"), &g, options).Label(m.FieldGroup()).Grow(1).Shrink(1).Changed() {
 			f.meta.Group = snippetGroupName(g)
 		}
 		if (IconButton{Icon: icons.NewFolder, Label: m.NewGroup()}).Clicked(c, "snippet:group:new") {
@@ -168,7 +168,7 @@ func (a *App) snippetSheets(c *ui.Context, m locales.Messages) {
 				sheetTitle(c, title)
 				ui.Form(c, func() {
 					ui.Field(c, m.FieldName(), func() {
-						in := ui.TextInput(c.Key("snippet:name"), &f.meta.Name).Label(m.FieldName()).AutoFocus()
+						in := formTextInput(c.Key("snippet:name"), &f.meta.Name).Label(m.FieldName()).AutoFocus()
 						if !f.adding {
 							a.snippets.hold.apply(c, f, in)
 						}
@@ -177,10 +177,10 @@ func (a *App) snippetSheets(c *ui.Context, m locales.Messages) {
 						a.snippetGroupField(c, m, f)
 					})
 					ui.Field(c, m.SnippetContent(), func() {
-						ui.TextArea(c.Key("snippet:content"), &f.content).Label(m.SnippetContent()).Font(a.termFamily()).FillWidth().Height(theme.Space(40))
+						formTextArea(c.Key("snippet:content"), &f.content).Label(m.SnippetContent()).Font(a.termFamily()).FillWidth().Height(theme.Space(40))
 					})
 					ui.Row(c).FillWidth().Gap(theme.Space(2)).AlignItems(ui.Center).Children(func() {
-						ui.Switch(c.Key("snippet:enter"), &f.meta.SendEnter).Label(m.SnippetImmediate())
+						formSwitch(c.Key("snippet:enter"), &f.meta.SendEnter).Label(m.SnippetImmediate())
 						ui.Text(c, m.SnippetImmediate()).FontSize(theme.Body).Grow(1).Shrink(1)
 					})
 				})

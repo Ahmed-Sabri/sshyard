@@ -14,7 +14,7 @@ import (
 func (a *App) hostGroupField(c *ui.Context, m locales.Messages, f *hostForm) {
 	ui.Row(c).FillWidth().Gap(theme.Space(2)).AlignItems(ui.Center).Children(func() {
 		if f.addingGroup {
-			in := ui.TextInput(c.Key("f:newGroup"), &f.newGroup).Label(m.NewGroup()).Placeholder(m.GroupPlaceholder()).AutoFocus().Grow(1).Shrink(1)
+			in := formTextInput(c.Key("f:newGroup"), &f.newGroup).Label(m.NewGroup()).Placeholder(m.GroupPlaceholder()).AutoFocus().Grow(1).Shrink(1)
 			a.editorHold.apply(c, &f.newGroup, in)
 			add := (IconButton{Icon: icons.Check, Label: m.SnippetAddGroup()}).Clicked(c, "f:group:add")
 			if in.Submitted() || add {
@@ -33,7 +33,7 @@ func (a *App) hostGroupField(c *ui.Context, m locales.Messages, f *hostForm) {
 		if f.group != "" && !slices.Contains(options, f.group) {
 			options = append(options, f.group)
 		}
-		if ui.Combobox(c.Key("f:group"), &group, options).Label(m.FieldGroup()).Grow(1).Shrink(1).Changed() {
+		if formCombobox(c.Key("f:group"), &group, options).Label(m.FieldGroup()).Grow(1).Shrink(1).Changed() {
 			f.group = group
 			if group == m.NoGroup() {
 				f.group = ""

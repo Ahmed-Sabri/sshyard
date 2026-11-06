@@ -163,12 +163,12 @@ func (a *App) proxyView(c *ui.Context, m locales.Messages) {
 			})
 			ui.Form(c, func() {
 				ui.Field(c, m.FieldName(), func() {
-					in := ui.TextInput(c.Key("pf:name"), &f.name).Placeholder("office").AutoFocus()
+					in := formTextInput(c.Key("pf:name"), &f.name).Placeholder("office").AutoFocus()
 					a.proxyHold.apply(c, f, in)
 				})
 				ui.Field(c, m.FieldType(), func() {
 					prev := f.kind
-					if ui.Segmented(c.Key("pf:kind"), &f.kind, "SOCKS5", "HTTP").Label(m.FieldType()).Changed() {
+					if formSegmented(c.Key("pf:kind"), &f.kind, "SOCKS5", "HTTP").Label(m.FieldType()).Changed() {
 						// The usual port follows the kind, unless one was typed.
 						def := map[int]string{0: "1080", 1: "8080"}
 						if strings.TrimSpace(f.port) == "" || f.port == def[prev] {
@@ -176,19 +176,19 @@ func (a *App) proxyView(c *ui.Context, m locales.Messages) {
 						}
 					}
 				})
-				ui.Field(c, m.FieldHost(), func() { ui.TextInput(c.Key("pf:addr"), &f.address).Placeholder("proxy.example.com") })
-				ui.Field(c, m.FieldPort(), func() { ui.TextInput(c.Key("pf:port"), &f.port).Width(90) })
-				ui.Field(c, m.FieldUser(), func() { ui.TextInput(c.Key("pf:user"), &f.user).Placeholder(m.ProxyUserPlaceholder()) })
+				ui.Field(c, m.FieldHost(), func() { formTextInput(c.Key("pf:addr"), &f.address).Placeholder("proxy.example.com") })
+				ui.Field(c, m.FieldPort(), func() { formTextInput(c.Key("pf:port"), &f.port).Width(90) })
+				ui.Field(c, m.FieldUser(), func() { formTextInput(c.Key("pf:user"), &f.user).Placeholder(m.ProxyUserPlaceholder()) })
 				if strings.TrimSpace(f.user) != "" {
 					ui.Field(c, m.FieldPassword(), func() {
 						ph := ""
 						if !f.isNew && f.orig.User != "" {
 							ph = m.PasswordUnchanged()
 						}
-						ui.TextInput(c.Key("pf:pw"), &f.password).Password().Placeholder(ph)
+						formTextInput(c.Key("pf:pw"), &f.password).Password().Placeholder(ph)
 					})
 				}
-				ui.Field(c, m.FieldNote(), func() { ui.TextInput(c.Key("pf:note"), &f.note) })
+				ui.Field(c, m.FieldNote(), func() { formTextInput(c.Key("pf:note"), &f.note) })
 			})
 			ui.Text(c, m.ProxyFirstHop()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
 			if !f.isNew {

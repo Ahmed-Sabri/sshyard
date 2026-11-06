@@ -378,7 +378,7 @@ func (a *App) historyButton(c *ui.Context, cn *conn, tok theme.Tokens, m locales
 				ui.Text(c, m.AiHistoryEmpty()).FontSize(theme.Footnote).TextColor(tok.TextMuted).Padding(6, 8)
 				return
 			}
-			in := ui.TextInput(c.Key("q"), &cn.ai.hquery).Placeholder(m.AiSearchChats()).Label(m.AiSearchChats()).
+			in := formTextInput(c.Key("q"), &cn.ai.hquery).Placeholder(m.AiSearchChats()).Label(m.AiSearchChats()).
 				FontSize(theme.Footnote).FillWidth().Margin(0, 0, 4, 0)
 			if a.menu.focus == 0 {
 				in.Focus()

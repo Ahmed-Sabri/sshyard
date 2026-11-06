@@ -331,7 +331,7 @@ func (a *App) prefAppearance(c *ui.Context, m locales.Messages, tok theme.Tokens
 			if n, ok := languageNames[s.Language]; ok {
 				cur = n
 			}
-			if ui.Select(c.Key("lang"), &cur, opts).Label(m.Language()).Width(180).Changed() {
+			if formSelect(c.Key("lang"), &cur, opts).Label(m.Language()).Width(180).Changed() {
 				s.Language = ""
 				for _, l := range settings.Languages {
 					if languageNames[l] == cur {
@@ -346,7 +346,7 @@ func (a *App) prefAppearance(c *ui.Context, m locales.Messages, tok theme.Tokens
 			if s.CloseBehavior == settings.CloseQuit {
 				cur = m.CloseQuit()
 			}
-			if ui.Select(c.Key("closebehavior"), &cur, []string{m.CloseToTray(), m.CloseQuit()}).Label(m.CloseBehavior()).Width(180).Changed() {
+			if formSelect(c.Key("closebehavior"), &cur, []string{m.CloseToTray(), m.CloseQuit()}).Label(m.CloseBehavior()).Width(180).Changed() {
 				s.CloseBehavior = settings.CloseToTray
 				if cur == m.CloseQuit() {
 					s.CloseBehavior = settings.CloseQuit
@@ -355,12 +355,12 @@ func (a *App) prefAppearance(c *ui.Context, m locales.Messages, tok theme.Tokens
 			}
 		})
 		g.row(m.RememberLayout(), m.RememberLayoutNote(), func() {
-			if ui.Switch(c.Key("rememberlayout"), &s.RememberLayout).Label(m.RememberLayout()).Changed() {
+			if formSwitch(c.Key("rememberlayout"), &s.RememberLayout).Label(m.RememberLayout()).Changed() {
 				*changed = true
 			}
 		})
 		g.row(m.RenewalNotify(), m.RenewalNotifyNote(), func() {
-			if ui.Switch(c.Key("renewalnotify"), &s.RenewalNotify).Label(m.RenewalNotify()).Changed() {
+			if formSwitch(c.Key("renewalnotify"), &s.RenewalNotify).Label(m.RenewalNotify()).Changed() {
 				*changed = true
 			}
 		})
@@ -369,7 +369,7 @@ func (a *App) prefAppearance(c *ui.Context, m locales.Messages, tok theme.Tokens
 			if s.TrayIcon == settings.TrayIconColor {
 				cur = m.TrayIconColor()
 			}
-			if ui.Select(c.Key("trayicon"), &cur, []string{m.TrayIconMono(), m.TrayIconColor()}).Label(m.TrayIconStyle()).Width(180).Changed() {
+			if formSelect(c.Key("trayicon"), &cur, []string{m.TrayIconMono(), m.TrayIconColor()}).Label(m.TrayIconStyle()).Width(180).Changed() {
 				s.TrayIcon = settings.TrayIconMono
 				if cur == m.TrayIconColor() {
 					s.TrayIcon = settings.TrayIconColor
@@ -383,7 +383,7 @@ func (a *App) prefAppearance(c *ui.Context, m locales.Messages, tok theme.Tokens
 				opts = append(opts, zoomLabel(m, z))
 			}
 			cur := zoomLabel(m, s.UIZoom)
-			if ui.Select(c.Key("uizoom"), &cur, opts).Label(m.UiZoom()).Width(180).Changed() {
+			if formSelect(c.Key("uizoom"), &cur, opts).Label(m.UiZoom()).Width(180).Changed() {
 				s.UIZoom = 0
 				for _, z := range settings.UIZooms {
 					if zoomLabel(m, z) == cur {
@@ -425,7 +425,7 @@ func (a *App) materialSection(c *ui.Context, m locales.Messages, tok theme.Token
 				note = m.MaterialUnsupported()
 			}
 			g.row(label, note, func() {
-				seg := ui.Segmented(c.Key(key), idx, m.MaterialTranslucent(), m.MaterialOpaque()).Label(label).Disabled(off)
+				seg := formSegmentedState(c.Key(key), idx, off, m.MaterialTranslucent(), m.MaterialOpaque()).Label(label)
 				if seg.Changed() && !off {
 					*cur, *changed = materials[*idx], true
 				}
@@ -451,7 +451,7 @@ func (a *App) prefTerminal(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 		})
 		g.row(m.MonospacedOnly(), m.MonospacedOnlyNote(), func() {
 			mono := s.MonospacedOnly
-			if ui.Switch(c.Key("monoonly"), &mono).Label(m.MonospacedOnly()).Changed() {
+			if formSwitch(c.Key("monoonly"), &mono).Label(m.MonospacedOnly()).Changed() {
 				s.MonospacedOnly, *changed = mono, true
 			}
 		})
@@ -467,7 +467,7 @@ func (a *App) prefTerminal(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 	a.settingsSection(c, tok, icons.LocalShell, tok.TintAt(3), m.LocalTerminal(), func(g *settingsGroup) {
 		g.row(m.OpenLocalOnStart(), m.OpenLocalOnStartNote(), func() {
 			on := s.OpenLocalOnStart
-			if ui.Switch(c.Key("localstart"), &on).Label(m.OpenLocalOnStart()).Changed() {
+			if formSwitch(c.Key("localstart"), &on).Label(m.OpenLocalOnStart()).Changed() {
 				s.OpenLocalOnStart, *changed = on, true
 			}
 		})
@@ -485,7 +485,7 @@ func (a *App) prefTerminal(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 					cur = sh.Name
 				}
 			}
-			if ui.Select(c.Key("localshell"), &cur, names).Label(m.DefaultShell()).Width(220).Changed() {
+			if formSelect(c.Key("localshell"), &cur, names).Label(m.DefaultShell()).Width(220).Changed() {
 				if i := slices.Index(names, cur); i >= 0 {
 					s.LocalShell, *changed = a.shells[i].ID, true
 				}
@@ -501,7 +501,7 @@ func (a *App) prefTerminal(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 		})
 		g.row(m.AutoReconnect(), "", func() {
 			a.autoRecon = s.AutoReconnect
-			if ui.Switch(c.Key("recon"), &a.autoRecon).Label(m.AutoReconnect()).Changed() {
+			if formSwitch(c.Key("recon"), &a.autoRecon).Label(m.AutoReconnect()).Changed() {
 				s.AutoReconnect = a.autoRecon
 				*changed = true
 			}
@@ -511,7 +511,7 @@ func (a *App) prefTerminal(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 		g.row(m.RightClick(), m.RightClickNote(), func() {
 			codes := []string{settings.RightClickMenu, settings.RightClickPaste, settings.RightClickCopyPaste}
 			a.rightClickChoice = max(slices.Index(codes, s.TerminalRightClick), 0)
-			if ui.Segmented(c.Key("rightclick"), &a.rightClickChoice, m.RightClickMenu(), m.Paste(), m.RightClickCopyPaste()).Label(m.RightClick()).Changed() {
+			if formSegmented(c.Key("rightclick"), &a.rightClickChoice, m.RightClickMenu(), m.Paste(), m.RightClickCopyPaste()).Label(m.RightClick()).Changed() {
 				if a.rightClickChoice >= 0 && a.rightClickChoice < len(codes) {
 					s.TerminalRightClick, *changed = codes[a.rightClickChoice], true
 				}
@@ -519,7 +519,7 @@ func (a *App) prefTerminal(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 		})
 		g.row(m.CopyOnSelect(), m.CopyOnSelectNote(), func() {
 			on := s.CopyOnSelect
-			if ui.Switch(c.Key("copyonselect"), &on).Label(m.CopyOnSelect()).Changed() {
+			if formSwitch(c.Key("copyonselect"), &on).Label(m.CopyOnSelect()).Changed() {
 				s.CopyOnSelect, *changed = on, true
 			}
 		})
@@ -531,7 +531,7 @@ func (a *App) prefTerminal(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 					a.osc52Choice = i
 				}
 			}
-			if ui.Segmented(c.Key("osc52"), &a.osc52Choice, m.Osc52Allow(), m.Osc52Ask(), m.Osc52Deny()).Label(m.Osc52Title()).Changed() {
+			if formSegmented(c.Key("osc52"), &a.osc52Choice, m.Osc52Allow(), m.Osc52Ask(), m.Osc52Deny()).Label(m.Osc52Title()).Changed() {
 				if a.osc52Choice >= 0 && a.osc52Choice < len(codes) {
 					s.OSC52Write = codes[a.osc52Choice]
 					*changed = true
@@ -551,20 +551,20 @@ func (a *App) prefMonitoring(c *ui.Context, m locales.Messages, tok theme.Tokens
 	a.settingsSection(c, tok, nil, ui.Color{}, "", func(g *settingsGroup) {
 		g.row(m.MetricsBar(), m.MetricsBarNote(), func() {
 			a.metOn = s.MetricsEnabled
-			if ui.Switch(c.Key("meton"), &a.metOn).Label(m.MetricsBar()).Changed() {
+			if formSwitch(c.Key("meton"), &a.metOn).Label(m.MetricsBar()).Changed() {
 				s.MetricsEnabled = a.metOn
 				*changed = true
 			}
 		})
 		g.row(m.MetricsInterval(), "", func() {
 			a.metEvery = intervalIndex(s.MetricsInterval)
-			if ui.Segmented(c.Key("metevery"), &a.metEvery, m.Seconds("1"), m.Seconds("2"), m.Seconds("5"), m.Seconds("10")).Label(m.MetricsInterval()).Changed() {
+			if formSegmented(c.Key("metevery"), &a.metEvery, m.Seconds("1"), m.Seconds("2"), m.Seconds("5"), m.Seconds("10")).Label(m.MetricsInterval()).Changed() {
 				s.MetricsInterval = []int{1, 2, 5, 10}[a.metEvery]
 				*changed = true
 			}
 		})
 		g.row(m.MetricsMount(), m.MetricsMountNote(), func() {
-			in := ui.TextInput(c.Key("metmount"), &a.metMount).Label(m.MetricsMount())
+			in := formTextInput(c.Key("metmount"), &a.metMount).Label(m.MetricsMount())
 			focused := in.Focused()
 			// Enter, or the caret leaving the field. Typing restarts
 			// the remote command, so it waits for one of those.
@@ -596,7 +596,7 @@ func (a *App) prefFiles(c *ui.Context, m locales.Messages, tok theme.Tokens, s *
 		g.row(m.FilesEdge(), m.FilesEdgeNote(), func() {
 			edges := []string{settings.FilesRight, settings.FilesBelow}
 			a.filesEdgeChoice = max(slices.Index(edges, s.FilesEdge), 0)
-			if ui.Segmented(c.Key("filesedge"), &a.filesEdgeChoice, m.FilesEdgeRight(), m.FilesEdgeBelow()).Label(m.FilesEdge()).Changed() {
+			if formSegmented(c.Key("filesedge"), &a.filesEdgeChoice, m.FilesEdgeRight(), m.FilesEdgeBelow()).Label(m.FilesEdge()).Changed() {
 				if a.filesEdgeChoice >= 0 && a.filesEdgeChoice < len(edges) {
 					s.FilesEdge, *changed = edges[a.filesEdgeChoice], true
 				}
@@ -770,7 +770,7 @@ func (a *App) aboutPage(c *ui.Context, m locales.Messages, tok theme.Tokens, s *
 	a.settingsSection(c, tok, icons.Download, tok.TintAt(1), m.Updates(), func(g *settingsGroup) {
 		g.row(m.CheckAutomatically(), "", func() {
 			a.updateCheck = s.CheckUpdates
-			if ui.Switch(c.Key("autoupd"), &a.updateCheck).Label(m.CheckAutomatically()).Changed() {
+			if formSwitch(c.Key("autoupd"), &a.updateCheck).Label(m.CheckAutomatically()).Changed() {
 				s.CheckUpdates = a.updateCheck
 				*changed = true
 			}
@@ -782,7 +782,7 @@ func (a *App) aboutPage(c *ui.Context, m locales.Messages, tok theme.Tokens, s *
 			for i, h := range settings.UpdateIntervals {
 				labels[i] = m.Hours(strconv.Itoa(h))
 			}
-			if ui.Segmented(c.Key("updevery"), &a.updEvery, labels...).Label(m.UpdateInterval()).Changed() {
+			if formSegmented(c.Key("updevery"), &a.updEvery, labels...).Label(m.UpdateInterval()).Changed() {
 				s.UpdateIntervalHours = settings.UpdateIntervals[a.updEvery]
 				*changed = true
 			}

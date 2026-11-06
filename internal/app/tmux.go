@@ -525,7 +525,7 @@ func (a *App) tmuxFormView(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 			})
 			ui.Form(c, func() {
 				ui.Field(c, m.TmuxName(), func() {
-					in := ui.TextInput(c.Key("tmuxname"), &f.name).AutoFocus()
+					in := formTextInput(c.Key("tmuxname"), &f.name).AutoFocus()
 					d.hold.apply(c, d.formSeq, in)
 					if in.Changed() {
 						f.err = ""
@@ -539,13 +539,13 @@ func (a *App) tmuxFormView(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 				}
 				if creating {
 					ui.Field(c, m.TmuxDir(), func() {
-						in := ui.TextInput(c.Key("tmuxdir"), &f.dir).Placeholder(m.TmuxDirPlaceholder())
+						in := formTextInput(c.Key("tmuxdir"), &f.dir).Placeholder(m.TmuxDirPlaceholder())
 						if in.Submitted() {
 							a.submitTmuxForm(m, tc)
 						}
 					})
 					ui.Field(c, m.TmuxOpenIn(), func() {
-						ui.Segmented(c.Key("tmuxwhere"), &f.where, m.TmuxThisTerminal(), m.NewTab(), m.TmuxOpenBackground()).
+						formSegmented(c.Key("tmuxwhere"), &f.where, m.TmuxThisTerminal(), m.NewTab(), m.TmuxOpenBackground()).
 							Label(m.TmuxOpenIn())
 					})
 				}

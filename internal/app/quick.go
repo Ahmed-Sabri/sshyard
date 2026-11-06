@@ -258,7 +258,7 @@ func (a *App) quickView(c *ui.Context, m locales.Messages) {
 			ui.Form(c, func() {
 				ui.Field(c, m.QuickTarget(), func() {
 					ui.Column(c).Gap(4).FillWidth().Children(func() {
-						in := ui.TextInput(c.Key("q:target"), &f.target).Placeholder("user@host:22").AutoFocus()
+						in := formTextInput(c.Key("q:target"), &f.target).Placeholder("user@host:22").AutoFocus()
 						a.quickHold.apply(c, f, in)
 						if in.Submitted() {
 							a.QuickConnect(m)
@@ -271,11 +271,11 @@ func (a *App) quickView(c *ui.Context, m locales.Messages) {
 					for _, ch := range choices {
 						labels = append(labels, ch.label)
 					}
-					ui.Select(c.Key("q:auth"), &f.auth, labels).Label(m.FieldAuth())
+					formSelect(c.Key("q:auth"), &f.auth, labels).Label(m.FieldAuth())
 				})
 				if f.auth == choices[0].label {
 					ui.Field(c, m.FieldPassword(), func() {
-						in := ui.TextInput(c.Key("q:pw"), &f.password).Password().Placeholder(m.QuickPasswordHint())
+						in := formTextInput(c.Key("q:pw"), &f.password).Password().Placeholder(m.QuickPasswordHint())
 						if in.Submitted() {
 							a.QuickConnect(m)
 						}

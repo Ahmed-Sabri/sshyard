@@ -408,7 +408,7 @@ func (a *App) editorView(c *ui.Context, m locales.Messages) {
 				sheetScroll(ui.Scroll(c.Key("f:scroll")).Shrink(1).MinHeight(0)).Children(func() {
 					ui.Form(c, func() {
 						ui.Field(c, m.FieldName(), func() {
-							in := ui.TextInput(c.Key("f:name"), &f.name).Placeholder("web-01").AutoFocus()
+							in := formTextInput(c.Key("f:name"), &f.name).Placeholder("web-01").AutoFocus()
 							if !f.addingGroup {
 								a.editorHold.apply(c, f, in)
 							}
@@ -421,10 +421,10 @@ func (a *App) editorView(c *ui.Context, m locales.Messages) {
 						if proto == assets.ProtoSerial {
 							a.serialFields(c, m, tok, f)
 						} else {
-							ui.Field(c, m.FieldHost(), func() { ui.TextInput(c.Key("f:addr"), &f.address).Placeholder("example.com") })
-							ui.Field(c, m.FieldPort(), func() { ui.TextInput(c.Key("f:port"), &f.port).Width(90) })
+							ui.Field(c, m.FieldHost(), func() { formTextInput(c.Key("f:addr"), &f.address).Placeholder("example.com") })
+							ui.Field(c, m.FieldPort(), func() { formTextInput(c.Key("f:port"), &f.port).Width(90) })
 						}
-						ui.Field(c, m.FieldUser(), func() { ui.TextInput(c.Key("f:user"), &f.user).Placeholder("root") })
+						ui.Field(c, m.FieldUser(), func() { formTextInput(c.Key("f:user"), &f.user).Placeholder("root") })
 						ui.Field(c, m.FieldGroup(), func() { a.hostGroupField(c, m, f) })
 						ui.Field(c, m.FieldAppearance(), func() { a.lookFields(c, m, tok, f) })
 						ui.Field(c, m.FieldAuth(), func() {
@@ -437,7 +437,7 @@ func (a *App) editorView(c *ui.Context, m locales.Messages) {
 							}
 							labels = append(labels, m.NewCredentialChoice())
 							prev := f.auth
-							if ui.Select(c.Key("f:auth"), &f.auth, labels).Label(m.FieldAuth()).Changed() && f.auth == m.NewCredentialChoice() {
+							if formSelect(c.Key("f:auth"), &f.auth, labels).Label(m.FieldAuth()).Changed() && f.auth == m.NewCredentialChoice() {
 								// The credential sheet replaces the editor, then
 								// comes back with the new credential chosen.
 								f.auth = prev
@@ -464,13 +464,13 @@ func (a *App) editorView(c *ui.Context, m locales.Messages) {
 							})
 							ui.Field(c, m.TmuxAutoAttach(), func() {
 								ui.Column(c).Gap(4).FillWidth().Children(func() {
-									ui.TextInput(c.Key("f:tmux"), &f.tmux).Placeholder(m.TmuxAutoAttachPlaceholder()).Label(m.TmuxAutoAttach()).FillWidth()
+									formTextInput(c.Key("f:tmux"), &f.tmux).Placeholder(m.TmuxAutoAttachPlaceholder()).Label(m.TmuxAutoAttach()).FillWidth()
 									ui.Text(c, m.TmuxAutoAttachHint()).FontSize(theme.Caption).TextColor(tok.TextMuted)
 								})
 							})
 							ui.Field(c, m.MetricsBar(), func() {
 								ui.Column(c).Gap(4).Children(func() {
-									ui.Segmented(c.Key("f:met"), &f.metricsIdx, m.MetricsFollow(), m.MetricsHostOn(), m.MetricsHostOff()).Label(m.MetricsBar()).Disabled(!a.settings.MetricsEnabled)
+									formSegmentedState(c.Key("f:met"), &f.metricsIdx, !a.settings.MetricsEnabled, m.MetricsFollow(), m.MetricsHostOn(), m.MetricsHostOff()).Label(m.MetricsBar())
 									if !a.settings.MetricsEnabled {
 										ui.Text(c, m.MetricsDisabledGlobally()).FontSize(theme.Caption).TextColor(tok.TextMuted)
 									}
@@ -489,7 +489,7 @@ func (a *App) editorView(c *ui.Context, m locales.Messages) {
 								labels := syncOSC52Label(m, f)
 								ui.Column(c).Gap(6).FillWidth().Margin(8, 0, 0, 0).Children(func() {
 									ui.Text(c, m.Osc52Title()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
-									ui.Select(c.Key("f:osc52"), &f.osc52, labels).Label(m.Osc52Title()).FillWidth()
+									formSelect(c.Key("f:osc52"), &f.osc52, labels).Label(m.Osc52Title()).FillWidth()
 								})
 							})
 						})
@@ -501,10 +501,10 @@ func (a *App) editorView(c *ui.Context, m locales.Messages) {
 						ui.Field(c, "", func() {
 							ui.Column(c).Gap(6).Children(func() {
 								if proto == assets.ProtoSSH {
-									ui.Checkbox(c.Key("f:cwd"), &f.cwdFollow, m.CwdFollow())
+									formCheckbox(c.Key("f:cwd"), &f.cwdFollow, m.CwdFollow())
 									ui.Text(c, m.HostCwdFollowHint()).FontSize(theme.Caption).TextColor(tok.TextMuted)
 								}
-								ui.Checkbox(c.Key("f:fav"), &f.favorite, m.Favorite())
+								formCheckbox(c.Key("f:fav"), &f.favorite, m.Favorite())
 							})
 						})
 					})
@@ -557,7 +557,7 @@ func (a *App) networkFields(c *ui.Context, m locales.Messages, tok theme.Tokens,
 			ui.Text(c, m.FieldProxy()).FontSize(theme.Footnote).TextColor(tok.TextMuted).Width(92)
 			prev := f.proxy
 			all := append(slices.Clone(labels), m.NewProxyChoice())
-			if ui.Select(c.Key("f:proxy"), &f.proxy, all).Label(m.FieldProxy()).Grow(1).Changed() && f.proxy == m.NewProxyChoice() {
+			if formSelect(c.Key("f:proxy"), &f.proxy, all).Label(m.FieldProxy()).Grow(1).Changed() && f.proxy == m.NewProxyChoice() {
 				// The proxy sheet replaces the editor, then comes back
 				// with the new proxy chosen.
 				f.proxy = prev
@@ -602,7 +602,7 @@ func (a *App) networkFields(c *ui.Context, m locales.Messages, tok theme.Tokens,
 		}
 		if len(pick) > 0 {
 			f.jumpPick = m.AddJumpHost()
-			if ui.Select(c.Key("f:jumpadd"), &f.jumpPick, append([]string{m.AddJumpHost()}, pick...)).Label(m.AddJumpHost()).FillWidth().Changed() {
+			if formSelect(c.Key("f:jumpadd"), &f.jumpPick, append([]string{m.AddJumpHost()}, pick...)).Label(m.AddJumpHost()).FillWidth().Changed() {
 				if i := slices.Index(pick, f.jumpPick); i >= 0 {
 					f.jumps = append(slices.Clone(f.jumps), pickIDs[i])
 				}
@@ -626,7 +626,7 @@ func (a *App) dirFields(c *ui.Context, m locales.Messages, tok theme.Tokens, f *
 		} {
 			ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
 				ui.Text(c, d.label).FontSize(theme.Footnote).TextColor(tok.TextMuted).Width(92)
-				ui.TextInput(c.Key(d.key), d.value).Placeholder(d.hint).Label(d.label).Grow(1)
+				formTextInput(c.Key(d.key), d.value).Placeholder(d.hint).Label(d.label).Grow(1)
 			})
 		}
 		ui.Text(c, m.DefaultDirsHint()).FontSize(theme.Caption).TextColor(tok.TextMuted)

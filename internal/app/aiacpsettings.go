@@ -243,10 +243,10 @@ func (a *App) acpSheet(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 			}
 			if f.adding {
 				ui.Field(c, m.AiACPCommand(), func() {
-					in := ui.TextInput(c.Key("acpcommand"), &f.command).Label(m.AiACPCommand()).AutoFocus()
+					in := formTextInput(c.Key("acpcommand"), &f.command).Label(m.AiACPCommand()).AutoFocus()
 					f.hold.apply(c, f, in)
 				})
-				ui.Field(c, m.AiACPArgs(), func() { ui.TextArea(c.Key("acpargs"), &f.args).Label(m.AiACPArgs()).FillWidth().Height(100) })
+				ui.Field(c, m.AiACPArgs(), func() { formTextArea(c.Key("acpargs"), &f.args).Label(m.AiACPArgs()).FillWidth().Height(100) })
 				ui.Text(c, m.AiACPArgsNote()).FontSize(theme.Caption).FillWidth().TextColor(tok.TextMuted)
 				ui.Row(c).Gap(theme.Space(2)).Children(func() {
 					if pill(c, m.AiACPAddCommand(), false, false, false) {

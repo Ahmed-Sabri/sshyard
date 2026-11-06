@@ -886,7 +886,7 @@ func switchRow(c *ui.Context, tok theme.Tokens, key, label, note string, on *boo
 				ui.Text(c, note).FontSize(theme.Caption).TextColor(tok.TextMuted)
 			}
 		})
-		ui.Switch(c.Key(key), on).Label(label).Disabled(disabled)
+		formDisabled(formSwitch(c.Key(key), on).Label(label), disabled)
 	})
 }
 
@@ -979,36 +979,36 @@ func (a *App) targetFields(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 	}
 	ui.Form(c, func() {
 		ui.Field(c, m.FieldName(), func() {
-			in := ui.TextInput(c.Key("bt:name"), &f.name).Placeholder("NAS").AutoFocus()
+			in := formTextInput(c.Key("bt:name"), &f.name).Placeholder("NAS").AutoFocus()
 			a.targetHold.apply(c, f, in)
 		})
 		ui.Field(c, m.FieldType(), func() {
-			ui.Segmented(c.Key("bt:kind"), &f.kind, "WebDAV", "S3", "Gist").Label(m.FieldType())
+			formSegmented(c.Key("bt:kind"), &f.kind, "WebDAV", "S3", "Gist").Label(m.FieldType())
 		})
 		switch kind {
 		case settings.BackupWebDAV:
 			ui.Field(c, m.FieldServerURL(), func() {
-				ui.TextInput(c.Key("bt:url"), &f.url).Placeholder("https://dav.example.com/remote.php/dav/files/me/")
+				formTextInput(c.Key("bt:url"), &f.url).Placeholder("https://dav.example.com/remote.php/dav/files/me/")
 			})
-			ui.Field(c, m.WebdavFolder(), func() { ui.TextInput(c.Key("bt:dir"), &f.dir).Placeholder("SSHYard") })
-			ui.Field(c, m.FieldUser(), func() { ui.TextInput(c.Key("bt:user"), &f.user) })
-			ui.Field(c, m.FieldPassword(), func() { ui.TextInput(c.Key("bt:secret"), &f.secret).Password().Placeholder(unchanged) })
+			ui.Field(c, m.WebdavFolder(), func() { formTextInput(c.Key("bt:dir"), &f.dir).Placeholder("SSHYard") })
+			ui.Field(c, m.FieldUser(), func() { formTextInput(c.Key("bt:user"), &f.user) })
+			ui.Field(c, m.FieldPassword(), func() { formTextInput(c.Key("bt:secret"), &f.secret).Password().Placeholder(unchanged) })
 		case settings.BackupS3:
-			ui.Field(c, m.S3Endpoint(), func() { ui.TextInput(c.Key("bt:url"), &f.url).Placeholder(m.S3EndpointPlaceholder()) })
-			ui.Field(c, m.S3Region(), func() { ui.TextInput(c.Key("bt:region"), &f.region).Placeholder("us-east-1") })
-			ui.Field(c, m.S3Bucket(), func() { ui.TextInput(c.Key("bt:bucket"), &f.bucket) })
-			ui.Field(c, m.S3Prefix(), func() { ui.TextInput(c.Key("bt:dir"), &f.dir).Placeholder("sshyard/") })
-			ui.Field(c, m.S3AccessKey(), func() { ui.TextInput(c.Key("bt:user"), &f.user) })
-			ui.Field(c, m.S3SecretKey(), func() { ui.TextInput(c.Key("bt:secret"), &f.secret).Password().Placeholder(unchanged) })
+			ui.Field(c, m.S3Endpoint(), func() { formTextInput(c.Key("bt:url"), &f.url).Placeholder(m.S3EndpointPlaceholder()) })
+			ui.Field(c, m.S3Region(), func() { formTextInput(c.Key("bt:region"), &f.region).Placeholder("us-east-1") })
+			ui.Field(c, m.S3Bucket(), func() { formTextInput(c.Key("bt:bucket"), &f.bucket) })
+			ui.Field(c, m.S3Prefix(), func() { formTextInput(c.Key("bt:dir"), &f.dir).Placeholder("sshyard/") })
+			ui.Field(c, m.S3AccessKey(), func() { formTextInput(c.Key("bt:user"), &f.user) })
+			ui.Field(c, m.S3SecretKey(), func() { formTextInput(c.Key("bt:secret"), &f.secret).Password().Placeholder(unchanged) })
 		case settings.BackupGist:
-			ui.Field(c, m.GistToken(), func() { ui.TextInput(c.Key("bt:secret"), &f.secret).Password().Placeholder(unchanged) })
-			ui.Field(c, m.GistID(), func() { ui.TextInput(c.Key("bt:gist"), &f.gistID).Placeholder(m.GistIDPlaceholder()) })
+			ui.Field(c, m.GistToken(), func() { formTextInput(c.Key("bt:secret"), &f.secret).Password().Placeholder(unchanged) })
+			ui.Field(c, m.GistID(), func() { formTextInput(c.Key("bt:gist"), &f.gistID).Placeholder(m.GistIDPlaceholder()) })
 		}
 		labels, _ := a.proxyChoices(m)
 		if !slices.Contains(labels, f.proxy) {
 			f.proxy = labels[0]
 		}
-		ui.Field(c, m.FieldProxy(), func() { ui.Select(c.Key("bt:proxy"), &f.proxy, labels).Label(m.FieldProxy()) })
+		ui.Field(c, m.FieldProxy(), func() { formSelect(c.Key("bt:proxy"), &f.proxy, labels).Label(m.FieldProxy()) })
 		ui.Field(c, m.BackupKeep(), func() {
 			ui.NumberInput(c.Key("bt:keep"), &f.keep, 0, settings.BackupKeepMax, 1).Label(m.BackupKeep())
 		})
@@ -1039,10 +1039,10 @@ func (a *App) targetFields(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 			return
 		}
 		ui.Field(c, m.BackupPassword(), func() {
-			ui.TextInput(c.Key("bt:pw"), &f.password).Password().Placeholder(ph).Disabled(f.busy)
+			formTextInput(c.Key("bt:pw"), &f.password).Password().Placeholder(ph).Disabled(f.busy)
 		})
 		ui.Field(c, m.ConfirmPassword(), func() {
-			ui.TextInput(c.Key("bt:confirm"), &f.confirm).Password().Placeholder(ph).Disabled(f.busy)
+			formTextInput(c.Key("bt:confirm"), &f.confirm).Password().Placeholder(ph).Disabled(f.busy)
 		})
 	})
 	switch {
@@ -1059,7 +1059,7 @@ func (a *App) targetFields(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 	if f.auto {
 		ui.Form(c, func() {
 			ui.Field(c, m.AutoBackupInterval(), func() {
-				ui.Segmented(c.Key("bt:every"), &f.every, m.BackupEvery6Hours(), m.BackupEveryDay(), m.BackupEveryWeek()).Label(m.AutoBackupInterval())
+				formSegmented(c.Key("bt:every"), &f.every, m.BackupEvery6Hours(), m.BackupEveryDay(), m.BackupEveryWeek()).Label(m.AutoBackupInterval())
 			})
 		})
 	}

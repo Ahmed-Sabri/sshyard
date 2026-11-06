@@ -970,8 +970,11 @@ func (a *App) dirSizeCell(c *ui.Context, cn *conn, remote bool, name string, on 
 		label := m.CalculateSizeHint(shownName(name))
 		b := ui.ButtonBase(c.Key("calc:"+name)).Label(label).Tooltip(label).Padding(0, 4).Radius(theme.RadiusSmall).
 			Disabled(remote && cn.fs.remote.client == nil)
+		if !b.IsDisabled() {
+			b.Cursor(ui.CursorPointer)
+		}
 		if b.Hovered() {
-			b.Background(fg.Alpha(0.12)).Cursor(ui.CursorPointer)
+			b.Background(fg.Alpha(0.12))
 		}
 		b.Children(func() {
 			ui.Text(c, m.CalculateSize()).FontSize(theme.Footnote).TextColor(fg).SingleLine()

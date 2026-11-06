@@ -156,7 +156,7 @@ func (a *App) lookFields(c *ui.Context, m locales.Messages, tok theme.Tokens, f 
 			}
 		})
 		ui.Row(c).Gap(8).AlignItems(ui.Center).FillWidth().Children(func() {
-			in := ui.TextInput(c.Key("f:emoji"), &f.emoji).Placeholder(m.EmojiPlaceholder()).Label(m.HostEmoji()).Width(200)
+			in := formTextInput(c.Key("f:emoji"), &f.emoji).Placeholder(m.EmojiPlaceholder()).Label(m.HostEmoji()).Width(200)
 			if in.Changed() {
 				f.icon = assets.IconText(f.emoji)
 			}

@@ -861,7 +861,7 @@ func (a *App) syntaxSelect(c *ui.Context, ed *editState, m locales.Messages) {
 	if choice == "" {
 		choice = plain
 	}
-	ui.Select(c.Key("syntax"), &choice, opts).Label(m.EditorSyntax()).Tooltip(m.EditorSyntax()).FontSize(theme.Caption)
+	formSelect(c.Key("syntax"), &choice, opts).Label(m.EditorSyntax()).Tooltip(m.EditorSyntax()).FontSize(theme.Caption)
 	if choice == plain {
 		choice = ""
 	}

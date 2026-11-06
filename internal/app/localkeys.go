@@ -120,13 +120,13 @@ func (a *App) localKeysSection(c *ui.Context, m locales.Messages, tok theme.Toke
 	a.settingsSection(c, tok, icons.Key, tok.TintAt(2), m.LocalKeysSection(), func(g *settingsGroup) {
 		g.row(m.LocalKeysTry(), m.LocalKeysTryNote(), func() {
 			a.lkChoice = s.LocalKeys
-			if ui.Switch(c.Key("localkeys"), &a.lkChoice).Label(m.LocalKeysTry()).Changed() {
+			if formSwitch(c.Key("localkeys"), &a.lkChoice).Label(m.LocalKeysTry()).Changed() {
 				s.LocalKeys, *changed = a.lkChoice, true
 			}
 		})
 		g.row(m.LocalKeysMCP(), m.LocalKeysMCPNote(), func() {
 			a.lkMCPChoice = s.LocalKeysMCP && s.LocalKeys
-			if ui.Switch(c.Key("localkeys:mcp"), &a.lkMCPChoice).Label(m.LocalKeysMCP()).Disabled(!s.LocalKeys).Changed() {
+			if formDisabled(formSwitch(c.Key("localkeys:mcp"), &a.lkMCPChoice).Label(m.LocalKeysMCP()), !s.LocalKeys).Changed() {
 				s.LocalKeysMCP, *changed = a.lkMCPChoice, true
 			}
 		})

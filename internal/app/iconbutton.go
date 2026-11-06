@@ -64,6 +64,9 @@ func (b IconButton) Show(c *ui.Context, key string) ui.Element {
 		pad = 5
 	}
 	el := ui.ButtonBase(c.Key("ib:" + key)).Label(b.Label).Tooltip(b.Label).Padding(pad).Radius(theme.Capsule).Disabled(b.Disabled)
+	if !el.IsDisabled() {
+		el.Cursor(ui.CursorPointer)
+	}
 	if b.Toggle {
 		el.Checked(b.Active)
 	}
@@ -86,7 +89,7 @@ func (b IconButton) Show(c *ui.Context, key string) ui.Element {
 		el.Background(hue.Alpha(strong * 1.8))
 		fg = hue
 	case el.Hovered():
-		el.Background(hue.Alpha(strong)).Cursor(ui.CursorPointer)
+		el.Background(hue.Alpha(strong))
 		fg = hue
 	case b.Active:
 		el.Background(th.Accent.Alpha(strong))

@@ -68,7 +68,7 @@ func (a *App) defaultBackupKey() (vault.Key, error) {
 // from.
 func passwordSource(c *ui.Context, m locales.Messages, key string, source *int) {
 	ui.Field(c, m.BackupPasswordSource(), func() {
-		ui.Segmented(c.Key(key), source, m.DefaultBackupPassword(), m.CustomPassword()).Label(m.BackupPasswordSource())
+		formSegmented(c.Key(key), source, m.DefaultBackupPassword(), m.CustomPassword()).Label(m.BackupPasswordSource())
 	})
 }
 
@@ -220,11 +220,11 @@ func (a *App) defaultPasswordView(c *ui.Context, m locales.Messages) {
 			})
 			ui.Form(c, func() {
 				ui.Field(c, m.BackupPassword(), func() {
-					in := ui.TextInput(c.Key("dp:pw"), &f.password).Password().AutoFocus().Disabled(f.busy)
+					in := formTextInput(c.Key("dp:pw"), &f.password).Password().AutoFocus().Disabled(f.busy)
 					a.defaultPwHold.apply(c, f, in)
 				})
 				ui.Field(c, m.ConfirmPassword(), func() {
-					if ui.TextInput(c.Key("dp:confirm"), &f.confirm).Password().Disabled(f.busy).Submitted() {
+					if formTextInput(c.Key("dp:confirm"), &f.confirm).Password().Disabled(f.busy).Submitted() {
 						a.SaveDefaultPassword(m)
 					}
 				})

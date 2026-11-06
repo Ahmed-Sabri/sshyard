@@ -112,7 +112,7 @@ func (a *App) aiSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, s 
 				backends = append(backends, s.AIDefaultAgent)
 				cur = s.AIDefaultAgent
 			}
-			if ui.Select(c.Key("aiagentdef"), &cur, opts).Label(m.AiDefaultAgent()).Width(180).Changed() {
+			if formSelect(c.Key("aiagentdef"), &cur, opts).Label(m.AiDefaultAgent()).Width(180).Changed() {
 				if i := slices.Index(opts, cur); i >= 0 {
 					s.AIDefaultAgent = backends[i]
 					*changed = true
@@ -144,7 +144,7 @@ func (a *App) aiSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, s 
 		})
 		g.row(m.AiRedact(), m.AiRedactNote(), func() {
 			on := s.AIRedact
-			if ui.Switch(c.Key("airedact"), &on).Label(m.AiRedact()).Changed() {
+			if formSwitch(c.Key("airedact"), &on).Label(m.AiRedact()).Changed() {
 				s.AIRedact = on
 				*changed = true
 			}
@@ -172,7 +172,7 @@ func (a *App) aiSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, s 
 	a.settingsSection(c, tok, icons.ModeAsk, tok.TintAt(1), m.AiPermissionSection(), func(g *settingsGroup) {
 		g.row(m.AiDefaultMode(), "", func() {
 			a.aiModeIdx = modeIndex(s.AIDefaultMode)
-			if ui.Segmented(c.Key("aimodedef"), &a.aiModeIdx, m.AiModeAsk(), m.AiModeReview(), m.AiModeFull()).Label(m.AiDefaultMode()).Changed() {
+			if formSegmented(c.Key("aimodedef"), &a.aiModeIdx, m.AiModeAsk(), m.AiModeReview(), m.AiModeFull()).Label(m.AiDefaultMode()).Changed() {
 				mode := []string{"ask", "review", "full"}[a.aiModeIdx]
 				if mode == "full" && a.settings.AIDefaultMode != "full" {
 					a.openFull("settings", 0)
@@ -308,7 +308,7 @@ func (a *App) providerSheet(c *ui.Context, m locales.Messages, tok theme.Tokens)
 			ui.Column(c).Gap(theme.Space(3)).Width(460).Children(func() {
 				sheetTitle(c, title)
 				ui.Field(c, m.FieldName(), func() {
-					in := ui.TextInput(c.Key("ap:name"), &f.name).Label(m.FieldName()).Placeholder("OpenAI").AutoFocus()
+					in := formTextInput(c.Key("ap:name"), &f.name).Label(m.FieldName()).Placeholder("OpenAI").AutoFocus()
 					f.hold.apply(c, f, in)
 				})
 				ui.Field(c, m.AiFormat(), func() {
@@ -324,14 +324,14 @@ func (a *App) providerSheet(c *ui.Context, m locales.Messages, tok theme.Tokens)
 					note(m.AiTypeSafeNote())
 				}
 				ui.Field(c, m.AiProviderURL(), func() {
-					ui.TextInput(c.Key("ap:url"), &f.base).Label(m.AiProviderURL()).Placeholder(providerURLHint(f.format))
+					formTextInput(c.Key("ap:url"), &f.base).Label(m.AiProviderURL()).Placeholder(providerURLHint(f.format))
 				})
 				ui.Field(c, m.AiAPIKey(), func() {
 					hint := m.AiAPIKeyKeep()
 					if f.isNew {
 						hint = m.AiAPIKeyPlaceholder()
 					}
-					ui.TextInput(c.Key("ap:key"), &f.key).Password().Label(m.AiAPIKey()).Placeholder(hint)
+					formTextInput(c.Key("ap:key"), &f.key).Password().Label(m.AiAPIKey()).Placeholder(hint)
 				})
 				note(m.AiAPIKeyNote())
 				ui.Field(c, m.AiDefaultModel(), func() {
@@ -401,7 +401,7 @@ func (a *App) providerAdvanced(c *ui.Context, m locales.Messages, tok theme.Toke
 	anthropic := providerFormats[f.format] == settings.AIFormatAnthropic
 	param := func(key, label string, on *bool, v *float64, lo, hi, step float64) {
 		ui.Row(c.Key(key)).Gap(theme.Space(3)).AlignItems(ui.Center).FillWidth().Children(func() {
-			ui.Checkbox(c.Key("on"), on, label).Width(180)
+			formCheckbox(c.Key("on"), on, label).Width(180)
 			ui.NumberInput(c.Key("v"), v, lo, hi, step).Label(label).Disabled(!*on)
 		})
 	}
@@ -419,12 +419,12 @@ func (a *App) providerAdvanced(c *ui.Context, m locales.Messages, tok theme.Toke
 		}
 		switch providerFormats[f.format] {
 		case settings.AIFormatChat:
-			ui.Checkbox(c.Key("ap:legacy"), &f.legacy, m.AiLegacyTokens())
+			formCheckbox(c.Key("ap:legacy"), &f.legacy, m.AiLegacyTokens())
 		case settings.AIFormatAnthropic:
 			ui.Text(c, m.AiAnthropicTokensNote(strconv.Itoa(llm.AnthropicMaxTokens))).FontSize(theme.Caption).FillWidth().TextColor(tok.TextMuted)
 		}
 		ui.Field(c, m.AiHeaders(), func() {
-			ui.TextArea(c.Key("ap:hdr"), &f.headers).Label(m.AiHeaders()).FillWidth().Height(72).Placeholder("X-Title: SSHYard")
+			formTextArea(c.Key("ap:hdr"), &f.headers).Label(m.AiHeaders()).FillWidth().Height(72).Placeholder("X-Title: SSHYard")
 		})
 		ui.Text(c, m.AiHeadersNote()).FontSize(theme.Caption).FillWidth().TextColor(tok.TextMuted)
 	})
@@ -744,7 +744,7 @@ func (a *App) aiHostFields(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 	ui.Collapsible(c.Key("f:ai"), m.AiSettings(), &f.aiOpen, func() {
 		ui.Column(c).Gap(8).FillWidth().Margin(8, 0, 0, 0).Children(func() {
 			ui.Text(c, m.AiHostMode()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
-			if ui.Segmented(c.Key("f:aimode"), &f.aiIdx, m.AiModeInherit(), m.AiModeAsk(), m.AiModeReview(), m.AiModeFull()).Label(m.AiHostMode()).Changed() {
+			if formSegmented(c.Key("f:aimode"), &f.aiIdx, m.AiModeInherit(), m.AiModeAsk(), m.AiModeReview(), m.AiModeFull()).Label(m.AiHostMode()).Changed() {
 				if f.aiIdx == 3 && f.orig.AIPolicy.Mode != "full" && !f.fullOK {
 					f.aiIdx = f.aiPrev
 					a.openFull("host", 0)
@@ -754,10 +754,10 @@ func (a *App) aiHostFields(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 			}
 			ui.Text(c, m.AiWritableRoots()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
 			ui.Text(c, m.AiWritableRootsNote()).FontSize(theme.Caption).TextColor(tok.TextMuted)
-			ui.TextArea(c.Key("f:roots"), &f.roots).FillWidth().Height(64)
+			formTextArea(c.Key("f:roots"), &f.roots).FillWidth().Height(64)
 			ui.Text(c, m.AiSensitive()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
 			ui.Text(c, m.AiSensitiveNote()).FontSize(theme.Caption).TextColor(tok.TextMuted)
-			ui.TextArea(c.Key("f:sens"), &f.sens).FillWidth().Height(64)
+			formTextArea(c.Key("f:sens"), &f.sens).FillWidth().Height(64)
 		})
 	})
 }

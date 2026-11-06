@@ -602,15 +602,15 @@ func (a *App) fwdView(c *ui.Context, m locales.Messages) {
 			dyn := fwdKinds[f.kind] == assets.ForwardDynamic
 			ui.Form(c, func() {
 				ui.Field(c, m.FieldName(), func() {
-					in := ui.TextInput(c.Key("ff:name"), &f.name).Placeholder(m.FwdNamePlaceholder()).AutoFocus()
+					in := formTextInput(c.Key("ff:name"), &f.name).Placeholder(m.FwdNamePlaceholder()).AutoFocus()
 					a.fwdHold.apply(c, f, in)
 				})
 				ui.Field(c, m.FieldType(), func() {
-					ui.Segmented(c.Key("ff:kind"), &f.kind, m.FwdKindLocal(), m.FwdKindRemote(), m.FwdKindDynamic()).Label(m.FieldType())
+					formSegmented(c.Key("ff:kind"), &f.kind, m.FwdKindLocal(), m.FwdKindRemote(), m.FwdKindDynamic()).Label(m.FieldType())
 				})
 				ui.Field(c, m.FwdHost(), func() {
 					labels, _ := a.hostChoices()
-					ui.Select(c.Key("ff:host"), &f.host, labels).Label(m.FwdHost())
+					formSelect(c.Key("ff:host"), &f.host, labels).Label(m.FwdHost())
 				})
 				listen := m.FwdListenLocal()
 				if fwdKinds[f.kind] == assets.ForwardRemote {
@@ -618,9 +618,9 @@ func (a *App) fwdView(c *ui.Context, m locales.Messages) {
 				}
 				ui.Field(c, listen, func() {
 					ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
-						ui.TextInput(c.Key("ff:laddr"), &f.listenAddr).Placeholder("127.0.0.1").Label(listen).Grow(1)
+						formTextInput(c.Key("ff:laddr"), &f.listenAddr).Placeholder("127.0.0.1").Label(listen).Grow(1)
 						ui.Text(c, ":").TextColor(tok.TextMuted)
-						ui.TextInput(c.Key("ff:lport"), &f.listenPort).Placeholder("8080").Label(m.FieldPort()).Width(80)
+						formTextInput(c.Key("ff:lport"), &f.listenPort).Placeholder("8080").Label(m.FieldPort()).Width(80)
 					})
 				})
 				if !dyn {
@@ -630,17 +630,17 @@ func (a *App) fwdView(c *ui.Context, m locales.Messages) {
 					}
 					ui.Field(c, target, func() {
 						ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
-							ui.TextInput(c.Key("ff:taddr"), &f.targetAddr).Placeholder("127.0.0.1").Label(target).Grow(1)
+							formTextInput(c.Key("ff:taddr"), &f.targetAddr).Placeholder("127.0.0.1").Label(target).Grow(1)
 							ui.Text(c, ":").TextColor(tok.TextMuted)
-							ui.TextInput(c.Key("ff:tport"), &f.targetPort).Placeholder("80").Label(m.FieldPort()).Width(80)
+							formTextInput(c.Key("ff:tport"), &f.targetPort).Placeholder("80").Label(m.FieldPort()).Width(80)
 						})
 					})
 				} else {
 					ui.Field(c, m.FwdProtocol(), func() {
-						ui.Select(c.Key("ff:proto"), &f.proto, fwdProtoLabels(m)).Label(m.FwdProtocol())
+						formSelect(c.Key("ff:proto"), &f.proto, fwdProtoLabels(m)).Label(m.FwdProtocol())
 					})
 					ui.Field(c, m.FieldUser(), func() {
-						ui.TextInput(c.Key("ff:user"), &f.user).Placeholder(m.FwdUserPlaceholder())
+						formTextInput(c.Key("ff:user"), &f.user).Placeholder(m.FwdUserPlaceholder())
 					})
 					if strings.TrimSpace(f.user) != "" {
 						ui.Field(c, m.FieldPassword(), func() {
@@ -648,14 +648,14 @@ func (a *App) fwdView(c *ui.Context, m locales.Messages) {
 							if !f.isNew && f.orig.User != "" {
 								ph = m.PasswordUnchanged()
 							}
-							ui.TextInput(c.Key("ff:pw"), &f.password).Password().Placeholder(ph)
+							formTextInput(c.Key("ff:pw"), &f.password).Password().Placeholder(ph)
 						})
 					}
 				}
 				ui.Field(c, m.FwdAutoStart(), func() {
-					ui.Switch(c.Key("ff:auto"), &f.autoStart).Label(m.FwdAutoStart())
+					formSwitch(c.Key("ff:auto"), &f.autoStart).Label(m.FwdAutoStart())
 				})
-				ui.Field(c, m.FieldNote(), func() { ui.TextInput(c.Key("ff:note"), &f.note) })
+				ui.Field(c, m.FieldNote(), func() { formTextInput(c.Key("ff:note"), &f.note) })
 			})
 			ui.Text(c, fwdHint(m, fwdKinds[f.kind])).FontSize(theme.Footnote).TextColor(tok.TextMuted)
 			probe := assets.Forward{ListenAddr: strings.TrimSpace(f.listenAddr)}

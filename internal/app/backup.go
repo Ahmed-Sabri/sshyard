@@ -627,7 +627,7 @@ func (a *App) backupView(c *ui.Context, m locales.Messages) {
 					return
 				}
 				ui.Field(c, m.BackupPassword(), func() {
-					in := ui.TextInput(c.Key("bk:pw"), &f.password).Password().AutoFocus().Disabled(f.busy)
+					in := formTextInput(c.Key("bk:pw"), &f.password).Password().AutoFocus().Disabled(f.busy)
 					a.backupHold.apply(c, f, in)
 					if in.Submitted() && f.restore {
 						a.RestoreBackup(m)
@@ -635,7 +635,7 @@ func (a *App) backupView(c *ui.Context, m locales.Messages) {
 				})
 				if !f.restore {
 					ui.Field(c, m.ConfirmPassword(), func() {
-						if ui.TextInput(c.Key("bk:confirm"), &f.confirm).Password().Disabled(f.busy).Submitted() {
+						if formTextInput(c.Key("bk:confirm"), &f.confirm).Password().Disabled(f.busy).Submitted() {
 							a.ExportBackup(m)
 						}
 					})
@@ -655,7 +655,7 @@ func (a *App) backupView(c *ui.Context, m locales.Messages) {
 						ui.Text(c, m.BackupIncludeSecrets()).FontSize(theme.Body).FontWeight(500)
 						ui.Text(c, m.BackupIncludeSecretsNote()).FontSize(theme.Caption).TextColor(tok.TextMuted)
 					})
-					ui.Switch(c.Key("bk:secrets"), &f.secrets).Label(m.BackupIncludeSecrets()).Disabled(f.busy)
+					formDisabled(formSwitch(c.Key("bk:secrets"), &f.secrets).Label(m.BackupIncludeSecrets()), f.busy)
 				})
 				ui.Text(c, m.BackupExportWarning()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
 			}

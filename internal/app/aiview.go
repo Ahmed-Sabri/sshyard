@@ -291,7 +291,7 @@ func (a *App) modelChip(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Mes
 					break
 				}
 			}
-			in := ui.TextInput(c.Key("q"), &cn.ai.query).Placeholder(m.AiSearchModels()).Label(m.AiSearchModels()).
+			in := formTextInput(c.Key("q"), &cn.ai.query).Placeholder(m.AiSearchModels()).Label(m.AiSearchModels()).
 				FontSize(theme.Footnote).FillWidth().Margin(0, 0, 4, 0)
 			if a.menu.focus == 0 {
 				in.Focus()
@@ -888,7 +888,7 @@ func (a *App) fullSheet(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 		ui.Column(c).Gap(14).Width(440).Children(func() {
 			sheetTitle(c, m.AiFullTitle())
 			ui.Text(c, m.AiFullBody()).FontSize(theme.Body).FillWidth()
-			box := ui.Checkbox(c.Key("aifullcheck"), &f.tick, m.AiFullCheck())
+			box := formCheckbox(c.Key("aifullcheck"), &f.tick, m.AiFullCheck())
 			a.fullHold.apply(c, f, box)
 			ui.Row(c).Gap(8).Children(func() {
 				ui.Spacer(c)
@@ -946,7 +946,7 @@ func (a *App) aiApproval(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 			ui.Text(c, m.AiDir()+": "+pr.Action.Dir).FontSize(theme.Caption).TextColor(tok.TextMuted)
 		}
 		if pr.Diff != "" {
-			ui.Checkbox(c.Key("onlydiff"), &cn.ai.onlyDiff, m.AiOnlyChanges())
+			formCheckbox(c.Key("onlydiff"), &cn.ai.onlyDiff, m.AiOnlyChanges())
 			diff := pr.Diff
 			if cn.ai.onlyDiff {
 				diff = agent.OnlyChanges(diff)

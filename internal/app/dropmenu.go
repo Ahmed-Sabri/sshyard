@@ -249,6 +249,9 @@ func (a *App) menuPanel(c *ui.Context, tok theme.Tokens, panel ui.Element, entri
 func (a *App) menuRow(c *ui.Context, tok theme.Tokens, e menuEntry, i, level int, compactMenu ...bool) ui.Element {
 	row := ui.ButtonBase(c.Key("mi:"+strconv.Itoa(i))).Role(ui.RoleMenuItem).FillWidth().Justify(ui.Start).
 		Padding(6, 8).Gap(10).Radius(theme.RadiusSmall).FocusRing(false).Disabled(e.Disabled)
+	if !row.IsDisabled() {
+		row.Cursor(ui.CursorPointer)
+	}
 	if e.Checked {
 		row.Role(ui.RoleMenuItemCheckBox).Checked(true)
 	}
@@ -276,10 +279,10 @@ func (a *App) menuRow(c *ui.Context, tok theme.Tokens, e menuEntry, i, level int
 	case e.Disabled:
 		row.Opacity(0.4)
 	case lit && row.Pressed():
-		row.Background(hue.Alpha(strong * 1.8)).Cursor(ui.CursorPointer)
+		row.Background(hue.Alpha(strong * 1.8))
 		fg, muted = hue, hue
 	case lit:
-		row.Background(hue.Alpha(strong)).Cursor(ui.CursorPointer)
+		row.Background(hue.Alpha(strong))
 		fg, muted = hue, hue
 	case e.Danger:
 		fg, muted = hue, hue

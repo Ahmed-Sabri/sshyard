@@ -246,7 +246,7 @@ func (a *App) askView(c *ui.Context, cn *conn, m locales.Messages) {
 				softTile(c, ic, tok.Accent, 30)
 				ui.Text(c, title).FontSize(theme.Title3).FontWeight(600).Shrink(1)
 			})
-			in := ui.TextInput(c.Key("name"), &ask.value).AutoFocus().Label(label).Placeholder(label).FillWidth()
+			in := formTextInput(c.Key("name"), &ask.value).AutoFocus().Label(label).Placeholder(label).FillWidth()
 			a.mkdirHold.apply(c, ask, in)
 			if ask.kind == askChmod {
 				ui.Text(c, m.ModeHint()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
@@ -356,7 +356,7 @@ func (a *App) conflictView(c *ui.Context, cn *conn, m locales.Messages) {
 			}
 			ui.Text(c, m.ConflictMessage(it.Rel, where)).Wrap()
 			if n := ask.left(); n > 1 {
-				ui.Checkbox(c.Key("all"), &ask.all, m.ApplyToAll(strconv.Itoa(n-1)))
+				formCheckbox(c.Key("all"), &ask.all, m.ApplyToAll(strconv.Itoa(n-1)))
 			}
 			ui.Row(c).Gap(8).Margin(4, 0, 0, 0).Children(func() {
 				if pill(c, m.Cancel(), false, false, false) {

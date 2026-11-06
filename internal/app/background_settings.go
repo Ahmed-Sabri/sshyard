@@ -71,7 +71,7 @@ func (a *App) backgroundSection(c *ui.Context, m locales.Messages, tok theme.Tok
 			if bg.Fit == "contain" {
 				idx = 1
 			}
-			if ui.Segmented(c.Key("background:fit"), &idx, m.BackgroundCover(), m.BackgroundContain()).Label(m.BackgroundFit()).Disabled(a.background.busy).Changed() {
+			if formSegmentedState(c.Key("background:fit"), &idx, a.background.busy, m.BackgroundCover(), m.BackgroundContain()).Label(m.BackgroundFit()).Changed() {
 				bg.Fit = []string{"cover", "contain"}[idx]
 				s.Background, *changed = bg, true
 				a.setBackgroundPreview(nil)
@@ -99,6 +99,9 @@ func (a *App) backgroundOpacity(c *ui.Context, label, key string, value *int, to
 		})
 		v := float64(*value)
 		slider := ui.Slider(c.Key(key), &v, 0, 100).Label(label).FillWidth().Disabled(a.background.busy)
+		if !slider.IsDisabled() {
+			slider.Cursor(ui.CursorPointer)
+		}
 		if slider.Changed() {
 			*value = int(v + .5)
 		}

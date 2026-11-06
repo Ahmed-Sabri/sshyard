@@ -142,7 +142,7 @@ func (a *App) highlightSection(c *ui.Context, m locales.Messages, tok theme.Toke
 		toggle := func(key, label, note string, v *bool) {
 			g.row(label, note, func() {
 				on := *v
-				if ui.Switch(c.Key(key), &on).Label(label).Changed() {
+				if formSwitch(c.Key(key), &on).Label(label).Changed() {
 					*v, *changed = on, true
 				}
 			})
@@ -167,7 +167,7 @@ func (a *App) highlightSection(c *ui.Context, m locales.Messages, tok theme.Toke
 			name := presetName(m, p.ID)
 			g.row(name, p.Sample, func() {
 				on := !slices.Contains(h.PresetsOff, p.ID)
-				if ui.Switch(c.Key("hl:preset:"+p.ID), &on).Label(name).Changed() {
+				if formSwitch(c.Key("hl:preset:"+p.ID), &on).Label(name).Changed() {
 					// A new slice: the one held is the settings' in force.
 					off := slices.DeleteFunc(slices.Clone(h.PresetsOff), func(id string) bool { return id == p.ID })
 					if !on {
@@ -190,7 +190,7 @@ func (a *App) highlightSection(c *ui.Context, m locales.Messages, tok theme.Toke
 			}
 			g.row(r.Pattern, hlRuleNote(m, r), func() {
 				on := !r.Off
-				if ui.Switch(c.Key(key+":on"), &on).Label(m.HighlightUse()).Changed() {
+				if formSwitch(c.Key(key+":on"), &on).Label(m.HighlightUse()).Changed() {
 					rules := slices.Clone(h.Rules)
 					rules[i].Off = !on
 					h.Rules, *changed = rules, true
@@ -295,7 +295,7 @@ func (a *App) highlightView(c *ui.Context, m locales.Messages) {
 			})
 			ui.Form(c, func() {
 				ui.Field(c, m.HighlightPattern(), func() {
-					in := ui.TextInput(c.Key("hl:f:pattern"), &r.Pattern).Placeholder(m.HighlightPatternPlaceholder()).AutoFocus()
+					in := formTextInput(c.Key("hl:f:pattern"), &r.Pattern).Placeholder(m.HighlightPatternPlaceholder()).AutoFocus()
 					a.hlHold.apply(c, f, in)
 					if in.Changed() {
 						f.err = ""
@@ -308,7 +308,7 @@ func (a *App) highlightView(c *ui.Context, m locales.Messages) {
 			flag := func(key, label string, v *bool) {
 				ui.Row(c).Gap(8).AlignItems(ui.Center).FillWidth().Children(func() {
 					ui.Text(c, label).FontSize(theme.Body).Grow(1)
-					if ui.Switch(c.Key(key), v).Label(label).Changed() {
+					if formSwitch(c.Key(key), v).Label(label).Changed() {
 						f.err = ""
 					}
 				})
@@ -342,7 +342,7 @@ func (a *App) highlightView(c *ui.Context, m locales.Messages) {
 				flag("hl:f:underline", m.HighlightUnderline(), &r.Underline)
 			})
 			ui.Column(c).Gap(6).FillWidth().Children(func() {
-				ui.TextInput(c.Key("hl:f:sample"), &f.sample).Placeholder(m.HighlightSample()).Label(m.HighlightSample()).FillWidth()
+				formTextInput(c.Key("hl:f:sample"), &f.sample).Placeholder(m.HighlightSample()).Label(m.HighlightSample()).FillWidth()
 				sample := f.sample
 				if sample == "" {
 					sample = r.Pattern

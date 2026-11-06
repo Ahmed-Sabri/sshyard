@@ -418,7 +418,7 @@ func (a *App) promptsView(c *ui.Context, m locales.Messages) {
 				if p.err != "" {
 					ui.Text(c, p.err).FontSize(theme.Footnote).TextColor(tok.Danger)
 				}
-				in := ui.TextInput(c.Key("secret"), &p.value).Password().AutoFocus().Label(title).FillWidth()
+				in := formTextInput(c.Key("secret"), &p.value).Password().AutoFocus().Label(title).FillWidth()
 				a.promptHold.apply(c, [2]any{p, p.err}, in)
 				hint := m.TypedNotSaved()
 				switch {
@@ -429,10 +429,10 @@ func (a *App) promptsView(c *ui.Context, m locales.Messages) {
 				}
 				ui.Text(c, hint).FontSize(theme.Caption).TextColor(tok.TextMuted)
 				if a.canSavePromptPassword(p) {
-					ui.Checkbox(c.Key("prompt:save-password"), &p.savePassword, m.SavePasswordCredential())
+					formCheckbox(c.Key("prompt:save-password"), &p.savePassword, m.SavePasswordCredential())
 				}
 				if p.localKey != nil {
-					ui.Checkbox(c.Key("prompt:remember-key"), &p.remember, m.RememberKeyPassphrase())
+					formCheckbox(c.Key("prompt:remember-key"), &p.remember, m.RememberKeyPassphrase())
 					// A remembered passphrase is in the store, which is locked.
 					if a.lk.IsRemembered(p.localKey.ID) && !a.unlocked() {
 						ui.Row(c).Children(func() {

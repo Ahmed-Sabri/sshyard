@@ -105,7 +105,7 @@ func (a *App) fontPicker(c *ui.Context, key, label, def string, sel *string, cur
 	if cur == "" {
 		*sel = def
 	}
-	if !ui.Combobox(c.Key(key), sel, fontOptions(def, fs)).Label(label).Width(220).Changed() {
+	if !formCombobox(c.Key(key), sel, fontOptions(def, fs)).Label(label).Width(220).Changed() {
 		return cur, false
 	}
 	if *sel == def {

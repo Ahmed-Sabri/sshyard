@@ -553,16 +553,16 @@ func (a *App) credView(c *ui.Context, m locales.Messages) {
 				})
 				ui.Form(c, func() {
 					ui.Field(c, m.FieldName(), func() {
-						in := ui.TextInput(c.Key("cf:name"), &f.name).Placeholder("ops").AutoFocus()
+						in := formTextInput(c.Key("cf:name"), &f.name).Placeholder("ops").AutoFocus()
 						a.credHold.apply(c, f, in)
 					})
 					ui.Field(c, m.FieldType(), func() {
-						if ui.Segmented(c.Key("cf:kind"), &f.kind, m.CredKindPassword(), m.CredKindPrivateKey()).Label(m.FieldType()).Changed() {
+						if formSegmented(c.Key("cf:kind"), &f.kind, m.CredKindPassword(), m.CredKindPrivateKey()).Label(m.FieldType()).Changed() {
 							f.err = ""
 						}
 					})
 					ui.Field(c, m.FieldUser(), func() {
-						ui.TextInput(c.Key("cf:user"), &f.user).Placeholder(m.CredUserPlaceholder())
+						formTextInput(c.Key("cf:user"), &f.user).Placeholder(m.CredUserPlaceholder())
 					})
 					if f.isKey() {
 						ui.Field(c, m.FieldPrivateKey(), func() { a.keyPicker(c, m, tok, f) })
@@ -573,10 +573,10 @@ func (a *App) credView(c *ui.Context, m locales.Messages) {
 								if !f.isNew && !f.loaded() && f.orig.Encrypted {
 									ph = m.PasswordUnchanged()
 								}
-								ui.TextInput(c.Key("cf:pass"), &f.passphrase).Password().Placeholder(ph)
+								formTextInput(c.Key("cf:pass"), &f.passphrase).Password().Placeholder(ph)
 							})
 							ui.Field(c, "", func() {
-								ui.Checkbox(c.Key("cf:ask"), &f.askPass, m.AskPassphraseEachTime())
+								formCheckbox(c.Key("cf:ask"), &f.askPass, m.AskPassphraseEachTime())
 							})
 						}
 					} else {
@@ -585,10 +585,10 @@ func (a *App) credView(c *ui.Context, m locales.Messages) {
 							if !f.isNew && f.orig.Kind == assets.CredPassword {
 								ph = m.PasswordUnchanged()
 							}
-							ui.TextInput(c.Key("cf:pw"), &f.password).Password().Placeholder(ph)
+							formTextInput(c.Key("cf:pw"), &f.password).Password().Placeholder(ph)
 						})
 					}
-					ui.Field(c, m.FieldNote(), func() { ui.TextInput(c.Key("cf:note"), &f.note) })
+					ui.Field(c, m.FieldNote(), func() { formTextInput(c.Key("cf:note"), &f.note) })
 				})
 				if !f.isNew {
 					used := m.CredUnused()
@@ -798,7 +798,7 @@ func (a *App) credDeleteView(c *ui.Context, m locales.Messages) {
 			}
 			ui.Row(c).Gap(12).AlignItems(ui.Center).Children(func() {
 				ui.Text(c, m.RebindTo()).FontSize(theme.Body)
-				ui.Select(c.Key("cd:rebind"), &a.rebindChoice, labels).Label(m.RebindTo()).Width(240)
+				formSelect(c.Key("cd:rebind"), &a.rebindChoice, labels).Label(m.RebindTo()).Width(240)
 			})
 			ui.Box(c).Height(1).FillWidth().Background(tok.Line)
 			ui.Row(c).Gap(8).Children(func() {

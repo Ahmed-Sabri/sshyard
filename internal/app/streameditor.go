@@ -119,7 +119,7 @@ func (f *hostForm) readPorts() {
 func (a *App) protocolField(c *ui.Context, m locales.Messages, f *hostForm) {
 	ui.Field(c, m.FieldProtocol(), func() {
 		prev := f.proto
-		if ui.Segmented(c.Key("f:proto"), &f.proto, m.ProtocolSSH(), m.ProtocolTelnet(), m.ProtocolSerial()).Label(m.FieldProtocol()).Changed() {
+		if formSegmented(c.Key("f:proto"), &f.proto, m.ProtocolSSH(), m.ProtocolTelnet(), m.ProtocolSerial()).Label(m.FieldProtocol()).Changed() {
 			a.setProtocol(m, f, prev)
 		}
 	})
@@ -133,7 +133,7 @@ func (a *App) serialFields(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 	ui.Field(c, m.FieldDevice(), func() {
 		ui.Column(c).Gap(6).FillWidth().Children(func() {
 			ui.Row(c).Gap(6).AlignItems(ui.Center).FillWidth().Children(func() {
-				ui.TextInput(c.Key("f:device"), &f.device).Placeholder(devicePlaceholder()).Label(m.FieldDevice()).Grow(1).Shrink(1)
+				formTextInput(c.Key("f:device"), &f.device).Placeholder(devicePlaceholder()).Label(m.FieldDevice()).Grow(1).Shrink(1)
 				if (IconButton{Icon: icons.Refresh, Label: m.RefreshPorts()}).Clicked(c, "f:ports") {
 					f.readPorts()
 				}
@@ -147,7 +147,7 @@ func (a *App) serialFields(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 				f.portPick = strings.TrimSpace(f.device)
 			}
 			all := append([]string{m.FieldDevice()}, f.ports...)
-			if ui.Select(c.Key("f:portpick"), &f.portPick, all).Label(m.FieldDevice()).FillWidth().Changed() && f.portPick != m.FieldDevice() {
+			if formSelect(c.Key("f:portpick"), &f.portPick, all).Label(m.FieldDevice()).FillWidth().Changed() && f.portPick != m.FieldDevice() {
 				f.device = f.portPick
 			}
 		})
@@ -161,24 +161,24 @@ func (a *App) serialFields(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 		if !slices.Contains(bauds, baud) {
 			bauds = append(bauds, baud)
 		}
-		if ui.Select(c.Key("f:baud"), &baud, bauds).Label(m.FieldBaud()).Width(140).Changed() {
+		if formSelect(c.Key("f:baud"), &baud, bauds).Label(m.FieldBaud()).Width(140).Changed() {
 			if b, err := strconv.Atoi(baud); err == nil {
 				f.baud = b
 			}
 		}
 	})
 	ui.Field(c, m.FieldDataBits(), func() {
-		ui.Segmented(c.Key("f:databits"), &f.dataBits, "5", "6", "7", "8").Label(m.FieldDataBits())
+		formSegmented(c.Key("f:databits"), &f.dataBits, "5", "6", "7", "8").Label(m.FieldDataBits())
 	})
 	ui.Field(c, m.FieldParity(), func() {
 		labels, codes := parityChoices(m)
 		lbl := labels[max(0, slices.Index(codes, f.parity))]
-		if ui.Select(c.Key("f:parity"), &lbl, labels).Label(m.FieldParity()).Width(140).Changed() {
+		if formSelect(c.Key("f:parity"), &lbl, labels).Label(m.FieldParity()).Width(140).Changed() {
 			f.parity = codes[max(0, slices.Index(labels, lbl))]
 		}
 	})
 	ui.Field(c, m.FieldStopBits(), func() {
-		ui.Segmented(c.Key("f:stopbits"), &f.stopBits, "1", "1.5", "2").Label(m.FieldStopBits())
+		formSegmented(c.Key("f:stopbits"), &f.stopBits, "1", "1.5", "2").Label(m.FieldStopBits())
 	})
 }
 
@@ -186,11 +186,11 @@ func (a *App) serialFields(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 // or serial host.
 func (a *App) streamTermFields(c *ui.Context, m locales.Messages, tok theme.Tokens, f *hostForm) {
 	ui.Field(c, m.FieldNewLine(), func() {
-		ui.Segmented(c.Key("f:newline"), &f.newLine, newLineLabels...).Label(m.FieldNewLine())
+		formSegmented(c.Key("f:newline"), &f.newLine, newLineLabels...).Label(m.FieldNewLine())
 	})
 	ui.Field(c, "", func() {
 		ui.Column(c).Gap(6).Children(func() {
-			ui.Checkbox(c.Key("f:echo"), &f.localEcho, m.LocalEcho())
+			formCheckbox(c.Key("f:echo"), &f.localEcho, m.LocalEcho())
 			ui.Text(c, m.LocalEchoHint()).FontSize(theme.Caption).TextColor(tok.TextMuted)
 		})
 	})

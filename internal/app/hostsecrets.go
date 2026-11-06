@@ -26,14 +26,14 @@ func (a *App) hostSecretFields(c *ui.Context, m locales.Messages, tok theme.Toke
 			if f.orig.Auth == assets.AuthPassword {
 				ph = m.PasswordUnchanged()
 			}
-			ui.TextInput(c.Key("hf:password"), &s.password).Password().Placeholder(ph)
+			formTextInput(c.Key("hf:password"), &s.password).Password().Placeholder(ph)
 		})
 	case m.CredKindKey():
 		ui.Field(c, m.FieldPrivateKey(), func() { a.keyPicker(c, m, tok, s) })
 		ui.Field(c, m.FieldCertificate(), func() { a.certPicker(c, m, tok, s) })
 		if s.encrypted() || s.genKey != nil {
-			ui.Field(c, m.FieldPassphrase(), func() { ui.TextInput(c.Key("hf:pass"), &s.passphrase).Password().Placeholder(m.PasswordUnchanged()) })
-			ui.Field(c, "", func() { ui.Checkbox(c.Key("hf:ask"), &s.askPass, m.AskPassphraseEachTime()) })
+			ui.Field(c, m.FieldPassphrase(), func() { formTextInput(c.Key("hf:pass"), &s.passphrase).Password().Placeholder(m.PasswordUnchanged()) })
+			ui.Field(c, "", func() { formCheckbox(c.Key("hf:ask"), &s.askPass, m.AskPassphraseEachTime()) })
 		}
 	}
 	if s.err != "" {
