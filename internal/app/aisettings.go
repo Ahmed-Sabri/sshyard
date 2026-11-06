@@ -94,7 +94,7 @@ func llmClient(p settings.AIProvider, key string) *llm.Client {
 }
 
 func (a *App) aiSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, s *settings.Settings, changed *bool) {
-	settingsSection(c, tok, nil, ui.Color{}, "", func(g *settingsGroup) {
+	a.settingsSection(c, tok, nil, ui.Color{}, "", func(g *settingsGroup) {
 		g.row(m.AiDefaultAgent(), "", func() {
 			// The built-in agent, then each ACP agent by name; a backend
 			// the file names but this build lacks shows as it is.
@@ -150,7 +150,7 @@ func (a *App) aiSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, s 
 			}
 		})
 	})
-	settingsSection(c, tok, icons.InstallKey, tok.TintAt(0), m.AiConsentSection(), func(g *settingsGroup) {
+	a.settingsSection(c, tok, icons.InstallKey, tok.TintAt(0), m.AiConsentSection(), func(g *settingsGroup) {
 		if len(s.AIConsentHosts) == 0 {
 			ui.Row(c).MinHeight(44).Padding(8, 14).Children(func() {
 				ui.Text(c, m.AiConsentEmpty()).FontSize(theme.Body).TextColor(tok.TextMuted)
@@ -169,7 +169,7 @@ func (a *App) aiSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, s 
 			})
 		}
 	})
-	settingsSection(c, tok, icons.ModeAsk, tok.TintAt(1), m.AiPermissionSection(), func(g *settingsGroup) {
+	a.settingsSection(c, tok, icons.ModeAsk, tok.TintAt(1), m.AiPermissionSection(), func(g *settingsGroup) {
 		g.row(m.AiDefaultMode(), "", func() {
 			a.aiModeIdx = modeIndex(s.AIDefaultMode)
 			if ui.Segmented(c.Key("aimodedef"), &a.aiModeIdx, m.AiModeAsk(), m.AiModeReview(), m.AiModeFull()).Label(m.AiDefaultMode()).Changed() {
@@ -184,7 +184,7 @@ func (a *App) aiSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, s 
 		})
 		a.reviewSettings(c, m, g, s, changed)
 	})
-	settingsSection(c, tok, icons.Robot, tok.TintAt(3), m.AiProvidersSection(), func(g *settingsGroup) {
+	a.settingsSection(c, tok, icons.Robot, tok.TintAt(3), m.AiProvidersSection(), func(g *settingsGroup) {
 		if len(s.AIProviders) == 0 {
 			ui.Row(c).MinHeight(44).Padding(8, 14).Children(func() {
 				ui.Text(c, m.AiNoProvider()).FontSize(theme.Body).TextColor(tok.TextMuted)

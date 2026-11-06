@@ -243,8 +243,8 @@ func (a *App) panelView(c *ui.Context, m locales.Messages, tok theme.Tokens, k i
 
 // panelCard is a card of a panel: a tile, a title and a muted note on
 // the right, over what fn builds.
-func panelCard(c *ui.Context, tok theme.Tokens, key string, ic *icons.Icon, tint ui.Color, title, note string, fn func()) {
-	card(c.Key(key), tok).FillWidth().Padding(theme.Space(3)).Gap(theme.Space(2.5)).Children(func() {
+func (a *App) panelCard(c *ui.Context, tok theme.Tokens, key string, ic *icons.Icon, tint ui.Color, title, note string, fn func()) {
+	a.contentCard(c.Key(key), tok).FillWidth().Padding(theme.Space(3)).Gap(theme.Space(2.5)).Children(func() {
 		ui.Row(c).Gap(8).AlignItems(ui.Center).FillWidth().Children(func() {
 			softTile(c, ic, tint, 22)
 			ui.Text(c, title).FontSize(theme.Body).FontWeight(600).Grow(1).Shrink(1).SingleLine()
@@ -393,7 +393,7 @@ func (a *App) monitorPanel(c *ui.Context, m locales.Messages, tok theme.Tokens) 
 		panelNote(c, tok, m.MonitorStream())
 		return
 	}
-	panelCard(c, tok, "sys", icons.Host, hostTint(tok, h), m.SysSection(), "", func() {
+	a.panelCard(c, tok, "sys", icons.Host, hostTint(tok, h), m.SysSection(), "", func() {
 		osName, lat, up := dash, dash, dash
 		if rd.OS != "" {
 			osName = rd.OS
@@ -439,11 +439,11 @@ func (a *App) monitorPanel(c *ui.Context, m locales.Messages, tok theme.Tokens) 
 		return
 	}
 	a.cpuCard(c, m, tok, fam, rd)
-	memCard(c, m, tok, fam, rd)
-	netCard(c, m, tok, fam, rd)
-	diskCard(c, m, tok, fam, rd)
+	a.memCard(c, m, tok, fam, rd)
+	a.netCard(c, m, tok, fam, rd)
+	a.diskCard(c, m, tok, fam, rd)
 	if len(rd.GPUs) > 0 {
-		gpuCard(c, m, tok, fam, rd)
+		a.gpuCard(c, m, tok, fam, rd)
 	}
 }
 
@@ -452,7 +452,7 @@ func (a *App) cpuCard(c *ui.Context, m locales.Messages, tok theme.Tokens, fam s
 	if len(rd.Cores) > 0 {
 		note = m.CpuCores(len(rd.Cores))
 	}
-	panelCard(c, tok, "cpu", icons.CPU, tok.TintAt(0), "CPU", note, func() {
+	a.panelCard(c, tok, "cpu", icons.CPU, tok.TintAt(0), "CPU", note, func() {
 		pct := m.MetricsDash()
 		if rd.CPUOK {
 			pct = fmtPct(rd.CPU)
@@ -516,8 +516,8 @@ func usageRow(c *ui.Context, tok theme.Tokens, fam, label string, pct float64, o
 	})
 }
 
-func memCard(c *ui.Context, m locales.Messages, tok theme.Tokens, fam string, rd session.Reading) {
-	panelCard(c, tok, "mem", icons.Memory, tok.TintAt(3), m.MemorySection(), "", func() {
+func (a *App) memCard(c *ui.Context, m locales.Messages, tok theme.Tokens, fam string, rd session.Reading) {
+	a.panelCard(c, tok, "mem", icons.Memory, tok.TintAt(3), m.MemorySection(), "", func() {
 		if !rd.MemOK {
 			panelNote(c, tok, m.NoData())
 			return
@@ -543,8 +543,8 @@ func rates(c *ui.Context, tok theme.Tokens, fam string, up, down string) {
 	})
 }
 
-func netCard(c *ui.Context, m locales.Messages, tok theme.Tokens, fam string, rd session.Reading) {
-	panelCard(c, tok, "net", icons.Network, tok.TintAt(2), m.NetworkSection(), "", func() {
+func (a *App) netCard(c *ui.Context, m locales.Messages, tok theme.Tokens, fam string, rd session.Reading) {
+	a.panelCard(c, tok, "net", icons.Network, tok.TintAt(2), m.NetworkSection(), "", func() {
 		if len(rd.NICs) == 0 {
 			panelNote(c, tok, m.NoData())
 			return
@@ -565,8 +565,8 @@ func netCard(c *ui.Context, m locales.Messages, tok theme.Tokens, fam string, rd
 	})
 }
 
-func diskCard(c *ui.Context, m locales.Messages, tok theme.Tokens, fam string, rd session.Reading) {
-	panelCard(c, tok, "disk", icons.Disk, tok.TintAt(1), m.DisksSection(), "", func() {
+func (a *App) diskCard(c *ui.Context, m locales.Messages, tok theme.Tokens, fam string, rd session.Reading) {
+	a.panelCard(c, tok, "disk", icons.Disk, tok.TintAt(1), m.DisksSection(), "", func() {
 		if len(rd.Vols) == 0 {
 			panelNote(c, tok, m.NoData())
 			return
@@ -577,8 +577,8 @@ func diskCard(c *ui.Context, m locales.Messages, tok theme.Tokens, fam string, r
 	})
 }
 
-func gpuCard(c *ui.Context, m locales.Messages, tok theme.Tokens, fam string, rd session.Reading) {
-	panelCard(c, tok, "gpu", icons.GPU, tok.TintAt(4), m.GpuSection(), "", func() {
+func (a *App) gpuCard(c *ui.Context, m locales.Messages, tok theme.Tokens, fam string, rd session.Reading) {
+	a.panelCard(c, tok, "gpu", icons.GPU, tok.TintAt(4), m.GpuSection(), "", func() {
 		for i, g := range rd.GPUs {
 			_, mem, temp := gpuBits(m, g)
 			usageRow(c, tok, fam, "GPU "+strconv.Itoa(i), float64(g.Util), g.UtilOK, mem+" · "+temp)
@@ -625,7 +625,7 @@ func (a *App) hostPanel(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 		return
 	}
 	temp, local := isTemp(h.ID), isLocal(h.ID)
-	card(c.Key("hosthero"), tok).FillWidth().Padding(theme.Space(3)).Gap(theme.Space(3)).Children(func() {
+	a.contentCard(c.Key("hosthero"), tok).FillWidth().Padding(theme.Space(3)).Gap(theme.Space(3)).Children(func() {
 		ui.Row(c).Gap(10).AlignItems(ui.Center).FillWidth().Children(func() {
 			hostAvatar(c, tok, h, 36)
 			ui.Column(c).Gap(2).Grow(1).Shrink(1).Children(func() {
@@ -685,7 +685,7 @@ func (a *App) hostPanel(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 			panes++
 		}
 	}
-	panelCard(c, tok, "hostinfo", icons.Proxy, tok.TintAt(7), m.ConnectionSection(), "", func() {
+	a.panelCard(c, tok, "hostinfo", icons.Proxy, tok.TintAt(7), m.ConnectionSection(), "", func() {
 		if !h.SSH() {
 			a.streamFacts(c, m, tok, h, proxy, panes, or)
 			return
@@ -712,7 +712,7 @@ func (a *App) renewalPanel(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 	if h.Provider == "" && !h.Renewal.On() && h.Note == "" {
 		return
 	}
-	panelCard(c, tok, "hostrenewal", icons.Renewal, tok.TintAt(2), m.RenewalSection(), "", func() {
+	a.panelCard(c, tok, "hostrenewal", icons.Renewal, tok.TintAt(2), m.RenewalSection(), "", func() {
 		item := func(label, value string, col ui.Color) {
 			ui.Column(c).Gap(2).FillWidth().Children(func() {
 				ui.Text(c, label).FontSize(theme.Caption).TextColor(tok.TextMuted)

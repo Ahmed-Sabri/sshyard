@@ -90,7 +90,11 @@ func (a *App) sidebarView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 				}
 				a.forwardsSection(c, m, tok)
 			}).Grow(1).FillWidth()
-			_ = sb
+			if a.hasBackground() {
+				// The sidebar region already owns its image tint; MyGo's
+				// sidebar scroll must not cover it with Theme.Surface.
+				sb.Background(ui.Transparent)
+			}
 		}
 
 		// The foot of the sidebar: host count and live SSH connections.

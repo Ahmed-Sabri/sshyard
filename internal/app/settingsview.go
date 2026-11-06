@@ -199,7 +199,7 @@ func (g *settingsGroup) divider() {
 
 // settingsSection is a card of settings under a tile and a title; with
 // no title, the card alone.
-func settingsSection(c *ui.Context, tok theme.Tokens, ic *icons.Icon, tint ui.Color, title string, fn func(g *settingsGroup)) {
+func (a *App) settingsSection(c *ui.Context, tok theme.Tokens, ic *icons.Icon, tint ui.Color, title string, fn func(g *settingsGroup)) {
 	ui.Column(c).Gap(8).FillWidth().Children(func() {
 		if title != "" {
 			ui.Row(c).Gap(8).AlignItems(ui.Center).Padding(0, 4).Children(func() {
@@ -207,7 +207,7 @@ func settingsSection(c *ui.Context, tok theme.Tokens, ic *icons.Icon, tint ui.Co
 				ui.Text(c, title).FontSize(theme.Body).FontWeight(600)
 			})
 		}
-		card(c, tok).FillWidth().Children(func() {
+		a.contentCard(c, tok).FillWidth().Children(func() {
 			fn(&settingsGroup{c: c, tok: tok})
 		})
 	})
@@ -316,7 +316,7 @@ func (a *App) themeSwitch(c *ui.Context, m locales.Messages, tok theme.Tokens) (
 }
 
 func (a *App) prefAppearance(c *ui.Context, m locales.Messages, tok theme.Tokens, s *settings.Settings, changed *bool) {
-	settingsSection(c, tok, nil, ui.Color{}, "", func(g *settingsGroup) {
+	a.settingsSection(c, tok, nil, ui.Color{}, "", func(g *settingsGroup) {
 		g.row(m.Theme(), "", func() {
 			if md, ok := a.themeSwitch(c, m, tok); ok {
 				s.Theme, *changed = md, true
@@ -398,7 +398,7 @@ func (a *App) prefAppearance(c *ui.Context, m locales.Messages, tok theme.Tokens
 	if !a.hasBackground() {
 		a.materialSection(c, m, tok, s, changed)
 	}
-	settingsSection(c, tok, icons.Edit, tok.TintAt(4), m.FontsSection(), func(g *settingsGroup) {
+	a.settingsSection(c, tok, icons.Edit, tok.TintAt(4), m.FontsSection(), func(g *settingsGroup) {
 		g.row(m.InterfaceFont(), "", func() {
 			if f, ok := a.fontPicker(c, "uifont", m.InterfaceFont(), m.SystemDefault(), &a.fonts.uiSel, s.UIFont, a.fonts.list); ok {
 				s.UIFont, *changed = f, true
@@ -418,7 +418,7 @@ var materials = []string{settings.MaterialTranslucent, settings.MaterialOpaque}
 // own. Without a material (Linux, Windows) the choice cannot be made.
 func (a *App) materialSection(c *ui.Context, m locales.Messages, tok theme.Tokens, s *settings.Settings, changed *bool) {
 	off := !c.Vibrancy()
-	settingsSection(c, tok, icons.Appearance, tok.TintAt(2), m.MaterialSection(), func(g *settingsGroup) {
+	a.settingsSection(c, tok, icons.Appearance, tok.TintAt(2), m.MaterialSection(), func(g *settingsGroup) {
 		choose := func(key, label, note string, idx *int, cur *string) {
 			*idx = max(slices.Index(materials, *cur), 0)
 			if off {
@@ -438,7 +438,7 @@ func (a *App) materialSection(c *ui.Context, m locales.Messages, tok theme.Token
 
 func (a *App) prefTerminal(c *ui.Context, m locales.Messages, tok theme.Tokens, s *settings.Settings, changed *bool) {
 	a.schemeSection(c, m, tok, s, changed)
-	settingsSection(c, tok, icons.Edit, tok.TintAt(4), m.FontsSection(), func(g *settingsGroup) {
+	a.settingsSection(c, tok, icons.Edit, tok.TintAt(4), m.FontsSection(), func(g *settingsGroup) {
 		g.row(m.TerminalFont(), "", func() {
 			if f, ok := a.fontPicker(c, "termfont", m.TerminalFont(), m.SystemDefault(), &a.fonts.termSel, s.TerminalFont, fonts.ForTerminal(a.fonts.list, s.MonospacedOnly)); ok {
 				s.TerminalFont, *changed = f, true
@@ -464,7 +464,7 @@ func (a *App) prefTerminal(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 		a.termFontPreview(c, tok)
 	})
 	a.highlightSection(c, m, tok, s, changed)
-	settingsSection(c, tok, icons.LocalShell, tok.TintAt(3), m.LocalTerminal(), func(g *settingsGroup) {
+	a.settingsSection(c, tok, icons.LocalShell, tok.TintAt(3), m.LocalTerminal(), func(g *settingsGroup) {
 		g.row(m.OpenLocalOnStart(), m.OpenLocalOnStartNote(), func() {
 			on := s.OpenLocalOnStart
 			if ui.Switch(c.Key("localstart"), &on).Label(m.OpenLocalOnStart()).Changed() {
@@ -492,7 +492,7 @@ func (a *App) prefTerminal(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 			}
 		})
 	})
-	settingsSection(c, tok, icons.Reconnect, tok.TintAt(0), m.ConnectionSection(), func(g *settingsGroup) {
+	a.settingsSection(c, tok, icons.Reconnect, tok.TintAt(0), m.ConnectionSection(), func(g *settingsGroup) {
 		g.row(m.KeepAlive(), "", func() {
 			if ui.NumberInput(c.Key("keep"), &a.keepChoice, 0, 600, 5).Changed() {
 				s.KeepAliveSeconds = int(a.keepChoice)
@@ -507,7 +507,7 @@ func (a *App) prefTerminal(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 			}
 		})
 	})
-	settingsSection(c, tok, icons.Paste, tok.TintAt(1), m.ClipboardSection(), func(g *settingsGroup) {
+	a.settingsSection(c, tok, icons.Paste, tok.TintAt(1), m.ClipboardSection(), func(g *settingsGroup) {
 		g.row(m.RightClick(), m.RightClickNote(), func() {
 			codes := []string{settings.RightClickMenu, settings.RightClickPaste, settings.RightClickCopyPaste}
 			a.rightClickChoice = max(slices.Index(codes, s.TerminalRightClick), 0)
@@ -548,7 +548,7 @@ func (a *App) prefTerminal(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 }
 
 func (a *App) prefMonitoring(c *ui.Context, m locales.Messages, tok theme.Tokens, s *settings.Settings, changed *bool) {
-	settingsSection(c, tok, nil, ui.Color{}, "", func(g *settingsGroup) {
+	a.settingsSection(c, tok, nil, ui.Color{}, "", func(g *settingsGroup) {
 		g.row(m.MetricsBar(), m.MetricsBarNote(), func() {
 			a.metOn = s.MetricsEnabled
 			if ui.Switch(c.Key("meton"), &a.metOn).Label(m.MetricsBar()).Changed() {
@@ -580,7 +580,7 @@ func (a *App) prefMonitoring(c *ui.Context, m locales.Messages, tok theme.Tokens
 }
 
 func (a *App) prefFiles(c *ui.Context, m locales.Messages, tok theme.Tokens, s *settings.Settings, changed *bool) {
-	settingsSection(c, tok, nil, ui.Color{}, "", func(g *settingsGroup) {
+	a.settingsSection(c, tok, nil, ui.Color{}, "", func(g *settingsGroup) {
 		g.row(m.TransferConcurrency(), m.TransferConcurrencyHint(), func() {
 			if ui.NumberInput(c.Key("conc"), &a.concChoice, 1, 10, 1).Changed() {
 				s.TransferConcurrency = int(a.concChoice)
@@ -650,7 +650,7 @@ func keyCaps(goos string, mods ui.Modifiers, key ui.Key) []string {
 // new one, or goes back to its own.
 func (a *App) shortcutsPage(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	custom := false
-	settingsSection(c, tok, nil, ui.Color{}, "", func(g *settingsGroup) {
+	a.settingsSection(c, tok, nil, ui.Color{}, "", func(g *settingsGroup) {
 		for _, ac := range actions {
 			k := a.keyOf(ac.id)
 			label := ac.label(m)
@@ -754,7 +754,7 @@ func (a *App) aboutPage(c *ui.Context, m locales.Messages, tok theme.Tokens, s *
 		v = "dev"
 	}
 	// The app itself: its tile, name, version and what it is.
-	card(c, tok).FillWidth().Padding(theme.Space(5)).Children(func() {
+	a.contentCard(c, tok).FillWidth().Padding(theme.Space(5)).Children(func() {
 		ui.Row(c).Gap(16).AlignItems(ui.Center).FillWidth().Children(func() {
 			ui.Image(c, a.logo).Size(60, 60).Shrink(0).Radius(theme.RadiusSheet).Label(m.AppName())
 			ui.Column(c).Gap(3).Grow(1).Shrink(1).Children(func() {
@@ -767,7 +767,7 @@ func (a *App) aboutPage(c *ui.Context, m locales.Messages, tok theme.Tokens, s *
 			}
 		})
 	})
-	settingsSection(c, tok, icons.Download, tok.TintAt(1), m.Updates(), func(g *settingsGroup) {
+	a.settingsSection(c, tok, icons.Download, tok.TintAt(1), m.Updates(), func(g *settingsGroup) {
 		g.row(m.CheckAutomatically(), "", func() {
 			a.updateCheck = s.CheckUpdates
 			if ui.Switch(c.Key("autoupd"), &a.updateCheck).Label(m.CheckAutomatically()).Changed() {
@@ -798,7 +798,7 @@ func (a *App) aboutPage(c *ui.Context, m locales.Messages, tok theme.Tokens, s *
 			})
 		}
 	})
-	settingsSection(c, tok, icons.Info, tok.TintAt(7), m.AboutInfo(), func(g *settingsGroup) {
+	a.settingsSection(c, tok, icons.Info, tok.TintAt(7), m.AboutInfo(), func(g *settingsGroup) {
 		value := func(s string) func() {
 			return func() { ui.Text(c, s).FontSize(theme.Body).TextColor(tok.TextMuted).SingleLine() }
 		}
@@ -818,7 +818,7 @@ func (a *App) aboutPage(c *ui.Context, m locales.Messages, tok theme.Tokens, s *
 		})
 		g.row(m.AboutSecrets(), "", value(m.SecretsKeychain()))
 	})
-	settingsSection(c, tok, icons.OpenWith, tok.TintAt(2), m.AboutLinks(), func(g *settingsGroup) {
+	a.settingsSection(c, tok, icons.OpenWith, tok.TintAt(2), m.AboutLinks(), func(g *settingsGroup) {
 		link := func(key, url string) func() {
 			return func() { ui.Link(c.Key(key), url[len("https://"):], url).FontSize(theme.Body) }
 		}

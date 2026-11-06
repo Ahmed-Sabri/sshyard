@@ -285,7 +285,7 @@ func (a *App) containersView(c *ui.Context, m locales.Messages, tok theme.Tokens
 		return
 	}
 	ct := cs[d.ctrSel]
-	card(c.Key("ctrcard"), tok).FillWidth().Padding(theme.Space(3)).Gap(theme.Space(2)).Children(func() {
+	a.contentCard(c.Key("ctrcard"), tok).FillWidth().Padding(theme.Space(3)).Gap(theme.Space(2)).Children(func() {
 		ui.Row(c).Gap(8).AlignItems(ui.Center).FillWidth().Children(func() {
 			softTile(c, icons.Docker, stateTint(tok, ct.State), 22)
 			ui.Column(c).Gap(1).Grow(1).Shrink(1).MinWidth(0).Children(func() {

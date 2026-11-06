@@ -68,3 +68,17 @@ func (a *App) editorChromeFill(col ui.Color) ui.Color {
 	}
 	return ui.Transparent
 }
+
+// contentSurfaceFill leaves the owning content region as the only image tint;
+// cards must not hide the image or compound that region's configured opacity.
+// Controls and overlays retain their own readable fills.
+func (a *App) contentSurfaceFill(col ui.Color) ui.Color {
+	if a.hasBackground() || a.clearContent {
+		return ui.Transparent
+	}
+	return col
+}
+
+func (a *App) contentCard(c *ui.Context, tok theme.Tokens) ui.Element {
+	return card(c, tok).Background(a.contentSurfaceFill(tok.Inset))
+}

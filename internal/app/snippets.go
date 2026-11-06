@@ -328,7 +328,7 @@ func (a *App) snippetRow(c *ui.Context, m locales.Messages, tok theme.Tokens, n 
 		}
 		// Under the name, past the tile.
 		ui.Column(c.Key("snippet:detail")).FillWidth().Padding(0, theme.Space(3), theme.Space(3), theme.Space(11.5)).Gap(theme.Space(2)).Children(func() {
-			ui.Scroll(c.Key("snippet:body")).FillWidth().MaxHeight(theme.Space(40)).Radius(theme.RadiusSmall).Background(tok.Inset).Border(1, tok.Line).Children(func() {
+			ui.Scroll(c.Key("snippet:body")).FillWidth().MaxHeight(theme.Space(40)).Radius(theme.RadiusSmall).Background(a.contentSurfaceFill(tok.Inset)).Border(1, tok.Line).Children(func() {
 				ui.Column(c).FillWidth().Padding(theme.Space(2), theme.Space(2.5)).Children(func() {
 					ui.Text(c, body).Font(a.termFamily()).FontSize(theme.Footnote)
 				})

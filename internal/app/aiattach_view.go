@@ -34,7 +34,7 @@ func (a *App) attachStrip(c *ui.Context, tok theme.Tokens, m locales.Messages, f
 		for i, f := range files {
 			ui.Row(c.Key("at:"+strconv.Itoa(i))).Width(theme.Space(65)).MaxWidthPercent(100).Height(theme.Space(16)).
 				Gap(theme.Space(1)).Padding(theme.Space(2)).AlignItems(ui.Center).Radius(theme.RadiusControl).
-				Background(tok.Inset).Border(1, tok.Line).Clip().Label(f.name).Children(func() {
+				Background(a.contentSurfaceFill(tok.Inset)).Border(1, tok.Line).Clip().Label(f.name).Children(func() {
 				var body ui.Element
 				if f.bmp != nil {
 					body = ui.ButtonBase(c.Key("preview")).Grow(1).Shrink(1).MinWidth(0).Gap(theme.Space(2)).AlignItems(ui.Center).

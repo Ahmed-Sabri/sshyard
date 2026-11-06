@@ -422,7 +422,7 @@ func (a *App) tmuxCard(c *ui.Context, m locales.Messages, tok theme.Tokens, tc *
 	d := a.tmux
 	busy := d.busy != ""
 	open := d.open[s.ID]
-	card(c.Key("tmux:"+s.ID), tok).FillWidth().Padding(theme.Space(3)).Gap(theme.Space(2)).Children(func() {
+	a.contentCard(c.Key("tmux:"+s.ID), tok).FillWidth().Padding(theme.Space(3)).Gap(theme.Space(2)).Children(func() {
 		ui.Row(c).Gap(8).AlignItems(ui.Center).FillWidth().Children(func() {
 			softTile(c, icons.Tmux, tok.Tint(s.Name), 22)
 			ui.Column(c).Gap(2).Grow(1).Shrink(1).MinWidth(0).Children(func() {
