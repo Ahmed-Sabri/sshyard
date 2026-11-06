@@ -411,7 +411,7 @@ func (a *App) materialSection(c *ui.Context, m locales.Messages, tok theme.Token
 				note = m.MaterialUnsupported()
 			}
 			g.row(label, note, func() {
-				seg := formSegmentedState(c.Key(key), idx, off, m.MaterialTranslucent(), m.MaterialOpaque()).Label(label)
+				seg := formSegmented(c.Key(key), idx, off, m.MaterialTranslucent(), m.MaterialOpaque()).Label(label)
 				if seg.Changed() && !off {
 					*cur, *changed = materials[*idx], true
 				}
@@ -520,7 +520,7 @@ func (a *App) prefTerminal(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 		g.row(m.RightClick(), m.RightClickNote(), func() {
 			codes := []string{settings.RightClickMenu, settings.RightClickPaste, settings.RightClickCopyPaste}
 			a.rightClickChoice = max(slices.Index(codes, s.TerminalRightClick), 0)
-			if formSegmented(c.Key("rightclick"), &a.rightClickChoice, m.RightClickMenu(), m.Paste(), m.RightClickCopyPaste()).Label(m.RightClick()).Changed() {
+			if formSegmented(c.Key("rightclick"), &a.rightClickChoice, false, m.RightClickMenu(), m.Paste(), m.RightClickCopyPaste()).Label(m.RightClick()).Changed() {
 				if a.rightClickChoice >= 0 && a.rightClickChoice < len(codes) {
 					s.TerminalRightClick, *changed = codes[a.rightClickChoice], true
 				}
@@ -540,7 +540,7 @@ func (a *App) prefTerminal(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 					a.osc52Choice = i
 				}
 			}
-			if formSegmented(c.Key("osc52"), &a.osc52Choice, m.Osc52Allow(), m.Osc52Ask(), m.Osc52Deny()).Label(m.Osc52Title()).Changed() {
+			if formSegmented(c.Key("osc52"), &a.osc52Choice, false, m.Osc52Allow(), m.Osc52Ask(), m.Osc52Deny()).Label(m.Osc52Title()).Changed() {
 				if a.osc52Choice >= 0 && a.osc52Choice < len(codes) {
 					s.OSC52Write = codes[a.osc52Choice]
 					*changed = true
@@ -567,7 +567,7 @@ func (a *App) prefMonitoring(c *ui.Context, m locales.Messages, tok theme.Tokens
 		})
 		g.row(m.MetricsInterval(), "", func() {
 			a.metEvery = intervalIndex(s.MetricsInterval)
-			if formSegmented(c.Key("metevery"), &a.metEvery, m.Seconds("1"), m.Seconds("2"), m.Seconds("5"), m.Seconds("10")).Label(m.MetricsInterval()).Changed() {
+			if formSegmented(c.Key("metevery"), &a.metEvery, false, m.Seconds("1"), m.Seconds("2"), m.Seconds("5"), m.Seconds("10")).Label(m.MetricsInterval()).Changed() {
 				s.MetricsInterval = []int{1, 2, 5, 10}[a.metEvery]
 				*changed = true
 			}
@@ -605,7 +605,7 @@ func (a *App) prefFiles(c *ui.Context, m locales.Messages, tok theme.Tokens, s *
 		g.row(m.FilesEdge(), m.FilesEdgeNote(), func() {
 			edges := []string{settings.FilesRight, settings.FilesBelow}
 			a.filesEdgeChoice = max(slices.Index(edges, s.FilesEdge), 0)
-			if formSegmented(c.Key("filesedge"), &a.filesEdgeChoice, m.FilesEdgeRight(), m.FilesEdgeBelow()).Label(m.FilesEdge()).Changed() {
+			if formSegmented(c.Key("filesedge"), &a.filesEdgeChoice, false, m.FilesEdgeRight(), m.FilesEdgeBelow()).Label(m.FilesEdge()).Changed() {
 				if a.filesEdgeChoice >= 0 && a.filesEdgeChoice < len(edges) {
 					s.FilesEdge, *changed = edges[a.filesEdgeChoice], true
 				}
@@ -791,7 +791,7 @@ func (a *App) aboutPage(c *ui.Context, m locales.Messages, tok theme.Tokens, s *
 			for i, h := range settings.UpdateIntervals {
 				labels[i] = m.Hours(strconv.Itoa(h))
 			}
-			if formSegmented(c.Key("updevery"), &a.updEvery, labels...).Label(m.UpdateInterval()).Changed() {
+			if formSegmented(c.Key("updevery"), &a.updEvery, false, labels...).Label(m.UpdateInterval()).Changed() {
 				s.UpdateIntervalHours = settings.UpdateIntervals[a.updEvery]
 				*changed = true
 			}

@@ -90,11 +90,7 @@ func formCombobox(c *ui.Context, selected *string, options []string) ui.Element 
 	return ui.Combobox(c, selected, options).Background(currentTokens(c).Fill).Radius(theme.RadiusControl)
 }
 
-func formSegmented(c *ui.Context, selected *int, labels ...string) ui.Element {
-	return formSegmentedState(c, selected, false, labels...)
-}
-
-func formSegmentedState(c *ui.Context, selected *int, disabled bool, labels ...string) ui.Element {
+func formSegmented(c *ui.Context, selected *int, disabled bool, labels ...string) ui.Element {
 	return segmentedControl(c, selected, disabled, labels, theme.Space(3), func(i int, col ui.Color) {
 		ui.Text(c, labels[i]).FontSize(theme.Footnote).FontWeight(500).TextColor(col).SingleLine()
 	})

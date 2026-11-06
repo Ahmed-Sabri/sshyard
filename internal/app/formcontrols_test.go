@@ -43,7 +43,7 @@ func TestFormControlsCursorAndDisabled(t *testing.T) {
 				formDisabled(formSelect(c.Key("select"), &selected, []string{"first", "second", "third"}).Label("Choice").Width(240), disabled)
 				formDisabled(formSwitch(c.Key("switch"), &on).Label("Switch"), disabled)
 				formDisabled(formCheckbox(c.Key("check"), &checked, "Checkbox"), disabled)
-				formSegmentedState(c.Key("segment"), &segment, disabled, "One", "Two")
+				formSegmented(c.Key("segment"), &segment, disabled, "One", "Two")
 			})
 		}, 500, 500)
 		tt.Frame()
@@ -89,7 +89,7 @@ func TestFormControlsDisabledAncestor(t *testing.T) {
 			formSelect(c.Key("select"), &selected, []string{"first", "second"}).Label("Choice")
 			formSwitch(c.Key("switch"), &on).Label("Switch")
 			formCheckbox(c.Key("check"), &checked, "Checkbox")
-			formSegmented(c.Key("segment"), &segment, "One", "Two")
+			formSegmented(c.Key("segment"), &segment, false, "One", "Two")
 		})
 	}, 400, 400)
 	tt.Frame()
@@ -217,7 +217,7 @@ func TestFormSegmentedRaisesSelected(t *testing.T) {
 		selected := 0
 		tt := ui.NewTester(func(c *ui.Context) {
 			ui.Column(c).Fill().Background(tok.Canvas).Padding(20).Children(func() {
-				formSegmented(c, &selected, "One", "Two")
+				formSegmented(c, &selected, false, "One", "Two")
 			})
 		}, 400, 200)
 		tt.SetDark(dark)
