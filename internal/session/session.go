@@ -73,9 +73,14 @@ type Options struct {
 	// that does not echo it.
 	LocalEcho bool
 	// Dir is the folder an SSH shell goes to each time it starts: a cd
-	// typed once the shell has gone quiet (enterDir). "~" or "~/…" is
+	// typed once the shell has gone quiet (enterShell). "~" or "~/…" is
 	// under the home folder.
 	Dir string
+	// Start, when set, is asked each time an SSH shell starts for a
+	// command to type after the cd to Dir, as an attach to a tmux
+	// session; "" types none. It may take its time, and run commands on
+	// client.
+	Start func(ctx context.Context, client *ssh.Client) string
 }
 
 // Status is a session's state, for the UI.
@@ -523,14 +528,14 @@ func (s *Session) connect(ctx context.Context) error {
 	s.status.State, s.status.Err, s.status.Attempt = Connected, nil, 0
 	s.status.Connects++
 	s.mu.Unlock()
-	if s.opts.Dir != "" {
-		go s.enterDir(shell, time.Now())
+	if s.opts.Dir != "" || s.opts.Start != nil {
+		go s.enterShell(ctx, client, shell, time.Now())
 	}
 	s.changed()
 	return nil
 }
 
-// dirQuiet is how long a new shell prints nothing before enterDir takes
+// dirQuiet is how long a new shell prints nothing before enterShell takes
 // its prompt to be up; dirWait is how long it waits at most, for a shell
 // that prints nothing.
 const (
@@ -538,11 +543,24 @@ const (
 	dirWait  = 5 * time.Second
 )
 
-// enterDir types the cd to Options.Dir into shell, started at start,
-// once it has printed and then gone quiet for dirQuiet, or after dirWait:
-// typed before the prompt, the terminal would echo it twice. It gives up
-// when shell is gone.
-func (s *Session) enterDir(shell *ssh.Session, start time.Time) {
+// enterShell types the cd to Options.Dir, then the command Options.Start
+// gives, into shell, started at start, once it has printed and then gone
+// quiet for dirQuiet, or after dirWait: typed before the prompt, the
+// terminal would echo it twice. It gives up when shell is gone.
+func (s *Session) enterShell(ctx context.Context, client *ssh.Client, shell *ssh.Session, start time.Time) {
+	var line string
+	if s.opts.Dir != "" {
+		line = cdLine(s.opts.Dir)
+	}
+	if s.opts.Start != nil {
+		if cmd := s.opts.Start(ctx, client); cmd != "" {
+			// Its leading space keeps it out of the history, as the cd's.
+			line += " " + cmd + "\r"
+		}
+	}
+	if line == "" {
+		return
+	}
 	for {
 		time.Sleep(dirQuiet / 5)
 		s.mu.Lock()
@@ -554,7 +572,7 @@ func (s *Session) enterDir(shell *ssh.Session, start time.Time) {
 		now := time.Now()
 		at := s.outAt.Load()
 		if (at != 0 && now.Sub(time.Unix(0, at)) >= dirQuiet) || now.Sub(start) >= dirWait {
-			_ = in.send([]byte(cdLine(s.opts.Dir)))
+			_ = in.send([]byte(line))
 			return
 		}
 	}

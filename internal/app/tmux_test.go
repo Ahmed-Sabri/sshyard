@@ -5,6 +5,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/Licoy/sshyard/internal/session"
 	"github.com/Licoy/sshyard/locales"
@@ -23,6 +24,8 @@ type tmuxExec struct {
 	two      bool
 	mine     bool
 	shell    string // what the idle script says: idle, busy, or "" for unknown
+	// made is set once a session was created, then listed as $9
+	made bool
 }
 
 func (x *tmuxExec) run(ch ssh.Channel, cmd string) int {
@@ -41,6 +44,9 @@ func (x *tmuxExec) run(ch ssh.Channel, cmd string) int {
 		if x.two {
 			io.WriteString(ch, "@S $2\t1\t0\t1700000000\t1700000000\t\tbuild\n")
 		}
+		if x.made {
+			io.WriteString(ch, "@S $9\t1\t0\t1700000000\t1700000000\t\tnew\n")
+		}
 		io.WriteString(ch, "@W $1\t0\t0\t1\tzsh\n@W $1\t1\t1\t2\tvim\n")
 		mine := "0"
 		if x.mine && !strings.HasSuffix(cmd, " _ ''") {
@@ -52,8 +58,12 @@ func (x *tmuxExec) run(ch ssh.Channel, cmd string) int {
 			return 1
 		}
 		io.WriteString(ch, x.shell+"\n")
+	case strings.Contains(cmd, "detach-client"):
+		x.cmds = append(x.cmds, cmd)
+		x.mine = false
 	case strings.Contains(cmd, "new-session -d"):
 		x.cmds = append(x.cmds, cmd)
+		x.made = true
 		io.WriteString(ch, "$9\n")
 	default:
 		x.cmds = append(x.cmds, cmd)
@@ -112,6 +122,9 @@ func TestTmuxPanel(t *testing.T) {
 	waitFor(t, tt, "the attach command", func() bool {
 		return strings.Contains(cn.s.Term.ScreenText(), "tmux attach-session -t '$1'")
 	})
+	if k := markOfConn(cn); k == nil || k.id != "$1" || k.name != "dev" {
+		t.Errorf("the session attached to: %+v", k)
+	}
 
 	// A name tmux would change is refused in the sheet, which stays.
 	mustClick(t, tt, "Rename Session")
@@ -163,7 +176,7 @@ func TestTmuxPanel(t *testing.T) {
 	waitFor(t, tt, "the tab", func() bool { return len(a.ws.Tabs) == tabs+1 })
 	nc := a.focused()
 	waitFor(t, tt, "attached in the tab", func() bool {
-		return nc.startCmd == "" && strings.Contains(nc.s.Term.ScreenText(), "tmux attach-session -t '$9'")
+		return strings.Contains(nc.s.Term.ScreenText(), "tmux attach-session -t '$9'")
 	})
 }
 
@@ -181,9 +194,22 @@ func TestTmuxPanelMine(t *testing.T) {
 	if !tt.HasText("This terminal") || !tt.HasText("build") || !tt.HasText("Not attached") {
 		t.Fatalf("texts %q", tt.Texts())
 	}
+	if k := markOfConn(cn); k == nil || k.id != "$1" {
+		t.Errorf("the session the terminal is in: %+v", k)
+	}
 	mustClick(t, tt, "Detach from Session")
 	waitFor(t, tt, "detach", func() bool { return x.did("detach-client", "/dev/pts/7") })
 	waitFor(t, tt, "done", func() bool { return a.tmux.busy == "" })
+	if k := markOfConn(cn); k != nil {
+		t.Errorf("kept after detaching: %+v", k)
+	}
+
+	// Attached again, it switches to another session without typing.
+	x.mu.Lock()
+	x.mine = true
+	x.mu.Unlock()
+	a.tmux.at = time.Time{}
+	waitFor(t, tt, "the banner again", func() bool { return tt.HasText("This terminal is attached to “dev”.") })
 
 	a.tmuxAttach(cn, "$2", -1)
 	waitFor(t, tt, "switch", func() bool { return x.did("switch-client", "/dev/pts/7", "$2") })

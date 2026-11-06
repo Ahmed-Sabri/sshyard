@@ -87,12 +87,17 @@ echo "no server running on /tmp/tmux-1000/default" >&2; exit 1`)
 	if ti.Version != "tmux 3.2a" || len(ti.Sessions) != 0 || len(ti.Clients) != 0 {
 		t.Fatalf("%+v", ti)
 	}
+	// Whether the terminal's client can be told is said even so.
+	_, err := os.Stat("/proc/self/environ")
+	if ti.Tells != (err == nil) {
+		t.Errorf("tells %v", ti.Tells)
+	}
 }
 
 // TestParseTmuxList: the terminal's own client is found, and lines that
 // are not right are skipped.
 func TestParseTmuxList(t *testing.T) {
-	ti := ParseTmuxList([]byte("@V tmux 3.3a\n" +
+	ti := ParseTmuxList([]byte("@V tmux 3.3a\n@P\n" +
 		"@S $1\t1\t2\t0\t0\t/\tweb\n" +
 		"@S nope\t1\t1\t0\t0\t/\tbad\n" +
 		"@S $2\t1\n" +
@@ -103,6 +108,9 @@ func TestParseTmuxList(t *testing.T) {
 		"@C ;rm\t$1\t1\n"))
 	if len(ti.Sessions) != 1 || ti.Sessions[0].Name != "web" || len(ti.Sessions[0].Wins) != 0 || len(ti.Clients) != 2 {
 		t.Fatalf("%+v", ti)
+	}
+	if !ti.Tells {
+		t.Error("@P not read")
 	}
 	if c, ok := ti.Mine(); !ok || c.TTY != "/dev/pts/2" {
 		t.Errorf("mine %+v %v", c, ok)
@@ -143,6 +151,15 @@ func TestTmuxNewScript(t *testing.T) {
 	cmd.Env = env
 	if out, err := cmd.CombinedOutput(); err != nil || !strings.Contains(string(out), "-s|it's|-c|/a'b|") {
 		t.Errorf("quoted: %v %q", err, out)
+	}
+}
+
+func TestTmuxNewOrAttachCommand(t *testing.T) {
+	if got := TmuxNewOrAttachCommand("it's"); got != `tmux new-session -A -s 'it'\''s'` {
+		t.Errorf("got %q", got)
+	}
+	if got := TmuxNewOrAttachCommand("-a"); got != "" {
+		t.Errorf("a bad name gave %q", got)
 	}
 }
 

@@ -511,6 +511,34 @@ func TestShellEntersDirAfterPrompt(t *testing.T) {
 	waitFor(t, "the cd again", func() bool { return strings.Count(s.Term.ScreenText(), "you said: cd") == 2 })
 }
 
+// TestShellStartCommand: each time the shell starts, the command Start
+// gives is typed after the cd, Start asked again on a reconnect.
+func TestShellStartCommand(t *testing.T) {
+	srv := server(t)
+	var asked atomic.Int32
+	s := New(Config{Addr: srv.Addr, User: "demo", Credentials: password("secret"), HostKey: trusted(t, srv).Callback()},
+		Options{Dir: "/srv", AutoReconnect: true, Backoff: 20 * time.Millisecond, Start: func(ctx context.Context, client *ssh.Client) string {
+			if client == nil {
+				return "no client"
+			}
+			if asked.Add(1) == 1 {
+				return "first"
+			}
+			return ""
+		}}, 80, 24)
+	defer s.Close()
+	s.Start()
+	waitText(t, s, "you said: first")
+	if text := s.Term.ScreenText(); strings.Index(text, "cd '/srv'") > strings.Index(text, "you said: first") {
+		t.Errorf("the command typed before the cd:\n%s", text)
+	}
+	srv.Drop()
+	waitFor(t, "the cd again", func() bool { return strings.Count(s.Term.ScreenText(), "you said: cd") == 2 })
+	if n := asked.Load(); n != 2 || strings.Count(s.Term.ScreenText(), "you said: first") != 1 {
+		t.Errorf("asked %d times:\n%s", n, s.Term.ScreenText())
+	}
+}
+
 func TestCdLine(t *testing.T) {
 	for dir, want := range map[string]string{
 		"/var/www":  " cd '/var/www'\r",

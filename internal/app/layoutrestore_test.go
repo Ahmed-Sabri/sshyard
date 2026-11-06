@@ -47,7 +47,8 @@ func TestLayoutWorkspaceRoundTrip(t *testing.T) {
 	closed, pct := false, float32(37)
 	a.sections["none"], a.stackPct["host/snippets/"] = &closed, &pct
 	a.panels = []inspectorKind{inspectHost, inspectSnippets}
-	term.cwd, term.startCmd = "PRIVATE_CWD", "PRIVATE_START_COMMAND"
+	term.cwd = "PRIVATE_CWD"
+	setStartOnce(term, "PRIVATE_START_COMMAND")
 	files.fs.remote.dir = "PRIVATE_REMOTE_DIRECTORY"
 	ai.ai.input, ai.ai.task = "PRIVATE_AI_DRAFT", "PRIVATE_AI_TASK"
 	a.Close()
@@ -76,7 +77,7 @@ func TestLayoutWorkspaceRoundTrip(t *testing.T) {
 	if terminal.kind != layout.Terminal || filePane.kind != layout.Files || assistant.kind != layout.AI || assistant.ai.link != terminal.id {
 		t.Fatal("mixed pane order or AI terminal association changed")
 	}
-	if terminal.cwd != "" || terminal.startCmd != "" || assistant.ai.input != "" || assistant.ai.task != "" || len(assistant.ai.items) != 0 {
+	if terminal.cwd != "" || startOnce(terminal) != "" || assistant.ai.input != "" || assistant.ai.task != "" || len(assistant.ai.items) != 0 {
 		t.Fatal("restored session content")
 	}
 	if assistant.ai.mode != "review" || assistant.ai.provider != "provider" || assistant.ai.model != "model" || assistant.ai.effort != "high" {
@@ -100,7 +101,8 @@ func TestLayoutLockedStartupReconnectsOnceWithoutReplay(t *testing.T) {
 		t.Fatal(err)
 	}
 	expectRead(t, tt, sh, "PRIVATE_OLD_COMMAND")
-	old.cwd, old.startCmd = "PRIVATE_CWD", "PRIVATE_START_COMMAND"
+	old.cwd = "PRIVATE_CWD"
+	setStartOnce(old, "PRIVATE_START_COMMAND")
 	s := a.Settings()
 	s.OpenLocalOnStart = true
 	if err := a.ApplySettings(s); err != nil {
@@ -128,7 +130,7 @@ func TestLayoutLockedStartupReconnectsOnceWithoutReplay(t *testing.T) {
 	again.withSecrets(nil)
 	waitFor(t, tt, "unlock and fresh SSH login", func() bool { return again.unlocked() && again.focused().s.Status().State == session.Connected })
 	fresh := again.focused()
-	if fresh.cwd != "" || fresh.startCmd != "" || strings.Contains(fresh.s.Term.ScreenText(), "PRIVATE_") {
+	if fresh.cwd != "" || startOnce(fresh) != "" || strings.Contains(fresh.s.Term.ScreenText(), "PRIVATE_") {
 		t.Fatal("restarted terminal retained session content")
 	}
 	if err := fresh.s.Send([]byte("FRESH_PROBE\r")); err != nil {

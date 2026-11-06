@@ -11,6 +11,7 @@ import (
 	"github.com/Licoy/sshyard/internal/icons"
 	"github.com/Licoy/sshyard/internal/keychain"
 	"github.com/Licoy/sshyard/internal/keys"
+	"github.com/Licoy/sshyard/internal/session"
 	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/locales"
@@ -48,6 +49,8 @@ type hostForm struct {
 	// (Host.TerminalDir, RemoteDir, LocalDir); dirsOpen shows them.
 	termDir, remoteDir, localDir string
 	dirsOpen                     bool
+	// tmux is the tmux session the host's terminals attach to (Host.Tmux)
+	tmux string
 	// osc52 is the override's label once Advanced is open; osc52Code is
 	// the saved policy ("", allow, ask, deny), so a save before that
 	// keeps it. advOpen shows Advanced.
@@ -134,6 +137,7 @@ func (a *App) openEditor(h *assets.Host) {
 		}
 		f.netOpen = f.proxy != "" || len(f.jumps) > 0
 		f.termDir, f.remoteDir, f.localDir = h.TerminalDir, h.RemoteDir, h.LocalDir
+		f.tmux = h.Tmux
 		f.dirsOpen = f.termDir != "" || f.remoteDir != "" || f.localDir != ""
 		f.osc52Code = h.OSC52
 		f.advOpen = h.OSC52 != ""
@@ -268,6 +272,11 @@ func (a *App) SaveForm(m locales.Messages) bool {
 	}
 	h.JumpChain = slices.Clone(f.jumps)
 	h.TerminalDir, h.RemoteDir, h.LocalDir = f.termDir, f.remoteDir, f.localDir
+	h.Tmux = strings.TrimSpace(f.tmux)
+	if h.SSH() && h.Tmux != "" && !session.TmuxNameOK(h.Tmux) {
+		f.err = m.TmuxNameInvalid()
+		return false
+	}
 	h.OSC52 = osc52CodeFrom(m, f)
 	mode := ""
 	if f.aiIdx >= 0 && f.aiIdx < 4 {
@@ -451,6 +460,12 @@ func (a *App) editorView(c *ui.Context, m locales.Messages) {
 							ui.Field(c, "", func() {
 								ui.Collapsible(c.Key("f:dirs"), m.DefaultDirs(), &f.dirsOpen, func() {
 									a.dirFields(c, m, tok, f)
+								})
+							})
+							ui.Field(c, m.TmuxAutoAttach(), func() {
+								ui.Column(c).Gap(4).FillWidth().Children(func() {
+									ui.TextInput(c.Key("f:tmux"), &f.tmux).Placeholder(m.TmuxAutoAttachPlaceholder()).Label(m.TmuxAutoAttach()).FillWidth()
+									ui.Text(c, m.TmuxAutoAttachHint()).FontSize(theme.Caption).TextColor(tok.TextMuted)
 								})
 							})
 							ui.Field(c, m.MetricsBar(), func() {

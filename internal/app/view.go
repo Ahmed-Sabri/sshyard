@@ -33,7 +33,7 @@ func (a *App) View(c *ui.Context) {
 	a.syncMetrics()
 	a.wakeUndo(c)
 	a.followCwd(c)
-	a.sendStartCmds()
+	a.watchTmux(c)
 	for _, cn := range a.conns {
 		if cn.fs != nil {
 			a.pendingOpens(cn)

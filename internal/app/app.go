@@ -176,9 +176,15 @@ type conn struct {
 	probeConn int
 	probeAt   time.Time
 	probeMiss int
-	// startCmd is a command typed into the terminal once it connects, as
-	// the shell in a container the Docker panel opened; see sendStartCmds
-	startCmd string
+	// start is what an SSH terminal's shell is given each time it starts
+	// (see shellStart); tmuxConn is the connect it was last seen at,
+	// tmuxUp when, and tmuxAt when the tmux session the terminal is in
+	// was last read (tmuxReading while it is); see watchTmux
+	start       *shellStart
+	tmuxConn    int
+	tmuxUp      time.Time
+	tmuxAt      time.Time
+	tmuxReading bool
 	// temp is the ID of the temporary host the pane was opened on, kept
 	// after it is saved as a host, so that what was typed for it goes
 	// when its last pane closes
@@ -299,6 +305,9 @@ type App struct {
 	// clearContent is set while the content shows the window's material,
 	// as the appearance settings ask (see contentFill)
 	clearContent bool
+	// tmuxWarned are the hosts whose terminals were told that their
+	// server has no tmux, by ID
+	tmuxWarned map[string]bool
 	// usage, docker and tmux are what the usage, Docker and tmux panels
 	// read
 	usage       *usageState
@@ -938,6 +947,10 @@ func (a *App) makeConn(hostID string, kind layout.Kind, link int) (*conn, error)
 	}
 	if kind == layout.Terminal {
 		opts.Dir = h.TerminalDir
+		if !opts.Local && !isStream(h) {
+			c.start = &shellStart{host: h.Tmux}
+			opts.Start = a.shellStartCmd(c)
+		}
 	}
 	c.s = session.New(cfg, opts, 80, 24)
 	c.s.OnChange = a.invalidate

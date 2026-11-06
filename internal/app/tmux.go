@@ -135,6 +135,9 @@ func (a *App) readTmux(c *ui.Context, tc *conn, tag string, now bool) {
 			d.running, d.err = false, err
 			if err == nil {
 				d.info, d.read = info, true
+				if tag != "" && a.conns[tc.id] == tc {
+					a.tmuxSeen(tc, info, time.Now())
+				}
 			}
 		})
 	}()
@@ -204,12 +207,7 @@ func (a *App) tmuxAttach(tc *conn, id string, window int) {
 		typed = true
 		return session.TmuxSelectWindow(ctx, client, id, window)
 	}, func() {
-		switch {
-		case typed:
-			if here.s.Status().State == session.Connected {
-				here.s.Write([]byte(session.TmuxAttachCommand(id) + "\r"))
-			}
-		case busy || unknown:
+		if busy || unknown {
 			a.tmuxOpenTab(tc, id, window)
 			a.toasts = append(a.toasts, func(m locales.Messages) ui.Toast {
 				if busy {
@@ -217,25 +215,42 @@ func (a *App) tmuxAttach(tc *conn, id string, window int) {
 				}
 				return ui.Toast{Title: m.TmuxUnknownNewTab()}
 			})
+			return
+		}
+		if typed {
+			if here.s.Status().State != session.Connected {
+				return
+			}
+			here.s.Write([]byte(session.TmuxAttachCommand(id) + "\r"))
+		}
+		if here.start != nil {
+			here.start.setMark(a.tmuxMarkOf(id))
 		}
 	})
 }
 
+// tmuxMarkOf is the mark of the session id, as the panel read it.
+func (a *App) tmuxMarkOf(id string) *tmuxMark {
+	if s, ok := a.tmux.info.Session(id); ok {
+		return markOf(s, time.Now())
+	}
+	return &tmuxMark{id: id, at: time.Now()}
+}
+
 // tmuxOpenTab opens a terminal on tc's host in a new tab, which attaches
-// to the session id, at window (-1 its current), once it is connected.
+// to the session id, at window (-1 its current), once it is connected,
+// and again after a reconnect.
 func (a *App) tmuxOpenTab(tc *conn, id string, window int) {
-	cmd := session.TmuxAttachCommand(id)
-	if cmd == "" {
+	if session.TmuxAttachCommand(id) == "" {
 		return
 	}
+	mark := a.tmuxMarkOf(id)
 	open := func() {
-		nid, err := a.Connect(tc.host.ID, openAt{})
-		if err != nil {
-			return
-		}
-		if cn := a.conns[nid]; cn != nil {
-			cn.startCmd = cmd
-		}
+		a.openTerminal(tc.host.ID, func(cn *conn) {
+			if cn.start != nil {
+				cn.start.mark = mark
+			}
+		})
 	}
 	if window < 0 {
 		open()
@@ -377,7 +392,11 @@ func (a *App) tmuxPanel(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 					tty := mine.TTY
 					a.tmuxRun(tc, tmuxBusyAll, func(ctx context.Context, client *ssh.Client) error {
 						return session.TmuxDetach(ctx, client, tty)
-					}, nil)
+					}, func() {
+						if here.start != nil {
+							here.start.setMark(nil)
+						}
+					})
 				}
 			})
 		}

@@ -33,9 +33,11 @@ const tmuxPrelude = "command -v tmux >/dev/null 2>&1 || exit 127\n"
 // tmuxListScript prints tmux's version (@V), its sessions (@S), their
 // windows (@W) and the clients attached (@C), fields split by tabs, a
 // name last as it may hold one. $1 is the tag of the terminal asking
-// (TagEnv): a client whose environment holds it is that terminal's.
-// Without a tmux server it prints the version alone.
+// (TagEnv): a client whose environment holds it is that terminal's, which
+// the server tells (@P) where it has Linux's /proc. Without a tmux server
+// it prints no session.
 var tmuxListScript = strings.ReplaceAll(tmuxPrelude+`echo "@V $(tmux -V 2>/dev/null)"
+[ -n "$1" ] && [ -r /proc/self/environ ] && echo @P
 tmux -u list-sessions -F "@S #{session_id}{T}#{session_windows}{T}#{session_attached}{T}#{session_created}{T}#{session_activity}{T}#{session_path}{T}#{session_name}" 2>/dev/null || exit 0
 tmux -u list-windows -a -F "@W #{session_id}{T}#{window_index}{T}#{window_active}{T}#{window_panes}{T}#{window_name}" 2>/dev/null
 t="`+TagEnv+`=$1"
@@ -101,9 +103,11 @@ type TmuxClient struct {
 	Mine    bool
 }
 
-// TmuxInfo is what TmuxList read.
+// TmuxInfo is what TmuxList read. Tells is set when the server tells the
+// asking terminal's client from the others: without it none is Mine.
 type TmuxInfo struct {
 	Version  string
+	Tells    bool
 	Sessions []TmuxSession
 	Clients  []TmuxClient
 }
@@ -148,6 +152,8 @@ func ParseTmuxList(out []byte) TmuxInfo {
 		switch tag {
 		case "@V":
 			t.Version = strings.TrimSpace(rest)
+		case "@P":
+			t.Tells = true
 		case "@S":
 			f := strings.SplitN(rest, "\t", 7)
 			if len(f) < 7 || !tmuxIDOK(f[0]) {
@@ -340,4 +346,14 @@ func TmuxAttachCommand(id string) string {
 		return ""
 	}
 	return "tmux attach-session -t '" + id + "'"
+}
+
+// TmuxNewOrAttachCommand is the command a shell is given to attach to the
+// session named name, created first when there is none, "" for a name
+// that may not be one. tmux takes the name as it is, not as a prefix.
+func TmuxNewOrAttachCommand(name string) string {
+	if !TmuxNameOK(name) {
+		return ""
+	}
+	return "tmux new-session -A -s " + shellQuote(name)
 }

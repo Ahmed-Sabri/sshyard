@@ -134,7 +134,7 @@ func TestDockerShell(t *testing.T) {
 	cn := a.focused()
 	waitFor(t, tt, "connected", func() bool { return cn.s.Status().State == session.Connected })
 	waitFor(t, tt, "the command", func() bool {
-		return cn.startCmd == "" && strings.Contains(cn.s.Term.ScreenText(), "docker exec -it c0ffee000001")
+		return startOnce(cn) == "" && strings.Contains(cn.s.Term.ScreenText(), "docker exec -it c0ffee000001")
 	})
 }
 

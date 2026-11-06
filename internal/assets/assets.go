@@ -100,6 +100,10 @@ type Host struct {
 	TerminalDir string `json:"terminalDir,omitempty"`
 	RemoteDir   string `json:"remoteDir,omitempty"`
 	LocalDir    string `json:"localDir,omitempty"`
+	// Tmux is the tmux session an SSH host's terminals attach to each
+	// time their shell starts, created when there is none; empty is
+	// none.
+	Tmux string `json:"tmux,omitempty"`
 	// OSC52 overrides the global OSC 52 write policy (allow, ask or
 	// deny). Empty follows the global setting.
 	OSC52 string `json:"osc52,omitempty"`
@@ -190,6 +194,7 @@ func (h *Host) Normalize() {
 	h.User = strings.TrimSpace(h.User)
 	h.Group = strings.TrimSpace(h.Group)
 	h.Provider, h.Note = strings.TrimSpace(h.Provider), strings.TrimSpace(h.Note)
+	h.Tmux = strings.TrimSpace(h.Tmux)
 	h.Renewal.normalize()
 	h.Icon = IconText(h.Icon)
 	if _, ok := theme.LightTokens().TintNamed(h.Color); !ok {

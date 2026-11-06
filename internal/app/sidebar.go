@@ -303,8 +303,12 @@ func (a *App) hostEntries(m locales.Messages, h assets.Host) []menuEntry {
 		}})
 	}
 	groups = append(groups, menuSep, menuEntry{Icon: icons.NewFolder, Label: m.NewGroupEllipsis(), Do: func() { a.openGroupForm("", h.ID) }})
-	return []menuEntry{
-		{Icon: icons.Run, Label: m.Connect(), Do: func() { a.Connect(h.ID, openAt{}) }},
+	connect := []menuEntry{{Icon: icons.Run, Label: m.Connect(), Do: func() { a.Connect(h.ID, openAt{}) }}}
+	if h.SSH() && h.Tmux != "" {
+		// A way in should the host's tmux session not start.
+		connect = append(connect, menuEntry{Icon: icons.Terminal, Label: m.ConnectWithoutTmux(), Do: func() { a.ConnectWithoutTmux(h.ID) }})
+	}
+	return append(connect, []menuEntry{
 		{Icon: icons.SplitRight, Label: m.SplitRight(), Disabled: noTab, Do: beside(func(at openAt) { a.Connect(h.ID, at) })},
 		{Icon: icons.Folder, Label: m.OpenFiles(), Disabled: noSSH, Do: func() { a.OpenFiles(h.ID, openAt{}, nil) }},
 		{Icon: icons.Robot, Label: m.OpenAI(), Disabled: noSSH, Do: func() { a.OpenAI(h.ID, openAt{}, 0) }},
@@ -322,7 +326,7 @@ func (a *App) hostEntries(m locales.Messages, h assets.Host) []menuEntry {
 		{Icon: icons.InstallKey, Label: m.InstallPublicKey(), Disabled: noSSH, Do: func() { a.openInstall(h.ID) }},
 		{Icon: icons.Forward, Label: m.NewForwardMenu(), Disabled: noSSH, Do: func() { a.openFwdForm(m, nil, h.ID) }},
 		{Icon: icons.Delete, Label: m.Delete(), Danger: true, Do: func() { a.deleteID, a.deleting = h.ID, true }},
-	}
+	}...)
 }
 
 // hostState is how the sessions open on host id are, the best of them

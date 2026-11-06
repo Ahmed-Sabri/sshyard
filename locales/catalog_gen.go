@@ -9159,6 +9159,76 @@ func (msgs Messages) TmuxUnknownNewTab() string {
 	return Catalog.Format(msgs.locale, "tmuxUnknownNewTab", nil)
 }
 
+// TmuxAutoAttach says "tmux session"
+// in the language the app shows.
+func TmuxAutoAttach() string { return In(i18n.Locale()).TmuxAutoAttach() }
+
+// TmuxAutoAttach says "tmux session"
+// in the language of msgs.
+func (msgs Messages) TmuxAutoAttach() string {
+	return Catalog.Format(msgs.locale, "tmuxAutoAttach", nil)
+}
+
+// TmuxAutoAttachPlaceholder says "Session name (empty is off)"
+// in the language the app shows.
+func TmuxAutoAttachPlaceholder() string { return In(i18n.Locale()).TmuxAutoAttachPlaceholder() }
+
+// TmuxAutoAttachPlaceholder says "Session name (empty is off)"
+// in the language of msgs.
+func (msgs Messages) TmuxAutoAttachPlaceholder() string {
+	return Catalog.Format(msgs.locale, "tmuxAutoAttachPlaceholder", nil)
+}
+
+// TmuxAutoAttachHint says "Each terminal on this host attaches to this tmux session once its shell is ready, creating it when there is none, and…"
+// in the language the app shows.
+func TmuxAutoAttachHint() string { return In(i18n.Locale()).TmuxAutoAttachHint() }
+
+// TmuxAutoAttachHint says "Each terminal on this host attaches to this tmux session once its shell is ready, creating it when there is none, and…"
+// in the language of msgs.
+func (msgs Messages) TmuxAutoAttachHint() string {
+	return Catalog.Format(msgs.locale, "tmuxAutoAttachHint", nil)
+}
+
+// ConnectWithoutTmux says "Connect Without tmux"
+// in the language the app shows.
+func ConnectWithoutTmux() string { return In(i18n.Locale()).ConnectWithoutTmux() }
+
+// ConnectWithoutTmux says "Connect Without tmux"
+// in the language of msgs.
+func (msgs Messages) ConnectWithoutTmux() string {
+	return Catalog.Format(msgs.locale, "connectWithoutTmux", nil)
+}
+
+// TmuxStartMissing says "tmux is not installed on {host}, so its terminals start without a tmux session."
+// in the language the app shows.
+func TmuxStartMissing(host string) string { return In(i18n.Locale()).TmuxStartMissing(host) }
+
+// TmuxStartMissing says "tmux is not installed on {host}, so its terminals start without a tmux session."
+// in the language of msgs.
+func (msgs Messages) TmuxStartMissing(host string) string {
+	return Catalog.Format(msgs.locale, "tmuxStartMissing", map[string]any{"host": host})
+}
+
+// TmuxStartGone says "The tmux session “{name}” is gone, so the terminal was not attached to it again."
+// in the language the app shows.
+func TmuxStartGone(name string) string { return In(i18n.Locale()).TmuxStartGone(name) }
+
+// TmuxStartGone says "The tmux session “{name}” is gone, so the terminal was not attached to it again."
+// in the language of msgs.
+func (msgs Messages) TmuxStartGone(name string) string {
+	return Catalog.Format(msgs.locale, "tmuxStartGone", map[string]any{"name": name})
+}
+
+// TmuxStartFailed says "Could not attach the terminal to its tmux session again: {detail}"
+// in the language the app shows.
+func TmuxStartFailed(detail string) string { return In(i18n.Locale()).TmuxStartFailed(detail) }
+
+// TmuxStartFailed says "Could not attach the terminal to its tmux session again: {detail}"
+// in the language of msgs.
+func (msgs Messages) TmuxStartFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "tmuxStartFailed", map[string]any{"detail": detail})
+}
+
 // BarCPU says "CPU"
 // in the language the app shows.
 func BarCPU() string { return In(i18n.Locale()).BarCPU() }

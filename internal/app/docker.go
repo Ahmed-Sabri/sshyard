@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/Licoy/sshyard/internal/icons"
-	"github.com/Licoy/sshyard/internal/layout"
 	"github.com/Licoy/sshyard/internal/session"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/locales"
@@ -173,26 +172,14 @@ func (a *App) dockerShell(tc *conn, ref string) {
 	if a.docker.info.Sudo {
 		docker = "sudo docker"
 	}
-	id, err := a.Connect(tc.host.ID, openAt{})
-	if err != nil {
-		return
-	}
-	if cn := a.conns[id]; cn != nil {
-		cn.startCmd = docker + " exec -it " + ref + ` sh -c "command -v bash >/dev/null && exec bash || exec sh"`
-	}
-}
-
-// sendStartCmds types the command a terminal was opened for once it is
-// connected (dockerShell).
-func (a *App) sendStartCmds() {
-	for _, cn := range a.conns {
-		if cn.startCmd == "" || cn.kind != layout.Terminal || cn.s == nil || cn.s.Status().State != session.Connected {
-			continue
+	// The container's shell is typed once, without the host's tmux
+	// session.
+	a.openTerminal(tc.host.ID, func(cn *conn) {
+		if cn.start != nil {
+			cn.start.once = docker + " exec -it " + ref + ` sh -c "command -v bash >/dev/null && exec bash || exec sh"`
+			cn.start.host = ""
 		}
-		cmd := cn.startCmd
-		cn.startCmd = ""
-		cn.s.Write([]byte(cmd + "\r"))
-	}
+	})
 }
 
 // dockerPanel is the Docker panel's body.

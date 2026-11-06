@@ -242,7 +242,7 @@ func TestStartupRestoresSavedAILayout(t *testing.T) {
 	if restoredAI == nil || restoredTerm == nil || restoredAI.ai.link != restoredTerm.id || len(restoredAI.ai.items) != 0 || restoredAI.ai.sess != nil {
 		t.Fatal("AI link or empty session not restored")
 	}
-	if restoredTerm.host.ID != term.host.ID || restoredTerm.startCmd != "" || restoredTerm.cwd != "" {
+	if restoredTerm.host.ID != term.host.ID || startOnce(restoredTerm) != "" || restoredTerm.cwd != "" {
 		t.Fatal("restored terminal content")
 	}
 	waitFor(t, tt2, "fresh startup connection", func() bool { return restoredTerm.s.Status().State == session.Connected })
