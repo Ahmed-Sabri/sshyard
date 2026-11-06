@@ -473,6 +473,7 @@ func (a *App) aiComposer(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 		if a.modeOf(cn) == policy.ModeFull {
 			aiBanner(c.Key("fullbar"), tok.Danger, icons.Warning, m.AiFullBar())
 		}
+		a.aiApproval(c, cn, tok, m)
 		box := ui.Column(c.Key("aicompose")).FillWidth().Padding(theme.Space(1)).Gap(theme.Space(1)).
 			Radius(theme.RadiusCard).Background(tok.Fill)
 		edge := tok.Line
@@ -837,7 +838,7 @@ func (a *App) aiSheets(c *ui.Context, m locales.Messages) {
 	tok := currentTokens(c)
 	a.consentSheet(c, m, tok)
 	a.fullSheet(c, m, tok)
-	a.askSheet(c, m, tok)
+	a.askElsewhere(c, m)
 	a.providerSheet(c, m, tok)
 	a.acpSheet(c, m, tok)
 	a.providerDelete(c, m)
@@ -906,81 +907,117 @@ func (a *App) fullSheet(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	}
 }
 
-func (a *App) askSheet(c *ui.Context, m locales.Messages, tok theme.Tokens) {
-	cn := a.pendingAI()
-	if cn == nil {
-		a.askOpen, a.askFor = false, 0
+// aiApproval asks, above the composer of the pane whose agent waits, to
+// allow what the agent wants to do. It stays until answered, or the turn
+// stops: clicking elsewhere leaves it waiting.
+func (a *App) aiApproval(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages) {
+	p := cn.ai.pending
+	if p == nil {
 		return
 	}
-	if a.askFor != cn.id {
-		a.askFor = cn.id
-		a.askOpen = true
+	pr := p.prompt
+	tint := tok.Accent
+	if pr.Decision.Red {
+		tint = tok.Danger
 	}
-	if !a.askOpen {
-		a.answerAI(cn, policy.Reject)
-		a.askFor = 0
-		return
-	}
-	pr := cn.ai.pending.prompt
-	sheet(ui.Modal(c.Key("aiask"), &a.askOpen, func() {
-		a.aiSheetStop(c)
-		ui.Column(c).Gap(12).Width(520).Children(func() {
-			where := m.AiWhereRemote(cn.host.Label())
-			if pr.Action.Where == policy.Local {
-				where = m.AiWhereLocal()
-			}
-			cat := string(pr.Decision.Category)
-			if cat == "" {
-				cat = pr.Action.Tool
-			}
-			title := ui.Text(c, where+" · "+cat+" · "+riskOf(m, pr.Decision.Risk)).FontSize(theme.Title3).FontWeight(600)
+	ui.Column(c.Key("aiask")).FillWidth().Padding(theme.Space(2), theme.Space(3)).Gap(theme.Space(2)).
+		Radius(theme.RadiusCard).Background(tint.Alpha(0.12)).Border(1, tint.Alpha(0.22)).Label(m.AiApprovalTitle()).Children(func() {
+		where := m.AiWhereRemote(a.pv(cn.host.Label()))
+		if pr.Action.Where == policy.Local {
+			where = m.AiWhereLocal()
+		}
+		cat := string(pr.Decision.Category)
+		if cat == "" {
+			cat = pr.Action.Tool
+		}
+		ui.Row(c.Key("head")).FillWidth().Gap(theme.Space(2)).AlignItems(ui.Center).Children(func() {
+			ui.Icon(c, icons.ModeAsk.SVG).Size(14, 14).Shrink(0).TextColor(tint)
+			title := ui.Text(c, where+" · "+cat+" · "+riskOf(m, pr.Decision.Risk)).FontSize(theme.Footnote).FontWeight(600).Shrink(1).MinWidth(0)
 			if pr.Decision.Red {
 				title.TextColor(tok.Danger)
 			}
-			if pr.Action.Command != "" {
-				ui.Text(c, pr.Action.Command).Font("monospace").FontSize(theme.Footnote).FillWidth()
-			}
-			if pr.Action.Dir != "" {
-				ui.Text(c, m.AiDir()+": "+pr.Action.Dir).FontSize(theme.Caption).TextColor(tok.TextMuted)
-			}
-			if pr.Diff != "" {
-				ui.Checkbox(c.Key("onlydiff"), &cn.ai.onlyDiff, m.AiOnlyChanges())
-				diff := pr.Diff
-				if cn.ai.onlyDiff {
-					diff = agent.OnlyChanges(diff)
-				}
-				gutterScroll(c, ui.Scroll(c.Key("diff")).Height(220).FillWidth()).Children(func() {
-					ui.Text(c, diff).Font("monospace").FontSize(theme.Caption).FillWidth()
-				})
-			} else if pr.Action.Path != "" {
-				ui.Text(c, pr.Action.Path).Font("monospace").FontSize(theme.Footnote).FillWidth()
-			}
-			if pr.Action.Reason != "" {
-				ui.Text(c, m.AiReason()+": "+pr.Action.Reason).FontSize(theme.Footnote).FillWidth()
-			}
-			if pr.ReviewNote != "" {
-				ui.Text(c, m.AiReviewNote()+": "+reviewNoteText(m, pr.ReviewNote)).FontSize(theme.Footnote).TextColor(tok.TextMuted).FillWidth()
-			}
-			ui.Row(c).Gap(8).Children(func() {
-				if pill(c, m.AiAllowOnce(), false, pr.Decision.Red, false) {
-					a.answerAI(cn, policy.AllowOnce)
-				}
-				if pr.Decision.Similar {
-					if pill(c, m.AiAllowSimilar(), false, pr.Decision.Red, false) {
-						a.answerAI(cn, policy.AllowSimilar)
-					}
-				}
-				ui.Spacer(c)
-				el, ok := pillEl(c, m.AiReject(), false, true, false)
-				a.aiHold.apply(c, cn.ai.pending, el)
-				if ok {
-					a.answerAI(cn, policy.Reject)
-				}
-			})
 		})
-	}), tok)
-	if !a.askOpen && cn.ai != nil && cn.ai.pending != nil {
-		a.answerAI(cn, policy.Reject)
-		a.askFor = 0
+		if pr.Action.Command != "" {
+			gutterScroll(c, ui.Scroll(c.Key("cmd")).MaxHeight(96).FillWidth()).Children(func() {
+				toolDetailText(c, pr.Action.Command, tok.Text, theme.Footnote)
+			})
+		}
+		if pr.Action.Dir != "" {
+			ui.Text(c, m.AiDir()+": "+pr.Action.Dir).FontSize(theme.Caption).TextColor(tok.TextMuted)
+		}
+		if pr.Diff != "" {
+			ui.Checkbox(c.Key("onlydiff"), &cn.ai.onlyDiff, m.AiOnlyChanges())
+			diff := pr.Diff
+			if cn.ai.onlyDiff {
+				diff = agent.OnlyChanges(diff)
+			}
+			gutterScroll(c, ui.Scroll(c.Key("diff")).MaxHeight(180).FillWidth()).Children(func() {
+				toolDetailText(c, diff, tok.Text, theme.Caption)
+			})
+		} else if pr.Action.Path != "" {
+			ui.Text(c, pr.Action.Path).Font("monospace").FontSize(theme.Footnote).FillWidth()
+		}
+		if pr.Action.Reason != "" {
+			ui.Text(c, m.AiReason()+": "+pr.Action.Reason).FontSize(theme.Footnote).FillWidth()
+		}
+		if pr.ReviewNote != "" {
+			ui.Text(c, m.AiReviewNote()+": "+reviewNoteText(m, pr.ReviewNote)).FontSize(theme.Footnote).TextColor(tok.TextMuted).FillWidth()
+		}
+		ui.Row(c.Key("answers")).FillWidth().Wrap().Gap(theme.Space(2)).AlignItems(ui.Center).Children(func() {
+			if pill(c, m.AiAllowOnce(), false, pr.Decision.Red, false) {
+				a.answerAI(cn, policy.AllowOnce)
+			}
+			if pr.Decision.Similar {
+				if pill(c, m.AiAllowSimilar(), false, pr.Decision.Red, false) {
+					a.answerAI(cn, policy.AllowSimilar)
+				}
+			}
+			ui.Spacer(c)
+			el, ok := pillEl(c, m.AiReject(), false, true, false)
+			// Reject takes the keyboard in the focused pane, unless a
+			// question is being written there.
+			if a.focused() == cn && cn.ai.input == "" {
+				a.aiHold.apply(c, p, el)
+			}
+			if ok {
+				a.answerAI(cn, policy.Reject)
+			}
+		})
+	})
+}
+
+// askElsewhere tells of an approval waiting in an AI pane out of sight
+// with a toast that shows the pane, and closes the toast once the pane
+// shows or the approval is no longer waiting.
+func (a *App) askElsewhere(c *ui.Context, m locales.Messages) {
+	for id, p := range a.askToasts {
+		cn := a.conns[id]
+		if cn == nil || cn.ai == nil || cn.ai.pending != p || a.paneShown(id) {
+			c.CloseToast(askToastID(id))
+			delete(a.askToasts, id)
+		}
 	}
+	for id, cn := range a.conns {
+		if cn.ai == nil || cn.ai.pending == nil || a.askToasts[id] == cn.ai.pending || a.paneShown(id) {
+			continue
+		}
+		if a.askToasts == nil {
+			a.askToasts = map[int]*aiPend{}
+		}
+		a.askToasts[id] = cn.ai.pending
+		c.AddToast(ui.Toast{ID: askToastID(id), Title: m.AiApprovalWaiting(a.pv(cn.host.Label())), Timeout: -1,
+			Action: m.AiShowApproval(), OnAction: func() {
+				if cn := a.conns[id]; cn != nil {
+					a.showPane(cn)
+				}
+			}})
+	}
+}
+
+func askToastID(id int) string { return "aiask:" + strconv.Itoa(id) }
+
+// paneShown reports whether pane id is in the workspace's tab on screen.
+func (a *App) paneShown(id int) bool {
+	t, _ := a.ws.Locate(id)
+	return a.page == pageWorkspace && t != nil && t == a.ws.ActiveTab()
 }

@@ -458,8 +458,9 @@ type App struct {
 	// provDelete asks before removing a provider and its keychain key.
 	provDeleting bool
 	provDeleteID string
-	askOpen      bool
-	askFor       int
+	// askToasts are the toasts telling of approvals waiting in panes out
+	// of sight, by pane, with the approval each tells of.
+	askToasts map[int]*aiPend
 	// mcp is the agents' server on this computer (open API, MCP and
 	// skill); mcpAsk the
 	// risk notice shown before it is turned on, mcpPort the port as edited

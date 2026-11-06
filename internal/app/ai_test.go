@@ -730,7 +730,7 @@ func TestAIConfirmSheetAndStop(t *testing.T) {
 	tt.Key(stopMods, ui.KeyPeriod)
 	tt.Frame()
 	if tt.HasText("Allow once") {
-		t.Fatal("stop left the sheet open")
+		t.Fatal("stop left the approval waiting")
 	}
 	c := a.conns[id]
 	if c.ai.pending != nil || c.ai.running {

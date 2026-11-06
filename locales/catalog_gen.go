@@ -5781,6 +5781,36 @@ func (msgs Messages) AiReject() string {
 	return Catalog.Format(msgs.locale, "aiReject", nil)
 }
 
+// AiApprovalTitle says "Approval needed"
+// in the language the app shows.
+func AiApprovalTitle() string { return In(i18n.Locale()).AiApprovalTitle() }
+
+// AiApprovalTitle says "Approval needed"
+// in the language of msgs.
+func (msgs Messages) AiApprovalTitle() string {
+	return Catalog.Format(msgs.locale, "aiApprovalTitle", nil)
+}
+
+// AiApprovalWaiting says "The AI on {host} is waiting for your approval"
+// in the language the app shows.
+func AiApprovalWaiting(host string) string { return In(i18n.Locale()).AiApprovalWaiting(host) }
+
+// AiApprovalWaiting says "The AI on {host} is waiting for your approval"
+// in the language of msgs.
+func (msgs Messages) AiApprovalWaiting(host string) string {
+	return Catalog.Format(msgs.locale, "aiApprovalWaiting", map[string]any{"host": host})
+}
+
+// AiShowApproval says "Show"
+// in the language the app shows.
+func AiShowApproval() string { return In(i18n.Locale()).AiShowApproval() }
+
+// AiShowApproval says "Show"
+// in the language of msgs.
+func (msgs Messages) AiShowApproval() string {
+	return Catalog.Format(msgs.locale, "aiShowApproval", nil)
+}
+
 // AiInsert says "Insert into terminal"
 // in the language the app shows.
 func AiInsert() string { return In(i18n.Locale()).AiInsert() }
