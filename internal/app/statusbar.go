@@ -18,7 +18,7 @@ const statusBarHeight = 30
 // shortcuts. The settings
 // are in the title bar.
 func (a *App) statusBar(c *ui.Context, m locales.Messages, tok theme.Tokens) {
-	ui.Box(c).Height(1).Shrink(0).FillWidth().Background(tok.GlassEdge)
+	a.backgroundSeparator(c, tok.GlassEdge, a.chromeFill(tok.Glass)).Height(1).Shrink(0).FillWidth()
 	ui.Row(c.Key("statusbar")).Height(statusBarHeight).Shrink(0).FillWidth().Padding(0, 6, 0, 12).Gap(theme.Space(3)).
 		AlignItems(ui.Center).Background(a.chromeFill(tok.Glass)).Children(func() {
 		if a.sidebarHidden() && (IconButton{Icon: icons.ShowSidebar, Label: m.ShowSidebar(), Size: Small}).Clicked(c, "showsidebar") {

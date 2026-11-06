@@ -6,22 +6,17 @@ import (
 )
 
 // drawBackground paints one image in window coordinates, before all regions.
-// Each region owns its tint so overlapping default fills never multiply it.
+// Regions own their tint; pane backgrounds replace it rather than multiplying it.
 func (a *App) drawBackground(c *ui.Context, tok theme.Tokens) {
 	if !a.hasBackground() {
 		return
-	}
-	bmp := a.background.bmp
-	fit := ui.Cover
-	if a.effectiveBackground().Fit == "contain" {
-		fit = ui.Contain
 	}
 	z := c.Zoom()
 	c.Root().Background(tok.Canvas).Draw(func(p *ui.Painter, r ui.Rect) {
 		if a.zoom.desktop > 0 {
 			a.zoom.device = p.Scale() / z
 		}
-		p.Image(bmp, r, fit)
+		a.paintBackground(p, r, tok)
 	})
 }
 
@@ -42,7 +37,7 @@ func (a *App) backgroundContentFill(col ui.Color) ui.Color {
 }
 
 func (a *App) contentRegionFill(col ui.Color) ui.Color {
-	if a.hasBackground() && (a.page == pageSettings || len(a.ws.Tabs) == 0) {
+	if a.hasBackground() {
 		return a.backgroundContentFill(col)
 	}
 	return ui.Transparent
@@ -81,4 +76,40 @@ func (a *App) contentSurfaceFill(col ui.Color) ui.Color {
 
 func (a *App) contentCard(c *ui.Context, tok theme.Tokens) ui.Element {
 	return card(c, tok).Background(a.contentSurfaceFill(tok.Inset))
+}
+
+// paintBackground resets even alpha images and contain letterboxes to the same
+// opaque canvas before drawing the image in full-window coordinates.
+func (a *App) paintBackground(p *ui.Painter, window ui.Rect, tok theme.Tokens) {
+	fit := ui.Cover
+	if a.effectiveBackground().Fit == "contain" {
+		fit = ui.Contain
+	}
+	p.Fill(window, tok.Canvas, 0)
+	p.Image(a.background.bmp, window, fit)
+}
+
+// paneBackground replaces the region's tint inside the card, preserving each
+// pane's palette without compounding ContentOpacity with the region beneath it.
+func (a *App) paneBackground(c *ui.Context, pane ui.Element, tok theme.Tokens, col ui.Color) {
+	if !a.hasBackground() {
+		return
+	}
+	w, h := c.Size()
+	window := ui.Rect{W: w, H: h}
+	pane.Background(ui.Transparent).Draw(func(p *ui.Painter, r ui.Rect) {
+		p.Clip(r, theme.RadiusCard, func() {
+			a.paintBackground(p, window, tok)
+			p.Fill(r, a.backgroundContentFill(col), 0)
+		})
+	})
+}
+
+// backgroundSeparator gives a standalone edge the same image tint as its band.
+func (a *App) backgroundSeparator(c *ui.Context, edge, fill ui.Color) ui.Element {
+	el := ui.Box(c).Background(edge)
+	if a.hasBackground() {
+		el.Background(fill).Draw(func(p *ui.Painter, r ui.Rect) { p.Fill(r, edge, 0) })
+	}
+	return el
 }

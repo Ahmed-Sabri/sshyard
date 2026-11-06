@@ -110,10 +110,10 @@ func (a *App) View(c *ui.Context) {
 						return
 					}
 					if len(a.panels) > 0 {
-						ui.Box(c).Width(1).FillHeight().Shrink(0).Background(tok.Line)
+						a.backgroundSeparator(c, tok.Line, a.backgroundInspectorFill(tok.Canvas)).Width(1).FillHeight().Shrink(0)
 						a.inspectorView(c, m, tok)
 					}
-					ui.Box(c).Width(1).FillHeight().Shrink(0).Background(tok.GlassEdge)
+					a.backgroundSeparator(c, tok.GlassEdge, a.chromeFill(tok.Glass)).Width(1).FillHeight().Shrink(0)
 					a.railView(c, m, tok)
 				})
 				if a.page == pageWorkspace {

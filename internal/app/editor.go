@@ -579,7 +579,7 @@ func (a *App) editorWindowView(c *ui.Context, cn *conn) {
 
 	ui.Column(c.Key("editorwin")).Fill().TextColor(tok.Text).Children(func() {
 		a.editorTabs(c, cn, tok, m)
-		ui.Box(c).Height(1).Shrink(0).FillWidth().Background(tok.Line)
+		a.backgroundSeparator(c, tok.Line, a.editorChromeFill(tok.Sidebar)).Height(1).Shrink(0).FillWidth()
 		pane := func() { a.editorPane(c, cn, ed, tok, m) }
 		if a.settings.EditorTreeHidden {
 			ui.Column(c.Key("edpane")).Grow(1).FillWidth().MinHeight(0).Background(a.editorWindowFill(tok.Canvas)).Children(pane)

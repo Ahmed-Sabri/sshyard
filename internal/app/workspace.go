@@ -326,6 +326,7 @@ func (a *App) paneView(c *ui.Context, t *layout.Tab, n *layout.Node, tok theme.T
 	var pane ui.Element
 	ui.Box(c.Key("pw:" + strconv.Itoa(n.ID))).Fill().Padding(paneGap / 2).Children(func() {
 		pane = ui.Column(c.Key("pane:" + strconv.Itoa(n.ID))).Grow(1).Shrink(1).MinHeight(0).Radius(theme.RadiusCard).Clip().Background(a.contentFill(bg, paneAlpha))
+		a.paneBackground(c, pane, tok, bg)
 		theme.Shadow(tok.Card).On(pane)
 		// The ask names a pane by number. Outline that pane in the accent
 		// color, wider than the focus hairline, until the question is gone.
