@@ -622,6 +622,13 @@ func TestHostMetricsDisabledWhenGlobalOff(t *testing.T) {
 	if tt.HasText("Disabled globally") {
 		t.Fatal("hint while the bar is on")
 	}
+	// Scroll the metrics control into view at the default window height.
+	r := mustFind(t, tt, a.form.auth)
+	tt.Scroll(r.X+r.W/2, r.Y+r.H/2, 0, 300)
+	r = mustFind(t, tt, "Off")
+	if r.W <= 0 || r.H <= 0 {
+		t.Fatalf("metrics option is clipped: %v", r)
+	}
 	mustClick(t, tt, "Off")
 	tt.Frame()
 	if a.form == nil || a.form.metricsIdx != 2 {
@@ -637,9 +644,7 @@ func TestHostMetricsDisabledWhenGlobalOff(t *testing.T) {
 	if !tt.HasText("Disabled globally") {
 		t.Fatalf("no hint: %q", tt.Texts())
 	}
-	if err := tt.Click("Off"); err == nil && a.form.metricsIdx != 0 {
-		t.Fatalf("disabled control changed to %d", a.form.metricsIdx)
-	}
+	mustClick(t, tt, "Off")
 	if a.form.metricsIdx != 0 {
 		t.Fatalf("index %d", a.form.metricsIdx)
 	}
