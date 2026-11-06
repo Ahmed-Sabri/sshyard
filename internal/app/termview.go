@@ -47,6 +47,7 @@ type termView struct {
 	rightClick   string
 	copyOnSelect bool
 	cursorStyle  vt.CursorStyle // user default, unless the program sets DECSCUSR
+	cursorBlink  bool           // user preference can force a steady cursor
 	blink        cursorBlinkClock
 	// openLink opens a web address clicked with linkMods; link is the one
 	// under the pointer while they are held, underlined.
@@ -111,7 +112,7 @@ type termView struct {
 }
 
 func newTermView(t ptyTarget, fontSize float32) *termView {
-	return &termView{target: t, fontSize: fontSize}
+	return &termView{target: t, fontSize: fontSize, cursorBlink: true}
 }
 
 // metrics measures the cells of the terminal font at a scale, again

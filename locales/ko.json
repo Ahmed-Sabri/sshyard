@@ -173,6 +173,8 @@
   "interfaceFont": "인터페이스 글꼴",
   "cursorShape": "커서 모양",
   "cursorShapeNote": "기본 커서 모양을 설정하며 터미널 프로그램에서 변경할 수 있습니다",
+  "terminalCursorBlink": "커서 깜박임",
+  "terminalCursorBlinkNote": "끄면 커서가 깜박이지 않고 계속 표시됩니다",
   "cursorBlock": "블록",
   "cursorBar": "세로 막대",
   "cursorUnderline": "밑줄",

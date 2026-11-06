@@ -18,7 +18,7 @@ type cursorBlinkClock struct {
 func (v *termView) showCursor(p *ui.Painter, focused bool) bool {
 	snap := &v.snap
 	visible := snap.CursorVisible && snap.CursorY >= 0 && snap.CursorY < snap.Rows && v.preedit == ""
-	if !visible || !focused || !snap.CursorBlink {
+	if !visible || !focused || !v.cursorBlink || !snap.CursorBlink {
 		v.blink.at = time.Time{}
 		return visible
 	}

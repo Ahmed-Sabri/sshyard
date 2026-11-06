@@ -173,6 +173,8 @@
   "interfaceFont": "界面字体",
   "cursorShape": "光标形状",
   "cursorShapeNote": "设置默认光标形状，终端程序可自行切换",
+  "terminalCursorBlink": "光标闪烁",
+  "terminalCursorBlinkNote": "关闭后光标保持常亮",
   "cursorBlock": "方块",
   "cursorBar": "竖线",
   "cursorUnderline": "下划线",

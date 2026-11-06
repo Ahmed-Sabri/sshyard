@@ -447,6 +447,11 @@ func (a *App) prefTerminal(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 				s.TerminalCursorStyle, *changed = codes[slices.Index(names, cur)], true
 			}
 		})
+		g.row(m.TerminalCursorBlink(), m.TerminalCursorBlinkNote(), func() {
+			if formSwitch(c.Key("cursorblink"), &s.TerminalCursorBlink).Label(m.TerminalCursorBlink()).Changed() {
+				*changed = true
+			}
+		})
 		g.row(m.TerminalFont(), "", func() {
 			if f, ok := a.fontPicker(c, "termfont", m.TerminalFont(), m.SystemDefault(), &a.fonts.termSel, s.TerminalFont, fonts.ForTerminal(a.fonts.list, s.MonospacedOnly)); ok {
 				s.TerminalFont, *changed = f, true

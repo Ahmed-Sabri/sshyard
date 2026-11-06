@@ -173,6 +173,8 @@
   "interfaceFont": "Interface font",
   "cursorShape": "Cursor shape",
   "cursorShapeNote": "Sets the default cursor shape; terminal programs can change it",
+  "terminalCursorBlink": "Cursor blinking",
+  "terminalCursorBlinkNote": "Turn off to keep the cursor steady",
   "cursorBlock": "Block",
   "cursorBar": "Vertical bar",
   "cursorUnderline": "Underline",

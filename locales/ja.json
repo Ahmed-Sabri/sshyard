@@ -173,6 +173,8 @@
   "interfaceFont": "インターフェースのフォント",
   "cursorShape": "カーソルの形状",
   "cursorShapeNote": "既定のカーソル形状を設定します（端末プログラムが変更する場合があります）",
+  "terminalCursorBlink": "カーソルの点滅",
+  "terminalCursorBlinkNote": "オフにするとカーソルは点滅せずに表示されます",
   "cursorBlock": "ブロック",
   "cursorBar": "縦線",
   "cursorUnderline": "下線",

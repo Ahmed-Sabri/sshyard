@@ -19,6 +19,7 @@ type cursorBlinkFixture struct {
 	bounds  ui.Rect
 	pal     theme.Terminal
 	focused bool
+	paints  int
 }
 
 func newCursorBlinkFixture(dark bool) *cursorBlinkFixture {
@@ -26,6 +27,7 @@ func newCursorBlinkFixture(dark bool) *cursorBlinkFixture {
 	f.v = newTermView(paintTarget{f.term}, 13)
 	f.tt = ui.NewTester(func(c *ui.Context) {
 		ui.Box(c).Fill().Draw(func(p *ui.Painter, r ui.Rect) {
+			f.paints++
 			f.bounds = r
 			f.v.paint(p, r, &f.pal, f.focused)
 		})

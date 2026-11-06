@@ -546,6 +546,7 @@ func (a *App) termElement(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn
 		a.openContext(tb.X, tb.Y, entries)
 	}
 	term.TextCaret(tv.caret())
+	tv.cursorBlink = a.settings.TerminalCursorBlink
 	tv.cursorStyle = vt.CursorBlock
 	switch a.settings.TerminalCursorStyle {
 	case settings.CursorBar:

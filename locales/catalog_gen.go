@@ -1775,6 +1775,26 @@ func (msgs Messages) CursorShapeNote() string {
 	return Catalog.Format(msgs.locale, "cursorShapeNote", nil)
 }
 
+// TerminalCursorBlink says "Cursor blinking"
+// in the language the app shows.
+func TerminalCursorBlink() string { return In(i18n.Locale()).TerminalCursorBlink() }
+
+// TerminalCursorBlink says "Cursor blinking"
+// in the language of msgs.
+func (msgs Messages) TerminalCursorBlink() string {
+	return Catalog.Format(msgs.locale, "terminalCursorBlink", nil)
+}
+
+// TerminalCursorBlinkNote says "Turn off to keep the cursor steady"
+// in the language the app shows.
+func TerminalCursorBlinkNote() string { return In(i18n.Locale()).TerminalCursorBlinkNote() }
+
+// TerminalCursorBlinkNote says "Turn off to keep the cursor steady"
+// in the language of msgs.
+func (msgs Messages) TerminalCursorBlinkNote() string {
+	return Catalog.Format(msgs.locale, "terminalCursorBlinkNote", nil)
+}
+
 // CursorBlock says "Block"
 // in the language the app shows.
 func CursorBlock() string { return In(i18n.Locale()).CursorBlock() }
