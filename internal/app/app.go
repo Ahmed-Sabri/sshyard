@@ -196,11 +196,19 @@ type conn struct {
 	// closes. Files panes are not numbered. 0 is not a terminal pane.
 	termNo int
 	// metCPU, metDisk, metNet, metGPU and metLoad are this pane's metrics
-	// popovers.
-	metCPU, metDisk, metNet, metGPU, metLoad bool
+	// popovers; metMore is the popover of the items the bar has no room
+	// for, metMoreItem the key of the item whose details it shows.
+	metCPU, metDisk, metNet, metGPU, metLoad, metMore bool
+	metMoreItem                                       string
 	// metCompact drops the words of the metrics bar, for a pane too
 	// narrow for them (metricsCompact)
 	metCompact bool
+	// metW is the width each item of the metrics bar took when last
+	// shown, by key, for laying out the bar before it is shown;
+	// metShown is metCompact as the bar was last shown, the mode of the
+	// widths the last frame measured
+	metW     map[string]float32
+	metShown bool
 	// ai is set for an AI pane. It has no session of its own.
 	ai *aiState
 }

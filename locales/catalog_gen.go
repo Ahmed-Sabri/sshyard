@@ -9399,6 +9399,16 @@ func (msgs Messages) BarGPU() string {
 	return Catalog.Format(msgs.locale, "barGPU", nil)
 }
 
+// MetricsMore says "More metrics"
+// in the language the app shows.
+func MetricsMore() string { return In(i18n.Locale()).MetricsMore() }
+
+// MetricsMore says "More metrics"
+// in the language of msgs.
+func (msgs Messages) MetricsMore() string {
+	return Catalog.Format(msgs.locale, "metricsMore", nil)
+}
+
 // MaterialSection says "Translucency"
 // in the language the app shows.
 func MaterialSection() string { return In(i18n.Locale()).MaterialSection() }

@@ -929,6 +929,7 @@
   "barDisk": "ディスク",
   "barLoad": "負荷",
   "barGPU": "GPU",
+  "metricsMore": "その他のメトリクス",
   "materialSection": "半透明効果",
   "materialChrome": "サイドバーとタイトルバー",
   "materialContent": "コンテンツ領域",

@@ -273,6 +273,78 @@ func TestMetricsBarAndCollector(t *testing.T) {
 	}
 }
 
+func TestMetricsFit(t *testing.T) {
+	ws := []float32{50, 100, 50, 80}
+	for _, c := range []struct {
+		avail float32
+		want  int
+	}{
+		{286, 4}, // all of them, with their gaps, and no more button
+		{285, 3}, // three beside the more button
+		{226, 3},
+		{225, 2},
+		{10, 0},
+	} {
+		if got := metricsFit(ws, c.avail, 2); got != c.want {
+			t.Errorf("avail %v: %d, want %d", c.avail, got, c.want)
+		}
+	}
+	// An item not measured yet is shown, to be measured.
+	if got := metricsFit([]float32{0, 0, 0}, 10, 2); got != 3 {
+		t.Errorf("unmeasured: %d", got)
+	}
+}
+
+// A pane too narrow for every metric shows those that fit and the rest
+// under the more button, not cut off.
+func TestMetricsBarOverflow(t *testing.T) {
+	ex := &frameExec{frames: linuxFrames(false)}
+	srv := startMetricSrv(t, ex.run)
+	a, tt := newTestApp(t)
+	connected(t, a, tt, srv)
+	waitSample(t, tt)
+	tt.Frame()
+	if tt.HasText("More metrics") {
+		t.Fatalf("more button in a wide pane: %q", tt.Texts())
+	}
+
+	a.SplitFocused(layout.Right)
+	tt.Frame()
+	a.SplitFocused(layout.Right)
+	waitFor(t, tt, "three terminals", func() bool { return terminalsUp(a) == 3 })
+	waitFor(t, tt, "more buttons", func() bool {
+		return textCount(tt, "More metrics") > 0 && !textsContain(tt, "Load 0.15 0.10 0.05")
+	})
+	if textCount(tt, "CPU 50%") == 0 {
+		t.Fatalf("first item overflowed: %q", tt.Texts())
+	}
+	mustClick(t, tt, "More metrics")
+	tt.Frame()
+	if !tt.HasText("Load 0.15 0.10 0.05") || tt.HasText("Load average") {
+		t.Fatalf("more popover misses the load: %q", tt.Texts())
+	}
+	// An item in it opens its details there, and closes them.
+	mustClick(t, tt, "Load 0.15 0.10 0.05")
+	tt.Frame()
+	for _, s := range []string{"Load average", "1 minute  0.15", "Shared by 2 CPUs"} {
+		if !tt.HasText(s) {
+			t.Fatalf("load details miss %q: %q", s, tt.Texts())
+		}
+	}
+	mustClick(t, tt, "Load 0.15 0.10 0.05")
+	tt.Frame()
+	if tt.HasText("Load average") || !tt.HasText("Load 0.15 0.10 0.05") {
+		t.Fatalf("load details stayed open: %q", tt.Texts())
+	}
+	mustClick(t, tt, "Load 0.15 0.10 0.05")
+	tt.Frame()
+	mustClick(t, tt, "More metrics")
+	tt.Frame()
+	if textsContain(tt, "Load 0.15 0.10 0.05") {
+		t.Fatalf("more popover stayed open: %q", tt.Texts())
+	}
+}
+
 func TestMetricsBarMenu(t *testing.T) {
 	ex := &frameExec{frames: linuxFrames(false)}
 	srv := startMetricSrv(t, ex.run)

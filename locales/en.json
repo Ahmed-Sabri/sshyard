@@ -929,6 +929,7 @@
   "barDisk": "Disk",
   "barLoad": "Load",
   "barGPU": "GPU",
+  "metricsMore": "More metrics",
   "materialSection": "Translucency",
   "materialChrome": "Sidebar & Title Bar",
   "materialContent": "Content Area",

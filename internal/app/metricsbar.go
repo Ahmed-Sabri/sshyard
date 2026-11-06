@@ -433,15 +433,9 @@ type metric struct {
 }
 
 // metricItem shows it, its menu that of the bar; one that opens a popover
-// lights in a rounded shape under the pointer and while open.
+// lights in a rounded shape under the pointer and while open. It keeps
+// the width the item took in the last frame.
 func (a *App) metricItem(c *ui.Context, cn *conn, m locales.Messages, tok theme.Tokens, fam string, it metric) {
-	if cn.metCompact {
-		for i := range it.parts {
-			if it.parts[i].icon != nil {
-				it.parts[i].word = ""
-			}
-		}
-	}
 	var el ui.Element
 	if it.open != nil {
 		el = ui.ButtonBase(c.Key(it.key)).Cursor(ui.CursorPointer)
@@ -453,7 +447,7 @@ func (a *App) metricItem(c *ui.Context, cn *conn, m locales.Messages, tok theme.
 		}
 		if el.Clicked() {
 			was := *it.open
-			cn.metCPU, cn.metDisk, cn.metNet, cn.metGPU, cn.metLoad = false, false, false, false, false
+			closeMetricPops(cn)
 			*it.open = !was
 		}
 	} else {
@@ -461,24 +455,117 @@ func (a *App) metricItem(c *ui.Context, cn *conn, m locales.Messages, tok theme.
 	}
 	el.Label(it.label).Tooltip(it.tip).Height(18).Padding(0, 5).Gap(8).AlignItems(ui.Center).Radius(theme.RadiusSmall).Shrink(0)
 	a.metricsItemMenu(el, cn, m)
-	el.Children(func() {
-		for _, p := range it.parts {
-			ui.Row(c).Gap(4).AlignItems(ui.Center).PassThrough().Children(func() {
-				if p.icon != nil {
-					ui.Icon(c, p.icon.SVG).Size(12, 12).Shrink(0).TextColor(p.col)
-				}
-				if p.word != "" {
-					ui.Text(c, p.word).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine()
-				}
-				ui.Text(c, p.value).Font(fam).FontSize(theme.Caption).FontWeight(500).TextColor(p.col).SingleLine()
-			})
-		}
-	})
+	el.Children(func() { metricParts(c, tok, fam, it.parts, cn.metCompact) })
 	if it.open != nil {
 		ui.Popover(c, el, it.open, func() {
 			ui.Column(c).Padding(8, 10).Gap(6).Children(it.pop)
 		})
 	}
+	if w := el.Bounds().W; w > 0 && cn.metShown == cn.metCompact && w != cn.metW[it.key] {
+		if cn.metW == nil {
+			cn.metW = map[string]float32{}
+		}
+		cn.metW[it.key] = w
+		c.Invalidate()
+	}
+}
+
+func closeMetricPops(cn *conn) {
+	cn.metCPU, cn.metDisk, cn.metNet, cn.metGPU, cn.metLoad, cn.metMore = false, false, false, false, false, false
+}
+
+// metricParts shows the figures of an item; compact drops the words of
+// those with an icon.
+func metricParts(c *ui.Context, tok theme.Tokens, fam string, parts []metricPart, compact bool) {
+	for _, p := range parts {
+		ui.Row(c).Gap(4).AlignItems(ui.Center).PassThrough().Children(func() {
+			if p.icon != nil {
+				ui.Icon(c, p.icon.SVG).Size(12, 12).Shrink(0).TextColor(p.col)
+			}
+			if p.word != "" && (!compact || p.icon == nil) {
+				ui.Text(c, p.word).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine()
+			}
+			ui.Text(c, p.value).Font(fam).FontSize(theme.Caption).FontWeight(500).TextColor(p.col).SingleLine()
+		})
+	}
+}
+
+// metricsMoreW is the width of the more button of the metrics bar.
+const metricsMoreW = 20
+
+// metricsFit is how many items of widths ws, in order, the bar shows in
+// avail: all of them when they fit, otherwise those that fit beside the
+// more button. An item not measured yet (0) is shown, to be measured.
+func metricsFit(ws []float32, avail, gap float32) int {
+	var total float32
+	for i, w := range ws {
+		if i > 0 {
+			total += gap
+		}
+		total += w
+	}
+	if total <= avail {
+		return len(ws)
+	}
+	room := avail - metricsMoreW - gap
+	var used float32
+	for i, w := range ws {
+		if i > 0 {
+			used += gap
+		}
+		used += w
+		if used > room {
+			return i
+		}
+	}
+	return len(ws)
+}
+
+// metricsMore is the more button of the metrics bar, its popover the
+// items the bar has no room for, with their words, each tip its own. One
+// with details opens them under it, one at a time, as its own popover
+// does on the bar.
+func (a *App) metricsMore(c *ui.Context, cn *conn, m locales.Messages, tok theme.Tokens, fam string, hidden []metric) {
+	el := IconButton{Icon: icons.More, Label: m.MetricsMore(), Size: Tiny, Active: cn.metMore}.Show(c, "mmore")
+	el.Shrink(0)
+	a.metricsItemMenu(el, cn, m)
+	if el.Clicked() {
+		was := cn.metMore
+		closeMetricPops(cn)
+		cn.metMore = !was
+		cn.metMoreItem = ""
+	}
+	ui.Popover(c, el, &cn.metMore, func() {
+		ui.Column(c).Padding(8, 10).Gap(6).Children(func() {
+			for _, it := range hidden {
+				open := it.pop != nil && cn.metMoreItem == it.key
+				var row ui.Element
+				if it.pop != nil {
+					row = ui.ButtonBase(c.Key("mm:" + it.key)).Cursor(ui.CursorPointer).Expanded(open)
+					switch {
+					case open || row.Pressed():
+						row.Background(tok.Press)
+					case row.Hovered():
+						row.Background(tok.Hover)
+					}
+					if row.Clicked() {
+						open = !open
+						cn.metMoreItem = ""
+						if open {
+							cn.metMoreItem = it.key
+						}
+					}
+				} else {
+					row = ui.Row(c.Key("mm:" + it.key))
+				}
+				row.Label(it.label).Tooltip(it.tip).Height(18).Padding(0, 5).Gap(8).AlignItems(ui.Center).Radius(theme.RadiusSmall)
+				row.Children(func() { metricParts(c, tok, fam, it.parts, false) })
+				if open {
+					ui.Column(c.Key("mmd:"+it.key)).Padding(2, 5, 4, 5).Gap(6).Children(it.pop)
+				}
+			}
+		})
+	})
 }
 
 func (a *App) metricsBar(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages) {
@@ -492,11 +579,14 @@ func (a *App) metricsBar(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 	row := ui.Row(c.Key("metrics")).MinHeight(24).Shrink(0).FillWidth().Padding(2, 6, 2, 6).Gap(2).AlignItems(ui.Center).
 		FontSize(theme.Caption).Label(m.MetricsBar()).ClipX()
 	if w := row.Bounds().W; w > 0 && (w < metricsCompact) != cn.metCompact {
-		// Measured anew: lay the items out again with or without words.
+		// Measured anew: lay the items out again with or without words,
+		// and measure them again.
 		cn.metCompact = w < metricsCompact
+		cn.metW = nil
 		c.Invalidate()
 	}
 	a.metricsItemMenu(row, cn, m)
+	defer func() { cn.metShown = cn.metCompact }()
 	row.Children(func() {
 		if reason != "" {
 			why := metricsReason(m, reason)
@@ -518,7 +608,8 @@ func (a *App) metricsBar(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 			cpuPct = fmtPct(rd.CPU)
 		}
 		cpu := m.MetricsCPU(cpuPct)
-		a.metricItem(c, cn, m, tok, fam, metric{key: "mcpu", label: cpu, tip: cpu, open: &cn.metCPU,
+		var items []metric
+		items = append(items, metric{key: "mcpu", label: cpu, tip: cpu, open: &cn.metCPU,
 			parts: []metricPart{{icons.CPU, m.BarCPU(), cpuPct, meterColor(tok, rd.CPU, rd.CPUOK)}},
 			pop:   func() { a.cpuPop(c, m, tok, fam, rd) }})
 
@@ -534,7 +625,7 @@ func (a *App) metricsBar(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 		if swap != "" {
 			parts = append(parts, metricPart{nil, m.BarSwap(), swap, meterColor(tok, rd.SwapPct, true)})
 		}
-		a.metricItem(c, cn, m, tok, fam, metric{key: "mmem", label: mem, tip: mem, parts: parts})
+		items = append(items, metric{key: "mmem", label: mem, tip: mem, parts: parts})
 
 		diskPct := dash
 		diskOK := false
@@ -544,7 +635,7 @@ func (a *App) metricsBar(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 			diskHot, diskOK = v.Pct, true
 		}
 		disk := m.MetricsDisk(diskPct)
-		a.metricItem(c, cn, m, tok, fam, metric{key: "mdisk", label: disk, tip: disk, open: &cn.metDisk,
+		items = append(items, metric{key: "mdisk", label: disk, tip: disk, open: &cn.metDisk,
 			parts: []metricPart{{icons.Disk, m.BarDisk(), diskPct, meterColor(tok, diskHot, diskOK)}},
 			pop:   func() { a.diskPop(c, m, fam, rd) }})
 
@@ -554,7 +645,7 @@ func (a *App) metricsBar(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 			up, down, netCol = fmtRate(rd.NetUp), fmtRate(rd.NetDown), tok.Accent
 		}
 		netLabel := m.MetricsNetLabel(up, down)
-		a.metricItem(c, cn, m, tok, fam, metric{key: "mnet", label: netLabel, tip: a.netTip(m, rd, netLabel), open: &cn.metNet,
+		items = append(items, metric{key: "mnet", label: netLabel, tip: a.netTip(m, rd, netLabel), open: &cn.metNet,
 			parts: []metricPart{{icons.Sent, "", up, netCol}, {icons.Received, "", down, netCol}},
 			pop:   func() { a.netPop(c, m, fam, rd) }})
 
@@ -570,7 +661,7 @@ func (a *App) metricsBar(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 		case rd.LoadOK:
 			loads, loadCol = fmtLoad(rd.Load1), tok.Text
 		}
-		a.metricItem(c, cn, m, tok, fam, metric{key: "mload", label: load, tip: load, open: &cn.metLoad,
+		items = append(items, metric{key: "mload", label: load, tip: load, open: &cn.metLoad,
 			parts: []metricPart{{icons.Load, m.BarLoad(), loads, loadCol}},
 			pop:   func() { a.loadPop(c, m, fam, rd) }})
 
@@ -583,9 +674,35 @@ func (a *App) metricsBar(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 				gpct, gok = p, true
 			}
 			gpu := m.MetricsGPU(gp)
-			a.metricItem(c, cn, m, tok, fam, metric{key: "mgpu", label: gpu, tip: gpu, open: &cn.metGPU,
+			items = append(items, metric{key: "mgpu", label: gpu, tip: gpu, open: &cn.metGPU,
 				parts: []metricPart{{icons.GPU, m.BarGPU(), gp, meterColor(tok, gpct, gok)}},
 				pop:   func() { a.gpuPop(c, m, fam, rd) }})
+		}
+
+		// As many items as the bar has room for, beside the latency at
+		// its end and its padding; the rest in the more popover.
+		const gap = 2
+		n := len(items)
+		if w := row.Bounds().W; w > 0 {
+			ws := make([]float32, len(items))
+			for i, it := range items {
+				ws[i] = cn.metW[it.key]
+			}
+			n = metricsFit(ws, w-12-cn.metW["mlat"]-2*gap, gap)
+		}
+		for _, it := range items[:n] {
+			a.metricItem(c, cn, m, tok, fam, it)
+		}
+		hidden := items[n:]
+		for _, it := range hidden {
+			if it.open != nil {
+				*it.open = false
+			}
+		}
+		if len(hidden) > 0 {
+			a.metricsMore(c, cn, m, tok, fam, hidden)
+		} else {
+			cn.metMore = false
 		}
 		ui.Spacer(c)
 		a.latencyItem(c, cn, tok, m, fam)

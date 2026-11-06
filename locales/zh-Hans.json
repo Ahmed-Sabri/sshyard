@@ -929,6 +929,7 @@
   "barDisk": "磁盘",
   "barLoad": "负载",
   "barGPU": "GPU",
+  "metricsMore": "更多指标",
   "materialSection": "半透明效果",
   "materialChrome": "侧边栏与标题栏",
   "materialContent": "内容区域",
