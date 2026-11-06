@@ -66,22 +66,24 @@ type Terminal struct {
 	// scrollback, which a later resize that makes room brings back.
 	pushed int
 
-	cur        cursor
-	saved      cursor
-	savedAlt   cursor
-	top, bot   int // scroll region, inclusive
-	tabs       []bool
-	modes      Modes
-	style      CursorStyle
-	title      string
-	cwd        string
-	cwdHost    string // the host the cwd report named
-	remoteHost string // OSC 1337 RemoteHost's host
-	g0Graphics bool
-	g1Graphics bool
-	shiftOut   bool
-	lastRune   rune
-	joinNext   bool // the last rune printed was ZWJ
+	cur         cursor
+	saved       cursor
+	savedAlt    cursor
+	top, bot    int // scroll region, inclusive
+	tabs        []bool
+	modes       Modes
+	style       CursorStyle
+	styleSet    bool // the program explicitly selected a shape with DECSCUSR
+	cursorBlink bool
+	title       string
+	cwd         string
+	cwdHost     string // the host the cwd report named
+	remoteHost  string // OSC 1337 RemoteHost's host
+	g0Graphics  bool
+	g1Graphics  bool
+	shiftOut    bool
+	lastRune    rune
+	joinNext    bool // the last rune printed was ZWJ
 
 	// parser
 	csiBytes int
@@ -155,7 +157,8 @@ func (t *Terminal) reset() {
 	t.savedAlt = cursor{}
 	t.top, t.bot = 0, t.rows-1
 	t.modes = Modes{CursorVisible: true, AutoWrap: true}
-	t.style = CursorBlock
+	t.style, t.styleSet = CursorBlock, false
+	t.cursorBlink = true
 	t.g0Graphics, t.g1Graphics, t.shiftOut = false, false, false
 	t.resetTabs()
 	t.onlyOSC = false

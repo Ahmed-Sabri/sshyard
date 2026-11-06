@@ -9,6 +9,7 @@ import (
 	"github.com/Licoy/sshyard/internal/session"
 	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/internal/theme"
+	"github.com/Licoy/sshyard/internal/vt"
 	"github.com/Licoy/sshyard/locales"
 	"github.com/egoist/mygo/ui"
 )
@@ -501,6 +502,7 @@ func (a *App) termElement(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn
 	term := ui.Box(c.Key("term")).Grow(1).FillWidth().Focusable().FocusRing(false).Clip().
 		Cursor(ui.CursorText).Label(m.Terminal() + " " + cn.host.Label())
 	if a.focusReq == cn.id && a.page == pageWorkspace {
+		tv.blink.at = time.Time{}
 		term.Focus()
 		a.focusReq = 0
 	}
@@ -544,6 +546,13 @@ func (a *App) termElement(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn
 		a.openContext(tb.X, tb.Y, entries)
 	}
 	term.TextCaret(tv.caret())
+	tv.cursorStyle = vt.CursorBlock
+	switch a.settings.TerminalCursorStyle {
+	case settings.CursorBar:
+		tv.cursorStyle = vt.CursorBar
+	case settings.CursorUnderline:
+		tv.cursorStyle = vt.CursorUnderline
+	}
 	tv.clear = a.clearContent
 	tv.hl, tv.hlOverride, tv.hlFullScreen = a.highlighter(), a.settings.Highlight.Override, a.settings.Highlight.FullScreen
 	term.Draw(func(p *ui.Painter, r ui.Rect) { tv.paint(p, r, pal, has) })

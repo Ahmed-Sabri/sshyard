@@ -55,6 +55,8 @@ type Settings struct {
 	UIZoom int `json:"uiZoom,omitempty"`
 	// UIFont is the interface's font family, "" for the system's.
 	UIFont string `json:"uiFont,omitempty"`
+	// TerminalCursorStyle selects the terminal cursor shape.
+	TerminalCursorStyle string `json:"terminalCursorStyle"`
 	// TerminalFont is the terminal's font family, "" for the system's
 	// monospaced font.
 	TerminalFont string `json:"terminalFont,omitempty"`
@@ -555,9 +557,16 @@ const (
 	TrayIconColor = "color"
 )
 
+// Terminal cursor shapes.
+const (
+	CursorBlock     = "block"
+	CursorBar       = "bar"
+	CursorUnderline = "underline"
+)
+
 // Default returns the defaults.
 func Default() Settings {
-	return Settings{Background: DefaultBackground(), RememberLayout: true, Theme: theme.Auto, CloseBehavior: CloseToTray, TrayIcon: TrayIconColor, CheckUpdates: true, UpdateIntervalHours: 1, TerminalFontSize: 13, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, FilesSplit: 50, FilesEdge: FilesRight, TerminalRightClick: RightClickMenu, EditorTreeWidth: 240, OSC52Write: OSC52Ask, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
+	return Settings{Background: DefaultBackground(), RememberLayout: true, Theme: theme.Auto, CloseBehavior: CloseToTray, TrayIcon: TrayIconColor, CheckUpdates: true, UpdateIntervalHours: 1, TerminalFontSize: 13, TerminalCursorStyle: CursorBlock, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, FilesSplit: 50, FilesEdge: FilesRight, TerminalRightClick: RightClickMenu, EditorTreeWidth: 240, OSC52Write: OSC52Ask, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
 		AIDefaultAgent: "builtin", AIDefaultMode: "ask", AIReviewStrictness: AIReviewStandard, AIContextLines: 200, AIAuditRetentionDays: 90, AIRedact: true, MCPPort: MCPPortDefault, LocalKeys: true, Highlight: Highlight{On: true}, RenewalNotify: true}
 }
 
@@ -601,6 +610,11 @@ func (s *Settings) Normalize() {
 	}
 	if s.UIZoom != 0 && !slices.Contains(UIZooms, s.UIZoom) {
 		s.UIZoom = d.UIZoom
+	}
+	switch s.TerminalCursorStyle {
+	case CursorBlock, CursorBar, CursorUnderline:
+	default:
+		s.TerminalCursorStyle = d.TerminalCursorStyle
 	}
 	if s.TerminalFontSize < 8 || s.TerminalFontSize > 32 {
 		s.TerminalFontSize = d.TerminalFontSize

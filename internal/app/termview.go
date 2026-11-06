@@ -46,6 +46,8 @@ type termView struct {
 	// it is made (settings.CopyOnSelect).
 	rightClick   string
 	copyOnSelect bool
+	cursorStyle  vt.CursorStyle // user default, unless the program sets DECSCUSR
+	blink        cursorBlinkClock
 	// openLink opens a web address clicked with linkMods; link is the one
 	// under the pointer while they are held, underlined.
 	openLink func(string)
@@ -481,7 +483,7 @@ func (v *termView) paint(p *ui.Painter, r ui.Rect, pal *theme.Terminal, focused 
 	}
 
 	// cursor
-	if snap.CursorVisible && snap.CursorY >= 0 && snap.CursorY < snap.Rows && v.preedit == "" {
+	if v.showCursor(p, focused) {
 		cx := ox + float32(min(snap.CursorX, snap.Cols-1))*cw
 		cy := oy + float32(snap.CursorY)*ch
 		w := cw
@@ -493,12 +495,16 @@ func (v *termView) paint(p *ui.Painter, r ui.Rect, pal *theme.Terminal, focused 
 			}
 		}
 		cur := ui.Rect{X: cx, Y: cy, W: w, H: ch}
+		style := v.cursorStyle
+		if snap.CursorStyleSet {
+			style = snap.CursorStyle
+		}
 		switch {
 		case !focused:
 			p.Stroke(cur, pal.Cursor, 0, 1/s)
-		case snap.CursorStyle == vt.CursorUnderline:
+		case style == vt.CursorUnderline:
 			p.Fill(ui.Rect{X: cx, Y: cy + ch - 2, W: w, H: 2}, pal.Cursor, 0)
-		case snap.CursorStyle == vt.CursorBar:
+		case style == vt.CursorBar:
 			p.Fill(ui.Rect{X: cx, Y: cy, W: max(2/s, 1.5), H: ch}, pal.Cursor, 0)
 		default:
 			p.Fill(cur, pal.Cursor, 0)
@@ -584,6 +590,7 @@ func (v *termView) send(b []byte) {
 	if len(b) == 0 {
 		return
 	}
+	v.blink.at = time.Time{}
 	v.offset = 0
 	v.selected = false
 	if _, err := v.target.Write(b); errors.Is(err, session.ErrInputBusy) && v.inputError != nil {
@@ -625,6 +632,7 @@ func (v *termView) focusChanged(focused bool) {
 	}
 	first := v.focusSeen == 0
 	v.focusSeen = seen
+	v.blink.at = time.Time{}
 	if first {
 		return
 	}
@@ -721,6 +729,7 @@ func (v *termView) input(ev ui.InputEvent, cb clipboard) bool {
 		v.send([]byte(strings.ReplaceAll(ev.Text, "\n", "\r")))
 		return true
 	case ui.InputCompose:
+		v.blink.at = time.Time{}
 		v.preedit = ev.Text
 		return true
 	case ui.InputCommand:

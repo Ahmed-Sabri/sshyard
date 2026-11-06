@@ -1755,6 +1755,56 @@ func (msgs Messages) InterfaceFont() string {
 	return Catalog.Format(msgs.locale, "interfaceFont", nil)
 }
 
+// CursorShape says "Cursor shape"
+// in the language the app shows.
+func CursorShape() string { return In(i18n.Locale()).CursorShape() }
+
+// CursorShape says "Cursor shape"
+// in the language of msgs.
+func (msgs Messages) CursorShape() string {
+	return Catalog.Format(msgs.locale, "cursorShape", nil)
+}
+
+// CursorShapeNote says "Sets the default cursor shape; terminal programs can change it"
+// in the language the app shows.
+func CursorShapeNote() string { return In(i18n.Locale()).CursorShapeNote() }
+
+// CursorShapeNote says "Sets the default cursor shape; terminal programs can change it"
+// in the language of msgs.
+func (msgs Messages) CursorShapeNote() string {
+	return Catalog.Format(msgs.locale, "cursorShapeNote", nil)
+}
+
+// CursorBlock says "Block"
+// in the language the app shows.
+func CursorBlock() string { return In(i18n.Locale()).CursorBlock() }
+
+// CursorBlock says "Block"
+// in the language of msgs.
+func (msgs Messages) CursorBlock() string {
+	return Catalog.Format(msgs.locale, "cursorBlock", nil)
+}
+
+// CursorBar says "Vertical bar"
+// in the language the app shows.
+func CursorBar() string { return In(i18n.Locale()).CursorBar() }
+
+// CursorBar says "Vertical bar"
+// in the language of msgs.
+func (msgs Messages) CursorBar() string {
+	return Catalog.Format(msgs.locale, "cursorBar", nil)
+}
+
+// CursorUnderline says "Underline"
+// in the language the app shows.
+func CursorUnderline() string { return In(i18n.Locale()).CursorUnderline() }
+
+// CursorUnderline says "Underline"
+// in the language of msgs.
+func (msgs Messages) CursorUnderline() string {
+	return Catalog.Format(msgs.locale, "cursorUnderline", nil)
+}
+
 // TerminalFont says "Terminal font"
 // in the language the app shows.
 func TerminalFont() string { return In(i18n.Locale()).TerminalFont() }

@@ -439,6 +439,14 @@ func (a *App) materialSection(c *ui.Context, m locales.Messages, tok theme.Token
 func (a *App) prefTerminal(c *ui.Context, m locales.Messages, tok theme.Tokens, s *settings.Settings, changed *bool) {
 	a.schemeSection(c, m, tok, s, changed)
 	a.settingsSection(c, tok, icons.Edit, tok.TintAt(4), m.FontsSection(), func(g *settingsGroup) {
+		g.row(m.CursorShape(), m.CursorShapeNote(), func() {
+			codes := []string{settings.CursorBlock, settings.CursorBar, settings.CursorUnderline}
+			names := []string{m.CursorBlock(), m.CursorBar(), m.CursorUnderline()}
+			cur := names[max(slices.Index(codes, s.TerminalCursorStyle), 0)]
+			if formSelect(c.Key("cursorstyle"), &cur, names).Label(m.CursorShape()).Width(180).Changed() {
+				s.TerminalCursorStyle, *changed = codes[slices.Index(names, cur)], true
+			}
+		})
 		g.row(m.TerminalFont(), "", func() {
 			if f, ok := a.fontPicker(c, "termfont", m.TerminalFont(), m.SystemDefault(), &a.fonts.termSel, s.TerminalFont, fonts.ForTerminal(a.fonts.list, s.MonospacedOnly)); ok {
 				s.TerminalFont, *changed = f, true

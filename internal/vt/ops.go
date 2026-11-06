@@ -401,13 +401,17 @@ func (t *Terminal) csi(final byte) {
 	if len(t.inter) > 0 {
 		switch {
 		case t.inter[0] == ' ' && final == 'q':
-			switch t.param(0, 1) {
+			param := t.param(0, 1)
+			switch param {
 			case 1, 2:
-				t.style = CursorBlock
+				t.style, t.styleSet = CursorBlock, true
 			case 3, 4:
-				t.style = CursorUnderline
+				t.style, t.styleSet = CursorUnderline, true
 			case 5, 6:
-				t.style = CursorBar
+				t.style, t.styleSet = CursorBar, true
+			}
+			if param >= 1 && param <= 6 {
+				t.cursorBlink = param%2 == 1
 			}
 		case t.inter[0] == '!' && final == 'p':
 			t.softReset()

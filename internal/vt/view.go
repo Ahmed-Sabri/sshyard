@@ -27,6 +27,8 @@ type Snapshot struct {
 	CursorX, CursorY int
 	CursorVisible    bool
 	CursorStyle      CursorStyle
+	CursorStyleSet   bool // the program selected CursorStyle with DECSCUSR
+	CursorBlink      bool
 	// Scrollback is how many lines are above the screen; Offset how many
 	// of them the view is scrolled up.
 	Scrollback, Offset int
@@ -52,8 +54,8 @@ func (t *Terminal) SnapshotInto(s *Snapshot, offset int) {
 	*s = Snapshot{
 		Cols: t.cols, Rows: t.rows,
 		Scrollback: t.scrollbackLen(), Offset: offset,
-		CursorStyle: t.style,
-		Modes:       t.modes,
+		CursorStyle: t.style, CursorStyleSet: t.styleSet, CursorBlink: t.cursorBlink,
+		Modes: t.modes,
 	}
 	s.Modes.AltScreen = t.altActive
 	s.First = t.firstLine() + t.historyLen() - t.rows - offset
