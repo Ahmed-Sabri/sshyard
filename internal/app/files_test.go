@@ -691,3 +691,56 @@ func TestFilesEdgeSetting(t *testing.T) {
 		t.Errorf("the files pane is not under the terminal: %d, axis %v", tab.Count(layout.Files), tab.Root.Axis)
 	}
 }
+
+// TestFilesSortByHeader: a click on a column's header sorts the rows by
+// it, a second reverses them and a third shows them as listed, folders
+// first throughout; the row chosen stays chosen.
+func TestFilesSortByHeader(t *testing.T) {
+	a, tt, fc, root := filesPaneAs(t, false, nil)
+	write(t, filepath.Join(root, "a.txt"), "12345678")
+	write(t, filepath.Join(root, "B.txt"), "1")
+	write(t, filepath.Join(root, "c.txt"), "1234")
+	write(t, filepath.Join(root, "dir", "inner.txt"), "x")
+	a.refreshSides(fc)
+	waitFor(t, tt, "c.txt", func() bool { return tt.HasText("c.txt") })
+	s := &fc.fs.remote
+	names := func() []string {
+		var out []string
+		for _, e := range s.entries {
+			out = append(out, e.Name)
+		}
+		return out
+	}
+	click := func(title string, want ...string) {
+		t.Helper()
+		tt.Advance(time.Second) // not a double click with the one before
+		mustClick(t, tt, title)
+		tt.Frame()
+		if got := names(); !slices.Equal(got, want) {
+			t.Fatalf("after clicking %s: %q, want %q", title, got, want)
+		}
+	}
+	listed := []string{"dir", "a.txt", "B.txt", "c.txt"}
+	if got := names(); !slices.Equal(got, listed) {
+		t.Fatalf("listed %q", got)
+	}
+	mustClick(t, tt, "B.txt")
+	click("Size", "dir", "B.txt", "c.txt", "a.txt")
+	click("Size", "dir", "a.txt", "c.txt", "B.txt")
+	click("Size", listed...)
+	if s.sort != (ui.SortOrder{}) {
+		t.Errorf("the third click left the sort %+v", s.sort)
+	}
+	click("Name", listed...)
+	click("Name", "dir", "c.txt", "B.txt", "a.txt")
+	if e, ok := selected(s.sel, s.entries); !ok || e.Name != "B.txt" || !s.chosen.Has("B.txt") {
+		t.Errorf("sorting chose %d of %q", s.sel, names())
+	}
+	// A folder listed again keeps the order.
+	a.refreshSides(fc)
+	waitFor(t, tt, "listed again", func() bool { return s.sel == -1 })
+	if got := names(); !slices.Equal(got, []string{"dir", "c.txt", "B.txt", "a.txt"}) {
+		t.Errorf("listed again %q", got)
+	}
+	click("Name", listed...)
+}

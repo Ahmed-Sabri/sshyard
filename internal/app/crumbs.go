@@ -443,7 +443,7 @@ func (a *App) reveal(cn *conn, remote bool, dir, name string) {
 	sd := cn.fs.side(remote)
 	sd.reveal = name
 	if dir == sd.dir {
-		sd.show(dir, sd.entries)
+		sd.show(dir, sd.listed)
 		return
 	}
 	a.goTo(cn, remote, dir)

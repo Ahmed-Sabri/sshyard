@@ -1,6 +1,7 @@
 package app
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -32,6 +33,12 @@ type sideList struct {
 	sel     int
 	chosen  ui.Selection[string]
 	list    ui.ListState
+	// listed are the entries as the folder listed them, folders first by
+	// name. entries are them in the order sorted says, which follows sort,
+	// the table's: a click on a column's header sorts by it, another
+	// reverses it and a third goes back to the order listed (resort).
+	listed       []sftpsvc.Entry
+	sort, sorted ui.SortOrder
 	// reveal is the name chosen once the folder lists, for an entry gone
 	// to from the breadcrumbs.
 	reveal string
@@ -97,14 +104,69 @@ func (sd *sideList) show(dir string, es []sftpsvc.Entry) {
 			}
 		}
 	}
-	sd.dir, sd.entries, sd.sel = dir, es, -1
+	sd.dir, sd.listed, sd.entries, sd.sel = dir, es, sortedEntries(es, sd.sorted), -1
 	if name := sd.reveal; name != "" {
 		sd.reveal = ""
-		if i := slices.IndexFunc(es, func(e sftpsvc.Entry) bool { return e.Name == name }); i >= 0 {
+		if i := slices.IndexFunc(sd.entries, func(e sftpsvc.Entry) bool { return e.Name == name }); i >= 0 {
 			sd.only(i)
 			sd.list.ScrollTo(i, ui.Center)
 		}
 	}
+}
+
+// resort sorts the entries as the table's header was clicked to: by a
+// column, ascending, then descending, then in the order listed. The row
+// last chosen stays so.
+func (sd *sideList) resort() {
+	if sd.sort == sd.sorted {
+		return
+	}
+	if sd.sort.Column == sd.sorted.Column && sd.sorted.Descending && !sd.sort.Descending {
+		sd.sort = ui.SortOrder{} // the third click
+	}
+	sd.sorted = sd.sort
+	name := ""
+	if e, ok := selected(sd.sel, sd.entries); ok {
+		name = e.Name
+	}
+	sd.entries = sortedEntries(sd.listed, sd.sorted)
+	if name != "" {
+		sd.sel = slices.IndexFunc(sd.entries, func(e sftpsvc.Entry) bool { return e.Name == name })
+	}
+}
+
+// sortedEntries are es sorted by the column o names, folders still first
+// and names breaking ties; es as they are for no column.
+func sortedEntries(es []sftpsvc.Entry, o ui.SortOrder) []sftpsvc.Entry {
+	if o.Column == "" {
+		return es
+	}
+	out := slices.Clone(es)
+	slices.SortStableFunc(out, func(a, b sftpsvc.Entry) int {
+		if a.IsDir != b.IsDir {
+			if a.IsDir {
+				return -1
+			}
+			return 1
+		}
+		var r int
+		switch o.Column {
+		case colSize:
+			if !a.IsDir { // a folder's size is not its contents'
+				r = cmp.Compare(a.Size, b.Size)
+			}
+		case colModified:
+			r = a.ModTime.Compare(b.ModTime)
+		case colPerm:
+			r = cmp.Compare(a.Mode.Perm(), b.Mode.Perm())
+		}
+		r = cmp.Or(r, cmp.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name)), cmp.Compare(a.Name, b.Name))
+		if o.Descending {
+			r = -r
+		}
+		return r
+	})
+	return out
 }
 
 // only chooses row i alone.
@@ -272,6 +334,7 @@ func newFilesState(onChange func()) *filesState {
 		sd.sel = -1
 		sd.list.Selected, sd.list.Selection = &sd.sel, &sd.chosen
 		sd.list.DragSelect, sd.list.RoundRows = true, true
+		sd.list.Sort = &sd.sort
 	}
 	return fs
 }
@@ -761,10 +824,12 @@ var deleteMods, deleteKey = func() (ui.Modifiers, ui.Key) {
 // click opens the menu of the entries chosen (fileEntries), or of the
 // folder off the rows. opened reports a double click on a chosen row's
 // name, which opens the row as Submitted does. The table shows the
-// columns its width has room for (tableColumns).
+// columns its width has room for (tableColumns), whose headers sort the
+// rows (resort).
 func (a *App) fileTable(c *ui.Context, cn *conn, remote bool, m locales.Messages, tok theme.Tokens) (tb ui.Element, opened bool) {
 	fs := cn.fs
 	sd := fs.side(remote)
+	sd.resort()
 	es, list := sd.entries, &sd.list
 	list.Key = func(i int) any { return es[i].Name }
 	list.Label = func(i int) string { return es[i].Name }
@@ -773,13 +838,13 @@ func (a *App) fileTable(c *ui.Context, cn *conn, remote bool, m locales.Messages
 	for i, id := range ids {
 		switch id {
 		case colName:
-			cols[i] = ui.TableColumn{ID: id, Title: m.ColName()}
+			cols[i] = ui.TableColumn{ID: id, Title: m.ColName(), Sortable: true}
 		case colSize:
-			cols[i] = ui.TableColumn{ID: id, Title: m.ColSize(), Width: 80, Align: ui.End}
+			cols[i] = ui.TableColumn{ID: id, Title: m.ColSize(), Width: 80, Align: ui.End, Sortable: true}
 		case colModified:
-			cols[i] = ui.TableColumn{ID: id, Title: m.ColModified(), Width: 130}
+			cols[i] = ui.TableColumn{ID: id, Title: m.ColModified(), Width: 130, Sortable: true}
 		case colPerm:
-			cols[i] = ui.TableColumn{ID: id, Title: m.InfoPermissions(), Width: 150}
+			cols[i] = ui.TableColumn{ID: id, Title: m.InfoPermissions(), Width: 150, Sortable: true}
 		}
 	}
 	key, side := "ltable", 0
