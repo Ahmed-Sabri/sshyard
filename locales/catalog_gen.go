@@ -11545,6 +11545,68 @@ func (msgs Messages) SecretsReasonUnavailable() string {
 	return Catalog.Format(msgs.locale, "secretsReasonUnavailable", nil)
 }
 
+// SecretsReasonLinuxUnknown says "The Linux credential operation failed; check your desktop session and system keyring."
+// in the language the app shows.
+func SecretsReasonLinuxUnknown() string { return In(i18n.Locale()).SecretsReasonLinuxUnknown() }
+
+// SecretsReasonLinuxUnknown says "The Linux credential operation failed; check your desktop session and system keyring."
+// in the language of msgs.
+func (msgs Messages) SecretsReasonLinuxUnknown() string {
+	return Catalog.Format(msgs.locale, "secretsReasonLinuxUnknown", nil)
+}
+
+// SecretsReasonLinuxDependency says "Install or update libsecret to 0.19 or later and enable a Secret Service provider."
+// in the language the app shows.
+func SecretsReasonLinuxDependency() string { return In(i18n.Locale()).SecretsReasonLinuxDependency() }
+
+// SecretsReasonLinuxDependency says "Install or update libsecret to 0.19 or later and enable a Secret Service provider."
+// in the language of msgs.
+func (msgs Messages) SecretsReasonLinuxDependency() string {
+	return Catalog.Format(msgs.locale, "secretsReasonLinuxDependency", nil)
+}
+
+// SecretsReasonLinuxSessionBus says "Start SSHYard in the same normal-user desktop session and check the session D-Bus."
+// in the language the app shows.
+func SecretsReasonLinuxSessionBus() string { return In(i18n.Locale()).SecretsReasonLinuxSessionBus() }
+
+// SecretsReasonLinuxSessionBus says "Start SSHYard in the same normal-user desktop session and check the session D-Bus."
+// in the language of msgs.
+func (msgs Messages) SecretsReasonLinuxSessionBus() string {
+	return Catalog.Format(msgs.locale, "secretsReasonLinuxSessionBus", nil)
+}
+
+// SecretsReasonLinuxAccessDenied says "The current user or access policy denied credential access; ask your administrator to check the policy."
+// in the language the app shows.
+func SecretsReasonLinuxAccessDenied() string {
+	return In(i18n.Locale()).SecretsReasonLinuxAccessDenied()
+}
+
+// SecretsReasonLinuxAccessDenied says "The current user or access policy denied credential access; ask your administrator to check the policy."
+// in the language of msgs.
+func (msgs Messages) SecretsReasonLinuxAccessDenied() string {
+	return Catalog.Format(msgs.locale, "secretsReasonLinuxAccessDenied", nil)
+}
+
+// SecretsReasonLinuxStartFailed says "The credential service could not start in your user session; check the service."
+// in the language the app shows.
+func SecretsReasonLinuxStartFailed() string { return In(i18n.Locale()).SecretsReasonLinuxStartFailed() }
+
+// SecretsReasonLinuxStartFailed says "The credential service could not start in your user session; check the service."
+// in the language of msgs.
+func (msgs Messages) SecretsReasonLinuxStartFailed() string {
+	return Catalog.Format(msgs.locale, "secretsReasonLinuxStartFailed", nil)
+}
+
+// SecretsReasonLinuxLocked says "Unlock the current user’s system keyring and try again."
+// in the language the app shows.
+func SecretsReasonLinuxLocked() string { return In(i18n.Locale()).SecretsReasonLinuxLocked() }
+
+// SecretsReasonLinuxLocked says "Unlock the current user’s system keyring and try again."
+// in the language of msgs.
+func (msgs Messages) SecretsReasonLinuxLocked() string {
+	return Catalog.Format(msgs.locale, "secretsReasonLinuxLocked", nil)
+}
+
 // SecretsReasonCancelled says "System authorization was cancelled."
 // in the language the app shows.
 func SecretsReasonCancelled() string { return In(i18n.Locale()).SecretsReasonCancelled() }

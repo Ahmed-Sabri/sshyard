@@ -20,8 +20,13 @@ func mapErr(err error) error {
 		return nil
 	case errors.Is(err, mygo.ErrSecretNotFound):
 		return ErrNotFound
-	case errors.Is(err, errors.ErrUnsupported):
+	}
+	err = mapLinuxServiceError(err)
+	if errors.Is(err, errors.ErrUnsupported) {
 		return errors.Join(ErrUnavailable, err)
+	}
+	if _, ok := err.(*LinuxServiceError); ok {
+		return err
 	}
 	if matches := osStatusSuffix.FindStringSubmatch(err.Error()); len(matches) == 2 {
 		if code, e := strconv.Atoi(matches[1]); e == nil {

@@ -259,7 +259,8 @@ func snippetErrorText(m locales.Messages, err error) string {
 	}
 	var op *keychain.OpError
 	var system *keychain.SystemError
-	if errors.As(err, &op) || errors.As(err, &system) {
+	var linux *keychain.LinuxServiceError
+	if errors.As(err, &op) || errors.As(err, &system) || errors.As(err, &linux) {
 		return unlockErrorText(m, err)
 	}
 	for _, known := range []error{keychain.ErrLocked, keychain.ErrBusy, keychain.ErrMasterMissing, keychain.ErrMasterInvalid, keychain.ErrCorrupt, keychain.ErrVersion, keychain.ErrUnavailable} {

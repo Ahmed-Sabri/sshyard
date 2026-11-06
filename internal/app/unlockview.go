@@ -82,6 +82,35 @@ func (a *App) unlockModal(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 
 // Only known reasons and operation names enter the interface, never raw errors.
 func unlockErrorText(m locales.Messages, err error) string {
+	reason := unlockErrorReason(m, err)
+	stage := m.SecretsStageOpen()
+	var op *keychain.OpError
+	if errors.As(err, &op) {
+		switch op.Op {
+		case "lock":
+			stage = m.SecretsStageLock()
+		case "master-read":
+			stage = m.SecretsStageReadMaster()
+		case "master-write":
+			stage = m.SecretsStageWriteMaster()
+		case "master-verify":
+			stage = m.SecretsStageVerifyMaster()
+		case "file-read":
+			stage = m.SecretsStageReadFile()
+		case "file-decrypt":
+			stage = m.SecretsStageDecrypt()
+		case "file-write":
+			stage = m.SecretsStageWriteFile()
+		}
+	}
+	return m.SecretsFailureDetail(stage, reason)
+}
+
+func unlockErrorReason(m locales.Messages, err error) string {
+	var linux *keychain.LinuxServiceError
+	if errors.As(err, &linux) {
+		return linuxServiceReason(m, linux.Kind)
+	}
 	reason := m.SecretsReasonSystem()
 	switch {
 	case errors.Is(err, os.ErrPermission):
@@ -117,25 +146,22 @@ func unlockErrorText(m locales.Messages, err error) string {
 		}
 		reason = m.SecretsSystemCode(reason, strconv.Itoa(system.Code))
 	}
-	stage := m.SecretsStageOpen()
-	var op *keychain.OpError
-	if errors.As(err, &op) {
-		switch op.Op {
-		case "lock":
-			stage = m.SecretsStageLock()
-		case "master-read":
-			stage = m.SecretsStageReadMaster()
-		case "master-write":
-			stage = m.SecretsStageWriteMaster()
-		case "master-verify":
-			stage = m.SecretsStageVerifyMaster()
-		case "file-read":
-			stage = m.SecretsStageReadFile()
-		case "file-decrypt":
-			stage = m.SecretsStageDecrypt()
-		case "file-write":
-			stage = m.SecretsStageWriteFile()
-		}
+	return reason
+}
+
+func linuxServiceReason(m locales.Messages, kind keychain.LinuxServiceErrorKind) string {
+	switch kind {
+	case keychain.LinuxServiceDependency:
+		return m.SecretsReasonLinuxDependency()
+	case keychain.LinuxServiceSessionBus:
+		return m.SecretsReasonLinuxSessionBus()
+	case keychain.LinuxServiceAccessDenied:
+		return m.SecretsReasonLinuxAccessDenied()
+	case keychain.LinuxServiceStartFailed:
+		return m.SecretsReasonLinuxStartFailed()
+	case keychain.LinuxServiceLocked:
+		return m.SecretsReasonLinuxLocked()
+	default:
+		return m.SecretsReasonLinuxUnknown()
 	}
-	return m.SecretsFailureDetail(stage, reason)
 }

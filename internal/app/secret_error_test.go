@@ -39,3 +39,43 @@ func TestSecretStoreErrorTextSanitizesTypedErrors(t *testing.T) {
 		})
 	}
 }
+
+func TestLinuxSecretErrorsSafeAndSpecific(t *testing.T) {
+	for _, lang := range []string{"en", "zh-Hans", "zh-Hant", "ko", "ja"} {
+		m := locales.In(lang)
+		for _, tc := range linuxSecretReasons(m) {
+			cause := &keychain.LinuxServiceError{Kind: tc.kind, Err: fmt.Errorf("private-token /private/keyring: %w", errors.ErrUnsupported)}
+			for _, err := range []error{cause, &keychain.OpError{Op: "master-write", Err: errors.Join(keychain.ErrUnavailable, cause)}} {
+				stage := m.SecretsStageOpen()
+				var op *keychain.OpError
+				if errors.As(err, &op) {
+					stage = m.SecretsStageWriteMaster()
+				}
+				want := m.SecretsFailureDetail(stage, tc.reason)
+				if got := secretStoreErrorText(m, err); got != want {
+					t.Errorf("%s kind %d: got %q want %q", lang, tc.kind, got, want)
+				}
+				if got := snippetErrorText(m, err); got != want {
+					t.Errorf("%s snippet kind %d: got %q want %q", lang, tc.kind, got, want)
+				}
+			}
+		}
+	}
+}
+
+func linuxSecretReasons(m locales.Messages) []struct {
+	kind   keychain.LinuxServiceErrorKind
+	reason string
+} {
+	return []struct {
+		kind   keychain.LinuxServiceErrorKind
+		reason string
+	}{
+		{keychain.LinuxServiceUnknown, m.SecretsReasonLinuxUnknown()},
+		{keychain.LinuxServiceDependency, m.SecretsReasonLinuxDependency()},
+		{keychain.LinuxServiceSessionBus, m.SecretsReasonLinuxSessionBus()},
+		{keychain.LinuxServiceAccessDenied, m.SecretsReasonLinuxAccessDenied()},
+		{keychain.LinuxServiceStartFailed, m.SecretsReasonLinuxStartFailed()},
+		{keychain.LinuxServiceLocked, m.SecretsReasonLinuxLocked()},
+	}
+}
