@@ -24,8 +24,8 @@ func TestRememberLayoutAppearanceSwitch(t *testing.T) {
 				if !tt.HasText(m.RememberLayoutNote()) {
 					t.Fatalf("missing layout preference explanation: %v", tt.Texts())
 				}
-				if !a.Settings().RememberLayout {
-					t.Fatal("layout preference must default on")
+				if a.Settings().RememberLayout {
+					t.Fatal("layout preference must default off")
 				}
 				label := mustFind(t, tt, m.RememberLayout())
 				note := mustFind(t, tt, m.RememberLayoutNote())
@@ -34,14 +34,14 @@ func TestRememberLayoutAppearanceSwitch(t *testing.T) {
 				x, y := float32(900-14-18), (label.Y+note.Y+note.H)/2
 				tt.ClickAt(x, y)
 				tt.Frame()
-				if s.RememberLayout || !changed {
-					t.Fatal("layout switch did not turn off")
+				if !s.RememberLayout || !changed {
+					t.Fatal("layout switch did not turn on")
 				}
 				changed = false
 				tt.ClickAt(x, y)
 				tt.Frame()
-				if !s.RememberLayout || !changed {
-					t.Fatal("layout switch did not turn back on")
+				if s.RememberLayout || !changed {
+					t.Fatal("layout switch did not turn back off")
 				}
 			})
 		}

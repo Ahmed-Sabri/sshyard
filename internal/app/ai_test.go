@@ -47,6 +47,15 @@ func appIn(t *testing.T, dir string, secrets keychain.Backend) (*App, *ui.Tester
 	return a, tt
 }
 
+// rememberLayoutIn turns layout memory on, as Settings would, for apps
+// started on dir; it defaults off.
+func rememberLayoutIn(t *testing.T, dir string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(dir, "settings.json"), []byte(`{"rememberLayout":true}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func savedHost(t *testing.T, a *App, name, addr string) assets.Host {
 	t.Helper()
 	h, err := a.Store().Add(assets.Host{Name: name, Address: addr, Port: 22, User: "root", Auth: assets.AuthAsk})
@@ -258,6 +267,7 @@ func TestAILayoutRestoresEmptySession(t *testing.T) {
 	}
 	defer srv.Close()
 	dir := t.TempDir()
+	rememberLayoutIn(t, dir)
 	system := keychain.NewMemory()
 	a, tt := appIn(t, dir, system)
 	term := connected(t, a, tt, srv)
@@ -312,6 +322,7 @@ func TestAILayoutRestoresEmptySession(t *testing.T) {
 
 func TestAILayoutDropsSavedFullMode(t *testing.T) {
 	dir := t.TempDir()
+	rememberLayoutIn(t, dir)
 	system := keychain.NewMemory()
 	a, _ := appIn(t, dir, system)
 	h := savedHost(t, a, "web", "10.0.0.8")
@@ -360,6 +371,7 @@ func TestLayoutSkipsTempHosts(t *testing.T) {
 	}
 	defer srv.Close()
 	dir := t.TempDir()
+	rememberLayoutIn(t, dir)
 	system := keychain.NewMemory()
 	a, tt := appIn(t, dir, system)
 	other := savedHost(t, a, "other", "10.0.0.8")

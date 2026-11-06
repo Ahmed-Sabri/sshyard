@@ -14,6 +14,7 @@ import (
 
 func TestLayoutSkippedPanesRemapFocusAndActiveTab(t *testing.T) {
 	dir, backend := t.TempDir(), keychain.NewMemory()
+	rememberLayoutIn(t, dir)
 	a, _ := appIn(t, dir, backend)
 	h := savedHost(t, a, "surviving", "127.0.0.1")
 	a.Close()
@@ -63,6 +64,7 @@ func TestLayoutInvalidSnapshotsRemainProtected(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			dir := t.TempDir()
+			rememberLayoutIn(t, dir)
 			file := filepath.Join(dir, "layout.json")
 			if err := os.WriteFile(file, []byte(raw), 0o600); err != nil {
 				t.Fatal(err)
@@ -88,6 +90,7 @@ func TestLayoutInvalidSnapshotsRemainProtected(t *testing.T) {
 func TestLayoutTogglePreservesRunningConnection(t *testing.T) {
 	srv, _ := startScript(t, "ready\r\n")
 	dir, backend := t.TempDir(), keychain.NewMemory()
+	rememberLayoutIn(t, dir)
 	a, tt := appIn(t, dir, backend)
 	c := connected(t, a, tt, srv)
 	a.saveLayout()
@@ -127,6 +130,7 @@ func TestLayoutTogglePreservesRunningConnection(t *testing.T) {
 
 func TestLayoutLegacySnapshotDoesNotBlockFutureMemory(t *testing.T) {
 	dir, backend := t.TempDir(), keychain.NewMemory()
+	rememberLayoutIn(t, dir)
 	file := filepath.Join(dir, "layout.json")
 	raw := `{"active":0,"tabs":[{"focus":1,"root":{"kind":"ai","host":"old-host"}}]}`
 	if err := os.WriteFile(file, []byte(raw), 0o600); err != nil {

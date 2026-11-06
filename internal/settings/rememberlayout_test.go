@@ -8,11 +8,11 @@ import (
 )
 
 func TestRememberLayoutDefaultAndPersistence(t *testing.T) {
-	if !Default().RememberLayout {
-		t.Fatal("layout memory must default on")
+	if Default().RememberLayout {
+		t.Fatal("layout memory must default off")
 	}
 	path := filepath.Join(t.TempDir(), "settings.json")
-	if s, err := Load(path); err != nil || !s.RememberLayout {
+	if s, err := Load(path); err != nil || s.RememberLayout {
 		t.Fatalf("missing settings: remember=%v, %v", s.RememberLayout, err)
 	}
 	for _, raw := range []string{`{}`, `{"theme":"dark"}`, `{"rememberLayout":true}`, `{"rememberLayout":false}`} {
@@ -23,7 +23,7 @@ func TestRememberLayoutDefaultAndPersistence(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		want := !strings.Contains(raw, "false")
+		want := strings.Contains(raw, "true")
 		if s.RememberLayout != want {
 			t.Fatalf("load %s: remember=%v", raw, s.RememberLayout)
 		}

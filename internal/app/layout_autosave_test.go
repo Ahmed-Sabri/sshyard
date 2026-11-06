@@ -23,6 +23,7 @@ func TestLayoutLocalShellRestoresWithoutStartupDuplicate(t *testing.T) {
 	}
 	withShells(t, session.Shell{ID: "fixture-sh", Name: "Fixture shell", Path: "/bin/sh"})
 	dir, backend := t.TempDir(), keychain.NewMemory()
+	rememberLayoutIn(t, dir)
 	a, tt := appIn(t, dir, backend)
 	id, err := a.OpenLocalShell("fixture-sh")
 	c := shellPane(t, a, id, err)
@@ -50,7 +51,9 @@ func TestLayoutLocalShellRestoresWithoutStartupDuplicate(t *testing.T) {
 }
 
 func TestLayoutViewDebouncesWorkspaceChanges(t *testing.T) {
-	a, tt := newTestApp(t)
+	dir := t.TempDir()
+	rememberLayoutIn(t, dir)
+	a, tt := newTestAppIn(t, dir)
 	h := savedHost(t, a, "saved", "127.0.0.1")
 	for range 2 {
 		c, err := a.makeConn(h.ID, layout.Terminal, 0)
@@ -110,7 +113,9 @@ func TestLayoutWriteFailureShowsLocalizedErrorAndPreservesFile(t *testing.T) {
 	}
 	for _, language := range []string{"en", "zh-Hans"} {
 		t.Run(language, func(t *testing.T) {
-			a, tt := newTestApp(t)
+			dir := t.TempDir()
+			rememberLayoutIn(t, dir)
+			a, tt := newTestAppIn(t, dir)
 			h := savedHost(t, a, "saved", "127.0.0.1")
 			if _, err := a.OpenAI(h.ID, openAt{}, 0); err != nil {
 				t.Fatal(err)
@@ -143,7 +148,9 @@ func TestLayoutToggleFailureRollsBackSnapshotAndSession(t *testing.T) {
 	for _, failure := range []string{"native", "settings", "success"} {
 		t.Run(failure, func(t *testing.T) {
 			srv, _ := startScript(t, "ready\r\n")
-			a, tt := newTestApp(t)
+			dir := t.TempDir()
+			rememberLayoutIn(t, dir)
+			a, tt := newTestAppIn(t, dir)
 			c := connected(t, a, tt, srv)
 			a.saveLayout()
 			file := filepath.Join(a.p.DataDir, "layout.json")
@@ -172,6 +179,9 @@ func TestLayoutToggleFailureRollsBackSnapshotAndSession(t *testing.T) {
 			}
 			if failure == "settings" {
 				path := filepath.Join(a.p.DataDir, "settings.json")
+				if err := os.Remove(path); err != nil {
+					t.Fatal(err)
+				}
 				if err := os.Mkdir(path, 0o700); err != nil {
 					t.Fatal(err)
 				}

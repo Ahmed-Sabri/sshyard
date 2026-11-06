@@ -19,6 +19,7 @@ func TestLayoutRememberedLocalCredentialsWaitForUnlock(t *testing.T) {
 	for _, where := range []string{"target", "jump", "none"} {
 		t.Run(where, func(t *testing.T) {
 			dir, backend := t.TempDir(), keychain.NewMemory()
+			rememberLayoutIn(t, dir)
 			a, _ := appIn(t, dir, backend)
 			h := savedHost(t, a, "target", "127.0.0.1")
 			rememberedHost := h

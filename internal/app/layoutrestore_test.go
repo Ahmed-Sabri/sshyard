@@ -17,6 +17,7 @@ import (
 // pane IDs are runtime identities and must be remapped rather than reused.
 func TestLayoutWorkspaceRoundTrip(t *testing.T) {
 	dir, backend := t.TempDir(), keychain.NewMemory()
+	rememberLayoutIn(t, dir)
 	a, _ := appIn(t, dir, backend)
 	h := savedHost(t, a, "saved", "127.0.0.1")
 	term, err := a.makeConn(h.ID, layout.Terminal, 0)
@@ -94,6 +95,7 @@ func TestLayoutWorkspaceRoundTrip(t *testing.T) {
 func TestLayoutLockedStartupReconnectsOnceWithoutReplay(t *testing.T) {
 	srv, sh := startScript(t, "PRIVATE_OLD_OUTPUT\r\n")
 	dir, backend := t.TempDir(), keychain.NewMemory()
+	rememberLayoutIn(t, dir)
 	a, tt := appIn(t, dir, backend)
 	old := connected(t, a, tt, srv)
 	waitFor(t, tt, "old output", func() bool { return strings.Contains(old.s.Term.ScreenText(), "PRIVATE_OLD_OUTPUT") })
@@ -150,6 +152,7 @@ func (b layoutSilentBackend) GetSilently(key string) ([]byte, error) { return b.
 func TestLayoutSilentUnlockStartsSavedConnection(t *testing.T) {
 	srv, _ := startScript(t, "ready\r\n")
 	dir, backend := t.TempDir(), keychain.NewMemory()
+	rememberLayoutIn(t, dir)
 	a, tt := appIn(t, dir, backend)
 	connected(t, a, tt, srv)
 	a.Close()
