@@ -516,8 +516,10 @@ func TestMetricsScriptInterval(t *testing.T) {
 	if first > 5*time.Second {
 		t.Fatalf("second frame waited a full interval: %s", first)
 	}
+	// The script counts in whole epoch seconds, so the interval may end up
+	// to a second early, and the two slow samples need not take as long.
 	gap := marks[2].Sub(marks[1])
-	if gap < 9*time.Second || gap > 11*time.Second {
+	if gap < 8*time.Second || gap > 11*time.Second {
 		t.Fatalf("gap %s", gap)
 	}
 }
