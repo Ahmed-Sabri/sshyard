@@ -585,19 +585,22 @@ func (a *App) networkFields(c *ui.Context, m locales.Messages, tok theme.Tokens,
 			return
 		}
 		ui.Text(c, m.FieldJumpHosts()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
-		if len(f.jumps) == 0 {
+		// Row actions replace f.jumps while List still uses this build's
+		// count, so all row callbacks must read the same stable slice.
+		jumps := f.jumps
+		if len(jumps) == 0 {
 			ui.Text(c, m.NoJumpHosts()).FontSize(theme.Footnote).TextColor(tok.TextMuted)
 		} else {
-			f.jumpList.Key = func(i int) any { return f.jumps[i] }
-			f.jumpList.Label = func(i int) string { return a.hostLabel(f.jumps[i]) }
-			f.jumpList.Reorder = func(rows []int, to int) { f.jumps = moveRows(f.jumps, rows, to) }
+			f.jumpList.Key = func(i int) any { return jumps[i] }
+			f.jumpList.Label = func(i int) string { return a.hostLabel(jumps[i]) }
+			f.jumpList.Reorder = func(rows []int, to int) { f.jumps = moveRows(jumps, rows, to) }
 			// More than five scroll, the remove buttons clear of the bar.
 			end := float32(4)
-			if len(f.jumps) > 5 {
+			if len(jumps) > 5 {
 				end += scrollGutter
 			}
-			ui.List(c.Key("f:jumps"), &f.jumpList, len(f.jumps), func(i int) {
-				id := f.jumps[i]
+			ui.List(c.Key("f:jumps"), &f.jumpList, len(jumps), func(i int) {
+				id := jumps[i]
 				ui.Row(c.Key("jump:"+id)).Height(34).Gap(8).Padding(0, end, 0, 8).AlignItems(ui.Center).FillWidth().Children(func() {
 					ui.Text(c, strconv.Itoa(i+1)).FontSize(theme.Caption).TextColor(tok.TextMuted).Width(14)
 					tile(c, icons.JumpHost, tok.Tint(id), 20)
@@ -606,7 +609,7 @@ func (a *App) networkFields(c *ui.Context, m locales.Messages, tok theme.Tokens,
 						f.jumps = slices.DeleteFunc(slices.Clone(f.jumps), func(s string) bool { return s == id })
 					}
 				})
-			}).Height(float32(34*min(len(f.jumps), 5))).FillWidth().Radius(theme.RadiusControl).Border(1, tok.Line).Background(tok.Fill)
+			}).Height(float32(34*min(len(jumps), 5))).FillWidth().Radius(theme.RadiusControl).Border(1, tok.Line).Background(tok.Fill)
 		}
 		var pick []string
 		var pickIDs []string
