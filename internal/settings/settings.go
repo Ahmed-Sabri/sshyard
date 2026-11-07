@@ -199,6 +199,16 @@ type Settings struct {
 	// RenewalNotified is, by host ID, the renewal day (assets.DateLayout)
 	// this device last notified of, so that each renewal notifies once.
 	RenewalNotified map[string]string `json:"renewalNotified,omitempty"`
+	// SessionLog is where the logs of terminal sessions go. It belongs to
+	// this device.
+	SessionLog SessionLog `json:"sessionLog"`
+}
+
+// SessionLog is how terminal sessions are logged.
+type SessionLog struct {
+	// Dir is the folder of the logs, an absolute path; "" is
+	// SSHYard/logs in the home folder.
+	Dir string `json:"dir,omitempty"`
 }
 
 // Highlight is how the terminal colors keywords in its output.
@@ -699,6 +709,9 @@ func (s *Settings) Normalize() {
 	s.Shortcuts = keys
 	s.normalizeAI(d)
 	s.normalizeBackups()
+	if s.SessionLog.Dir = strings.TrimSpace(s.SessionLog.Dir); !filepath.IsAbs(s.SessionLog.Dir) {
+		s.SessionLog.Dir = ""
+	}
 }
 
 // MaxTerminalSchemes bounds the imported color schemes.

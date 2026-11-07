@@ -22,17 +22,19 @@ import (
 type inspectorKind string
 
 const (
-	inspectMonitor  inspectorKind = "monitor"
-	inspectUsage    inspectorKind = "usage"
-	inspectHost     inspectorKind = "host"
-	inspectDocker   inspectorKind = "docker"
-	inspectSnippets inspectorKind = "snippets"
-	inspectTmux     inspectorKind = "tmux"
+	inspectMonitor   inspectorKind = "monitor"
+	inspectUsage     inspectorKind = "usage"
+	inspectHost      inspectorKind = "host"
+	inspectDocker    inspectorKind = "docker"
+	inspectSnippets  inspectorKind = "snippets"
+	inspectTmux      inspectorKind = "tmux"
+	inspectBroadcast inspectorKind = "broadcast"
+	inspectLog       inspectorKind = "log"
 )
 
 // panelOrder is the order the panels stack in, the rail's: opening or
 // closing one leaves the others where they are.
-var panelOrder = []inspectorKind{inspectMonitor, inspectUsage, inspectHost, inspectSnippets, inspectDocker, inspectTmux}
+var panelOrder = []inspectorKind{inspectMonitor, inspectUsage, inspectHost, inspectSnippets, inspectDocker, inspectTmux, inspectBroadcast, inspectLog}
 
 // railWidth is the rail's width, the status bar's height; inspectorWidth
 // the panel's, and tableInspectorWidth that of a panel of tables (usage,
@@ -54,6 +56,8 @@ func panelWidth(k inspectorKind) float32 {
 		return snippetWidth
 	case inspectTmux:
 		return tmuxInspectorWidth
+	case inspectBroadcast, inspectLog:
+		return broadcastWidth
 	}
 	return inspectorWidth
 }
@@ -144,6 +148,18 @@ func (a *App) railView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 			}
 			a.openFwdForm(m, nil, id)
 		}
+		// Actions on several sessions at once.
+		ui.Box(c.Key("sep2")).Width(14).Height(1).Shrink(0).MarginY(theme.Space(1)).Background(tok.Line)
+		toggle(inspectBroadcast, icons.Broadcast, icons.BroadcastOn, m.Broadcast())
+		logging, failed := a.logCount()
+		badge := ""
+		if logging > 0 {
+			badge = strconv.Itoa(logging)
+		}
+		if (IconButton{Icon: icons.FileText, On: icons.FileTextOn, Label: m.SessionLogs(), Active: a.panelOpen(inspectLog), Toggle: true,
+			Prominent: logging > 0, Badge: badge, BadgeDanger: failed, Size: Small}).Clicked(c, "insp:"+string(inspectLog)) {
+			a.togglePanel(inspectLog)
+		}
 		ui.Spacer(c)
 		if (IconButton{Icon: icons.Quick, Label: m.QuickConnect(), Size: Small}).Clicked(c, "quick") {
 			a.OpenQuickConnect()
@@ -191,8 +207,15 @@ func (a *App) panelStack(c *ui.Context, m locales.Messages, tok theme.Tokens, ks
 
 // panelView is panel k: its title bar, and its cards scrolling under it.
 func (a *App) panelView(c *ui.Context, m locales.Messages, tok theme.Tokens, k inspectorKind) {
-	if k == inspectSnippets {
+	switch k {
+	case inspectSnippets:
 		a.snippetsPanel(c, m, tok)
+		return
+	case inspectBroadcast:
+		a.broadcastPanel(c, m, tok)
+		return
+	case inspectLog:
+		a.logPanel(c, m, tok)
 		return
 	}
 	title, tables := m.SystemMonitor(), false
@@ -207,12 +230,7 @@ func (a *App) panelView(c *ui.Context, m locales.Messages, tok theme.Tokens, k i
 		title, tables = m.TmuxManager(), true
 	}
 	ui.Column(c.Key("panel:" + string(k))).Fill().Children(func() {
-		ui.Row(c).Height(40).Shrink(0).Padding(0, 8, 0, 16).Gap(8).AlignItems(ui.Center).Children(func() {
-			ui.Text(c, title).FontSize(theme.Body).FontWeight(600).Grow(1).Shrink(1).SingleLine()
-			if (IconButton{Icon: icons.Close, Label: m.ClosePanel(), Size: Small}).Clicked(c, "close") {
-				a.closePanel(k)
-			}
-		})
+		a.panelHead(c, m, k, title)
 		if tables {
 			// Its tables (the tmux panel its list) scroll themselves: the
 			// panel gives them its height.
@@ -238,6 +256,16 @@ func (a *App) panelView(c *ui.Context, m locales.Messages, tok theme.Tokens, k i
 				}
 			})
 		})
+	})
+}
+
+// panelHead is the title bar of panel k, with the button closing it.
+func (a *App) panelHead(c *ui.Context, m locales.Messages, k inspectorKind, title string) {
+	ui.Row(c.Key("head")).Height(toolbarHeight).Shrink(0).Padding(0, 8, 0, 16).Gap(8).AlignItems(ui.Center).Children(func() {
+		ui.Text(c, title).FontSize(theme.Body).FontWeight(600).Grow(1).Shrink(1).SingleLine()
+		if (IconButton{Icon: icons.Close, Label: m.ClosePanel(), Size: Small}).Clicked(c, "close") {
+			a.closePanel(k)
+		}
 	})
 }
 

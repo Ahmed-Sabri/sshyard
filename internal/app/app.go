@@ -33,6 +33,7 @@ import (
 	"github.com/Licoy/sshyard/internal/netproxy"
 	"github.com/Licoy/sshyard/internal/session"
 	"github.com/Licoy/sshyard/internal/settings"
+	"github.com/Licoy/sshyard/internal/termlog"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/internal/updater"
 	"github.com/Licoy/sshyard/internal/vault"
@@ -211,12 +212,19 @@ type conn struct {
 	metShown bool
 	// ai is set for an AI pane. It has no session of its own.
 	ai *aiState
+	// log is a terminal's session log while it is kept (startLog).
+	log *termlog.Recorder
 }
 
 func (c *conn) item() layout.Item { return layout.Item{Kind: c.kind, ID: c.id} }
 
 // close ends the connection and what runs on it.
 func (c *conn) close() {
+	if r := c.log; r != nil {
+		c.log = nil
+		c.s.Term.SetLineHook(nil)
+		r.Close(c.s.Term.CursorLine(), time.Now())
+	}
 	if c.fs != nil {
 		c.fs.close()
 	}
@@ -298,6 +306,8 @@ type App struct {
 	panels   []inspectorKind
 	stackPct map[string]*float32
 	snippets snippetState
+	// bc is the broadcast panel's state.
+	bc broadcastState
 	// tabStart is the first tab the title bar shows when not all fit, the
 	// others in its menu of more tabs; tabRoom the width they had
 	tabStart int

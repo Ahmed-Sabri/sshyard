@@ -16196,3 +16196,285 @@ func HostKeyForgotten(host string) string { return In(i18n.Locale()).HostKeyForg
 func (msgs Messages) HostKeyForgotten(host string) string {
 	return Catalog.Format(msgs.locale, "hostKeyForgotten", map[string]any{"host": host})
 }
+
+// Broadcast says "Broadcast Commands"
+// in the language the app shows.
+func Broadcast() string { return In(i18n.Locale()).Broadcast() }
+
+// Broadcast says "Broadcast Commands"
+// in the language of msgs.
+func (msgs Messages) Broadcast() string {
+	return Catalog.Format(msgs.locale, "broadcast", nil)
+}
+
+// BroadcastThisTab says "This Tab"
+// in the language the app shows.
+func BroadcastThisTab() string { return In(i18n.Locale()).BroadcastThisTab() }
+
+// BroadcastThisTab says "This Tab"
+// in the language of msgs.
+func (msgs Messages) BroadcastThisTab() string {
+	return Catalog.Format(msgs.locale, "broadcastThisTab", nil)
+}
+
+// BroadcastAllTabs says "All Tabs"
+// in the language the app shows.
+func BroadcastAllTabs() string { return In(i18n.Locale()).BroadcastAllTabs() }
+
+// BroadcastAllTabs says "All Tabs"
+// in the language of msgs.
+func (msgs Messages) BroadcastAllTabs() string {
+	return Catalog.Format(msgs.locale, "broadcastAllTabs", nil)
+}
+
+// BroadcastSelected says "{count} of {total} terminals selected"
+// in the language the app shows.
+func BroadcastSelected(count string, total string) string {
+	return In(i18n.Locale()).BroadcastSelected(count, total)
+}
+
+// BroadcastSelected says "{count} of {total} terminals selected"
+// in the language of msgs.
+func (msgs Messages) BroadcastSelected(count string, total string) string {
+	return Catalog.Format(msgs.locale, "broadcastSelected", map[string]any{"count": count, "total": total})
+}
+
+// BroadcastNoTarget says "No terminal to send to"
+// in the language the app shows.
+func BroadcastNoTarget() string { return In(i18n.Locale()).BroadcastNoTarget() }
+
+// BroadcastNoTarget says "No terminal to send to"
+// in the language of msgs.
+func (msgs Messages) BroadcastNoTarget() string {
+	return Catalog.Format(msgs.locale, "broadcastNoTarget", nil)
+}
+
+// BroadcastBusy says "The last command is still being sent, try again after it finishes"
+// in the language the app shows.
+func BroadcastBusy() string { return In(i18n.Locale()).BroadcastBusy() }
+
+// BroadcastBusy says "The last command is still being sent, try again after it finishes"
+// in the language of msgs.
+func (msgs Messages) BroadcastBusy() string {
+	return Catalog.Format(msgs.locale, "broadcastBusy", nil)
+}
+
+// BroadcastPlaceholder says "Command for the selected terminals (Enter sends, Shift+Enter adds a line)"
+// in the language the app shows.
+func BroadcastPlaceholder() string { return In(i18n.Locale()).BroadcastPlaceholder() }
+
+// BroadcastPlaceholder says "Command for the selected terminals (Enter sends, Shift+Enter adds a line)"
+// in the language of msgs.
+func (msgs Messages) BroadcastPlaceholder() string {
+	return Catalog.Format(msgs.locale, "broadcastPlaceholder", nil)
+}
+
+// BroadcastRun says "Run it (press Enter after it)"
+// in the language the app shows.
+func BroadcastRun() string { return In(i18n.Locale()).BroadcastRun() }
+
+// BroadcastRun says "Run it (press Enter after it)"
+// in the language of msgs.
+func (msgs Messages) BroadcastRun() string {
+	return Catalog.Format(msgs.locale, "broadcastRun", nil)
+}
+
+// BroadcastSend says "Send to Selected Terminals"
+// in the language the app shows.
+func BroadcastSend() string { return In(i18n.Locale()).BroadcastSend() }
+
+// BroadcastSend says "Send to Selected Terminals"
+// in the language of msgs.
+func (msgs Messages) BroadcastSend() string {
+	return Catalog.Format(msgs.locale, "broadcastSend", nil)
+}
+
+// BroadcastSent says "Sent"
+// in the language the app shows.
+func BroadcastSent() string { return In(i18n.Locale()).BroadcastSent() }
+
+// BroadcastSent says "Sent"
+// in the language of msgs.
+func (msgs Messages) BroadcastSent() string {
+	return Catalog.Format(msgs.locale, "broadcastSent", nil)
+}
+
+// BroadcastNotSent says "Not sent"
+// in the language the app shows.
+func BroadcastNotSent() string { return In(i18n.Locale()).BroadcastNotSent() }
+
+// BroadcastNotSent says "Not sent"
+// in the language of msgs.
+func (msgs Messages) BroadcastNotSent() string {
+	return Catalog.Format(msgs.locale, "broadcastNotSent", nil)
+}
+
+// BroadcastConfirmTitle says "Send several lines?"
+// in the language the app shows.
+func BroadcastConfirmTitle() string { return In(i18n.Locale()).BroadcastConfirmTitle() }
+
+// BroadcastConfirmTitle says "Send several lines?"
+// in the language of msgs.
+func (msgs Messages) BroadcastConfirmTitle() string {
+	return Catalog.Format(msgs.locale, "broadcastConfirmTitle", nil)
+}
+
+// BroadcastConfirm says "Each line may run as a command in the {count} selected terminals."
+// in the language the app shows.
+func BroadcastConfirm(count string) string { return In(i18n.Locale()).BroadcastConfirm(count) }
+
+// BroadcastConfirm says "Each line may run as a command in the {count} selected terminals."
+// in the language of msgs.
+func (msgs Messages) BroadcastConfirm(count string) string {
+	return Catalog.Format(msgs.locale, "broadcastConfirm", map[string]any{"count": count})
+}
+
+// SessionLogs says "Session Logs"
+// in the language the app shows.
+func SessionLogs() string { return In(i18n.Locale()).SessionLogs() }
+
+// SessionLogs says "Session Logs"
+// in the language of msgs.
+func (msgs Messages) SessionLogs() string {
+	return Catalog.Format(msgs.locale, "sessionLogs", nil)
+}
+
+// LogOpenFolder says "Show Logs Folder"
+// in the language the app shows.
+func LogOpenFolder() string { return In(i18n.Locale()).LogOpenFolder() }
+
+// LogOpenFolder says "Show Logs Folder"
+// in the language of msgs.
+func (msgs Messages) LogOpenFolder() string {
+	return Catalog.Format(msgs.locale, "logOpenFolder", nil)
+}
+
+// LogChooseFolder says "Change Logs Folder"
+// in the language the app shows.
+func LogChooseFolder() string { return In(i18n.Locale()).LogChooseFolder() }
+
+// LogChooseFolder says "Change Logs Folder"
+// in the language of msgs.
+func (msgs Messages) LogChooseFolder() string {
+	return Catalog.Format(msgs.locale, "logChooseFolder", nil)
+}
+
+// LogRecordingCount says "{count, plural, one {# terminal logging} other {# terminals logging}}"
+// in the language the app shows.
+func LogRecordingCount(count int) string { return In(i18n.Locale()).LogRecordingCount(count) }
+
+// LogRecordingCount says "{count, plural, one {# terminal logging} other {# terminals logging}}"
+// in the language of msgs.
+func (msgs Messages) LogRecordingCount(count int) string {
+	return Catalog.Format(msgs.locale, "logRecordingCount", map[string]any{"count": count})
+}
+
+// LogStartAll says "Start Logging All"
+// in the language the app shows.
+func LogStartAll() string { return In(i18n.Locale()).LogStartAll() }
+
+// LogStartAll says "Start Logging All"
+// in the language of msgs.
+func (msgs Messages) LogStartAll() string {
+	return Catalog.Format(msgs.locale, "logStartAll", nil)
+}
+
+// LogStopAll says "Stop Logging All"
+// in the language the app shows.
+func LogStopAll() string { return In(i18n.Locale()).LogStopAll() }
+
+// LogStopAll says "Stop Logging All"
+// in the language of msgs.
+func (msgs Messages) LogStopAll() string {
+	return Catalog.Format(msgs.locale, "logStopAll", nil)
+}
+
+// LogStart says "Start Logging"
+// in the language the app shows.
+func LogStart() string { return In(i18n.Locale()).LogStart() }
+
+// LogStart says "Start Logging"
+// in the language of msgs.
+func (msgs Messages) LogStart() string {
+	return Catalog.Format(msgs.locale, "logStart", nil)
+}
+
+// LogStop says "Stop Logging"
+// in the language the app shows.
+func LogStop() string { return In(i18n.Locale()).LogStop() }
+
+// LogStop says "Stop Logging"
+// in the language of msgs.
+func (msgs Messages) LogStop() string {
+	return Catalog.Format(msgs.locale, "logStop", nil)
+}
+
+// LogSaveOutput says "Save Terminal Output"
+// in the language the app shows.
+func LogSaveOutput() string { return In(i18n.Locale()).LogSaveOutput() }
+
+// LogSaveOutput says "Save Terminal Output"
+// in the language of msgs.
+func (msgs Messages) LogSaveOutput() string {
+	return Catalog.Format(msgs.locale, "logSaveOutput", nil)
+}
+
+// LogOpenFile says "Open Log File"
+// in the language the app shows.
+func LogOpenFile() string { return In(i18n.Locale()).LogOpenFile() }
+
+// LogOpenFile says "Open Log File"
+// in the language of msgs.
+func (msgs Messages) LogOpenFile() string {
+	return Catalog.Format(msgs.locale, "logOpenFile", nil)
+}
+
+// LogNoTerminal says "Open a terminal to log its session."
+// in the language the app shows.
+func LogNoTerminal() string { return In(i18n.Locale()).LogNoTerminal() }
+
+// LogNoTerminal says "Open a terminal to log its session."
+// in the language of msgs.
+func (msgs Messages) LogNoTerminal() string {
+	return Catalog.Format(msgs.locale, "logNoTerminal", nil)
+}
+
+// LogNote says "A log keeps, as text, what a terminal shows from the moment logging starts, commands echoed back included. Input it d…"
+// in the language the app shows.
+func LogNote() string { return In(i18n.Locale()).LogNote() }
+
+// LogNote says "A log keeps, as text, what a terminal shows from the moment logging starts, commands echoed back included. Input it d…"
+// in the language of msgs.
+func (msgs Messages) LogNote() string {
+	return Catalog.Format(msgs.locale, "logNote", nil)
+}
+
+// LogFailed says "Session log failed: {error}"
+// in the language the app shows.
+func LogFailed(error string) string { return In(i18n.Locale()).LogFailed(error) }
+
+// LogFailed says "Session log failed: {error}"
+// in the language of msgs.
+func (msgs Messages) LogFailed(error string) string {
+	return Catalog.Format(msgs.locale, "logFailed", map[string]any{"error": error})
+}
+
+// LogSaveFailed says "Could not save the terminal output: {error}"
+// in the language the app shows.
+func LogSaveFailed(error string) string { return In(i18n.Locale()).LogSaveFailed(error) }
+
+// LogSaveFailed says "Could not save the terminal output: {error}"
+// in the language of msgs.
+func (msgs Messages) LogSaveFailed(error string) string {
+	return Catalog.Format(msgs.locale, "logSaveFailed", map[string]any{"error": error})
+}
+
+// LogSaved says "Saved to {path}"
+// in the language the app shows.
+func LogSaved(path string) string { return In(i18n.Locale()).LogSaved(path) }
+
+// LogSaved says "Saved to {path}"
+// in the language of msgs.
+func (msgs Messages) LogSaved(path string) string {
+	return Catalog.Format(msgs.locale, "logSaved", map[string]any{"path": path})
+}
