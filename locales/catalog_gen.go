@@ -87,6 +87,76 @@ func (msgs Messages) TrayIconStyleNote() string {
 	return Catalog.Format(msgs.locale, "trayIconStyleNote", nil)
 }
 
+// TrayClick says "When clicking the tray icon"
+// in the language the app shows.
+func TrayClick() string { return In(i18n.Locale()).TrayClick() }
+
+// TrayClick says "When clicking the tray icon"
+// in the language of msgs.
+func (msgs Messages) TrayClick() string {
+	return Catalog.Format(msgs.locale, "trayClick", nil)
+}
+
+// TrayClickNote says "Choose whether a tray click opens the host popup or the main window."
+// in the language the app shows.
+func TrayClickNote() string { return In(i18n.Locale()).TrayClickNote() }
+
+// TrayClickNote says "Choose whether a tray click opens the host popup or the main window."
+// in the language of msgs.
+func (msgs Messages) TrayClickNote() string {
+	return Catalog.Format(msgs.locale, "trayClickNote", nil)
+}
+
+// TrayClickPanel says "Host popup"
+// in the language the app shows.
+func TrayClickPanel() string { return In(i18n.Locale()).TrayClickPanel() }
+
+// TrayClickPanel says "Host popup"
+// in the language of msgs.
+func (msgs Messages) TrayClickPanel() string {
+	return Catalog.Format(msgs.locale, "trayClickPanel", nil)
+}
+
+// TrayClickWindow says "Main window"
+// in the language the app shows.
+func TrayClickWindow() string { return In(i18n.Locale()).TrayClickWindow() }
+
+// TrayClickWindow says "Main window"
+// in the language of msgs.
+func (msgs Messages) TrayClickWindow() string {
+	return Catalog.Format(msgs.locale, "trayClickWindow", nil)
+}
+
+// TrayMaterial says "Tray popup material"
+// in the language the app shows.
+func TrayMaterial() string { return In(i18n.Locale()).TrayMaterial() }
+
+// TrayMaterial says "Tray popup material"
+// in the language of msgs.
+func (msgs Messages) TrayMaterial() string {
+	return Catalog.Format(msgs.locale, "trayMaterial", nil)
+}
+
+// TrayMaterialNote says "Set the tray popup material independently of the main window."
+// in the language the app shows.
+func TrayMaterialNote() string { return In(i18n.Locale()).TrayMaterialNote() }
+
+// TrayMaterialNote says "Set the tray popup material independently of the main window."
+// in the language of msgs.
+func (msgs Messages) TrayMaterialNote() string {
+	return Catalog.Format(msgs.locale, "trayMaterialNote", nil)
+}
+
+// TrayResizeHeight says "Drag to resize popup height"
+// in the language the app shows.
+func TrayResizeHeight() string { return In(i18n.Locale()).TrayResizeHeight() }
+
+// TrayResizeHeight says "Drag to resize popup height"
+// in the language of msgs.
+func (msgs Messages) TrayResizeHeight() string {
+	return Catalog.Format(msgs.locale, "trayResizeHeight", nil)
+}
+
 // TrayIconFailed says "Could not update the system tray icon."
 // in the language the app shows.
 func TrayIconFailed() string { return In(i18n.Locale()).TrayIconFailed() }
@@ -185,6 +255,46 @@ func CloseBehaviorNote() string { return In(i18n.Locale()).CloseBehaviorNote() }
 // in the language of msgs.
 func (msgs Messages) CloseBehaviorNote() string {
 	return Catalog.Format(msgs.locale, "closeBehaviorNote", nil)
+}
+
+// TrayOpenHosts says "Open Host Popup"
+// in the language the app shows.
+func TrayOpenHosts() string { return In(i18n.Locale()).TrayOpenHosts() }
+
+// TrayOpenHosts says "Open Host Popup"
+// in the language of msgs.
+func (msgs Messages) TrayOpenHosts() string {
+	return Catalog.Format(msgs.locale, "trayOpenHosts", nil)
+}
+
+// TrayOpenPanel says "Open Main Panel"
+// in the language the app shows.
+func TrayOpenPanel() string { return In(i18n.Locale()).TrayOpenPanel() }
+
+// TrayOpenPanel says "Open Main Panel"
+// in the language of msgs.
+func (msgs Messages) TrayOpenPanel() string {
+	return Catalog.Format(msgs.locale, "trayOpenPanel", nil)
+}
+
+// TrayShortcuts says "Shortcuts"
+// in the language the app shows.
+func TrayShortcuts() string { return In(i18n.Locale()).TrayShortcuts() }
+
+// TrayShortcuts says "Shortcuts"
+// in the language of msgs.
+func (msgs Messages) TrayShortcuts() string {
+	return Catalog.Format(msgs.locale, "trayShortcuts", nil)
+}
+
+// TrayPanelFailed says "Could not open the tray panel."
+// in the language the app shows.
+func TrayPanelFailed() string { return In(i18n.Locale()).TrayPanelFailed() }
+
+// TrayPanelFailed says "Could not open the tray panel."
+// in the language of msgs.
+func (msgs Messages) TrayPanelFailed() string {
+	return Catalog.Format(msgs.locale, "trayPanelFailed", nil)
 }
 
 // TrayShowWindow says "Show SSHYard"
