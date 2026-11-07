@@ -87,6 +87,20 @@ func TestTrayConnectionDeferredAndOpensMainFirst(t *testing.T) {
 func TestTrayConnectionPreservesProtocolAndSecretGate(t *testing.T) {
 	b := &authorizationBackend{Memory: keychain.NewMemory()}
 	a, _ := lockedTestApp(t, b)
+	t.Cleanup(func() {
+		// This test marks an unlock busy without starting its cleanup worker.
+		a.unlock.mu.Lock()
+		a.unlock.busy = false
+		a.unlock.mu.Unlock()
+		a.Close()
+		kc, err := a.openSecrets()
+		if err != nil {
+			t.Fatalf("credential store lock was not released: %v", err)
+		}
+		if err := kc.Close(); err != nil {
+			t.Fatalf("close reopened credential store: %v", err)
+		}
+	})
 	a.unlock.stored = true
 	// A pending explicit unlock must hold all sessions without bypassing it.
 	a.unlock.busy = true
