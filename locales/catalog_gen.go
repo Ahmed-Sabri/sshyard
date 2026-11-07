@@ -16750,3 +16750,263 @@ func LogRecentNone() string { return In(i18n.Locale()).LogRecentNone() }
 func (msgs Messages) LogRecentNone() string {
 	return Catalog.Format(msgs.locale, "logRecentNone", nil)
 }
+
+// CommandHistory says "Command History"
+// in the language the app shows.
+func CommandHistory() string { return In(i18n.Locale()).CommandHistory() }
+
+// CommandHistory says "Command History"
+// in the language of msgs.
+func (msgs Messages) CommandHistory() string {
+	return Catalog.Format(msgs.locale, "commandHistory", nil)
+}
+
+// HistoryNoSession says "Open a terminal to see the commands run on its host."
+// in the language the app shows.
+func HistoryNoSession() string { return In(i18n.Locale()).HistoryNoSession() }
+
+// HistoryNoSession says "Open a terminal to see the commands run on its host."
+// in the language of msgs.
+func (msgs Messages) HistoryNoSession() string {
+	return Catalog.Format(msgs.locale, "historyNoSession", nil)
+}
+
+// HistoryStream says "Command history needs SSH or a local shell. This pane is a Telnet or serial terminal."
+// in the language the app shows.
+func HistoryStream() string { return In(i18n.Locale()).HistoryStream() }
+
+// HistoryStream says "Command history needs SSH or a local shell. This pane is a Telnet or serial terminal."
+// in the language of msgs.
+func (msgs Messages) HistoryStream() string {
+	return Catalog.Format(msgs.locale, "historyStream", nil)
+}
+
+// HistoryNoTerminal says "Open a terminal on this host to read its command history."
+// in the language the app shows.
+func HistoryNoTerminal() string { return In(i18n.Locale()).HistoryNoTerminal() }
+
+// HistoryNoTerminal says "Open a terminal on this host to read its command history."
+// in the language of msgs.
+func (msgs Messages) HistoryNoTerminal() string {
+	return Catalog.Format(msgs.locale, "historyNoTerminal", nil)
+}
+
+// HistoryWSL says "Command history of WSL shells is not supported yet."
+// in the language the app shows.
+func HistoryWSL() string { return In(i18n.Locale()).HistoryWSL() }
+
+// HistoryWSL says "Command history of WSL shells is not supported yet."
+// in the language of msgs.
+func (msgs Messages) HistoryWSL() string {
+	return Catalog.Format(msgs.locale, "historyWSL", nil)
+}
+
+// HistoryReading says "Reading command history…"
+// in the language the app shows.
+func HistoryReading() string { return In(i18n.Locale()).HistoryReading() }
+
+// HistoryReading says "Reading command history…"
+// in the language of msgs.
+func (msgs Messages) HistoryReading() string {
+	return Catalog.Format(msgs.locale, "historyReading", nil)
+}
+
+// HistorySearch says "Search commands"
+// in the language the app shows.
+func HistorySearch() string { return In(i18n.Locale()).HistorySearch() }
+
+// HistorySearch says "Search commands"
+// in the language of msgs.
+func (msgs Messages) HistorySearch() string {
+	return Catalog.Format(msgs.locale, "historySearch", nil)
+}
+
+// HistoryFailed says "Could not read the history: {reason}"
+// in the language the app shows.
+func HistoryFailed(reason string) string { return In(i18n.Locale()).HistoryFailed(reason) }
+
+// HistoryFailed says "Could not read the history: {reason}"
+// in the language of msgs.
+func (msgs Messages) HistoryFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "historyFailed", map[string]any{"reason": reason})
+}
+
+// HistoryNoneTitle says "No command history"
+// in the language the app shows.
+func HistoryNoneTitle() string { return In(i18n.Locale()).HistoryNoneTitle() }
+
+// HistoryNoneTitle says "No command history"
+// in the language of msgs.
+func (msgs Messages) HistoryNoneTitle() string {
+	return Catalog.Format(msgs.locale, "historyNoneTitle", nil)
+}
+
+// HistoryNoneHint says "No shell history file was found for this user. Bash writes its history when a shell exits."
+// in the language the app shows.
+func HistoryNoneHint() string { return In(i18n.Locale()).HistoryNoneHint() }
+
+// HistoryNoneHint says "No shell history file was found for this user. Bash writes its history when a shell exits."
+// in the language of msgs.
+func (msgs Messages) HistoryNoneHint() string {
+	return Catalog.Format(msgs.locale, "historyNoneHint", nil)
+}
+
+// HistoryNoMatch says "No matching commands"
+// in the language the app shows.
+func HistoryNoMatch() string { return In(i18n.Locale()).HistoryNoMatch() }
+
+// HistoryNoMatch says "No matching commands"
+// in the language of msgs.
+func (msgs Messages) HistoryNoMatch() string {
+	return Catalog.Format(msgs.locale, "historyNoMatch", nil)
+}
+
+// HistoryAll says "All"
+// in the language the app shows.
+func HistoryAll() string { return In(i18n.Locale()).HistoryAll() }
+
+// HistoryAll says "All"
+// in the language of msgs.
+func (msgs Messages) HistoryAll() string {
+	return Catalog.Format(msgs.locale, "historyAll", nil)
+}
+
+// HistoryFilterShell says "Filter commands by shell"
+// in the language the app shows.
+func HistoryFilterShell() string { return In(i18n.Locale()).HistoryFilterShell() }
+
+// HistoryFilterShell says "Filter commands by shell"
+// in the language of msgs.
+func (msgs Messages) HistoryFilterShell() string {
+	return Catalog.Format(msgs.locale, "historyFilterShell", nil)
+}
+
+// HistoryToday says "Today"
+// in the language the app shows.
+func HistoryToday() string { return In(i18n.Locale()).HistoryToday() }
+
+// HistoryToday says "Today"
+// in the language of msgs.
+func (msgs Messages) HistoryToday() string {
+	return Catalog.Format(msgs.locale, "historyToday", nil)
+}
+
+// HistoryYesterday says "Yesterday"
+// in the language the app shows.
+func HistoryYesterday() string { return In(i18n.Locale()).HistoryYesterday() }
+
+// HistoryYesterday says "Yesterday"
+// in the language of msgs.
+func (msgs Messages) HistoryYesterday() string {
+	return Catalog.Format(msgs.locale, "historyYesterday", nil)
+}
+
+// HistoryUntimed says "No time recorded"
+// in the language the app shows.
+func HistoryUntimed() string { return In(i18n.Locale()).HistoryUntimed() }
+
+// HistoryUntimed says "No time recorded"
+// in the language of msgs.
+func (msgs Messages) HistoryUntimed() string {
+	return Catalog.Format(msgs.locale, "historyUntimed", nil)
+}
+
+// HistoryRuns says "{count, plural, one {# run} other {# runs}}"
+// in the language the app shows.
+func HistoryRuns(count int) string { return In(i18n.Locale()).HistoryRuns(count) }
+
+// HistoryRuns says "{count, plural, one {# run} other {# runs}}"
+// in the language of msgs.
+func (msgs Messages) HistoryRuns(count int) string {
+	return Catalog.Format(msgs.locale, "historyRuns", map[string]any{"count": count})
+}
+
+// HistoryLines says "{count, plural, one {# line} other {# lines}}"
+// in the language the app shows.
+func HistoryLines(count int) string { return In(i18n.Locale()).HistoryLines(count) }
+
+// HistoryLines says "{count, plural, one {# line} other {# lines}}"
+// in the language of msgs.
+func (msgs Messages) HistoryLines(count int) string {
+	return Catalog.Format(msgs.locale, "historyLines", map[string]any{"count": count})
+}
+
+// HistoryShowMore says "{count, plural, one {Show more (# left)} other {Show more (# left)}}"
+// in the language the app shows.
+func HistoryShowMore(count int) string { return In(i18n.Locale()).HistoryShowMore(count) }
+
+// HistoryShowMore says "{count, plural, one {Show more (# left)} other {Show more (# left)}}"
+// in the language of msgs.
+func (msgs Messages) HistoryShowMore(count int) string {
+	return Catalog.Format(msgs.locale, "historyShowMore", map[string]any{"count": count})
+}
+
+// HistoryRun says "Send to terminal and run"
+// in the language the app shows.
+func HistoryRun() string { return In(i18n.Locale()).HistoryRun() }
+
+// HistoryRun says "Send to terminal and run"
+// in the language of msgs.
+func (msgs Messages) HistoryRun() string {
+	return Catalog.Format(msgs.locale, "historyRun", nil)
+}
+
+// HistoryInsert says "Insert into terminal"
+// in the language the app shows.
+func HistoryInsert() string { return In(i18n.Locale()).HistoryInsert() }
+
+// HistoryInsert says "Insert into terminal"
+// in the language of msgs.
+func (msgs Messages) HistoryInsert() string {
+	return Catalog.Format(msgs.locale, "historyInsert", nil)
+}
+
+// HistoryAddSnippet says "Add to snippets"
+// in the language the app shows.
+func HistoryAddSnippet() string { return In(i18n.Locale()).HistoryAddSnippet() }
+
+// HistoryAddSnippet says "Add to snippets"
+// in the language of msgs.
+func (msgs Messages) HistoryAddSnippet() string {
+	return Catalog.Format(msgs.locale, "historyAddSnippet", nil)
+}
+
+// HistoryShowWhole says "Show the whole command"
+// in the language the app shows.
+func HistoryShowWhole() string { return In(i18n.Locale()).HistoryShowWhole() }
+
+// HistoryShowWhole says "Show the whole command"
+// in the language of msgs.
+func (msgs Messages) HistoryShowWhole() string {
+	return Catalog.Format(msgs.locale, "historyShowWhole", nil)
+}
+
+// HistoryBashTip says "Bash writes its history only when a shell exits, without times. To see commands at once, with the time they ran, add …"
+// in the language the app shows.
+func HistoryBashTip() string { return In(i18n.Locale()).HistoryBashTip() }
+
+// HistoryBashTip says "Bash writes its history only when a shell exits, without times. To see commands at once, with the time they ran, add …"
+// in the language of msgs.
+func (msgs Messages) HistoryBashTip() string {
+	return Catalog.Format(msgs.locale, "historyBashTip", nil)
+}
+
+// HistoryTipCopy says "Copy these lines"
+// in the language the app shows.
+func HistoryTipCopy() string { return In(i18n.Locale()).HistoryTipCopy() }
+
+// HistoryTipCopy says "Copy these lines"
+// in the language of msgs.
+func (msgs Messages) HistoryTipCopy() string {
+	return Catalog.Format(msgs.locale, "historyTipCopy", nil)
+}
+
+// HistoryBashTipTitle says "Bash history is incomplete"
+// in the language the app shows.
+func HistoryBashTipTitle() string { return In(i18n.Locale()).HistoryBashTipTitle() }
+
+// HistoryBashTipTitle says "Bash history is incomplete"
+// in the language of msgs.
+func (msgs Messages) HistoryBashTipTitle() string {
+	return Catalog.Format(msgs.locale, "historyBashTipTitle", nil)
+}

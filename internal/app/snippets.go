@@ -145,16 +145,22 @@ func (a *App) snippetList(c *ui.Context, m locales.Messages, tok theme.Tokens, a
 	})
 }
 
-// snippetSearch is the search field, as the hosts' one: a magnifier, the
-// text and, while it holds any, an IconButton clearing it, as Escape does.
+// snippetSearch is the search field of the snippets.
 func (a *App) snippetSearch(c *ui.Context, m locales.Messages, tok theme.Tokens) {
-	ui.Row(c.Key("snippet:search")).FillWidth().Height(30).Padding(0, theme.Space(1), 0, theme.Space(2.5)).Gap(theme.Space(1.5)).AlignItems(ui.Center).
+	searchField(c, m, tok, "snippet:search", &a.snippets.query, m.SnippetSearch())
+}
+
+// searchField is a panel's search field, as the hosts' one: a magnifier,
+// the text and, while it holds any, an IconButton clearing it, as Escape
+// does.
+func searchField(c *ui.Context, m locales.Messages, tok theme.Tokens, key string, q *string, placeholder string) {
+	ui.Row(c.Key(key)).FillWidth().Height(30).Padding(0, theme.Space(1), 0, theme.Space(2.5)).Gap(theme.Space(1.5)).AlignItems(ui.Center).
 		Radius(theme.RadiusControl).Background(tok.Fill).Children(func() {
 		ui.Icon(c, icons.Search.SVG).Size(14, 14).Shrink(0).TextColor(tok.TextMuted)
-		in := ui.TextInputBase(c.Key("q"), &a.snippets.query).Placeholder(m.SnippetSearch()).Label(m.SnippetSearch()).Grow(1).Shrink(1).MinWidth(40)
-		if a.snippets.query != "" {
+		in := ui.TextInputBase(c.Key("q"), q).Placeholder(placeholder).Label(placeholder).Grow(1).Shrink(1).MinWidth(40)
+		if *q != "" {
 			if (IconButton{Icon: icons.ClearText, Label: m.ClearSearch(), Size: Small}).Clicked(c, "clear") || in.Shortcut(0, ui.KeyEscape) {
-				a.snippets.query = ""
+				*q = ""
 				in.Focus()
 			}
 		} else {
