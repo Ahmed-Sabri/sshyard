@@ -55,6 +55,9 @@ type hostForm struct {
 	// encoding is the output encoding of the host's new terminals
 	// (Host.Encoding)
 	encoding vt.OutputEncoding
+	// sessionLog logs the host's terminals as they connect
+	// (Host.SessionLog)
+	sessionLog bool
 	// osc52 is the override's label once Advanced is open; osc52Code is
 	// the saved policy ("", allow, ask, deny), so a save before that
 	// keeps it. advOpen shows Advanced.
@@ -142,6 +145,7 @@ func (a *App) openEditor(h *assets.Host) {
 		f.netOpen = f.proxy != "" || len(f.jumps) > 0
 		f.termDir, f.remoteDir, f.localDir = h.TerminalDir, h.RemoteDir, h.LocalDir
 		f.tmux = h.Tmux
+		f.sessionLog = h.SessionLog
 		if e := vt.OutputEncoding(h.Encoding); slices.Contains(vt.OutputEncodings(), e) {
 			f.encoding = e
 		}
@@ -281,6 +285,7 @@ func (a *App) SaveForm(m locales.Messages) bool {
 	h.TerminalDir, h.RemoteDir, h.LocalDir = f.termDir, f.remoteDir, f.localDir
 	h.Tmux = strings.TrimSpace(f.tmux)
 	h.Encoding = string(f.encoding)
+	h.SessionLog = f.sessionLog
 	if h.SSH() && h.Tmux != "" && !session.TmuxNameOK(h.Tmux) {
 		f.err = m.TmuxNameInvalid()
 		return false
@@ -488,6 +493,7 @@ func (a *App) editorView(c *ui.Context, m locales.Messages) {
 							a.streamTermFields(c, m, tok, f)
 						}
 						encodingField(c, m, tok, f)
+						sessionLogField(c, m, tok, f)
 						ui.Field(c, "", func() {
 							ui.Collapsible(c.Key("f:renewal"), m.RenewalSection(), &f.renewOpen, func() {
 								a.renewalFields(c, m, tok, f)
@@ -659,6 +665,17 @@ func encodingField(c *ui.Context, m locales.Messages, tok theme.Tokens, f *hostF
 				}
 			}
 			ui.Text(c, m.TerminalEncodingHint()).FontSize(theme.Caption).TextColor(tok.TextMuted)
+		})
+	})
+}
+
+// sessionLogField is whether the host's terminals are logged as they
+// connect.
+func sessionLogField(c *ui.Context, m locales.Messages, tok theme.Tokens, f *hostForm) {
+	ui.Field(c, m.SessionLogs(), func() {
+		ui.Column(c).Gap(4).FillWidth().Children(func() {
+			formCheckbox(c.Key("f:log"), &f.sessionLog, m.LogAuto())
+			ui.Text(c, m.LogAutoHint()).FontSize(theme.Caption).TextColor(tok.TextMuted)
 		})
 	})
 }

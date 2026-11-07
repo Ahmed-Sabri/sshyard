@@ -5,12 +5,14 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/Licoy/sshyard/internal/icons"
 	"github.com/Licoy/sshyard/internal/layout"
+	"github.com/Licoy/sshyard/internal/session"
 	"github.com/Licoy/sshyard/internal/termlog"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/internal/vt"
@@ -18,11 +20,69 @@ import (
 	"github.com/egoist/mygo/ui"
 )
 
-// The session logs panel lists the terminals: it starts and stops each
-// one's log, a text file of what it printed from then on, and saves what
-// a terminal holds already. Logs are never started on their own.
+// The session logs pane lists the terminals: it starts and stops each
+// one's log, a file of what it printed from then on, and saves what a
+// terminal holds already; then the logs written last. A log starts on its
+// own only for a host set to log its terminals (Host.SessionLog), as one
+// connects.
 
 var errLogNoTerminal = errors.New("log: not a terminal pane")
+
+// recentMax is how many logs the pane lists as written last.
+const recentMax = 12
+
+// logsState is the session logs pane's: the logs written last, as last
+// listed from dir.
+type logsState struct {
+	recent  []recentLog
+	dir     string
+	listing bool
+}
+
+// recentLog is a log file of the folder.
+type recentLog struct {
+	Path, Host string
+	Size       int64
+	Mod        time.Time
+}
+
+// recentLogs are the n logs of dir written last, the last first: those of
+// its hosts' folders.
+func recentLogs(dir string, n int) []recentLog {
+	var out []recentLog
+	hosts, _ := os.ReadDir(dir)
+	for _, h := range hosts {
+		if !h.IsDir() {
+			continue
+		}
+		files, _ := os.ReadDir(filepath.Join(dir, h.Name()))
+		for _, f := range files {
+			if f.IsDir() || filepath.Ext(f.Name()) != ".log" {
+				continue
+			}
+			if info, err := f.Info(); err == nil {
+				out = append(out, recentLog{Path: filepath.Join(dir, h.Name(), f.Name()), Host: h.Name(), Size: info.Size(), Mod: info.ModTime()})
+			}
+		}
+	}
+	slices.SortFunc(out, func(a, b recentLog) int { return b.Mod.Compare(a.Mod) })
+	return out[:min(n, len(out))]
+}
+
+// listLogs lists the logs written last again, in the background.
+func (a *App) listLogs() {
+	if a.logs.listing {
+		return
+	}
+	a.logs.listing = true
+	dir := a.logDir()
+	go func() {
+		recent := recentLogs(dir, recentMax)
+		a.post(func() {
+			a.logs.recent, a.logs.dir, a.logs.listing = recent, dir, false
+		})
+	}()
+}
 
 // logDir is the folder the session logs go to, a folder of each host's
 // in it.
@@ -42,13 +102,62 @@ func (a *App) startLog(c *conn) error {
 		return nil
 	}
 	h := a.liveHost(c.host)
-	r, err := termlog.Start(a.logDir(), termlog.Header{Name: h.Label(), Target: h.Target()}, time.Now(), a.invalidate)
+	st := a.settings.SessionLog
+	r, err := termlog.Start(a.logDir(), termlog.Header{Name: h.Label(), Target: h.Target()}, termlog.Options{Raw: st.Raw, Stamps: st.Stamps}, time.Now(), a.invalidate)
 	if err != nil {
 		return err
 	}
-	c.log = r
-	c.s.Term.SetLineHook(r.Line)
+	c.log, c.logConns = r, c.s.Status().Connects
+	if st.Raw {
+		c.s.SetOutputTap(r.Raw)
+	} else {
+		c.s.Term.SetLineHook(r.Line)
+	}
 	return nil
+}
+
+// watchLogs marks in each log where its session connected again, and
+// starts the log of a terminal of a host set to log them as it connects,
+// once.
+func (a *App) watchLogs(m locales.Messages) {
+	for _, c := range a.conns {
+		if c.kind != layout.Terminal || c.s == nil {
+			continue
+		}
+		st := c.s.Status()
+		if c.log != nil && st.Connects != c.logConns {
+			if c.logConns > 0 {
+				c.log.Mark(m.LogReconnected(), time.Now())
+			}
+			c.logConns = st.Connects
+		}
+		if c.log == nil && !c.autoLog && st.State == session.Connected && a.liveHost(c.host).SessionLog {
+			c.autoLog = true
+			if err := a.startLog(c); err != nil {
+				a.logToast(err)
+			}
+		}
+	}
+}
+
+// setHostLog sets whether the terminals of host id are logged as they
+// connect.
+func (a *App) setHostLog(id string, on bool) {
+	h, ok := a.store.Get(id)
+	if !ok {
+		return
+	}
+	h.SessionLog = on
+	if _, err := a.store.Update(h); err != nil {
+		a.logToast(err)
+	}
+}
+
+// setLogFormat sets how the logs to come are written.
+func (a *App) setLogFormat(raw, stamps bool) error {
+	st := a.settings
+	st.SessionLog.Raw, st.SessionLog.Stamps = raw, stamps
+	return a.ApplySettings(st)
 }
 
 // stopLog ends the log of c with the line its terminal is on; the file is
@@ -60,11 +169,16 @@ func (a *App) stopLog(c *conn) {
 	}
 	c.log = nil
 	c.s.Term.SetLineHook(nil)
+	c.s.SetOutputTap(nil)
 	tail, failed := c.s.Term.CursorLine(), r.Err() != nil
 	go func() {
-		if err := r.Close(tail, time.Now()); err != nil && !failed {
-			a.post(func() { a.logToast(err) })
-		}
+		err := r.Close(tail, time.Now())
+		a.post(func() {
+			if err != nil && !failed {
+				a.logToast(err)
+			}
+			a.listLogs()
+		})
 	}()
 }
 
@@ -171,17 +285,20 @@ func (a *App) chooseLogDir(m locales.Messages) {
 func (a *App) setLogDir(dir string) error {
 	st := a.settings
 	st.SessionLog.Dir = dir
-	return a.ApplySettings(st)
+	err := a.ApplySettings(st)
+	a.listLogs()
+	return err
 }
 
-// logPanel is the session logs panel: the folder, then the terminals,
-// each with its log.
+// logPanel is what the session logs pane shows: the folder and how logs
+// are written, then the terminals, each with its log, and the logs
+// written last.
 func (a *App) logPanel(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	panes := a.terminalPanes(a.ws.Tabs)
 	n, _ := a.logCount()
+	st := a.settings.SessionLog
 	ui.Column(c.Key("logs")).Fill().Children(func() {
-		a.panelHead(c, m, inspectLog, m.SessionLogs())
-		ui.Row(c.Key("log:dir")).FillWidth().Shrink(0).Padding(0, theme.Space(2), theme.Space(2), theme.Space(4)).Gap(theme.Space(1.5)).AlignItems(ui.Center).Children(func() {
+		ui.Row(c.Key("log:dir")).FillWidth().Shrink(0).Padding(theme.Space(2), theme.Space(2), theme.Space(1), theme.Space(4)).Gap(theme.Space(1.5)).AlignItems(ui.Center).Children(func() {
 			ui.Icon(c, icons.Folder.SVG).Size(14, 14).Shrink(0).TextColor(tok.TextMuted)
 			ui.Text(c, a.logDir()).FontSize(theme.Footnote).TextColor(tok.TextMuted).SingleLine().Grow(1).Shrink(1).MinWidth(0).Tooltip(a.logDir())
 			if (IconButton{Icon: icons.OpenFile, Label: m.LogOpenFolder(), Disabled: a.p.OpenPath == nil, Size: Small}).Clicked(c, "log:open") {
@@ -189,6 +306,21 @@ func (a *App) logPanel(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 			}
 			if (IconButton{Icon: icons.Edit, Label: m.LogChooseFolder(), Disabled: a.p.PickFolder == nil, Size: Small}).Clicked(c, "log:choose") {
 				a.chooseLogDir(m)
+			}
+		})
+		// How the logs to come are written.
+		ui.Row(c.Key("log:format")).FillWidth().Shrink(0).Padding(theme.Space(1), theme.Space(3), theme.Space(2), theme.Space(4)).Gap(theme.Space(3)).AlignItems(ui.Center).Children(func() {
+			format := 0
+			if st.Raw {
+				format = 1
+			}
+			formSegmented(c.Key("log:fmt"), &format, false, m.LogFormatText(), m.LogFormatRaw()).Label(m.LogFormat()).Tooltip(m.LogFormatHint()).Shrink(0)
+			stamps := st.Stamps
+			formDisabled(ui.Checkbox(c.Key("log:stamps"), &stamps, m.LogStamps()), format == 1).Shrink(1)
+			if raw := format == 1; raw != st.Raw || stamps != st.Stamps {
+				if err := a.setLogFormat(raw, stamps); err != nil {
+					a.logToast(err)
+				}
 			}
 		})
 		ui.Row(c.Key("log:all")).FillWidth().Shrink(0).Padding(0, theme.Space(2), theme.Space(2), theme.Space(4)).Gap(theme.Space(1)).AlignItems(ui.Center).Children(func() {
@@ -211,14 +343,14 @@ func (a *App) logPanel(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 		gutterScroll(c, ui.Scroll(c.Key("log:list")).Grow(1).Shrink(1).MinHeight(0).FillWidth()).Children(func() {
 			ui.Column(c).FillWidth().Padding(theme.Space(2)).Gap(theme.Space(0.5)).Children(func() {
 				if len(panes) == 0 {
-					ui.Column(c).FillWidth().Padding(theme.Space(8), theme.Space(4)).AlignItems(ui.Center).Children(func() {
+					ui.Column(c).FillWidth().Padding(theme.Space(6), theme.Space(4)).AlignItems(ui.Center).Children(func() {
 						panelNote(c, tok, m.LogNoTerminal())
 					})
-					return
 				}
 				for _, cn := range panes {
 					a.logRow(c, m, tok, cn)
 				}
+				a.recentLogsList(c, m, tok)
 			})
 		})
 		ui.Box(c).Height(1).Shrink(0).FillWidth().Background(tok.Line)
@@ -228,8 +360,9 @@ func (a *App) logPanel(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	})
 }
 
-// logRow is a terminal of the logs panel: its log, kept or not, and how
-// long and big it is so far.
+// logRow is a terminal of the logs pane: its log, kept or not, how long
+// and big it is so far, and whether its host's terminals are logged as
+// they connect.
 func (a *App) logRow(c *ui.Context, m locales.Messages, tok theme.Tokens, cn *conn) {
 	r := cn.log
 	ui.Column(c.Key("log:row:"+strconv.Itoa(cn.id))).FillWidth().Padding(theme.Space(1), theme.Space(2)).Gap(theme.Space(0.5)).Radius(theme.RadiusControl).Children(func() {
@@ -252,16 +385,64 @@ func (a *App) logRow(c *ui.Context, m locales.Messages, tok theme.Tokens, cn *co
 				a.saveBuffer(cn, m)
 			}
 			if (IconButton{Icon: icons.FileText, Label: m.LogOpenFile(), Disabled: r == nil || a.p.OpenPath == nil, Size: Small}).Clicked(c, "open") && r != nil {
-				path := r.Path()
-				go func() {
-					if err := a.p.OpenPath(path); err != nil {
-						a.post(func() { a.logToast(err) })
-					}
-				}()
+				a.openLogFile(r.Path())
 			}
 		})
+		if h, ok := a.store.Get(cn.host.ID); ok {
+			auto := h.SessionLog
+			if formCheckbox(c.Key("auto"), &auto, m.LogAuto()).MarginStart(theme.Space(3.5)).Changed() {
+				a.setHostLog(h.ID, auto)
+			}
+		}
 		if r != nil && r.Err() != nil {
 			ui.Text(c, m.LogFailed(r.Err().Error())).FontSize(theme.Caption).TextColor(tok.Danger).FillWidth()
 		}
 	})
+}
+
+// openLogFile opens the log at path with its app.
+func (a *App) openLogFile(path string) {
+	if a.p.OpenPath == nil {
+		return
+	}
+	go func() {
+		if err := a.p.OpenPath(path); err != nil {
+			a.post(func() { a.logToast(err) })
+		}
+	}()
+}
+
+// recentLogsList is the logs of the folder written last, each opened as
+// it is clicked.
+func (a *App) recentLogsList(c *ui.Context, m locales.Messages, tok theme.Tokens) {
+	if a.logs.dir != a.logDir() {
+		a.listLogs()
+	}
+	ui.Row(c.Key("log:recent")).FillWidth().Padding(theme.Space(3), theme.Space(2), theme.Space(1), theme.Space(2)).Gap(theme.Space(1)).AlignItems(ui.Center).Children(func() {
+		ui.Text(c, m.LogRecent()).FontSize(theme.Caption).FontWeight(600).TextColor(tok.TextMuted).SingleLine().Grow(1)
+		if (IconButton{Icon: icons.Refresh, Label: m.Refresh(), Disabled: a.logs.listing, Size: Small}).Clicked(c, "log:relist") {
+			a.listLogs()
+		}
+	})
+	if len(a.logs.recent) == 0 {
+		ui.Text(c, m.LogRecentNone()).FontSize(theme.Caption).TextColor(tok.TextMuted).Padding(0, theme.Space(2))
+		return
+	}
+	for _, l := range a.logs.recent {
+		row := ui.Row(c.Key("log:file:"+l.Path)).FillWidth().MinHeight(28).Padding(theme.Space(1), theme.Space(2)).Gap(theme.Space(2)).AlignItems(ui.Center).
+			Radius(theme.RadiusControl).Cursor(ui.CursorPointer).Label(m.LogOpenFile() + " " + filepath.Base(l.Path)).Tooltip(l.Path)
+		if row.Hovered() {
+			row.Background(tok.Hover)
+		}
+		row.Children(func() {
+			ui.Icon(c, icons.FileText.SVG).Size(14, 14).Shrink(0).TextColor(tok.TextMuted)
+			ui.Column(c).Grow(1).Shrink(1).MinWidth(0).Gap(1).Children(func() {
+				ui.Text(c, a.pv(l.Host)).FontSize(theme.Footnote).SingleLine()
+				ui.Text(c, l.Mod.Format("2006-01-02 15:04")+" · "+humanSize(l.Size)).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine()
+			})
+		})
+		if row.Clicked() {
+			a.openLogFile(l.Path)
+		}
+	}
 }

@@ -188,6 +188,9 @@ var (
 	// Broadcast sends a command to several terminals at once.
 	Broadcast   = load("broadcast-line")
 	BroadcastOn = load("broadcast-fill")
+	// Keyboard sends what is typed to several terminals at once.
+	Keyboard   = load("keyboard-box-line")
+	KeyboardOn = load("keyboard-box-fill")
 	// The AI permission modes: asks first, reviewed, full access.
 	ModeAsk    = InstallKey
 	ModeReview = load("eye-line")

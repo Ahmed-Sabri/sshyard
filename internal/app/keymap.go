@@ -31,6 +31,8 @@ const (
 	actZoomOut        = "zoomOut"
 	actZoomReset      = "zoomReset"
 	actSendBreak      = "sendBreak"
+	actBroadcast      = "broadcast"
+	actSessionLogs    = "sessionLogs"
 )
 
 // action is an action with a shortcut: what it is called, its icon in the
@@ -64,6 +66,8 @@ var actions = []action{
 	{actZoomOut, locales.Messages.ZoomOut, icons.ZoomOut, keymap.Combo{Mods: appMods, Key: ui.KeyMinus}, false},
 	{actZoomReset, locales.Messages.ZoomReset, icons.Reset, keymap.Combo{Mods: appMods, Key: ui.Key0}, false},
 	{actSendBreak, locales.Messages.SendBreak, icons.SendBreak, keymap.Combo{Mods: appMods, Key: ui.KeyB}, false},
+	{actBroadcast, locales.Messages.Broadcast, icons.Broadcast, keymap.Combo{Mods: aiMods, Key: ui.KeyM}, false},
+	{actSessionLogs, locales.Messages.SessionLogs, icons.FileText, keymap.Combo{Mods: aiMods, Key: ui.KeyL}, false},
 }
 
 // actionOf is the action with id.
@@ -272,5 +276,9 @@ func (a *App) runAction(id string) {
 		if cn := a.focused(); a.page == pageWorkspace && cn != nil {
 			a.sendBreak(cn)
 		}
+	case actBroadcast:
+		a.ToggleTool(layout.Broadcast)
+	case actSessionLogs:
+		a.ToggleTool(layout.Logs)
 	}
 }

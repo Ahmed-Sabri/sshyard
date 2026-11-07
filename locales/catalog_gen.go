@@ -16478,3 +16478,165 @@ func LogSaved(path string) string { return In(i18n.Locale()).LogSaved(path) }
 func (msgs Messages) LogSaved(path string) string {
 	return Catalog.Format(msgs.locale, "logSaved", map[string]any{"path": path})
 }
+
+// BroadcastLive says "Sync keyboard input"
+// in the language the app shows.
+func BroadcastLive() string { return In(i18n.Locale()).BroadcastLive() }
+
+// BroadcastLive says "Sync keyboard input"
+// in the language of msgs.
+func (msgs Messages) BroadcastLive() string {
+	return Catalog.Format(msgs.locale, "broadcastLive", nil)
+}
+
+// BroadcastLiveNote says "What you type in a selected terminal also goes to the other selected terminals"
+// in the language the app shows.
+func BroadcastLiveNote() string { return In(i18n.Locale()).BroadcastLiveNote() }
+
+// BroadcastLiveNote says "What you type in a selected terminal also goes to the other selected terminals"
+// in the language of msgs.
+func (msgs Messages) BroadcastLiveNote() string {
+	return Catalog.Format(msgs.locale, "broadcastLiveNote", nil)
+}
+
+// BroadcastLiveOn says "Keyboard input is synced to the selected terminals"
+// in the language the app shows.
+func BroadcastLiveOn() string { return In(i18n.Locale()).BroadcastLiveOn() }
+
+// BroadcastLiveOn says "Keyboard input is synced to the selected terminals"
+// in the language of msgs.
+func (msgs Messages) BroadcastLiveOn() string {
+	return Catalog.Format(msgs.locale, "broadcastLiveOn", nil)
+}
+
+// BroadcastPasteTitle says "Paste into several terminals?"
+// in the language the app shows.
+func BroadcastPasteTitle() string { return In(i18n.Locale()).BroadcastPasteTitle() }
+
+// BroadcastPasteTitle says "Paste into several terminals?"
+// in the language of msgs.
+func (msgs Messages) BroadcastPasteTitle() string {
+	return Catalog.Format(msgs.locale, "broadcastPasteTitle", nil)
+}
+
+// BroadcastPasteConfirm says "The text has several lines; each may run as a command in the {count} synced terminals."
+// in the language the app shows.
+func BroadcastPasteConfirm(count string) string {
+	return In(i18n.Locale()).BroadcastPasteConfirm(count)
+}
+
+// BroadcastPasteConfirm says "The text has several lines; each may run as a command in the {count} synced terminals."
+// in the language of msgs.
+func (msgs Messages) BroadcastPasteConfirm(count string) string {
+	return Catalog.Format(msgs.locale, "broadcastPasteConfirm", map[string]any{"count": count})
+}
+
+// BroadcastSnippet says "Send a Snippet"
+// in the language the app shows.
+func BroadcastSnippet() string { return In(i18n.Locale()).BroadcastSnippet() }
+
+// BroadcastSnippet says "Send a Snippet"
+// in the language of msgs.
+func (msgs Messages) BroadcastSnippet() string {
+	return Catalog.Format(msgs.locale, "broadcastSnippet", nil)
+}
+
+// LogFormat says "Log format"
+// in the language the app shows.
+func LogFormat() string { return In(i18n.Locale()).LogFormat() }
+
+// LogFormat says "Log format"
+// in the language of msgs.
+func (msgs Messages) LogFormat() string {
+	return Catalog.Format(msgs.locale, "logFormat", nil)
+}
+
+// LogFormatText says "Text"
+// in the language the app shows.
+func LogFormatText() string { return In(i18n.Locale()).LogFormatText() }
+
+// LogFormatText says "Text"
+// in the language of msgs.
+func (msgs Messages) LogFormatText() string {
+	return Catalog.Format(msgs.locale, "logFormatText", nil)
+}
+
+// LogFormatRaw says "Raw"
+// in the language the app shows.
+func LogFormatRaw() string { return In(i18n.Locale()).LogFormatRaw() }
+
+// LogFormatRaw says "Raw"
+// in the language of msgs.
+func (msgs Messages) LogFormatRaw() string {
+	return Catalog.Format(msgs.locale, "logFormatRaw", nil)
+}
+
+// LogFormatHint says "Text keeps the lines as shown; raw keeps every byte printed, escape sequences included. Applies to logs started next."
+// in the language the app shows.
+func LogFormatHint() string { return In(i18n.Locale()).LogFormatHint() }
+
+// LogFormatHint says "Text keeps the lines as shown; raw keeps every byte printed, escape sequences included. Applies to logs started next."
+// in the language of msgs.
+func (msgs Messages) LogFormatHint() string {
+	return Catalog.Format(msgs.locale, "logFormatHint", nil)
+}
+
+// LogStamps says "Timestamps"
+// in the language the app shows.
+func LogStamps() string { return In(i18n.Locale()).LogStamps() }
+
+// LogStamps says "Timestamps"
+// in the language of msgs.
+func (msgs Messages) LogStamps() string {
+	return Catalog.Format(msgs.locale, "logStamps", nil)
+}
+
+// LogAuto says "Log this host's terminals when they connect"
+// in the language the app shows.
+func LogAuto() string { return In(i18n.Locale()).LogAuto() }
+
+// LogAuto says "Log this host's terminals when they connect"
+// in the language of msgs.
+func (msgs Messages) LogAuto() string {
+	return Catalog.Format(msgs.locale, "logAuto", nil)
+}
+
+// LogAutoHint says "Each terminal of this host starts its session log as it connects, in the folder chosen in the Session Logs pane."
+// in the language the app shows.
+func LogAutoHint() string { return In(i18n.Locale()).LogAutoHint() }
+
+// LogAutoHint says "Each terminal of this host starts its session log as it connects, in the folder chosen in the Session Logs pane."
+// in the language of msgs.
+func (msgs Messages) LogAutoHint() string {
+	return Catalog.Format(msgs.locale, "logAutoHint", nil)
+}
+
+// LogReconnected says "reconnected"
+// in the language the app shows.
+func LogReconnected() string { return In(i18n.Locale()).LogReconnected() }
+
+// LogReconnected says "reconnected"
+// in the language of msgs.
+func (msgs Messages) LogReconnected() string {
+	return Catalog.Format(msgs.locale, "logReconnected", nil)
+}
+
+// LogRecent says "Recent logs"
+// in the language the app shows.
+func LogRecent() string { return In(i18n.Locale()).LogRecent() }
+
+// LogRecent says "Recent logs"
+// in the language of msgs.
+func (msgs Messages) LogRecent() string {
+	return Catalog.Format(msgs.locale, "logRecent", nil)
+}
+
+// LogRecentNone says "No logs in this folder yet"
+// in the language the app shows.
+func LogRecentNone() string { return In(i18n.Locale()).LogRecentNone() }
+
+// LogRecentNone says "No logs in this folder yet"
+// in the language of msgs.
+func (msgs Messages) LogRecentNone() string {
+	return Catalog.Format(msgs.locale, "logRecentNone", nil)
+}

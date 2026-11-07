@@ -13,7 +13,7 @@ var at = time.Date(2026, 11, 7, 10, 30, 1, 0, time.FixedZone("", 8*3600))
 
 func TestRecorderWritesLines(t *testing.T) {
 	dir := t.TempDir()
-	r, err := Start(dir, Header{Name: "web/01", Target: "root@10.0.0.1:22"}, at, nil)
+	r, err := Start(dir, Header{Name: "web/01", Target: "root@10.0.0.1:22"}, Options{}, at, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,13 +50,67 @@ func TestRecorderWritesLines(t *testing.T) {
 	}
 }
 
-func TestRecorderFilePrivateAndUnique(t *testing.T) {
-	dir := t.TempDir()
-	r1, err := Start(dir, Header{Name: "box"}, at, nil)
+// readClosed closes r at a minute past at and returns its log.
+func readClosed(t *testing.T, r *Recorder, tail string) string {
+	t.Helper()
+	if err := r.Close(tail, at.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(r.Path())
 	if err != nil {
 		t.Fatal(err)
 	}
-	r2, err := Start(dir, Header{Name: "box"}, at, nil)
+	return string(b)
+}
+
+func TestRecorderStampsLines(t *testing.T) {
+	r, err := Start(t.TempDir(), Header{Name: "box"}, Options{Stamps: true}, at, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := at
+	r.now = func() time.Time { return now }
+	r.Line("one", false)
+	// A line wrapped onto the next has one time, where it starts.
+	now = now.Add(time.Second)
+	r.Line("abc", true)
+	now = now.Add(time.Second)
+	r.Line("def", false)
+	r.Mark("reconnected", at.Add(5*time.Second))
+	got := readClosed(t, r, "$")
+	_, body, _ := strings.Cut(got, "\n")
+	want := "[2026-11-07 10:30:01] one\n[2026-11-07 10:30:02] abcdef\n" +
+		"--- reconnected · 2026-11-07 10:30:06 +08:00 ---\n[2026-11-07 10:30:03] $\n<== 2026-11-07 10:31:01 +08:00\n"
+	if body != want {
+		t.Fatalf("log %q, want %q", body, want)
+	}
+}
+
+func TestRecorderRawKeepsBytes(t *testing.T) {
+	r, err := Start(t.TempDir(), Header{Name: "box"}, Options{Raw: true}, at, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.Raw([]byte("\x1b[31mred\x1b[0m\r\n$ "))
+	// The line left open ends before a mark and before the last line;
+	// a raw log takes no tail, which its bytes have already.
+	r.Mark("reconnected", at)
+	r.Raw([]byte("50%\r100%"))
+	got := readClosed(t, r, "100%")
+	_, body, _ := strings.Cut(got, "\n")
+	want := "\x1b[31mred\x1b[0m\r\n$ \n--- reconnected · 2026-11-07 10:30:01 +08:00 ---\n50%\r100%\n<== 2026-11-07 10:31:01 +08:00\n"
+	if body != want {
+		t.Fatalf("log %q, want %q", body, want)
+	}
+}
+
+func TestRecorderFilePrivateAndUnique(t *testing.T) {
+	dir := t.TempDir()
+	r1, err := Start(dir, Header{Name: "box"}, Options{}, at, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r2, err := Start(dir, Header{Name: "box"}, Options{}, at, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +139,7 @@ func TestRecorderFilePrivateAndUnique(t *testing.T) {
 }
 
 func TestRecorderWriteFailureStops(t *testing.T) {
-	r, err := Start(t.TempDir(), Header{Name: "box"}, at, nil)
+	r, err := Start(t.TempDir(), Header{Name: "box"}, Options{}, at, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +159,7 @@ func TestRecorderWriteFailureStops(t *testing.T) {
 }
 
 func TestRecorderBacklogStops(t *testing.T) {
-	r, err := Start(t.TempDir(), Header{Name: "box"}, at, nil)
+	r, err := Start(t.TempDir(), Header{Name: "box"}, Options{}, at, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

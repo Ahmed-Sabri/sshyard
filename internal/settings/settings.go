@@ -209,6 +209,10 @@ type SessionLog struct {
 	// Dir is the folder of the logs, an absolute path; "" is
 	// SSHYard/logs in the home folder.
 	Dir string `json:"dir,omitempty"`
+	// Raw keeps the bytes printed, escape sequences and all, rather than
+	// the lines shown; Stamps starts each line with its time.
+	Raw    bool `json:"raw,omitempty"`
+	Stamps bool `json:"stamps,omitempty"`
 }
 
 // Highlight is how the terminal colors keywords in its output.

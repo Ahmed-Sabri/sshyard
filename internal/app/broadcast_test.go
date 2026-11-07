@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"strconv"
 	"testing"
 
 	"github.com/Licoy/sshyard/internal/assets"
@@ -167,21 +168,178 @@ func TestBroadcastAsksBeforeSeveralLines(t *testing.T) {
 	a, tt, cs, shells := broadcastPair(t)
 	a.ws.Activate(cs[0].id)
 	a.bc.draft = "cd /tmp\nls\n"
-	a.submitBroadcast(false)
-	if !a.bc.confirm || a.bc.sent != nil {
-		t.Fatalf("several lines sent without asking: confirm %v, sent %v", a.bc.confirm, a.bc.sent)
+	a.submitBroadcast()
+	if !a.bc.confirm || a.bc.sent != nil || a.bc.draft == "" {
+		t.Fatalf("several lines sent without asking: confirm %v, sent %v, draft %q", a.bc.confirm, a.bc.sent, a.bc.draft)
 	}
 	a.bc.confirm = false
-	a.submitBroadcast(true)
+	a.confirmBroadcast()
 	waitBroadcast(t, a, tt)
 	readExactly(t, tt, shells[1], "cd /tmp\rls\r")
+	if a.bc.draft != "" || len(a.bc.history) != 1 || a.bc.history[0] != "cd /tmp\nls\n" {
+		t.Fatalf("sent, draft %q, history %q", a.bc.draft, a.bc.history)
+	}
 
 	// One line, its line end aside, goes at once.
 	a.bc.draft = "pwd\r\n"
-	a.submitBroadcast(false)
+	a.submitBroadcast()
 	if a.bc.confirm {
 		t.Fatal("asked before one line")
 	}
 	waitBroadcast(t, a, tt)
 	readExactly(t, tt, shells[1], "pwd\r")
+
+	// Refused, the draft stays and is not remembered.
+	a.bc.left = map[int]bool{cs[0].id: true, cs[1].id: true}
+	a.bc.draft = "uptime"
+	a.submitBroadcast()
+	if a.bc.draft != "uptime" || len(a.bc.history) != 2 {
+		t.Fatalf("refused, draft %q, history %q", a.bc.draft, a.bc.history)
+	}
+}
+
+func TestBroadcastHistory(t *testing.T) {
+	var b broadcastState
+	if _, ok := b.recall("x", true); ok {
+		t.Fatal("recalled from no history")
+	}
+	b.remember("one")
+	b.remember("two")
+	b.remember("two")
+	b.remember("  ")
+	if len(b.history) != 2 {
+		t.Fatalf("history %q", b.history)
+	}
+	steps := []struct {
+		up   bool
+		want string
+		ok   bool
+	}{{true, "two", true}, {true, "one", true}, {true, "", false}, {false, "two", true}, {false, "typed", true}, {false, "", false}}
+	for i, s := range steps {
+		got, ok := b.recall("typed", s.up)
+		if got != s.want || ok != s.ok {
+			t.Fatalf("step %d: %q %v, want %q %v", i, got, ok, s.want, s.ok)
+		}
+	}
+	for i := range historyMax + 5 {
+		b.remember(strconv.Itoa(i))
+	}
+	if len(b.history) != historyMax || b.history[len(b.history)-1] != strconv.Itoa(historyMax+4) {
+		t.Fatalf("history of %d, last %q", len(b.history), b.history[len(b.history)-1])
+	}
+}
+
+// keyIn types into terminal pane c as its view takes keys; paste, when
+// set, pastes it instead.
+func keyIn(a *App, c *conn, ev ui.InputEvent, paste ...string) {
+	c.tv.fanout = a.fanoutFrom(c)
+	c.tv.holdPaste = func(text string) bool { return a.holdPaste(c, text) }
+	if len(paste) > 0 {
+		c.tv.Paste(paste[0])
+		return
+	}
+	c.tv.input(ev, nil)
+}
+
+func TestSyncKeyboardInput(t *testing.T) {
+	a, tt, cs, shells := broadcastPair(t)
+	shells[1].out <- "\x1b[?1h"
+	waitFor(t, tt, "cursor keys mode", func() bool { return cs[1].s.Term.Modes().AppCursorKeys })
+	a.ws.Activate(cs[0].id)
+	a.ToggleTool(layout.Broadcast)
+	if a.focused() != cs[0] || !a.toolHere(layout.Broadcast) {
+		t.Fatalf("focused %v after opening the broadcast pane", a.focused())
+	}
+	up := ui.InputEvent{Kind: ui.InputKeyDown, Key: ui.KeyUp}
+	keyIn(a, cs[0], up)
+	readExactly(t, tt, shells[0], "\x1b[A")
+	if got := shells[1].take(); got != "" {
+		t.Fatalf("typing went to another terminal while not synced: %q", got)
+	}
+
+	// Synced: each target gets the key as its terminal reads it.
+	a.bc.live = true
+	keyIn(a, cs[0], up)
+	keyIn(a, cs[0], ui.InputEvent{Kind: ui.InputText, Text: "ls"})
+	readExactly(t, tt, shells[0], "\x1b[Als")
+	readExactly(t, tt, shells[1], "\x1bOAls")
+	if got := shells[2].take(); got != "" {
+		t.Fatalf("a terminal of another tab got %q", got)
+	}
+	// One left out neither gets nor sends.
+	a.bc.left = map[int]bool{cs[1].id: true}
+	keyIn(a, cs[0], ui.InputEvent{Kind: ui.InputText, Text: "x"})
+	keyIn(a, cs[1], ui.InputEvent{Kind: ui.InputText, Text: "y"})
+	readExactly(t, tt, shells[0], "x")
+	readExactly(t, tt, shells[1], "y")
+	a.bc.left = nil
+
+	// Several lines pasted wait for a yes, then go to each as it takes a
+	// paste.
+	keyIn(a, cs[0], ui.InputEvent{}, "one\ntwo")
+	if !a.bc.pasteAsk {
+		t.Fatal("several lines pasted without asking")
+	}
+	if got := shells[0].take() + shells[1].take(); got != "" {
+		t.Fatalf("sent before asking: %q", got)
+	}
+	a.bc.pasteAsk = false
+	a.pasteHeld()
+	readExactly(t, tt, shells[0], "\x1b[200~one\rtwo\x1b[201~")
+	readExactly(t, tt, shells[1], "one\rtwo")
+
+	// Closing the pane ends the sync, which stays off when it opens again.
+	a.ToggleTool(layout.Broadcast)
+	if a.toolPane(layout.Broadcast) != nil || a.bc.live {
+		t.Fatal("the sync outlived its pane")
+	}
+	a.ToggleTool(layout.Broadcast)
+	if a.fanoutFrom(cs[0]) != nil {
+		t.Fatal("synced again on its own")
+	}
+}
+
+func TestToolPanes(t *testing.T) {
+	a, _, cs, _ := broadcastPair(t)
+	// One of each in the workspace: opened in a tab, then brought to
+	// another, then closed where it is.
+	a.ToggleTool(layout.Logs)
+	logs := a.toolPane(layout.Logs)
+	if lt, _ := a.ws.Locate(logs.id); lt != a.ws.TabOf(a.paneNode(cs[2].id)) {
+		t.Fatal("the logs pane is not in the active tab")
+	}
+	a.ws.Activate(cs[0].id)
+	a.ToggleTool(layout.Logs)
+	if lt, _ := a.ws.Locate(logs.id); a.toolPane(layout.Logs) != logs || lt != a.ws.TabOf(a.paneNode(cs[0].id)) {
+		t.Fatal("the logs pane did not come to the active tab")
+	}
+	if a.focused() != cs[0] {
+		t.Fatalf("focused %v, want the terminal", a.focused())
+	}
+	// A click on it keeps the tab's focus on its session.
+	tab := a.ws.ActiveTab()
+	tab.Focus = a.paneNode(logs.id)
+	a.settleFocus(tab)
+	if a.focused() != cs[0] {
+		t.Fatalf("focused %v once the tool pane was clicked", a.focused())
+	}
+	// It is not saved with the layout.
+	for _, tb := range a.layoutSnapshot().Tabs {
+		var walk func(n *nodeSnap)
+		walk = func(n *nodeSnap) {
+			if n == nil {
+				return
+			}
+			if n.Kind == "logs" || n.Kind == "broadcast" {
+				t.Fatalf("tool pane saved: %+v", n)
+			}
+			walk(n.A)
+			walk(n.B)
+		}
+		walk(tb.Root)
+	}
+	a.ToggleTool(layout.Logs)
+	if a.toolPane(layout.Logs) != nil {
+		t.Fatal("the logs pane stayed open")
+	}
 }
