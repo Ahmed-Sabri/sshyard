@@ -448,19 +448,18 @@ func historyMeta(m locales.Messages, e shellhist.Entry) string {
 }
 
 // historyRow is a command: its first line and what is known of it, with
-// the button running it and its menu, the same as a right click. Chosen,
-// it opens on its whole text.
+// an IconButton for each of its actions, which a right click lists too.
+// Chosen, it opens on its whole text.
 func (a *App) historyRow(c *ui.Context, m locales.Messages, tok theme.Tokens, i int, e shellhist.Entry, disabled bool) {
 	d := a.hist
 	key := strconv.Itoa(i)
 	sel := d.selected == e.Cmd
 	fam := a.termFamily()
-	more := "hist:more:" + key
 	box := ui.Column(c.Key("hist:row:" + key)).FillWidth().Radius(theme.RadiusControl)
 	switch {
 	case sel:
 		box.Background(tok.Accent.Alpha(accentWash(tok)))
-	case box.Hovered() || a.menu.key == more:
+	case box.Hovered():
 		box.Background(tok.Hover)
 	}
 	box.Children(func() {
@@ -486,7 +485,15 @@ func (a *App) historyRow(c *ui.Context, m locales.Messages, tok theme.Tokens, i 
 			if (IconButton{Icon: icons.Send, Label: m.HistoryRun(), Disabled: disabled, Size: Small}).Clicked(c, "hist:run:"+key) {
 				a.runHistory(m, e.Cmd, true)
 			}
-			a.menuButton(c, more, IconButton{Icon: icons.More, Label: m.MoreActions(), Size: Small}, func() []menuEntry { return a.historyMenu(m, e.Cmd, disabled) })
+			if (IconButton{Icon: icons.Paste, Label: m.HistoryInsert(), Disabled: disabled, Size: Small}).Clicked(c, "hist:insert:"+key) {
+				a.runHistory(m, e.Cmd, false)
+			}
+			if (IconButton{Icon: icons.Copy, Label: m.Copy(), Size: Small}).Clicked(c, "hist:copy:"+key) {
+				a.copyHistory(e.Cmd)
+			}
+			if (IconButton{Icon: icons.API, Label: m.HistoryAddSnippet(), Size: Small}).Clicked(c, "hist:snippet:"+key) {
+				a.historySnippet(m, e.Cmd)
+			}
 		})
 		if !sel {
 			return

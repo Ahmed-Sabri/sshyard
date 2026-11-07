@@ -12595,14 +12595,36 @@ func (msgs Messages) SnippetPreview(name string) string {
 	return Catalog.Format(msgs.locale, "snippetPreview", map[string]any{"name": name})
 }
 
-// SnippetMore says "More actions for {name}"
+// SnippetEditAction says "Edit {name}"
 // in the language the app shows.
-func SnippetMore(name string) string { return In(i18n.Locale()).SnippetMore(name) }
+func SnippetEditAction(name string) string { return In(i18n.Locale()).SnippetEditAction(name) }
 
-// SnippetMore says "More actions for {name}"
+// SnippetEditAction says "Edit {name}"
 // in the language of msgs.
-func (msgs Messages) SnippetMore(name string) string {
-	return Catalog.Format(msgs.locale, "snippetMore", map[string]any{"name": name})
+func (msgs Messages) SnippetEditAction(name string) string {
+	return Catalog.Format(msgs.locale, "snippetEditAction", map[string]any{"name": name})
+}
+
+// SnippetDuplicateAction says "Duplicate {name}"
+// in the language the app shows.
+func SnippetDuplicateAction(name string) string {
+	return In(i18n.Locale()).SnippetDuplicateAction(name)
+}
+
+// SnippetDuplicateAction says "Duplicate {name}"
+// in the language of msgs.
+func (msgs Messages) SnippetDuplicateAction(name string) string {
+	return Catalog.Format(msgs.locale, "snippetDuplicateAction", map[string]any{"name": name})
+}
+
+// SnippetDeleteAction says "Delete {name}"
+// in the language the app shows.
+func SnippetDeleteAction(name string) string { return In(i18n.Locale()).SnippetDeleteAction(name) }
+
+// SnippetDeleteAction says "Delete {name}"
+// in the language of msgs.
+func (msgs Messages) SnippetDeleteAction(name string) string {
+	return Catalog.Format(msgs.locale, "snippetDeleteAction", map[string]any{"name": name})
 }
 
 // SnippetDuplicate says "Duplicate"
