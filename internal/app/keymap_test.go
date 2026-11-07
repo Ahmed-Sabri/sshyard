@@ -28,6 +28,8 @@ func TestShortcutRule(t *testing.T) {
 		{"darwin", quick, k(ui.Super|ui.Shift, ui.KeyZ), ruleReserved},
 		{"darwin", quick, k(ui.Super, ui.KeyEnter), ruleKey},
 		{"darwin", save, k(ui.Super, ui.KeyW), ruleReserved},
+		// The menu bar's Close Window, which takes it before the window.
+		{"darwin", quick, k(ui.Super|ui.Shift, ui.KeyW), ruleReserved},
 		{"linux", quick, k(ui.Ctrl, ui.KeyJ), ruleMods},
 		{"linux", quick, k(ui.Ctrl|ui.Shift, ui.KeyF5), ruleOK},
 		{"linux", quick, k(ui.Ctrl|ui.Shift, ui.KeyC), ruleReserved},

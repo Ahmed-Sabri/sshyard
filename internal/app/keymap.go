@@ -133,14 +133,15 @@ func shortcutMods(goos string, editor bool) ui.Modifiers {
 }
 
 // reserved are the shortcuts no action may take on goos: editing text
-// (Select All, Copy, Paste, Cut, Undo, Redo), the system's, and the
-// terminal's copy and paste; for the editor, also closing its tab.
+// (Select All, Copy, Paste, Cut, Undo, Redo), the system's and the menu
+// bar's (Close Window), and the terminal's copy and paste; for the editor,
+// also closing its tab.
 func reserved(goos string, editor bool) []keymap.Combo {
 	k := func(m ui.Modifiers, key ui.Key) keymap.Combo { return keymap.Combo{Mods: m, Key: key} }
 	if goos == "darwin" {
 		out := []keymap.Combo{k(ui.Super, ui.KeyA), k(ui.Super, ui.KeyC), k(ui.Super, ui.KeyV), k(ui.Super, ui.KeyX),
 			k(ui.Super, ui.KeyZ), k(ui.Super|ui.Shift, ui.KeyZ), k(ui.Super, ui.KeyQ), k(ui.Super, ui.KeyH),
-			k(ui.Super, ui.KeyM), k(ui.Super, ui.KeyBackquote)}
+			k(ui.Super, ui.KeyM), k(ui.Super, ui.KeyBackquote), k(ui.Super|ui.Shift, ui.KeyW)}
 		if editor {
 			out = append(out, k(ui.Super, ui.KeyW))
 		}
@@ -244,7 +245,9 @@ func (a *App) runAction(id string) {
 			a.Connect(id, openAt{})
 		}
 	case actClosePane:
-		a.CloseFocused()
+		if a.page == pageWorkspace {
+			a.CloseFocused()
+		}
 	case actSplitRight:
 		a.SplitFocused(layout.Right)
 	case actSplitDown:
