@@ -15,7 +15,8 @@ import (
 	"github.com/Licoy/sshyard/internal/ai/policy"
 )
 
-// MaxToolCalls is how many tool calls one turn runs before it pauses.
+// MaxToolCalls is how many tool calls one turn runs before it pauses, for a
+// Config that names none.
 const MaxToolCalls = 25
 
 // maxOutput is the most of one tool result kept for the timeline and the model.
@@ -24,9 +25,9 @@ const maxOutput = 1 << 20
 // defaultMaxChars is the context budget. Oldest tool outputs are summarised past it.
 const defaultMaxChars = 120_000
 
-// ErrPaused is returned when a turn stops after MaxToolCalls tool calls.
+// ErrPaused is returned when a turn stops after its tool-call limit.
 // Continue resumes it.
-var ErrPaused = errors.New("agent: paused after 25 tool calls")
+var ErrPaused = errors.New("agent: paused at the tool call limit")
 
 var errTurnPaused = errors.New("agent: turn is paused")
 
@@ -42,6 +43,9 @@ type Config struct {
 	Tools    Tools
 	Redact   bool
 	MaxChars int
+	// MaxToolCalls caps the tool calls one turn runs before it pauses.
+	// Nil keeps MaxToolCalls; a pointer to 0 runs without a limit.
+	MaxToolCalls *int
 }
 
 // Kind is one timeline event.
@@ -94,8 +98,12 @@ type Session struct {
 	maxChars int
 	msgs     []llm.Message
 	hostSent bool
+	// used counts the tool calls of the turn so far; limit is how many it
+	// may run in all, raised by maxCalls on each Continue; maxCalls is the
+	// calls one stretch grants, 0 for no limit at all.
 	used     int
 	limit    int
+	maxCalls int
 	paused   bool
 	pending  []llm.ToolCall
 }
@@ -111,6 +119,10 @@ func New(cfg Config) *Session {
 	if maxChars <= 0 {
 		maxChars = defaultMaxChars
 	}
+	maxCalls := MaxToolCalls
+	if cfg.MaxToolCalls != nil {
+		maxCalls = max(0, *cfg.MaxToolCalls)
+	}
 	return &Session{
 		model:    cfg.Model,
 		gate:     cfg.Gate,
@@ -118,11 +130,24 @@ func New(cfg Config) *Session {
 		redact:   cfg.Redact,
 		maxChars: maxChars,
 		msgs:     []llm.Message{{Role: "system", Content: SystemPrompt}},
+		maxCalls: maxCalls,
+		limit:    maxCalls,
 	}
 }
 
-// Configure updates an idle session after its previous turn has stopped
-func (s *Session) Configure(gate policy.Gate, redact bool) { s.gate = gate; s.redact = redact }
+// Configure updates an idle session after its previous turn has stopped:
+// the gate it asks, whether it redacts, and the tool calls its next turn
+// runs before pausing. A nil maxToolCalls keeps MaxToolCalls.
+func (s *Session) Configure(gate policy.Gate, redact bool, maxToolCalls *int) {
+	s.gate = gate
+	s.redact = redact
+	maxCalls := MaxToolCalls
+	if maxToolCalls != nil {
+		maxCalls = max(0, *maxToolCalls)
+	}
+	s.maxCalls = maxCalls
+	s.limit = maxCalls
+}
 
 // Paused reports whether the session is waiting for Continue.
 func (s *Session) Paused() bool { return s.paused }
@@ -158,13 +183,14 @@ func (s *Session) TurnWith(ctx context.Context, user string, parts []llm.Part, m
 	}
 	s.msgs = append(s.msgs, llm.Message{Role: "user", Content: s.mask(text), Parts: parts})
 	s.used = 0
-	s.limit = MaxToolCalls
+	s.limit = s.maxCalls
 	s.pending = nil
 	return s.loop(ctx, emit)
 }
 
 // Continue runs the tool calls that were held at the pause, then keeps going.
-// It grants another MaxToolCalls. It does nothing when the session is not paused.
+// It grants another stretch of tool calls. It does nothing when the session
+// is not paused.
 func (s *Session) Continue(ctx context.Context, emit func(Event)) error {
 	if !s.paused {
 		return nil
@@ -173,7 +199,11 @@ func (s *Session) Continue(ctx context.Context, emit func(Event)) error {
 		return errors.New("agent: not configured")
 	}
 	s.paused = false
-	s.limit = s.used + MaxToolCalls
+	if s.maxCalls <= 0 {
+		s.limit = 0 // no limit at all: every remaining call runs
+	} else {
+		s.limit = s.used + s.maxCalls
+	}
 	if err := s.drain(ctx, emit); err != nil {
 		return err
 	}
@@ -223,7 +253,8 @@ func (s *Session) drain(ctx context.Context, emit func(Event)) error {
 			s.cancelRest("cancelled")
 			return err
 		}
-		if s.used >= s.limit {
+		// A limit of 0 is no limit: the turn runs every call it is given.
+		if s.limit > 0 && s.used >= s.limit {
 			s.paused = true
 			if emit != nil {
 				emit(Event{Kind: EventPause})
