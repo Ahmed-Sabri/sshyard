@@ -122,6 +122,10 @@ func kindIcon(k layout.Kind, on bool) *icons.Icon {
 		return icons.FileTextOn
 	case k == layout.Logs:
 		return icons.FileText
+	case k == layout.Snippets:
+		return icons.API
+	case k == layout.History:
+		return icons.History
 	case on:
 		return icons.TerminalOn
 	}

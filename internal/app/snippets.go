@@ -29,9 +29,6 @@ type snippetState struct {
 	inline bool
 }
 
-// snippetWidth is the snippets panel's width, room for a command line.
-const snippetWidth = 360
-
 // rowButton is a Small IconButton's width with the gap before it;
 // rowTextMin the room a list row keeps for its text beside its actions,
 // chosen so a panel's rows show alike with or without the scroll gutter.
@@ -62,24 +59,24 @@ func (a *App) snippetTarget() *conn {
 	return cn
 }
 
-// snippetsPanel is the snippets panel: the search and the groups over the
-// list, in sections by group, and at the foot the terminal they go to.
+// snippetsHead is what the snippets pane's header holds after its name:
+// how many there are and the button adding one.
+func (a *App) snippetsHead(c *ui.Context, m locales.Messages, tok theme.Tokens) {
+	if n := len(a.store.Snippets()); n > 0 {
+		ui.Text(c, strconv.Itoa(n)).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine()
+	}
+	ui.Spacer(c)
+	if (IconButton{Icon: icons.Add, Label: m.SnippetNew(), Size: Tiny}).Clicked(c, "snippet:new") {
+		a.openSnippet(m, assets.Snippet{Group: a.snippets.group}, false)
+	}
+}
+
+// snippetsPanel is the snippets pane under its header: the search and
+// the groups over the list, in sections by group, and at the foot the
+// terminal they go to.
 func (a *App) snippetsPanel(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	all := a.store.Snippets()
 	ui.Column(c.Key("snippets")).Fill().Children(func() {
-		ui.Row(c).Height(toolbarHeight).Shrink(0).Padding(0, theme.Space(2), 0, theme.Space(4)).Gap(theme.Space(2)).AlignItems(ui.Center).Children(func() {
-			ui.Text(c, m.Snippets()).FontSize(theme.Body).FontWeight(600).Shrink(1).SingleLine()
-			if len(all) > 0 {
-				ui.Text(c, strconv.Itoa(len(all))).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine()
-			}
-			ui.Spacer(c)
-			if (IconButton{Icon: icons.Add, Label: m.SnippetNew(), Size: Small}).Clicked(c, "snippet:new") {
-				a.openSnippet(m, assets.Snippet{Group: a.snippets.group}, false)
-			}
-			if (IconButton{Icon: icons.Close, Label: m.ClosePanel(), Size: Small}).Clicked(c, "snippet:close") {
-				a.closePanel(inspectSnippets)
-			}
-		})
 		if len(all) == 0 {
 			a.snippetIntro(c, m, tok)
 		} else {

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/Licoy/sshyard/internal/assets"
+	"github.com/Licoy/sshyard/internal/layout"
 	"github.com/Licoy/sshyard/locales"
 	"github.com/egoist/mygo/ui"
 )
@@ -103,14 +104,12 @@ func backgroundSnippetsView(t *testing.T) backgroundView {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.openPanel(inspectSnippets)
+	a.ToggleTool(layout.Snippets)
 	a.snippets.selected = n.ID
 	tt.Frame()
 	return backgroundView{a, tt, func() {
 		m := locales.In("en")
-		mustClick(t, tt, m.SnippetMore(n.Name))
-		tt.Frame()
-		mustClick(t, tt, m.Edit())
+		mustClick(t, tt, m.SnippetEditAction(n.Name))
 		tt.Frame()
 		if a.snippets.form == nil || a.snippets.form.content != "echo background\npwd" {
 			t.Fatal("snippet edit lost the selected body")

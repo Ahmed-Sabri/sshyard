@@ -242,41 +242,48 @@ func (a *App) historyMenu(m locales.Messages, cmd string, disabled bool) []menuE
 	}
 }
 
-// historyPanel is the command history panel: its title bar, the search
-// and the shells over the list, and at the foot the terminal commands go
-// to.
-func (a *App) historyPanel(c *ui.Context, m locales.Messages, tok theme.Tokens) {
+// history is the history pane's state, made on first use.
+func (a *App) history() *historyState {
 	if a.hist == nil {
 		a.hist = &historyState{limit: historyPage}
 	}
-	d := a.hist
+	return a.hist
+}
+
+// historyHead is what the history pane's header holds after its name:
+// how many commands there are, the read going on, the tip on bash and
+// the button reading them again.
+func (a *App) historyHead(c *ui.Context, m locales.Messages, tok theme.Tokens) {
+	d := a.history()
+	src, _ := a.historySource(m, a.focused())
+	if src != nil && d.read && len(d.hist.Entries) > 0 {
+		ui.Text(c, strconv.Itoa(len(d.hist.Entries))).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine()
+	}
+	ui.Spacer(c)
+	if src != nil && d.running {
+		ui.Spinner(c)
+	}
+	if src != nil && d.read && historyTipShows(d.hist) {
+		if (IconButton{Icon: icons.Warning, Label: m.HistoryBashTipTitle(), Prominent: true, Size: Tiny}).Clicked(c, "hist:tip") {
+			d.tipOpen = true
+		}
+	}
+	if (IconButton{Icon: icons.Refresh, Label: m.Refresh(), Disabled: src == nil || d.running, Size: Tiny}).Clicked(c, "hist:refresh") {
+		d.err = nil
+		a.readHistory(c, src, true)
+	}
+}
+
+// historyPanel is the command history pane under its header: the search
+// and the shells over the list, and at the foot the terminal commands go
+// to.
+func (a *App) historyPanel(c *ui.Context, m locales.Messages, tok theme.Tokens) {
+	a.history()
 	src, note := a.historySource(m, a.focused())
 	if src != nil {
 		a.readHistory(c, src, false)
 	}
 	ui.Column(c.Key("history")).Fill().Children(func() {
-		ui.Row(c).Height(toolbarHeight).Shrink(0).Padding(0, theme.Space(2), 0, theme.Space(4)).Gap(theme.Space(2)).AlignItems(ui.Center).Children(func() {
-			ui.Text(c, m.CommandHistory()).FontSize(theme.Body).FontWeight(600).Shrink(1).SingleLine()
-			if src != nil && d.read && len(d.hist.Entries) > 0 {
-				ui.Text(c, strconv.Itoa(len(d.hist.Entries))).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine()
-			}
-			ui.Spacer(c)
-			if src != nil && d.running {
-				ui.Spinner(c)
-			}
-			if src != nil && d.read && historyTipShows(d.hist) {
-				if (IconButton{Icon: icons.Warning, Label: m.HistoryBashTipTitle(), Prominent: true, Size: Small}).Clicked(c, "hist:tip") {
-					d.tipOpen = true
-				}
-			}
-			if (IconButton{Icon: icons.Refresh, Label: m.Refresh(), Disabled: src == nil || d.running, Size: Small}).Clicked(c, "hist:refresh") {
-				d.err = nil
-				a.readHistory(c, src, true)
-			}
-			if (IconButton{Icon: icons.Close, Label: m.ClosePanel(), Size: Small}).Clicked(c, "hist:close") {
-				a.closePanel(inspectHistory)
-			}
-		})
 		if src == nil {
 			ui.Column(c.Key("hist:note")).Grow(1).Shrink(1).MinHeight(0).FillWidth().Padding(0, theme.Space(4)).Children(func() {
 				panelNote(c, tok, note)
