@@ -393,6 +393,29 @@ func TestMaxToolCallsValue(t *testing.T) {
 	}
 }
 
+// TestMaxToolCallsSettingKeepsRunningTurns: the limit reaches a built-in
+// pane at its next turn without stopping the one it is running, and an
+// external agent, which counts its own calls, is left alone.
+func TestMaxToolCallsSettingKeepsRunningTurns(t *testing.T) {
+	a, _ := newTestApp(t)
+	stopped := map[int]bool{}
+	for id, agentID := range map[int]string{1: "builtin", 2: "acp"} {
+		a.conns[id] = &conn{id: id, ai: &aiState{agent: agentID, running: true, cancel: func() { stopped[id] = true }}}
+	}
+	one := 1
+	s := a.Settings()
+	s.AIMaxToolCalls = &one
+	if err := a.ApplySettings(s); err != nil {
+		t.Fatal(err)
+	}
+	if stopped[1] || stopped[2] {
+		t.Fatalf("changing the limit stopped turns: %v", stopped)
+	}
+	if !a.conns[1].ai.dirty || a.conns[2].ai.dirty {
+		t.Fatalf("built-in dirty %v, external dirty %v", a.conns[1].ai.dirty, a.conns[2].ai.dirty)
+	}
+}
+
 // TestMaxToolCallsSettingPausesOpenPane: lowering the cap in settings
 // reaches a pane that is already open, so its next turn stops there and
 // waits instead of running every call the model asks for.

@@ -709,9 +709,14 @@ func (a *App) ApplySettings(s settings.Settings) error {
 		all := settings.IsACP(c.ai.agent) && !oldACP.SameLaunch(newACP) ||
 			old.AIReviewProvider != s.AIReviewProvider || old.AIReviewKind != s.AIReviewKind ||
 			old.AIReviewModel != s.AIReviewModel || old.AIReviewStrictness != s.AIReviewStrictness ||
-			old.AIRedact != s.AIRedact || old.AIDefaultMode != s.AIDefaultMode || old.MaxToolCalls() != s.MaxToolCalls()
+			old.AIRedact != s.AIRedact || old.AIDefaultMode != s.AIDefaultMode
 		if all || c.ai.agent == "builtin" && !reflect.DeepEqual(providerIn(old, c.ai.provider), providerIn(s, c.ai.provider)) || !reflect.DeepEqual(providerIn(old, old.AIReviewProvider), providerIn(s, s.AIReviewProvider)) {
 			a.invalidateAI(c)
+		} else if c.ai.agent == "builtin" && old.MaxToolCalls() != s.MaxToolCalls() {
+			// The built-in agent reads the limit as a turn starts or
+			// continues, so the turn running is left to finish; an
+			// external agent counts its own calls.
+			c.ai.dirty = true
 		}
 	}
 	if s.Theme != old.Theme && a.p.SetTheme != nil {
