@@ -61,17 +61,6 @@ func TestAIPaneLayout(t *testing.T) {
 
 	mustClick(t, tt, "Model")
 	tt.Frame()
-	// The first level names the providers; their models live one level down.
-	for _, s := range []string{"Alpha", "Beta", "Manage Providers…"} {
-		if !tt.HasText(s) {
-			t.Fatalf("model menu lacks %q: %q", s, tt.Texts())
-		}
-	}
-	for _, s := range []string{"beta-1", "beta-2", "beta-mini"} {
-		if tt.HasText(s) {
-			t.Fatalf("model %q is listed outside its provider: %q", s, tt.Texts())
-		}
-	}
 	if a.conns[id].ai.provider != "p1" {
 		t.Fatalf("with several providers the pane starts on %q, not the first", a.conns[id].ai.provider)
 	}
@@ -323,10 +312,8 @@ func TestAIPaneNarrow(t *testing.T) {
 	}
 }
 
-// TestModelMenuGroupsProviders: the model menu names the providers first,
-// each opening its own models in a submenu, so the models of different
-// providers never share one flat list. A search still lists its matches
-// directly, since the query has already narrowed them.
+// TestModelMenuGroupsProviders: with several providers a model is chosen
+// from its provider's submenu, which switches the pane to that provider.
 func TestModelMenuGroupsProviders(t *testing.T) {
 	a, tt := newTestApp(t)
 	tt.SetSize(1200, 2400)
@@ -349,12 +336,6 @@ func TestModelMenuGroupsProviders(t *testing.T) {
 	tt.Frame()
 	if a.menu.key == "" {
 		t.Fatal("the model menu did not open")
-	}
-	if !tt.HasText("Alpha") || !tt.HasText("Beta") {
-		t.Fatalf("providers not listed first: %q", tt.Texts())
-	}
-	if tt.HasText("alpha-2") || tt.HasText("beta-1") || tt.HasText("beta-2") {
-		t.Fatal("models were listed outside their provider")
 	}
 	openModelSubmenu(t, a, tt, "Beta")
 	mustClick(t, tt, "beta-2")

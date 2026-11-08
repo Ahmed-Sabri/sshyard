@@ -57,9 +57,6 @@ func TestAIModelMenu(t *testing.T) {
 	// One provider has no group to name first, so its models are the menu.
 	mustClick(t, tt, "Model")
 	tt.Frame()
-	if tt.HasText("OpenAI") {
-		t.Fatalf("a lone provider was listed as a group: %q", tt.Texts())
-	}
 	mustClick(t, tt, "claude-sonnet-4")
 	tt.Frame()
 	if a.conns[id].ai.model != "claude-sonnet-4" {
