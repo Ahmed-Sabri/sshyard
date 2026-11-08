@@ -1421,9 +1421,14 @@ func hostsBy(st *assets.Store, query string) (favorites []assets.Host, groups []
 		}
 		byGroup[h.Group] = append(byGroup[h.Group], h)
 	}
-	// Groups made on their own show while empty, but not in a search.
+	// Groups made on their own show while empty, but not in a search,
+	// where a group shows for the hosts of its subgroups too.
+	found := map[string]bool{}
+	for g := range byGroup {
+		found[g], found[assets.GroupParent(g)] = true, true
+	}
 	for _, g := range st.Groups() {
-		if _, ok := byGroup[g]; ok || query == "" {
+		if found[g] || query == "" {
 			groups = append(groups, g)
 		}
 	}

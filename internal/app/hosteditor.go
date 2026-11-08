@@ -439,7 +439,7 @@ func (a *App) editorView(c *ui.Context, m locales.Messages) {
 						}
 						ui.Field(c, m.FieldUser(), func() { formTextInput(c.Key("f:user"), &f.user).Placeholder("root") })
 						ui.Field(c, m.FieldGroup(), func() { a.hostGroupField(c, m, f) })
-						ui.Field(c, m.FieldAppearance(), func() { a.lookFields(c, m, tok, f) })
+						ui.Field(c, m.FieldAppearance(), func() { a.lookFields(c, m, tok, &f.icon, &f.emoji, &f.color, m.AutoIcon(), m.AutoColor()) })
 						ui.Field(c, m.FieldAuth(), func() {
 							if f.auth == "" {
 								f.auth = a.authLabel(m, f.orig)

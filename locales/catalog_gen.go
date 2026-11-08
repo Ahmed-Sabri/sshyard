@@ -8083,14 +8083,34 @@ func (msgs Messages) NewGroupEllipsis() string {
 	return Catalog.Format(msgs.locale, "newGroupEllipsis", nil)
 }
 
-// RenameGroup says "Rename group"
+// EditGroup says "Edit group"
 // in the language the app shows.
-func RenameGroup() string { return In(i18n.Locale()).RenameGroup() }
+func EditGroup() string { return In(i18n.Locale()).EditGroup() }
 
-// RenameGroup says "Rename group"
+// EditGroup says "Edit group"
 // in the language of msgs.
-func (msgs Messages) RenameGroup() string {
-	return Catalog.Format(msgs.locale, "renameGroup", nil)
+func (msgs Messages) EditGroup() string {
+	return Catalog.Format(msgs.locale, "editGroup", nil)
+}
+
+// GroupFolderIcon says "Folder icon"
+// in the language the app shows.
+func GroupFolderIcon() string { return In(i18n.Locale()).GroupFolderIcon() }
+
+// GroupFolderIcon says "Folder icon"
+// in the language of msgs.
+func (msgs Messages) GroupFolderIcon() string {
+	return Catalog.Format(msgs.locale, "groupFolderIcon", nil)
+}
+
+// GroupDefaultColor says "Default color"
+// in the language the app shows.
+func GroupDefaultColor() string { return In(i18n.Locale()).GroupDefaultColor() }
+
+// GroupDefaultColor says "Default color"
+// in the language of msgs.
+func (msgs Messages) GroupDefaultColor() string {
+	return Catalog.Format(msgs.locale, "groupDefaultColor", nil)
 }
 
 // DeleteGroup says "Delete group"
@@ -8151,6 +8171,48 @@ func NewHostInGroup() string { return In(i18n.Locale()).NewHostInGroup() }
 // in the language of msgs.
 func (msgs Messages) NewHostInGroup() string {
 	return Catalog.Format(msgs.locale, "newHostInGroup", nil)
+}
+
+// NewSubgroup says "New subgroup"
+// in the language the app shows.
+func NewSubgroup() string { return In(i18n.Locale()).NewSubgroup() }
+
+// NewSubgroup says "New subgroup"
+// in the language of msgs.
+func (msgs Messages) NewSubgroup() string {
+	return Catalog.Format(msgs.locale, "newSubgroup", nil)
+}
+
+// SubgroupOf says "In {group}"
+// in the language the app shows.
+func SubgroupOf(group string) string { return In(i18n.Locale()).SubgroupOf(group) }
+
+// SubgroupOf says "In {group}"
+// in the language of msgs.
+func (msgs Messages) SubgroupOf(group string) string {
+	return Catalog.Format(msgs.locale, "subgroupOf", map[string]any{"group": group})
+}
+
+// GroupTooDeep says "Groups nest only one level deep: a subgroup cannot hold groups."
+// in the language the app shows.
+func GroupTooDeep() string { return In(i18n.Locale()).GroupTooDeep() }
+
+// GroupTooDeep says "Groups nest only one level deep: a subgroup cannot hold groups."
+// in the language of msgs.
+func (msgs Messages) GroupTooDeep() string {
+	return Catalog.Format(msgs.locale, "groupTooDeep", nil)
+}
+
+// DeleteGroupTreeConfirm says "Delete the group {group} and its subgroups? Their hosts are kept, without a group."
+// in the language the app shows.
+func DeleteGroupTreeConfirm(group string) string {
+	return In(i18n.Locale()).DeleteGroupTreeConfirm(group)
+}
+
+// DeleteGroupTreeConfirm says "Delete the group {group} and its subgroups? Their hosts are kept, without a group."
+// in the language of msgs.
+func (msgs Messages) DeleteGroupTreeConfirm(group string) string {
+	return Catalog.Format(msgs.locale, "deleteGroupTreeConfirm", map[string]any{"group": group})
 }
 
 // MoveToGroup says "Move to group"

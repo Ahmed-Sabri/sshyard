@@ -65,16 +65,12 @@ func (a *App) sidebarView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 						}
 					})
 				}
+				gap := len(favs) > 0
 				for _, g := range groups {
-					sec := ui.SidebarSection(c.Key("s:g:"+g), g, a.section("g:"+g), func() {
-						for _, h := range byGroup[g] {
-							a.hostItem(c, m, h, "")
-						}
-						if len(byGroup[g]) == 0 {
-							ui.Text(c, m.EmptyGroup()).FontSize(theme.Caption).TextColor(tok.TextMuted).Padding(2, 8, 6, 8)
-						}
-					})
-					a.groupSection(c, m, tok, sec, g)
+					if assets.GroupParent(g) == "" {
+						a.groupTree(c, m, tok, g, groups, byGroup, gap)
+						gap = false
+					}
 				}
 				if hs := byGroup[""]; len(hs) > 0 {
 					title := m.Ungrouped()
@@ -129,23 +125,6 @@ func (a *App) connectedCount() int {
 		}
 	}
 	return len(clients)
-}
-
-// groupSection gives a group's section its menu, and takes the hosts
-// dropped on it.
-func (a *App) groupSection(c *ui.Context, m locales.Messages, tok theme.Tokens, sec ui.Element, g string) {
-	a.contextMenu(sec, func() []menuEntry {
-		return []menuEntry{
-			{Icon: icons.Add, Label: m.NewHostInGroup(), Do: func() {
-				a.openEditor(nil)
-				a.form.group = g
-			}},
-			{Icon: icons.Rename, Label: m.RenameGroup(), Do: func() { a.openGroupForm(g, "") }},
-			menuSep,
-			{Icon: icons.Delete, Label: m.DeleteGroup(), Danger: true, Do: func() { a.groupDelete, a.groupDeleting = g, true }},
-		}
-	})
-	a.groupDragDrop(c, m, tok, sec, g)
 }
 
 // hostDrops moves a host dropped from the sidebar on a section into the

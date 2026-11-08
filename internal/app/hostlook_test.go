@@ -103,11 +103,11 @@ func TestSidebarToolsAndGroups(t *testing.T) {
 		t.Fatalf("host in %q; texts %q", got.Group, tt.Texts())
 	}
 
-	// Renamed from the section's menu, the host goes along.
+	// Renamed from the section's edit sheet, the host goes along.
 	if err := tt.RightClick("Prod"); err != nil {
 		t.Fatal(err)
 	}
-	if err := chooseMenu(a, tt, "Rename group"); err != nil {
+	if err := chooseMenu(a, tt, "Edit group"); err != nil {
 		t.Fatalf("%v menu %q", err, menuOf(a))
 	}
 	tt.Frame()
