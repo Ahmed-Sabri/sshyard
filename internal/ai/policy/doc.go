@@ -113,7 +113,8 @@
 // model, ReadOnly and Low auto-run and all other grades ask. Grades remain
 // metadata and audit context for the model.
 // ModeFull auto-runs every grade, Unknown included, so nothing interrupts
-// a pane the user set to stop asking. Critical and Unknown still set Red,
-// which marks what ran unjudged, and neither offers "allow similar". High,
-// including git exec-config, auto-runs.
+// a pane the user set to stop asking. Critical and Unknown still set Red
+// and neither offers "allow similar"; an Unknown that ran keeps its grade
+// on the tool card and in the audit. High, including git exec-config,
+// auto-runs.
 package policy

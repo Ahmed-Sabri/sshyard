@@ -331,6 +331,8 @@ func TestClassifyRemote(t *testing.T) {
 		{cmd: "ip route del default", cat: "network", risk: RiskHigh, prefix: "ip route del"},
 		{cmd: "ip link set eth0 up", cat: "network", risk: RiskHigh, prefix: "ip link set"},
 		{cmd: "ip addr add 10.0.0.1/24 dev eth0", cat: "network", risk: RiskHigh, prefix: "ip addr add"},
+		{cmd: "ip route $(printf del) default", cat: "unknown", risk: RiskUnknown, prefix: "ip route"},
+		{cmd: `ip addr "$(echo flush)" dev eth0`, cat: "unknown", risk: RiskUnknown, prefix: "ip addr"},
 		{cmd: "ifconfig eth0 up", cat: "network", risk: RiskHigh, prefix: "ifconfig"},
 		{cmd: "ifconfig eth0 down", cat: "network", risk: RiskHigh, prefix: "ifconfig"},
 		{cmd: "route add default gw 1.2.3.4", cat: "network", risk: RiskHigh, prefix: "route add"},
@@ -698,6 +700,9 @@ func TestClassifyTC(t *testing.T) {
 		{"tc -n other qdisc show", "unknown", RiskUnknown},
 		{"tc qdisc exec dd if=/dev/zero of=/dev/sda", "unknown", RiskUnknown},
 		{"tc monitor", "unknown", RiskUnknown},
+		{"tc qdisc $(printf add) dev eth0 root netem loss 100%", "unknown", RiskUnknown},
+		{`tc qdisc "$(echo del)" dev eth0 root`, "unknown", RiskUnknown},
+		{"tc qdisc show dev $(ip route show default | awk '{print $5}')", "read", RiskReadOnly},
 	}
 	for _, c := range cases {
 		t.Run(c.command, func(t *testing.T) {

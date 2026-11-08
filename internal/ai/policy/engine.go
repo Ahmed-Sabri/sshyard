@@ -81,9 +81,9 @@ func (engine) Classify(a Action, scope Scope) Grade {
 //
 // ModeFull auto-runs every grade, Unknown included: the user picked the
 // mode that promises to stop asking, and a grade SSHYard could not settle
-// is not evidence against the action. Critical and Unknown still set Red,
-// which any surface showing the decision reads as "ran unjudged". High
-// auto-runs.
+// is not evidence against the action. Critical and Unknown still set Red
+// and never offer Similar; what ran unjudged stays visible through its
+// grade, "unknown" on the tool card and in the audit. High auto-runs.
 // Similar is offered only for Low and Medium on Ask or Review outcomes; the
 // gate narrows it to a single command when a reviewer is configured.
 func (engine) Decide(mode Mode, g Grade, reviewerConfigured bool) Decision {
@@ -102,8 +102,8 @@ func (engine) Decide(mode Mode, g Grade, reviewerConfigured bool) Decision {
 	case ModeFull:
 		d.Outcome = Allow
 		d.By = ByFull
-		// An action the rules could not grade still runs; Red records that
-		// it ran unjudged.
+		// An action the rules could not grade still runs, flagged Red as
+		// a Critical one is.
 		if g.Risk == RiskUnknown {
 			d.Red = true
 		}

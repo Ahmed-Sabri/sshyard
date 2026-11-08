@@ -1735,8 +1735,12 @@ func (e *shellEnv) gradeIP(args []arg) partial {
 		return unk("ip")
 	}
 	obj := ipObject(rest[0].text)
+	if len(rest) > 1 && !rest[1].ok {
+		// A substituted command could be any of them, add or del included.
+		return partial{cat: "unknown", risk: RiskUnknown, prefix: strings.TrimSpace("ip " + obj), why: "ip command substitution"}
+	}
 	act := ""
-	if len(rest) > 1 && rest[1].ok && !strings.HasPrefix(rest[1].text, "-") {
+	if len(rest) > 1 && !strings.HasPrefix(rest[1].text, "-") {
 		act = rest[1].text
 	}
 	readAct := act == "" || act == "show" || act == "list" || act == "help" || act == "get"
@@ -1790,7 +1794,8 @@ var tcObjects = map[string]bool{"qdisc": true, "class": true, "filter": true, "a
 // gradeTC: an object with no command, or show/list/ls, only reads kernel
 // traffic-control state. add, del, change, replace, link and attach rewrite
 // it and are High "network", like ip. -n (another namespace) and -b (run a
-// batch file) hide what runs, so they and every other form are Unknown.
+// batch file) hide what runs, so they, a substituted command and every
+// other form are Unknown.
 func (e *shellEnv) gradeTC(args []arg) partial {
 	rest := args[1:]
 	for len(rest) > 0 {
@@ -1825,8 +1830,12 @@ func (e *shellEnv) gradeTC(args []arg) partial {
 	if !tcObjects[obj] {
 		return namedUnk("tc", "unlisted command: tc "+obj)
 	}
+	if len(rest) > 1 && !rest[1].ok {
+		// A substituted command could be any of them, add or del included.
+		return namedUnk("tc", "tc command substitution")
+	}
 	act := ""
-	if len(rest) > 1 && rest[1].ok && !strings.HasPrefix(rest[1].text, "-") {
+	if len(rest) > 1 && !strings.HasPrefix(rest[1].text, "-") {
 		act = rest[1].text
 	}
 	switch act {
