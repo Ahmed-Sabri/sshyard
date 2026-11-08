@@ -627,7 +627,7 @@
   "aiReviewNone": "なし",
   "aiContextLines": "ターミナルのコンテキスト行数",
   "aiMaxToolCalls": "1 ターンあたりのツール呼び出し上限",
-  "aiMaxToolCallsNote": "上限に達すると確認のため一時停止します。空欄または 0 で無制限",
+  "aiMaxToolCallsNote": "上限に達すると確認のため一時停止します。0 で無制限、空欄で既定値",
   "aiAuditDays": "監査ログの保持期間（日）",
   "aiRedact": "秘密情報を伏せる",
   "aiRedactNote": "モデルに送信する前に、秘密鍵やトークンと疑われる内容をマスクします。",

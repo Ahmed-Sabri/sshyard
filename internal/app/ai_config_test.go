@@ -361,35 +361,36 @@ func TestAIProviderTestSendsNoTokenLimit(t *testing.T) {
 	}
 }
 
-// TestMaxToolCallsValue: the limit field reads empty and 0 as no limit,
-// takes a whole number in range, and rejects anything else so that the
-// setting keeps what it had.
+// TestMaxToolCallsValue: the limit field reads empty as the default and
+// only an explicit 0 as no limit, takes a whole number in range, and
+// rejects anything else so that the setting keeps what it had.
 func TestMaxToolCallsValue(t *testing.T) {
 	for _, c := range []struct {
-		in   string
-		want int
-		ok   bool
+		in    string
+		unset bool
+		want  int
+		ok    bool
 	}{
-		{"", 0, true},
-		{"   ", 0, true},
-		{"0", 0, true},
-		{"25", 25, true},
-		{" 30 ", 30, true},
-		{"-1", 0, false},
-		{"abc", 0, false},
-		{"1.5", 0, false},
-		{"10001", 0, false},
+		{"", true, 0, true},
+		{"   ", true, 0, true},
+		{"0", false, 0, true},
+		{"25", false, 25, true},
+		{" 30 ", false, 30, true},
+		{"-1", false, 0, false},
+		{"abc", false, 0, false},
+		{"1.5", false, 0, false},
+		{"10001", false, 0, false},
 	} {
 		got, ok := maxToolCallsValue(c.in)
-		if ok != c.ok || ok && *got != c.want {
-			t.Fatalf("%q read as %v (ok %v), want %d (ok %v)", c.in, got, ok, c.want, c.ok)
+		if ok != c.ok || ok && (got == nil) != c.unset || ok && got != nil && *got != c.want {
+			t.Fatalf("%q read as %v (ok %v), want unset %v %d (ok %v)", c.in, got, ok, c.unset, c.want, c.ok)
 		}
 	}
-	if got := maxToolCallsText(0); got != "" {
-		t.Fatalf("no limit shows as %q", got)
-	}
-	if got := maxToolCallsText(25); got != "25" {
-		t.Fatalf("25 shows as %q", got)
+	zero, sixty := 0, 60
+	for n, want := range map[*int]string{nil: "", &zero: "0", &sixty: "60"} {
+		if got := maxToolCallsText(n); got != want {
+			t.Fatalf("%v shows as %q, want %q", n, got, want)
+		}
 	}
 }
 

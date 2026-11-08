@@ -776,14 +776,14 @@ func (a *App) aiHostFields(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 	})
 }
 
-// maxToolCallsValue reads the tool-call limit field: empty and 0 both mean
-// no limit, and any other value must be a whole number the setting accepts.
-// A text that is neither leaves the setting as it was.
+// maxToolCallsValue reads the tool-call limit field: empty is the default
+// (nil), 0 is no limit, and any other value must be a whole number the
+// setting accepts. A text that is none of these leaves the setting as it was.
+// No limit takes the explicit 0 so that clearing the field never lifts it.
 func maxToolCallsValue(text string) (*int, bool) {
 	text = strings.TrimSpace(text)
 	if text == "" {
-		zero := 0
-		return &zero, true
+		return nil, true
 	}
 	n, err := strconv.Atoi(text)
 	if err != nil || n < 0 || n > settings.AIMaxToolCallsMax {
@@ -792,10 +792,11 @@ func maxToolCallsValue(text string) (*int, bool) {
 	return &n, true
 }
 
-// maxToolCallsText is the limit as the field shows it, empty for no limit.
-func maxToolCallsText(n int) string {
-	if n <= 0 {
+// maxToolCallsText is the setting as the field shows it, empty when unset
+// so that the placeholder shows the default.
+func maxToolCallsText(n *int) string {
+	if n == nil {
 		return ""
 	}
-	return strconv.Itoa(n)
+	return strconv.Itoa(*n)
 }

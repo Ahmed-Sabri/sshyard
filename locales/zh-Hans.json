@@ -627,7 +627,7 @@
   "aiReviewNone": "无",
   "aiContextLines": "终端上下文行数",
   "aiMaxToolCalls": "单轮工具调用上限",
-  "aiMaxToolCallsNote": "达到上限后暂停，等你确认继续；留空或 0 表示不限制",
+  "aiMaxToolCallsNote": "达到上限后暂停，等你确认继续；填 0 表示不限制，留空使用默认值",
   "aiAuditDays": "审计保留天数",
   "aiRedact": "脱敏",
   "aiRedactNote": "在发送给模型之前，遮盖疑似私钥和令牌。",

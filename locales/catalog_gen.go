@@ -6373,11 +6373,11 @@ func (msgs Messages) AiMaxToolCalls() string {
 	return Catalog.Format(msgs.locale, "aiMaxToolCalls", nil)
 }
 
-// AiMaxToolCallsNote says "Pauses for your go-ahead at the limit; leave empty or 0 for no limit"
+// AiMaxToolCallsNote says "Pauses for your go-ahead at the limit. Enter 0 for no limit; leave empty for the default"
 // in the language the app shows.
 func AiMaxToolCallsNote() string { return In(i18n.Locale()).AiMaxToolCallsNote() }
 
-// AiMaxToolCallsNote says "Pauses for your go-ahead at the limit; leave empty or 0 for no limit"
+// AiMaxToolCallsNote says "Pauses for your go-ahead at the limit. Enter 0 for no limit; leave empty for the default"
 // in the language of msgs.
 func (msgs Messages) AiMaxToolCallsNote() string {
 	return Catalog.Format(msgs.locale, "aiMaxToolCallsNote", nil)
