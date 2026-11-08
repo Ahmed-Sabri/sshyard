@@ -355,7 +355,7 @@ func (a *App) ensureAI(c *conn) error {
 			c.ai.box.set(cl, paneModel(c, p), paneEffort(c, p))
 		}
 		if c.ai.dirty {
-			c.ai.sess.Configure(a.aiGate(c), a.settings.AIRedact)
+			c.ai.sess.Configure(a.aiGate(c), a.settings.AIRedact, a.settings.AIMaxToolCalls)
 			c.ai.dirty = false
 		}
 		return nil
@@ -388,7 +388,7 @@ func (a *App) ensureAI(c *conn) error {
 		tools = newTermTools(a, c)
 	}
 	c.ai.tools, c.ai.target = tools, target
-	c.ai.sess = agent.Restore(agent.Config{Model: streamer, Gate: a.aiGate(c), Tools: tools, Redact: a.settings.AIRedact, Target: target}, c.ai.msgs)
+	c.ai.sess = agent.Restore(agent.Config{Model: streamer, Gate: a.aiGate(c), Tools: tools, Redact: a.settings.AIRedact, Target: target, MaxToolCalls: a.settings.AIMaxToolCalls}, c.ai.msgs)
 	c.ai.dirty = false
 	return nil
 }

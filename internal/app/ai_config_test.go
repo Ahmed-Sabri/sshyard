@@ -360,3 +360,74 @@ func TestAIProviderTestSendsNoTokenLimit(t *testing.T) {
 		t.Fatalf("test %q body %s", f.test, body)
 	}
 }
+
+// TestMaxToolCallsValue: the limit field reads empty and 0 as no limit,
+// takes a whole number in range, and rejects anything else so that the
+// setting keeps what it had.
+func TestMaxToolCallsValue(t *testing.T) {
+	for _, c := range []struct {
+		in   string
+		want int
+		ok   bool
+	}{
+		{"", 0, true},
+		{"   ", 0, true},
+		{"0", 0, true},
+		{"25", 25, true},
+		{" 30 ", 30, true},
+		{"-1", 0, false},
+		{"abc", 0, false},
+		{"1.5", 0, false},
+		{"10001", 0, false},
+	} {
+		got, ok := maxToolCallsValue(c.in)
+		if ok != c.ok || ok && *got != c.want {
+			t.Fatalf("%q read as %v (ok %v), want %d (ok %v)", c.in, got, ok, c.want, c.ok)
+		}
+	}
+	if got := maxToolCallsText(0); got != "" {
+		t.Fatalf("no limit shows as %q", got)
+	}
+	if got := maxToolCallsText(25); got != "25" {
+		t.Fatalf("25 shows as %q", got)
+	}
+}
+
+// TestMaxToolCallsSettingPausesOpenPane: lowering the cap in settings
+// reaches a pane that is already open, so its next turn stops there and
+// waits instead of running every call the model asks for.
+func TestMaxToolCallsSettingPausesOpenPane(t *testing.T) {
+	a, tt := newTestApp(t)
+	h := savedHost(t, a, "web", "10.0.0.8")
+	consentHost(t, a, h.ID)
+	s := a.Settings()
+	s.AIDefaultMode = "full" // no confirmation dialog in the way
+	if err := a.ApplySettings(s); err != nil {
+		t.Fatal(err)
+	}
+	a.newModel = func(*conn) agent.Streamer {
+		return &replyModel{replies: []llm.Message{{Role: "assistant", ToolCalls: []llm.ToolCall{
+			{ID: "c1", Name: "run_command", Arguments: `{"command":"uptime"}`},
+			{ID: "c2", Name: "run_command", Arguments: `{"command":"uptime"}`},
+		}}}}
+	}
+	a.newTools = func(*conn) agent.Tools { return diskTools{} }
+	id, err := a.OpenAI(h.ID, openAt{}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	one := 1
+	s = a.Settings()
+	s.AIMaxToolCalls = &one
+	if err := a.ApplySettings(s); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	a.SendAI(id, "check twice")
+	waitFor(t, tt, "a pause at the limit", func() bool { return a.conns[id].ai.paused })
+	if !a.conns[id].ai.paused {
+		t.Fatal("the turn ran past the configured limit")
+	}
+	a.StopAI(id)
+}

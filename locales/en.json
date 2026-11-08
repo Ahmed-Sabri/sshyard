@@ -626,6 +626,8 @@
   "aiSetDefaultProvider": "Set as Default Provider",
   "aiReviewNone": "None",
   "aiContextLines": "Terminal context lines",
+  "aiMaxToolCalls": "Tool calls per turn",
+  "aiMaxToolCallsNote": "Pauses for your go-ahead at the limit; leave empty or 0 for no limit",
   "aiAuditDays": "Audit retention (days)",
   "aiRedact": "Redact secrets",
   "aiRedactNote": "Mask suspected private keys and tokens before they are sent to the model.",

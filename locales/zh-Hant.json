@@ -626,6 +626,8 @@
   "aiSetDefaultProvider": "設為預設供應商",
   "aiReviewNone": "無",
   "aiContextLines": "終端機上下文行數",
+  "aiMaxToolCalls": "單輪工具呼叫上限",
+  "aiMaxToolCallsNote": "達到上限後暫停，等你確認繼續；留空或 0 表示不限制",
   "aiAuditDays": "稽核保留天數",
   "aiRedact": "遮蔽敏感資訊",
   "aiRedactNote": "在傳送給模型之前，遮蓋疑似私鑰和權杖。",
