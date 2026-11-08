@@ -50,6 +50,9 @@ type historyState struct {
 	limit                  int
 	// tipOpen shows the sheet of the tip on bash's history
 	tipOpen bool
+	// inline shows each command's actions as buttons, the rows being wide
+	// enough for them (rowActionsFit); else a More menu holds them.
+	inline bool
 }
 
 // readLocalHistory reads this computer's history for the local shell sh;
@@ -448,18 +451,24 @@ func historyMeta(m locales.Messages, e shellhist.Entry) string {
 }
 
 // historyRow is a command: its first line and what is known of it, with
-// an IconButton for each of its actions, which a right click lists too.
-// Chosen, it opens on its whole text.
+// the button running it and, as wide as the panel allows, an IconButton
+// for each of its other actions or a More menu of them, which a right
+// click lists too. Chosen, it opens on its whole text.
 func (a *App) historyRow(c *ui.Context, m locales.Messages, tok theme.Tokens, i int, e shellhist.Entry, disabled bool) {
 	d := a.hist
 	key := strconv.Itoa(i)
 	sel := d.selected == e.Cmd
 	fam := a.termFamily()
+	more := "hist:more:" + key
 	box := ui.Column(c.Key("hist:row:" + key)).FillWidth().Radius(theme.RadiusControl)
+	if fit := rowActionsFit(box.Bounds().W, theme.Space(1)+theme.Space(4), 4); fit != d.inline {
+		d.inline = fit
+		c.Invalidate()
+	}
 	switch {
 	case sel:
 		box.Background(tok.Accent.Alpha(accentWash(tok)))
-	case box.Hovered():
+	case box.Hovered() || a.menu.key == more:
 		box.Background(tok.Hover)
 	}
 	box.Children(func() {
@@ -484,6 +493,10 @@ func (a *App) historyRow(c *ui.Context, m locales.Messages, tok theme.Tokens, i 
 			}
 			if (IconButton{Icon: icons.Send, Label: m.HistoryRun(), Disabled: disabled, Size: Small}).Clicked(c, "hist:run:"+key) {
 				a.runHistory(m, e.Cmd, true)
+			}
+			if !d.inline {
+				a.menuButton(c, more, IconButton{Icon: icons.More, Label: m.MoreActions(), Size: Small}, func() []menuEntry { return a.historyMenu(m, e.Cmd, disabled) })
+				return
 			}
 			if (IconButton{Icon: icons.Paste, Label: m.HistoryInsert(), Disabled: disabled, Size: Small}).Clicked(c, "hist:insert:"+key) {
 				a.runHistory(m, e.Cmd, false)

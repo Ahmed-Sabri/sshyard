@@ -1255,6 +1255,7 @@
   "snippetEditAction": "{name} を編集",
   "snippetDuplicateAction": "{name} を複製",
   "snippetDeleteAction": "{name} を削除",
+  "snippetMore": "{name}のその他の操作",
   "snippetDuplicate": "複製",
   "snippetSent": "ターミナルに送信しました",
   "snippetDelete": "スニペットを削除",

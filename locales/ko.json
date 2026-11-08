@@ -1255,6 +1255,7 @@
   "snippetEditAction": "{name} 편집",
   "snippetDuplicateAction": "{name} 복제",
   "snippetDeleteAction": "{name} 삭제",
+  "snippetMore": "{name}의 추가 작업",
   "snippetDuplicate": "복제",
   "snippetSent": "터미널로 보냈습니다",
   "snippetDelete": "스니펫 삭제",

@@ -108,7 +108,9 @@ func backgroundSnippetsView(t *testing.T) backgroundView {
 	tt.Frame()
 	return backgroundView{a, tt, func() {
 		m := locales.In("en")
-		mustClick(t, tt, m.SnippetEditAction(n.Name))
+		mustClick(t, tt, m.SnippetMore(n.Name))
+		tt.Frame()
+		mustClick(t, tt, m.Edit())
 		tt.Frame()
 		if a.snippets.form == nil || a.snippets.form.content != "echo background\npwd" {
 			t.Fatal("snippet edit lost the selected body")

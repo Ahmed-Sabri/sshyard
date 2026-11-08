@@ -24,10 +24,28 @@ type snippetState struct {
 	showing, deleting bool
 	deleteID          string
 	hold              focusHold
+	// inline shows each entry's actions as buttons, the rows being wide
+	// enough for them (rowActionsFit); else a More menu holds them.
+	inline bool
 }
 
 // snippetWidth is the snippets panel's width, room for a command line.
 const snippetWidth = 360
+
+// rowButton is a Small IconButton's width with the gap before it;
+// rowTextMin the room a list row keeps for its text beside its actions,
+// chosen so a panel's rows show alike with or without the scroll gutter.
+const (
+	rowButton  = 24 + 2
+	rowTextMin = 232
+)
+
+// rowActionsFit reports whether a row w wide, of which fixed goes to its
+// padding and tile, keeps rowTextMin for its text beside n buttons. A
+// row not yet measured does not.
+func rowActionsFit(w, fixed float32, n int) bool {
+	return w > 0 && w-fixed-float32(n)*rowButton >= rowTextMin
+}
 
 // snippetHit is an entry the search matches, with its body as read.
 type snippetHit struct {
@@ -278,8 +296,9 @@ func (a *App) snippetMatches(m locales.Messages, n assets.Snippet, body string) 
 }
 
 // snippetRow is an entry: its tile, name and first line, with its action
-// and menu. Chosen, it opens on the whole body, its group and its mode;
-// only its action sends it, never a click on the row.
+// and, as wide as the panel allows, its other actions or a More menu of
+// them. Chosen, it opens on the whole body, its group and its mode; only
+// its action sends it, never a click on the row.
 func (a *App) snippetRow(c *ui.Context, m locales.Messages, tok theme.Tokens, n assets.Snippet, body string, err error) {
 	sel := a.snippets.selected == n.ID
 	label, ic, mode := m.SnippetInsertAction(n.Name), icons.Paste, m.SnippetInsert()
@@ -293,11 +312,17 @@ func (a *App) snippetRow(c *ui.Context, m locales.Messages, tok theme.Tokens, n 
 		body = snippetErrorText(m, err)
 		preview = body
 	}
+	more := "snippet:more:" + n.ID
 	box := ui.Column(c.Key("snippet:row:" + n.ID)).FillWidth().Radius(theme.RadiusControl)
+	// Measured with the most actions an entry has, so all rows show alike.
+	if fit := rowActionsFit(box.Bounds().W, theme.Space(1)+theme.Space(4)+28+theme.Space(2.5), 5); fit != a.snippets.inline {
+		a.snippets.inline = fit
+		c.Invalidate()
+	}
 	switch {
 	case sel:
 		box.Background(tok.Accent.Alpha(accentWash(tok)))
-	case box.Hovered():
+	case box.Hovered() || a.menu.key == more:
 		box.Background(tok.Hover)
 	}
 	box.Children(func() {
@@ -325,7 +350,11 @@ func (a *App) snippetRow(c *ui.Context, m locales.Messages, tok theme.Tokens, n 
 			if (IconButton{Icon: ic, Label: label, Disabled: disabled, Size: Small}).Clicked(c, "snippet:send:"+n.ID) {
 				a.startSnippet(m, n.ID, n.SendEnter)
 			}
-			a.snippetActions(c, m, n, disabled)
+			if a.snippets.inline {
+				a.snippetActions(c, m, n, disabled)
+			} else {
+				a.menuButton(c, more, IconButton{Icon: icons.More, Label: m.SnippetMore(n.Name), Size: Small}, func() []menuEntry { return a.snippetMenu(m, n, disabled) })
+			}
 		})
 		if !sel {
 			return
@@ -351,7 +380,8 @@ func (a *App) snippetRow(c *ui.Context, m locales.Messages, tok theme.Tokens, n 
 
 // snippetActions are an entry's actions beside its own, each an
 // IconButton: inserting one that sends Enter, editing, duplicating and
-// deleting it. The right click lists them too (snippetMenu).
+// deleting it. Its More menu and the right click list them too
+// (snippetMenu).
 func (a *App) snippetActions(c *ui.Context, m locales.Messages, n assets.Snippet, disabled bool) {
 	if n.SendEnter {
 		if (IconButton{Icon: icons.Paste, Label: m.SnippetInsertAction(n.Name), Disabled: disabled, Size: Small}).Clicked(c, "snippet:insert:"+n.ID) {
@@ -369,12 +399,14 @@ func (a *App) snippetActions(c *ui.Context, m locales.Messages, n assets.Snippet
 	}
 }
 
+// snippetMenu is an entry's actions beside its own, in snippetActions'
+// order.
 func (a *App) snippetMenu(m locales.Messages, n assets.Snippet, disabled bool) []menuEntry {
-	out := []menuEntry{{Icon: icons.Edit, Label: m.Edit(), Do: func() { a.openSnippet(m, n, false) }}, {Icon: icons.Copy, Label: m.SnippetDuplicate(), Do: func() { a.openSnippet(m, n, true) }}, {Icon: icons.Delete, Label: m.Delete(), Danger: true, Do: func() { a.snippets.deleteID = n.ID; a.snippets.deleting = true }}}
+	var out []menuEntry
 	if n.SendEnter {
-		out = append(out, menuSep, menuEntry{Icon: icons.Paste, Label: m.SnippetInsert(), Disabled: disabled, Do: func() { a.startSnippet(m, n.ID, false) }})
+		out = append(out, menuEntry{Icon: icons.Paste, Label: m.SnippetInsert(), Disabled: disabled, Do: func() { a.startSnippet(m, n.ID, false) }}, menuSep)
 	}
-	return out
+	return append(out, menuEntry{Icon: icons.Edit, Label: m.Edit(), Do: func() { a.openSnippet(m, n, false) }}, menuEntry{Icon: icons.Copy, Label: m.SnippetDuplicate(), Do: func() { a.openSnippet(m, n, true) }}, menuEntry{Icon: icons.Delete, Label: m.Delete(), Danger: true, Do: func() { a.snippets.deleteID = n.ID; a.snippets.deleting = true }})
 }
 func (a *App) startSnippet(m locales.Messages, id string, enter bool) {
 	if !a.unlocked() {

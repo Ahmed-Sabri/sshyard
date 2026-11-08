@@ -1255,6 +1255,7 @@
   "snippetEditAction": "编辑 {name}",
   "snippetDuplicateAction": "复制 {name} 为新条目",
   "snippetDeleteAction": "删除 {name}",
+  "snippetMore": "{name} 的更多操作",
   "snippetDuplicate": "复制为新条目",
   "snippetSent": "已发送到终端",
   "snippetDelete": "删除快捷指令",

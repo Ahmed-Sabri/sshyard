@@ -12689,6 +12689,16 @@ func (msgs Messages) SnippetDeleteAction(name string) string {
 	return Catalog.Format(msgs.locale, "snippetDeleteAction", map[string]any{"name": name})
 }
 
+// SnippetMore says "More actions for {name}"
+// in the language the app shows.
+func SnippetMore(name string) string { return In(i18n.Locale()).SnippetMore(name) }
+
+// SnippetMore says "More actions for {name}"
+// in the language of msgs.
+func (msgs Messages) SnippetMore(name string) string {
+	return Catalog.Format(msgs.locale, "snippetMore", map[string]any{"name": name})
+}
+
 // SnippetDuplicate says "Duplicate"
 // in the language the app shows.
 func SnippetDuplicate() string { return In(i18n.Locale()).SnippetDuplicate() }

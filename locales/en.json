@@ -1255,6 +1255,7 @@
   "snippetEditAction": "Edit {name}",
   "snippetDuplicateAction": "Duplicate {name}",
   "snippetDeleteAction": "Delete {name}",
+  "snippetMore": "More actions for {name}",
   "snippetDuplicate": "Duplicate",
   "snippetSent": "Sent to terminal",
   "snippetDelete": "Delete Snippet",
