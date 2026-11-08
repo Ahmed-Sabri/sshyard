@@ -61,11 +61,13 @@ const (
 	EventDone     Kind = "done"
 )
 
-// Event is one thing the UI timeline shows. Tool is set for EventTool.
+// Event is one thing the UI timeline shows. Tool is set for EventTool;
+// Calls, for EventPause, is the tool calls the turn has run.
 type Event struct {
-	Kind Kind
-	Text string
-	Tool *ToolCard
+	Kind  Kind
+	Text  string
+	Tool  *ToolCard
+	Calls int
 }
 
 // ToolCard is one tool call on the timeline. Output is truncated to 1 MB.
@@ -261,7 +263,7 @@ func (s *Session) drain(ctx context.Context, emit func(Event)) error {
 		if s.limit > 0 && s.used >= s.limit {
 			s.paused = true
 			if emit != nil {
-				emit(Event{Kind: EventPause})
+				emit(Event{Kind: EventPause, Calls: s.used})
 			}
 			return ErrPaused
 		}

@@ -426,8 +426,8 @@ func TestMaxToolCallsSettingPausesOpenPane(t *testing.T) {
 	tt.Frame()
 	a.SendAI(id, "check twice")
 	waitFor(t, tt, "a pause at the limit", func() bool { return a.conns[id].ai.paused })
-	if !a.conns[id].ai.paused {
-		t.Fatal("the turn ran past the configured limit")
+	if n := a.conns[id].ai.pauseCalls; n != 1 {
+		t.Fatalf("the pause notes %d calls, want 1", n)
 	}
 	a.StopAI(id)
 }

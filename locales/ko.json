@@ -651,7 +651,7 @@
   "aiEmpty": "이 탭의 터미널을 참고하여 답변합니다. 명령과 파일 변경은 아래 권한을 따릅니다.",
   "aiEmptyTitle": "{host}에서 무엇을 할까요?",
   "aiWorking": "작업 중…",
-  "aiPaused": "도구를 25회 호출한 후 일시 정지되었습니다.",
+  "aiPaused": "{count, plural, other {도구를 #회 호출한 후 일시 정지되었습니다.}}",
   "aiContinue": "계속",
   "aiNoKey": "이 제공자의 API 키가 저장되지 않았습니다.",
   "aiNoModel": "질문하기 전에 설정 → AI 도우미에서 제공자를 선택하세요.",

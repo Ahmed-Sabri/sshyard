@@ -6613,14 +6613,14 @@ func (msgs Messages) AiWorking() string {
 	return Catalog.Format(msgs.locale, "aiWorking", nil)
 }
 
-// AiPaused says "Paused after 25 tool calls."
+// AiPaused says "{count, plural, one {Paused after # tool call.} other {Paused after # tool calls.}}"
 // in the language the app shows.
-func AiPaused() string { return In(i18n.Locale()).AiPaused() }
+func AiPaused(count int) string { return In(i18n.Locale()).AiPaused(count) }
 
-// AiPaused says "Paused after 25 tool calls."
+// AiPaused says "{count, plural, one {Paused after # tool call.} other {Paused after # tool calls.}}"
 // in the language of msgs.
-func (msgs Messages) AiPaused() string {
-	return Catalog.Format(msgs.locale, "aiPaused", nil)
+func (msgs Messages) AiPaused(count int) string {
+	return Catalog.Format(msgs.locale, "aiPaused", map[string]any{"count": count})
 }
 
 // AiContinue says "Continue"

@@ -675,12 +675,19 @@ func TestCustomToolCallLimit(t *testing.T) {
 	if !errors.Is(err, ErrPaused) || !s.Paused() || len(tools.calls) != 2 {
 		t.Fatalf("err %v paused %v calls %d", err, s.Paused(), len(tools.calls))
 	}
-	// The stretch is spent again mid-turn, so the pause comes back.
-	if err := s.Continue(t.Context(), nil); !errors.Is(err, ErrPaused) {
+	// The stretch is spent again mid-turn, so the pause comes back, and
+	// says how many calls the turn has run in all.
+	pausedAt := -1
+	emit := func(ev Event) {
+		if ev.Kind == EventPause {
+			pausedAt = ev.Calls
+		}
+	}
+	if err := s.Continue(t.Context(), emit); !errors.Is(err, ErrPaused) {
 		t.Fatalf("first continue %v", err)
 	}
-	if !s.Paused() || len(tools.calls) != 4 {
-		t.Fatalf("first continue paused %v calls %d", s.Paused(), len(tools.calls))
+	if !s.Paused() || len(tools.calls) != 4 || pausedAt != 4 {
+		t.Fatalf("first continue paused %v calls %d pause event %d", s.Paused(), len(tools.calls), pausedAt)
 	}
 	if err := s.Continue(t.Context(), nil); err != nil {
 		t.Fatal(err)
