@@ -206,7 +206,8 @@ func TestHostAppearance(t *testing.T) {
 }
 
 // TestLocalTerminal opens a shell on this computer from the status bar,
-// splits it, and offers no files or AI for it.
+// splits it, and offers no files for it but an assistant that types
+// into it.
 func TestLocalTerminal(t *testing.T) {
 	a, tt := newTestApp(t)
 	mustClick(t, tt, "Local terminal")
@@ -229,8 +230,8 @@ func TestLocalTerminal(t *testing.T) {
 	a.OpenFilesBeside()
 	a.OpenAIBeside()
 	tt.Frame()
-	if tab.Count(layout.Files) != 0 || tab.Count(layout.AI) != 0 {
-		t.Errorf("files or AI on this computer: %v", a.ws.Items())
+	if tab.Count(layout.Files) != 0 || tab.Count(layout.AI) != 1 {
+		t.Errorf("files, or no assistant, on this computer: %v", a.ws.Items())
 	}
 	if _, err := a.OpenFiles(localID, openAt{}, nil); err != errLocalTerminalOnly {
 		t.Errorf("open files: %v", err)

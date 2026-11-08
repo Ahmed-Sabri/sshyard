@@ -634,7 +634,7 @@ func (a *App) termElement(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn
 // termEntries are the context menu of a terminal pane n of tab t.
 func (a *App) termEntries(t *layout.Tab, n *layout.Node, cn *conn, tv *termView, svc ui.Services, m locales.Messages) []menuEntry {
 	sel := tv.SelectedText()
-	noAI := !remoteOnly(cn)
+	noFiles, noAI := !remoteOnly(cn), !canAI(cn)
 	edge, other := a.filesEdge(), layout.Bottom
 	if edge == layout.Bottom {
 		other = layout.Right
@@ -658,8 +658,8 @@ func (a *App) termEntries(t *layout.Tab, n *layout.Node, cn *conn, tv *termView,
 		menuSep,
 		a.bound(actSplitRight, menuEntry{Icon: icons.SplitRight, Label: m.SplitRight(), Do: focus(func() { a.SplitFocused(layout.Right) })}),
 		a.bound(actSplitDown, menuEntry{Icon: icons.SplitDown, Label: m.SplitDown(), Do: focus(func() { a.SplitFocused(layout.Bottom) })}),
-		a.bound(actOpenFiles, menuEntry{Icon: icons.Folder, Label: openFilesLabel(m, edge), Disabled: noAI, Do: focus(a.OpenFilesBeside)}),
-		{Label: openFilesLabel(m, other), Disabled: noAI, Do: focus(func() {
+		a.bound(actOpenFiles, menuEntry{Icon: icons.Folder, Label: openFilesLabel(m, edge), Disabled: noFiles, Do: focus(a.OpenFilesBeside)}),
+		{Label: openFilesLabel(m, other), Disabled: noFiles, Do: focus(func() {
 			a.OpenFiles(cn.host.ID, openAt{pane: n.ID, edge: other}, cn)
 		})},
 		a.bound(actOpenAI, menuEntry{Icon: icons.Robot, Label: m.OpenAIRight(), Disabled: noAI, Do: focus(func() {

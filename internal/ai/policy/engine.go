@@ -140,6 +140,15 @@ func gradeRemote(a Action, scope Scope) partial {
 		return gradeReadPath(env, a.Path)
 	case "write_file":
 		return gradeFileWrite(env, a.Path, writeFileTool)
+	case "terminal_key":
+		return gradeKey(a.Command)
+	case "terminal_send":
+		// A line typed into a local shell is graded as the command it is;
+		// a device's command line has NewDeviceEngine.
+		if strings.TrimSpace(a.Command) == "" {
+			return unk("empty action")
+		}
+		return env.script(a.Command)
 	case "run_command", "":
 		if strings.TrimSpace(a.Command) == "" {
 			if a.Path != "" {

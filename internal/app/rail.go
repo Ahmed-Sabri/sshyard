@@ -130,7 +130,7 @@ func (a *App) railView(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 		if ai {
 			label = m.CloseAIPane()
 		}
-		if (IconButton{Icon: icons.Robot, On: icons.RobotOn, Label: label, Active: ai, Toggle: true, Disabled: !ai && !remoteOnly(cn), Size: Small}).Clicked(c, "ai") {
+		if (IconButton{Icon: icons.Robot, On: icons.RobotOn, Label: label, Active: ai, Toggle: true, Disabled: !ai && !canAI(cn), Size: Small}).Clicked(c, "ai") {
 			a.ToggleAI()
 		}
 		if (IconButton{Icon: icons.Forward, Label: m.NewForwardMenu(), Disabled: a.store.Len() == 0, Size: Small}).Clicked(c, "fwd") {

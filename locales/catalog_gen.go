@@ -13669,6 +13669,46 @@ func (msgs Messages) AiToolWriteFile() string {
 	return Catalog.Format(msgs.locale, "aiToolWriteFile", nil)
 }
 
+// AiToolTerminalSend says "Type in terminal"
+// in the language the app shows.
+func AiToolTerminalSend() string { return In(i18n.Locale()).AiToolTerminalSend() }
+
+// AiToolTerminalSend says "Type in terminal"
+// in the language of msgs.
+func (msgs Messages) AiToolTerminalSend() string {
+	return Catalog.Format(msgs.locale, "aiToolTerminalSend", nil)
+}
+
+// AiToolTerminalKey says "Press key in terminal"
+// in the language the app shows.
+func AiToolTerminalKey() string { return In(i18n.Locale()).AiToolTerminalKey() }
+
+// AiToolTerminalKey says "Press key in terminal"
+// in the language of msgs.
+func (msgs Messages) AiToolTerminalKey() string {
+	return Catalog.Format(msgs.locale, "aiToolTerminalKey", nil)
+}
+
+// AiEmptyTerminal says "Answers draw on this tab’s terminal. The assistant works by typing into it, with no file access; what it types foll…"
+// in the language the app shows.
+func AiEmptyTerminal() string { return In(i18n.Locale()).AiEmptyTerminal() }
+
+// AiEmptyTerminal says "Answers draw on this tab’s terminal. The assistant works by typing into it, with no file access; what it types foll…"
+// in the language of msgs.
+func (msgs Messages) AiEmptyTerminal() string {
+	return Catalog.Format(msgs.locale, "aiEmptyTerminal", nil)
+}
+
+// AiACPNeedsSSH says "External agents need an SSH host. Switch to the built-in assistant to work in this terminal."
+// in the language the app shows.
+func AiACPNeedsSSH() string { return In(i18n.Locale()).AiACPNeedsSSH() }
+
+// AiACPNeedsSSH says "External agents need an SSH host. Switch to the built-in assistant to work in this terminal."
+// in the language of msgs.
+func (msgs Messages) AiACPNeedsSSH() string {
+	return Catalog.Format(msgs.locale, "aiACPNeedsSSH", nil)
+}
+
 // AiToolAction says "Tool action"
 // in the language the app shows.
 func AiToolAction() string { return In(i18n.Locale()).AiToolAction() }

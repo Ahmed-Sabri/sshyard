@@ -294,7 +294,7 @@ func (a *App) hostEntries(m locales.Messages, h assets.Host) []menuEntry {
 	return append(connect, []menuEntry{
 		{Icon: icons.SplitRight, Label: m.SplitRight(), Disabled: noTab, Do: beside(func(at openAt) { a.Connect(h.ID, at) })},
 		{Icon: icons.Folder, Label: m.OpenFiles(), Disabled: noSSH, Do: func() { a.OpenFiles(h.ID, openAt{}, nil) }},
-		{Icon: icons.Robot, Label: m.OpenAI(), Disabled: noSSH, Do: func() { a.OpenAI(h.ID, openAt{}, 0) }},
+		{Icon: icons.Robot, Label: m.OpenAI(), Do: func() { a.OpenAIFor(h.ID) }},
 		{Icon: icons.OpenFile, Label: openFilesLabel(m, a.filesEdge()), Disabled: noTab || noSSH, Do: beside(func(at openAt) {
 			at.edge = a.filesEdge()
 			a.OpenFiles(h.ID, at, nil)

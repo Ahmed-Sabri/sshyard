@@ -463,7 +463,11 @@ func (a *App) aiTimeline(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 		ui.Column(c.Key("aiempty")).Grow(1).FillWidth().Padding(theme.Space(6)).Gap(theme.Space(2)).AlignItems(ui.Center).Justify(ui.Center).Children(func() {
 			softTile(c, icons.Robot, tok.Accent, 44).Margin(0, 0, theme.Space(1), 0)
 			ui.Text(c, m.AiEmptyTitle(a.pv(cn.host.Label()))).FontSize(theme.Title3).FontWeight(600).TextAlign(ui.Center).MaxWidth(320)
-			ui.Text(c, m.AiEmpty()).FontSize(theme.Footnote).TextColor(tok.TextMuted).TextAlign(ui.Center).MaxWidth(300)
+			empty := m.AiEmpty()
+			if aiTarget(cn.host) != agent.TargetSSH {
+				empty = m.AiEmptyTerminal()
+			}
+			ui.Text(c, empty).FontSize(theme.Footnote).TextColor(tok.TextMuted).TextAlign(ui.Center).MaxWidth(300)
 			a.recentChats(c, cn, tok, m)
 		})
 		return
@@ -841,6 +845,8 @@ func aiErrLine(m locales.Messages, s string) string {
 		return m.AiACPCloseFailed()
 	case "acp-start":
 		return m.AiACPStartFailed()
+	case "acp-ssh":
+		return m.AiACPNeedsSSH()
 	case "acp-protocol":
 		return m.AiACPProtocolFailed()
 	case "acp-session":

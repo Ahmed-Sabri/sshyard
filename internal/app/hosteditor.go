@@ -508,11 +508,9 @@ func (a *App) editorView(c *ui.Context, m locales.Messages) {
 								})
 							})
 						})
-						if proto == assets.ProtoSSH {
-							ui.Field(c, "", func() {
-								a.aiHostFields(c, m, tok, f)
-							})
-						}
+						ui.Field(c, "", func() {
+							a.aiHostFields(c, m, tok, f, proto == assets.ProtoSSH)
+						})
 						ui.Field(c, "", func() {
 							ui.Column(c).Gap(6).Children(func() {
 								if proto == assets.ProtoSSH {
