@@ -330,7 +330,7 @@ func (a *App) providerClient(p *settings.AIProvider) (*llm.Client, error) {
 	if err != nil || len(bytes.TrimSpace(b)) == 0 {
 		return nil, errAIKey
 	}
-	return llmClient(*p, string(bytes.TrimSpace(b))), nil
+	return a.llmClient(*p, string(bytes.TrimSpace(b))), nil
 }
 
 func (a *App) ensureAI(c *conn) error {

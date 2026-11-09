@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -360,6 +361,9 @@ type App struct {
 	// proxyForm is the proxy sheet open, from settings or the host editor
 	proxyForm    *proxyForm
 	proxyEditing bool
+	// proxyClients are the HTTP clients of proxyClient by proxy choice,
+	// under mu
+	proxyClients map[string]*http.Client
 	credDelete   string
 	credDeleting bool
 	rebindChoice string
@@ -414,8 +418,10 @@ type App struct {
 	win         *WindowControls
 	maximized   bool
 	updateCheck bool
-	// updEvery is the index of the update interval in its control.
+	// updEvery is the index of the update interval in its control;
+	// updProxy the updates' proxy choice in its select.
 	updEvery  int
+	updProxy  string
 	themeIdx  int
 	autoRecon bool
 	// lkChoice and lkMCPChoice are the switches of settings.LocalKeys and
@@ -640,6 +646,7 @@ type disabledUpdates struct{}
 func (disabledUpdates) Enabled() bool                { return false }
 func (disabledUpdates) Check()                       {}
 func (disabledUpdates) SetAutomatic(bool)            {}
+func (disabledUpdates) SetRoute(updater.Route)       {}
 func (disabledUpdates) Available() string            { return "" }
 func (disabledUpdates) OnChange(func()) (off func()) { return func() {} }
 
@@ -759,6 +766,9 @@ func (a *App) ApplySettings(s settings.Settings) error {
 	}
 	if s.CheckUpdates != old.CheckUpdates {
 		a.upd.SetAutomatic(s.CheckUpdates)
+	}
+	if s.UpdateProxy != old.UpdateProxy {
+		a.routeUpdates()
 	}
 	a.syncChoices()
 	return nil

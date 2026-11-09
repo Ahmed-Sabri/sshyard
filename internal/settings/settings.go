@@ -45,6 +45,10 @@ type Settings struct {
 	KeepAliveSeconds    int     `json:"keepAliveSeconds"`
 	AutoReconnect       bool    `json:"autoReconnect"`
 	SidebarWidth        float32 `json:"sidebarWidth"`
+	// UpdateProxy is how the checks for updates and their downloads go
+	// out: "" the system's proxy settings, ProxyDirect none, else a
+	// proxy's ID.
+	UpdateProxy string `json:"updateProxy,omitempty"`
 	// TerminalLineHeight and TerminalCharWidth are the height of the
 	// terminal's rows and the width of its cells, in percent of the
 	// font's own line and advance.
@@ -464,7 +468,14 @@ type AIProvider struct {
 	TopP            *float64          `json:"topP,omitempty"`
 	MaxTokens       *int              `json:"maxTokens,omitempty"`
 	LegacyMaxTokens bool              `json:"legacyMaxTokens,omitempty"`
+	// Proxy is how the requests go out: "" the system's proxy settings,
+	// ProxyDirect none, else a proxy's ID.
+	Proxy string `json:"proxy,omitempty"`
 }
+
+// ProxyDirect is the proxy choice of AIProvider.Proxy and UpdateProxy
+// that goes out without one, ignoring the system's proxy settings.
+const ProxyDirect = "direct"
 
 // The wire formats of an AIProvider, as internal/ai/llm names them.
 const (
@@ -685,6 +696,7 @@ func (s *Settings) Normalize() {
 	if !slices.Contains(UpdateIntervals, s.UpdateIntervalHours) {
 		s.UpdateIntervalHours = d.UpdateIntervalHours
 	}
+	s.UpdateProxy = strings.TrimSpace(s.UpdateProxy)
 	if s.UIZoom != 0 && !slices.Contains(UIZooms, s.UIZoom) {
 		s.UIZoom = d.UIZoom
 	}
@@ -868,6 +880,7 @@ func (p *AIProvider) normalize() {
 	p.Name = strings.TrimSpace(p.Name)
 	p.BaseURL = strings.TrimSpace(p.BaseURL)
 	p.Model = strings.TrimSpace(p.Model)
+	p.Proxy = strings.TrimSpace(p.Proxy)
 	switch p.Format {
 	case AIFormatChat, AIFormatResponses, AIFormatAnthropic, AIFormatTypeSafe:
 	case "":

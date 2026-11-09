@@ -3109,6 +3109,36 @@ func (msgs Messages) NewProxyChoice() string {
 	return Catalog.Format(msgs.locale, "newProxyChoice", nil)
 }
 
+// ProxySystem says "System proxy"
+// in the language the app shows.
+func ProxySystem() string { return In(i18n.Locale()).ProxySystem() }
+
+// ProxySystem says "System proxy"
+// in the language of msgs.
+func (msgs Messages) ProxySystem() string {
+	return Catalog.Format(msgs.locale, "proxySystem", nil)
+}
+
+// ProxyMissing says "Deleted proxy"
+// in the language the app shows.
+func ProxyMissing() string { return In(i18n.Locale()).ProxyMissing() }
+
+// ProxyMissing says "Deleted proxy"
+// in the language of msgs.
+func (msgs Messages) ProxyMissing() string {
+	return Catalog.Format(msgs.locale, "proxyMissing", nil)
+}
+
+// ProxySystemNote says "System proxy follows the system's network settings, PAC files included."
+// in the language the app shows.
+func ProxySystemNote() string { return In(i18n.Locale()).ProxySystemNote() }
+
+// ProxySystemNote says "System proxy follows the system's network settings, PAC files included."
+// in the language of msgs.
+func (msgs Messages) ProxySystemNote() string {
+	return Catalog.Format(msgs.locale, "proxySystemNote", nil)
+}
+
 // FieldJumpHosts says "Jump hosts, in the order they are dialed (drag to reorder)"
 // in the language the app shows.
 func FieldJumpHosts() string { return In(i18n.Locale()).FieldJumpHosts() }

@@ -797,6 +797,23 @@ func (a *App) aboutPage(c *ui.Context, m locales.Messages, tok theme.Tokens, s *
 				*changed = true
 			}
 		})
+		// Checks and downloads go the way chosen, from the next request.
+		g.row(m.FieldProxy(), m.ProxySystemNote(), func() {
+			sel := a.proxySelect(c.Key("updproxy"), m, &a.updProxy, proxyPick{system: true, back: func(id string) {
+				if id == "" {
+					return
+				}
+				ns := a.settings
+				ns.UpdateProxy = id
+				if err := a.ApplySettings(ns); err != nil {
+					a.toastError(m.ErrGeneric(err.Error()))
+				}
+			}})
+			if sel.Changed() && a.updProxy != s.UpdateProxy {
+				s.UpdateProxy = a.updProxy
+				*changed = true
+			}
+		})
 		switch nv := a.upd.Available(); {
 		case !a.upd.Enabled():
 			g.row(m.UpdatesDisabled(), "", func() {})
