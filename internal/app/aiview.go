@@ -1,6 +1,7 @@
 package app
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -171,15 +172,25 @@ func effortName(m locales.Messages, e string) string {
 	return m.AiEffortAuto()
 }
 
-// effortChip shows the pane's thinking level and chooses another. The
-// Anthropic format cannot turn thinking off, so it offers no "off".
+// effortChip shows the pane's thinking level and chooses another: as
+// signal bars in place of the bulb, in the accent while thinking is on,
+// so the level reads even when the chip shows bare. The Anthropic format
+// cannot turn thinking off, so it offers no "off".
 func (a *App) effortChip(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages, fit aiFit) {
 	p := a.paneProvider(cn)
 	cur := ""
 	if p != nil {
 		cur = paneEffort(cn, p)
 	}
-	ch := chip{Icon: icons.Thinking, Label: effortName(m, cur), Tip: m.AiThinkingLevel()}.fit(m, fit, 0)
+	ch := chip{Icon: icons.Thinking, Label: effortName(m, cur), Tip: m.AiThinkingLevel()}
+	if cur != "" {
+		ch.Meter = true
+		ch.Level = slices.Index(effortLevels, cur) - 1
+		if ch.Level > 0 {
+			ch.Tint = tok.Accent
+		}
+	}
+	ch = ch.fit(m, fit, 0)
 	a.menuChip(c, "aieffort:"+strconv.Itoa(cn.id), ch, func() []menuEntry {
 		out := make([]menuEntry, 0, len(effortLevels))
 		for _, e := range effortLevels {
