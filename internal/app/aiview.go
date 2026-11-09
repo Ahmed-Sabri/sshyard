@@ -477,7 +477,7 @@ func (a *App) aiTimeline(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 			// The agent does not remember what comes before forgot.
 			forgot := func(i int) {
 				if cn.ai.forgot > 0 && i == cn.ai.forgot {
-					aiBanner(c.Key("aiforgot"), tok.Accent, icons.Info, m.AiAgentForgot())
+					aiBanner(c.Key("aiforgot"), tok.Accent, icons.Info, m.AiAgentForgot(), nil)
 				}
 			}
 			for i := range cn.ai.items {
@@ -518,8 +518,11 @@ func (a *App) aiTimeline(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 // access shows a banner above it. The choices show as fit allows.
 func (a *App) aiComposer(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages, fit aiFit) {
 	ui.Column(c.Key("aifoot")).Shrink(0).FillWidth().Padding(0, theme.Space(3), theme.Space(3), theme.Space(3)).Gap(theme.Space(2)).Children(func() {
-		if a.modeOf(cn) == policy.ModeFull {
-			aiBanner(c.Key("fullbar"), tok.Danger, icons.Warning, m.AiFullBar())
+		switch {
+		case a.modeOf(cn) != policy.ModeFull:
+			cn.ai.fullSeen = false
+		case !cn.ai.fullSeen:
+			aiBanner(c.Key("fullbar"), tok.Danger, icons.Warning, m.AiFullBar(), func() { cn.ai.fullSeen = true })
 		}
 		a.aiApproval(c, cn, tok, m)
 		box := ui.Column(c.Key("aicompose")).FillWidth().Padding(theme.Space(1)).Gap(theme.Space(1)).
@@ -606,11 +609,22 @@ func (a *App) sendAI(cn *conn) {
 }
 
 // aiBanner is a rounded notice tinted with col, as the panes' banners are.
-func aiBanner(c *ui.Context, col ui.Color, ic *icons.Icon, text string) ui.Element {
-	return ui.Row(c).FillWidth().Padding(6, 10).Gap(theme.Space(2)).AlignItems(ui.Center).
+// With dismiss, a close button at its end calls it.
+func aiBanner(c *ui.Context, col ui.Color, ic *icons.Icon, text string, dismiss func()) ui.Element {
+	pad := float32(10)
+	if dismiss != nil {
+		pad = 4
+	}
+	return ui.Row(c).FillWidth().Padding(6, pad, 6, 10).Gap(theme.Space(2)).AlignItems(ui.Center).
 		Radius(theme.RadiusControl).Background(col.Alpha(0.12)).Border(1, col.Alpha(0.22)).Children(func() {
 		ui.Icon(c, ic.SVG).Size(14, 14).Shrink(0).TextColor(col)
 		ui.Text(c, text).FontSize(theme.Footnote).Grow(1).Shrink(1)
+		if dismiss != nil {
+			m := locales.In(c.Locale())
+			if (IconButton{Icon: icons.Close, Label: m.AiDismiss(), Size: Tiny}).Clicked(c, "dismiss") {
+				dismiss()
+			}
+		}
 	})
 }
 
@@ -705,7 +719,15 @@ func (a *App) aiCard(c *ui.Context, cn *conn, i int, tok theme.Tokens, m locales
 			})
 		})
 	case "err":
-		aiBanner(key, tok.Danger, icons.Warning, aiErrLine(m, it.text))
+		aiBanner(key, tok.Danger, icons.Warning, aiErrLine(m, it.text), func() {
+			// After the frame, which is still going through the items.
+			id, text := cn.id, it.text
+			a.post(func() {
+				if cn := a.conns[id]; cn != nil && cn.ai != nil && i < len(cn.ai.items) && cn.ai.items[i].text == text {
+					a.dropAIItem(cn, i)
+				}
+			})
+		})
 	case "tool":
 		a.toolCard(key, cn, it, tok, m)
 	}

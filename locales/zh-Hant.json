@@ -641,6 +641,7 @@
   "aiMaxToolCalls": "單輪工具呼叫上限",
   "aiMaxToolCallsNote": "達到上限後暫停，等你確認繼續；填 0 表示不限制，留空使用預設值",
   "aiAuditDays": "稽核保留天數",
+  "aiDismiss": "關閉提示",
   "aiRedact": "遮蔽敏感資訊",
   "aiRedactNote": "在傳送給模型之前，遮蓋疑似私鑰和權杖。",
   "aiHostMode": "權限",

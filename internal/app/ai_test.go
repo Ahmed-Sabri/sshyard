@@ -1285,3 +1285,34 @@ func TestAIBlankThinking(t *testing.T) {
 		t.Fatalf("saved items %+v", conv.Items)
 	}
 }
+
+// TestAIDismissError checks that a dismissed error leaves the conversation
+// and its history, keeps the point the agent forgot from in place, and that
+// nothing but an error is dismissed.
+func TestAIDismissError(t *testing.T) {
+	a, _ := newTestApp(t)
+	h := savedHost(t, a, "web", "10.0.0.8")
+	id, err := a.OpenAI(h.ID, openAt{}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := a.conns[id]
+	a.noteQuestion(c, "disk?", nil)
+	c.ai.items = []aiItem{{kind: "err", text: "timeout"}, {kind: "user", text: "disk?"}, {kind: "err", text: "network"}}
+	c.ai.forgot = 2
+	a.dropAIItem(c, 1)
+	if len(c.ai.items) != 3 {
+		t.Fatalf("dropped a question: %+v", c.ai.items)
+	}
+	a.dropAIItem(c, 0)
+	if len(c.ai.items) != 2 || c.ai.items[0].kind != "user" || c.ai.forgot != 1 {
+		t.Fatalf("after dismiss: %+v forgot %d", c.ai.items, c.ai.forgot)
+	}
+	conv, err := a.chatHistory().Load(h.ID, c.ai.conv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(conv.Items) != 2 || conv.Items[0].Kind != "user" || conv.Items[1].Text != "network" {
+		t.Fatalf("saved items %+v", conv.Items)
+	}
+}

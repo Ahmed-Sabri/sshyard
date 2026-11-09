@@ -6515,6 +6515,16 @@ func (msgs Messages) AiAuditDays() string {
 	return Catalog.Format(msgs.locale, "aiAuditDays", nil)
 }
 
+// AiDismiss says "Dismiss"
+// in the language the app shows.
+func AiDismiss() string { return In(i18n.Locale()).AiDismiss() }
+
+// AiDismiss says "Dismiss"
+// in the language of msgs.
+func (msgs Messages) AiDismiss() string {
+	return Catalog.Format(msgs.locale, "aiDismiss", nil)
+}
+
 // AiRedact says "Redact secrets"
 // in the language the app shows.
 func AiRedact() string { return In(i18n.Locale()).AiRedact() }
