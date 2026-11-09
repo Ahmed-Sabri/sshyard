@@ -753,9 +753,9 @@ func (a *App) aiCard(c *ui.Context, cn *conn, i int, tok theme.Tokens, m locales
 	case "text":
 		ui.Column(key).FillWidth().Children(func() {
 			if cn.ai.running && i == len(cn.ai.items)-1 {
-				markdown.Stream(c, it.text, cn.ai.md).FillWidth()
+				markdown.Stream(c, boldAsMeant(it.text), cn.ai.md).FillWidth()
 			} else {
-				markdown.View(c, it.text, cn.ai.md).FillWidth()
+				markdown.View(c, boldAsMeant(it.text), cn.ai.md).FillWidth()
 			}
 		})
 	case "think":
