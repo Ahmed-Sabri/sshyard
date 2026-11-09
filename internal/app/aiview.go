@@ -1,7 +1,6 @@
 package app
 
 import (
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -172,25 +171,41 @@ func effortName(m locales.Messages, e string) string {
 	return m.AiEffortAuto()
 }
 
-// effortChip shows the pane's thinking level and chooses another: as
-// signal bars in place of the bulb, in the accent while thinking is on,
-// so the level reads even when the chip shows bare. The Anthropic format
-// cannot turn thinking off, so it offers no "off".
+// effortMeters are the signal bars lit for each thinking level, by the
+// names the providers and the ACP agents give it.
+var effortMeters = map[string]int{
+	llm.EffortNone: 0, "off": 0,
+	"minimal": 1, llm.EffortLow: 1,
+	llm.EffortMedium: 2,
+	llm.EffortHigh:   3,
+	llm.EffortXHigh:  4, "max": 4,
+}
+
+// meter shows thinking level e on ch as signal bars in place of the
+// bulb, in the accent while thinking is on, so the level reads even on a
+// bare chip. A level it does not know, as "" for the provider's default,
+// keeps the bulb.
+func (ch chip) meter(tok theme.Tokens, e string) chip {
+	n, ok := effortMeters[strings.ToLower(e)]
+	if !ok {
+		return ch
+	}
+	ch.Meter, ch.Level = true, n
+	if n > 0 {
+		ch.Tint = tok.Accent
+	}
+	return ch
+}
+
+// effortChip shows the pane's thinking level and chooses another. The
+// Anthropic format cannot turn thinking off, so it offers no "off".
 func (a *App) effortChip(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Messages, fit aiFit) {
 	p := a.paneProvider(cn)
 	cur := ""
 	if p != nil {
 		cur = paneEffort(cn, p)
 	}
-	ch := chip{Icon: icons.Thinking, Label: effortName(m, cur), Tip: m.AiThinkingLevel()}
-	if cur != "" {
-		ch.Meter = true
-		ch.Level = slices.Index(effortLevels, cur) - 1
-		if ch.Level > 0 {
-			ch.Tint = tok.Accent
-		}
-	}
-	ch = ch.fit(m, fit, 0)
+	ch := chip{Icon: icons.Thinking, Label: effortName(m, cur), Tip: m.AiThinkingLevel()}.meter(tok, cur).fit(m, fit, 0)
 	a.menuChip(c, "aieffort:"+strconv.Itoa(cn.id), ch, func() []menuEntry {
 		out := make([]menuEntry, 0, len(effortLevels))
 		for _, e := range effortLevels {
