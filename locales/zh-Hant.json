@@ -766,7 +766,6 @@
   "colorBright": "亮{color}",
   "systemMonitor": "系統監視",
   "hostDetails": "主機詳情",
-  "closePanel": "關閉面板",
   "inspectorEmpty": "開啟一個工作階段後，這裡會顯示它的主機資訊。",
   "monitorNoTerminal": "在此主機上開啟終端機後即可讀取監視資料。",
   "monitorOff": "此主機的監視資料已關閉。",

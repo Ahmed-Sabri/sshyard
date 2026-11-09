@@ -7765,16 +7765,6 @@ func (msgs Messages) HostDetails() string {
 	return Catalog.Format(msgs.locale, "hostDetails", nil)
 }
 
-// ClosePanel says "Close Panel"
-// in the language the app shows.
-func ClosePanel() string { return In(i18n.Locale()).ClosePanel() }
-
-// ClosePanel says "Close Panel"
-// in the language of msgs.
-func (msgs Messages) ClosePanel() string {
-	return Catalog.Format(msgs.locale, "closePanel", nil)
-}
-
 // InspectorEmpty says "Open a session to see its host here."
 // in the language the app shows.
 func InspectorEmpty() string { return In(i18n.Locale()).InspectorEmpty() }

@@ -6,6 +6,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/Licoy/sshyard/internal/layout"
 	"github.com/Licoy/sshyard/internal/session"
 	"golang.org/x/crypto/ssh"
 )
@@ -67,8 +68,8 @@ func TestDockerPanel(t *testing.T) {
 	connected(t, a, tt, srv)
 	mustClick(t, tt, "Docker")
 	tt.Frame()
-	if !a.panelOpen(inspectDocker) {
-		t.Fatalf("panels %q", a.panels)
+	if !a.toolHere(layout.Docker) {
+		t.Fatal("the pane did not open")
 	}
 	waitFor(t, tt, "the containers", func() bool { return tt.HasText("web") && tt.HasText("db") })
 	for _, s := range []string{"Containers (2)", "Images (1)", "nginx:1.27", "Up 2 hours", "Select a container to manage it."} {
@@ -121,7 +122,7 @@ func TestDockerShell(t *testing.T) {
 	a, tt := newTestApp(t)
 	tt.SetSize(1400, 900)
 	connected(t, a, tt, srv)
-	a.panels = []inspectorKind{inspectDocker}
+	a.ShowTool(layout.Docker)
 	tt.Frame()
 	waitFor(t, tt, "the containers", func() bool { return tt.HasText("web") })
 	a.docker.ctrSel = 0
@@ -143,7 +144,7 @@ func TestDockerMissing(t *testing.T) {
 	srv := startMetricSrv(t, (&dockerExec{missing: true}).run)
 	a, tt := newTestApp(t)
 	connected(t, a, tt, srv)
-	a.panels = []inspectorKind{inspectDocker}
+	a.ShowTool(layout.Docker)
 	tt.Frame()
 	waitFor(t, tt, "the note", func() bool { return tt.HasText("Docker is not installed on this server.") })
 }

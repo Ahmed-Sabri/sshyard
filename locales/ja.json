@@ -766,7 +766,6 @@
   "colorBright": "明るい{color}",
   "systemMonitor": "システムモニター",
   "hostDetails": "ホストの詳細",
-  "closePanel": "パネルを閉じる",
   "inspectorEmpty": "セッションを開くとホストの情報をここに表示します。",
   "monitorNoTerminal": "このホストでターミナルを開くとメトリクスを表示します。",
   "monitorOff": "このホストのメトリクスは無効です。",

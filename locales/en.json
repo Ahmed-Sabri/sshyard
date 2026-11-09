@@ -766,7 +766,6 @@
   "colorBright": "Bright {color}",
   "systemMonitor": "System Monitor",
   "hostDetails": "Host Details",
-  "closePanel": "Close Panel",
   "inspectorEmpty": "Open a session to see its host here.",
   "monitorNoTerminal": "Open a terminal on this host to read its metrics.",
   "monitorOff": "Metrics are turned off for this host.",
