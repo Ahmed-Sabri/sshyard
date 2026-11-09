@@ -592,7 +592,7 @@ func (a *App) aiComposer(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 		if paths := box.DroppedFiles(); len(paths) > 0 {
 			a.attachPaths(cn, paths)
 		}
-		id := cn.id
+		id, svc := cn.id, c.Services()
 		box.Border(1, edge).Children(func() {
 			if drag {
 				ui.Text(c.Key("aidrop"), m.AiDropFiles()).FontSize(theme.Footnote).TextColor(tok.Accent).Padding(theme.Space(1), theme.Space(2), 0, theme.Space(2))
@@ -607,6 +607,10 @@ func (a *App) aiComposer(c *ui.Context, cn *conn, tok theme.Tokens, m locales.Me
 			in := ui.TextAreaBase(c.Key("aiin:"+strconv.Itoa(cn.id)+":"+strconv.Itoa(cn.ai.gen)), &cn.ai.input).
 				Placeholder(m.AiPlaceholder()).Label(m.AiPlaceholder()).FontSize(theme.Body).Padding(theme.Space(1), theme.Space(2)).
 				FillWidth().Lines(2, 8).
+				OnPaste(func(text string) bool {
+					cn := a.conns[id]
+					return cn != nil && cn.ai != nil && a.pasteAttach(cn, svc, text)
+				}).
 				OnTextKey(func(k ui.TextKey) bool {
 					if k.Key != ui.KeyEnter || k.Mods != 0 {
 						return false
