@@ -20,6 +20,12 @@ var languageNames = map[string]string{"en": "English", "zh-Hans": "简体中文"
 // repoURL is where SSHYard's source and issues live.
 const repoURL = "https://github.com/Licoy/sshyard"
 
+// issuesURL is where feedback goes on GitHub, qqGroupURL the users' QQ group.
+const (
+	issuesURL  = repoURL + "/issues"
+	qqGroupURL = "https://qm.qq.com/q/OcPq9MNkeO"
+)
+
 // prefPage is a page of the settings, chosen in their sidebar.
 type prefPage string
 
