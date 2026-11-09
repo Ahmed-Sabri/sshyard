@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -54,6 +55,23 @@ type dockerState struct {
 	logs       string
 	logsBusy   bool
 	logsErr    string
+	// The details sheet of the container detailRef, read again every
+	// dockerEvery while it shows. A click on a row opens it, and the
+	// row stays chosen only while it shows.
+	detailOpen    bool
+	detailRef     string
+	detail        session.ContainerDetail
+	detailRead    bool
+	detailRunning bool
+	detailAt      time.Time
+	detailErr     error
+	// The details sheet of the image imgRef, read as it opens.
+	imgOpen    bool
+	imgRef     string
+	img        session.ImageDetail
+	imgRead    bool
+	imgRunning bool
+	imgErr     error
 }
 
 // dockerErrText is a failure of the panel in words.
@@ -76,6 +94,8 @@ func (a *App) readDocker(c *ui.Context, tc *conn, now bool) {
 		d.conn, d.connects, d.running, d.at = tc.id, connects, false, time.Time{}
 		d.info, d.read, d.err, d.busy = session.DockerInfo{}, false, nil, ""
 		d.ctrSel, d.imgSel = -1, -1
+		d.detailOpen, d.detailRunning = false, false
+		d.imgOpen, d.imgRunning = false, false
 	}
 	if d.running {
 		return
@@ -126,7 +146,7 @@ func (a *App) dockerDo(tc *conn, action session.DockerAction, ref string) {
 			if d.gen != gen {
 				return
 			}
-			d.busy, d.at = "", time.Time{} // read again at once
+			d.busy, d.at, d.detailAt = "", time.Time{}, time.Time{} // read again at once
 			if err != nil {
 				a.toasts = append(a.toasts, func(m locales.Messages) ui.Toast {
 					return ui.Toast{Title: dockerErrText(m, err), Type: "error"}
@@ -228,6 +248,8 @@ func (a *App) dockerPanel(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	} else {
 		a.imagesView(c, m, tok, tc)
 	}
+	a.dockerImageView(c, m, tok, tc)
+	a.dockerDetailView(c, m, tok, tc)
 	a.dockerConfirm(c, m, tc)
 	a.dockerLogsView(c, m, tok, tc)
 }
@@ -252,119 +274,130 @@ func (a *App) containersView(c *ui.Context, m locales.Messages, tok theme.Tokens
 		panelNote(c, tok, m.DockerNoContainers())
 		return
 	}
-	if d.ctrSel >= len(cs) {
+	if !d.detailOpen || d.ctrSel >= len(cs) {
 		d.ctrSel = -1
 	}
 	d.ctrList.Selected = &d.ctrSel
 	cols := []ui.TableColumn{{Title: m.ColName(), MinWidth: 90}, {Title: m.DockerColImage(), Width: 120}, {Title: m.DockerColStatus(), Width: 120}}
-	d.ctrList.CellMenu = func(menu *ui.Menu, row, _ int) {
-		if row < len(cs) {
-			a.containerMenu(menu, m, tc, cs[row])
-		}
-	}
-	ui.Table(c.Key("containers"), &d.ctrList, cols, len(cs), func(row, col int) {
+	tbl := ui.Table(c.Key("containers"), &d.ctrList, cols, len(cs), func(row, col int) {
 		ct := cs[row]
 		muted := tok.TextMuted
 		if d.ctrSel == row {
 			muted = tok.AccentText
 		}
-		switch col {
-		case 0:
-			ui.Row(c).Gap(6).AlignItems(ui.Center).Grow(1).MinWidth(0).Children(func() {
+		cell := ui.Row(c).Gap(6).AlignItems(ui.Center).Grow(1).MinWidth(0).AlignSelf(ui.Stretch).Children(func() {
+			switch col {
+			case 0:
 				dot(c, stateTint(tok, ct.State))
 				ui.Text(c, ct.Name).FontSize(theme.Footnote).SingleLine()
-			})
-		case 1:
-			ui.Text(c, ct.Image).FontSize(theme.Footnote).TextColor(muted).SingleLine()
-		case 2:
-			ui.Text(c, ct.Status).FontSize(theme.Footnote).TextColor(muted).SingleLine()
-		}
+			case 1:
+				ui.Text(c, ct.Image).FontSize(theme.Footnote).TextColor(muted).SingleLine()
+			case 2:
+				ui.Text(c, ct.Status).FontSize(theme.Footnote).TextColor(muted).SingleLine()
+			}
+		})
+		a.contextMenu(cell, func() []menuEntry { return a.containerEntries(m, tc, ct.ID) })
 	}).Grow(1).Shrink(1).MinHeight(0).FillWidth()
+	if (tbl.Changed() || tbl.Submitted()) && d.ctrSel >= 0 && d.ctrSel < len(cs) {
+		a.openContainer(cs[d.ctrSel])
+	}
 	if d.ctrSel < 0 {
 		panelNote(c, tok, m.DockerPickContainer())
-		return
 	}
-	ct := cs[d.ctrSel]
-	a.contentCard(c.Key("ctrcard"), tok).FillWidth().Padding(theme.Space(3)).Gap(theme.Space(2)).Children(func() {
-		ui.Row(c).Gap(8).AlignItems(ui.Center).FillWidth().Children(func() {
-			softTile(c, icons.Docker, stateTint(tok, ct.State), 22)
-			ui.Column(c).Gap(1).Grow(1).Shrink(1).MinWidth(0).Children(func() {
-				ui.Text(c, ct.Name).FontSize(theme.Body).FontWeight(600).SingleLine()
-				ui.Text(c, ct.Status).FontSize(theme.Caption).TextColor(tok.TextMuted).SingleLine()
-			})
-		})
-		ports := ct.Ports
-		if ports == "" {
-			ports = m.MetricsDash()
+}
+
+// containerActions are the buttons doing to the container ct what its
+// menu does.
+func (a *App) containerActions(c *ui.Context, m locales.Messages, tc *conn, ct session.Container) {
+	d := a.docker
+	ui.Row(c.Key("ctracts")).Gap(2).AlignItems(ui.Center).FillWidth().Children(func() {
+		busy := d.busy != ""
+		if ct.Running() {
+			if (IconButton{Icon: icons.Halt, Label: m.DockerStop(), Disabled: busy}).Clicked(c, "stop") {
+				a.dockerDo(tc, session.DockerStop, ct.ID)
+			}
+		} else if (IconButton{Icon: icons.Resume, Label: m.DockerStart(), Disabled: busy}).Clicked(c, "start") {
+			a.dockerDo(tc, session.DockerStart, ct.ID)
 		}
-		facts(c, tok, a.termFamily(), m.DockerColImage(), ct.Image, "ID", shortID(ct.ID), m.DockerPorts(), ports)
-		ui.Row(c.Key("ctracts")).Gap(2).AlignItems(ui.Center).FillWidth().Children(func() {
-			busy := d.busy != ""
-			if ct.Running() {
-				if (IconButton{Icon: icons.Halt, Label: m.DockerStop(), Disabled: busy}).Clicked(c, "stop") {
-					a.dockerDo(tc, session.DockerStop, ct.ID)
-				}
-			} else if (IconButton{Icon: icons.Resume, Label: m.DockerStart(), Disabled: busy}).Clicked(c, "start") {
-				a.dockerDo(tc, session.DockerStart, ct.ID)
+		if (IconButton{Icon: icons.Reconnect, Label: m.DockerRestart(), Disabled: busy}).Clicked(c, "restart") {
+			a.dockerDo(tc, session.DockerRestart, ct.ID)
+		}
+		if ct.State == "paused" {
+			if (IconButton{Icon: icons.Resume, Label: m.DockerUnpause(), Disabled: busy, Active: true}).Clicked(c, "unpause") {
+				a.dockerDo(tc, session.DockerUnpause, ct.ID)
 			}
-			if (IconButton{Icon: icons.Reconnect, Label: m.DockerRestart(), Disabled: busy}).Clicked(c, "restart") {
-				a.dockerDo(tc, session.DockerRestart, ct.ID)
-			}
-			if ct.State == "paused" {
-				if (IconButton{Icon: icons.Resume, Label: m.DockerUnpause(), Disabled: busy, Active: true}).Clicked(c, "unpause") {
-					a.dockerDo(tc, session.DockerUnpause, ct.ID)
-				}
-			} else if (IconButton{Icon: icons.Pause, Label: m.DockerPause(), Disabled: busy || ct.State != "running"}).Clicked(c, "pause") {
-				a.dockerDo(tc, session.DockerPause, ct.ID)
-			}
-			if (IconButton{Icon: icons.Logs, Label: m.DockerLogs()}).Clicked(c, "logs") {
-				a.dockerLogs(tc, ct.ID, ct.Name)
-			}
-			if (IconButton{Icon: icons.Terminal, Label: m.DockerShell(), Disabled: ct.State != "running"}).Clicked(c, "shell") {
-				a.dockerShell(tc, ct.ID)
-			}
-			ui.Spacer(c)
-			if busy {
-				ui.Spinner(c)
-			}
-			if (IconButton{Icon: icons.Delete, Label: m.DockerRemove(), Danger: true, Disabled: busy}).Clicked(c, "rm") {
-				d.confirm, d.confirmRef, d.confirmImg = true, ct.ID, false
-			}
-		})
+		} else if (IconButton{Icon: icons.Pause, Label: m.DockerPause(), Disabled: busy || ct.State != "running"}).Clicked(c, "pause") {
+			a.dockerDo(tc, session.DockerPause, ct.ID)
+		}
+		if (IconButton{Icon: icons.Logs, Label: m.DockerLogs()}).Clicked(c, "logs") {
+			a.dockerLogs(tc, ct.ID, ct.Name)
+		}
+		if (IconButton{Icon: icons.Terminal, Label: m.DockerShell(), Disabled: ct.State != "running"}).Clicked(c, "shell") {
+			d.detailOpen = false
+			a.dockerShell(tc, ct.ID)
+		}
+		ui.Spacer(c)
+		if busy {
+			ui.Spinner(c)
+		}
+		if (IconButton{Icon: icons.Delete, Label: m.DockerRemove(), Danger: true, Disabled: busy}).Clicked(c, "rm") {
+			d.confirm, d.confirmRef, d.confirmImg = true, ct.ID, false
+		}
 	})
 }
 
-// containerMenu is a container row's menu: what its card's buttons do.
-func (a *App) containerMenu(menu *ui.Menu, m locales.Messages, tc *conn, ct session.Container) {
+// containerEntries are the menu of the container id: what the buttons
+// of its details do. None once it is gone.
+func (a *App) containerEntries(m locales.Messages, tc *conn, id string) []menuEntry {
 	d := a.docker
+	i := slices.IndexFunc(d.info.Containers, func(ct session.Container) bool { return ct.ID == id })
+	if i < 0 {
+		return nil
+	}
+	ct := d.info.Containers[i]
 	busy := d.busy != ""
+	do := func(action session.DockerAction) func() { return func() { a.dockerDo(tc, action, ct.ID) } }
+	es := []menuEntry{{Icon: icons.Info, Label: m.DockerDetails(), Do: func() {
+		d.imgOpen = false
+		a.openContainer(ct)
+	}}, menuSep}
 	if ct.Running() {
-		if menu.Item(m.DockerStop()).Disabled(busy).Chosen() {
-			a.dockerDo(tc, session.DockerStop, ct.ID)
-		}
-	} else if menu.Item(m.DockerStart()).Disabled(busy).Chosen() {
-		a.dockerDo(tc, session.DockerStart, ct.ID)
+		es = append(es, menuEntry{Icon: icons.Halt, Label: m.DockerStop(), Disabled: busy, Do: do(session.DockerStop)})
+	} else {
+		es = append(es, menuEntry{Icon: icons.Resume, Label: m.DockerStart(), Disabled: busy, Do: do(session.DockerStart)})
 	}
-	if menu.Item(m.DockerRestart()).Disabled(busy).Chosen() {
-		a.dockerDo(tc, session.DockerRestart, ct.ID)
-	}
+	es = append(es, menuEntry{Icon: icons.Reconnect, Label: m.DockerRestart(), Disabled: busy, Do: do(session.DockerRestart)})
 	if ct.State == "paused" {
-		if menu.Item(m.DockerUnpause()).Disabled(busy).Chosen() {
-			a.dockerDo(tc, session.DockerUnpause, ct.ID)
-		}
-	} else if menu.Item(m.DockerPause()).Disabled(busy || ct.State != "running").Chosen() {
-		a.dockerDo(tc, session.DockerPause, ct.ID)
+		es = append(es, menuEntry{Icon: icons.Resume, Label: m.DockerUnpause(), Disabled: busy, Do: do(session.DockerUnpause)})
+	} else {
+		es = append(es, menuEntry{Icon: icons.Pause, Label: m.DockerPause(), Disabled: busy || ct.State != "running", Do: do(session.DockerPause)})
 	}
-	menu.Separator()
-	if menu.Item(m.DockerLogs()).Chosen() {
-		a.dockerLogs(tc, ct.ID, ct.Name)
+	return append(es, menuSep,
+		menuEntry{Icon: icons.Logs, Label: m.DockerLogs(), Do: func() { a.dockerLogs(tc, ct.ID, ct.Name) }},
+		menuEntry{Icon: icons.Terminal, Label: m.DockerShell(), Disabled: ct.State != "running", Do: func() {
+			d.detailOpen, d.imgOpen = false, false
+			a.dockerShell(tc, ct.ID)
+		}},
+		menuSep,
+		menuEntry{Icon: icons.Delete, Label: m.DockerRemove(), Danger: true, Disabled: busy, Do: func() {
+			d.confirm, d.confirmRef, d.confirmImg = true, ct.ID, false
+		}},
+	)
+}
+
+// imageEntries are the menu of the image id. None once it is gone.
+func (a *App) imageEntries(m locales.Messages, tc *conn, id string) []menuEntry {
+	d := a.docker
+	i := slices.IndexFunc(d.info.Images, func(im session.Image) bool { return im.ID == id })
+	if i < 0 {
+		return nil
 	}
-	if menu.Item(m.DockerShell()).Disabled(ct.State != "running").Chosen() {
-		a.dockerShell(tc, ct.ID)
-	}
-	menu.Separator()
-	if menu.Item(m.DockerRemove()).Disabled(busy).Chosen() {
-		d.confirm, d.confirmRef, d.confirmImg = true, ct.ID, false
+	return []menuEntry{
+		{Icon: icons.Info, Label: m.DockerDetails(), Do: func() { a.openImage(tc, id) }},
+		menuSep,
+		{Icon: icons.Delete, Label: m.DockerRemoveImage(), Danger: true, Disabled: d.busy != "", Do: func() {
+			d.confirm, d.confirmRef, d.confirmImg = true, id, true
+		}},
 	}
 }
 
@@ -375,44 +408,36 @@ func (a *App) imagesView(c *ui.Context, m locales.Messages, tok theme.Tokens, tc
 		panelNote(c, tok, m.DockerNoImages())
 		return
 	}
-	if d.imgSel >= len(is) {
+	if !d.imgOpen || d.imgSel >= len(is) {
 		d.imgSel = -1
 	}
 	d.imgList.Selected = &d.imgSel
 	cols := []ui.TableColumn{{Title: m.DockerColImage(), MinWidth: 120}, {Title: m.ColSize(), Width: 72, Align: ui.End}, {Title: m.DockerColCreated(), Width: 110}}
-	d.imgList.CellMenu = func(menu *ui.Menu, row, _ int) {
-		if row < len(is) && menu.Item(m.DockerRemoveImage()).Disabled(d.busy != "").Chosen() {
-			d.confirm, d.confirmRef, d.confirmImg = true, is[row].ID, true
-		}
-	}
-	ui.Table(c.Key("images"), &d.imgList, cols, len(is), func(row, col int) {
+	tbl := ui.Table(c.Key("images"), &d.imgList, cols, len(is), func(row, col int) {
 		im := is[row]
 		muted := tok.TextMuted
 		if d.imgSel == row {
 			muted = tok.AccentText
 		}
-		switch col {
-		case 0:
-			ui.Text(c, im.Ref()).FontSize(theme.Footnote).SingleLine().Tooltip(im.Ref() + " · " + shortID(im.ID))
-		case 1:
-			ui.Text(c, im.Size).FontSize(theme.Footnote).TextColor(muted).SingleLine()
-		case 2:
-			ui.Text(c, im.Created).FontSize(theme.Footnote).TextColor(muted).SingleLine()
-		}
+		cell := ui.Row(c).AlignItems(ui.Center).Grow(1).MinWidth(0).AlignSelf(ui.Stretch).Children(func() {
+			switch col {
+			case 0:
+				ui.Text(c, im.Ref()).FontSize(theme.Footnote).SingleLine().Tooltip(im.Ref() + " · " + shortID(im.ID))
+			case 1:
+				ui.Spacer(c)
+				ui.Text(c, im.Size).FontSize(theme.Footnote).TextColor(muted).SingleLine()
+			case 2:
+				ui.Text(c, im.Created).FontSize(theme.Footnote).TextColor(muted).SingleLine()
+			}
+		})
+		a.contextMenu(cell, func() []menuEntry { return a.imageEntries(m, tc, im.ID) })
 	}).Grow(1).Shrink(1).MinHeight(0).FillWidth()
-	if d.imgSel < 0 {
-		return
+	if (tbl.Changed() || tbl.Submitted()) && d.imgSel >= 0 && d.imgSel < len(is) {
+		a.openImage(tc, is[d.imgSel].ID)
 	}
-	im := is[d.imgSel]
-	ui.Row(c.Key("imgacts")).Gap(8).AlignItems(ui.Center).FillWidth().Children(func() {
-		ui.Text(c, im.Ref()).FontSize(theme.Footnote).FontWeight(600).SingleLine().Grow(1).Shrink(1)
-		if d.busy != "" {
-			ui.Spinner(c)
-		}
-		if (IconButton{Icon: icons.Delete, Label: m.DockerRemoveImage(), Danger: true, Disabled: d.busy != ""}).Clicked(c, "rmi") {
-			d.confirm, d.confirmRef, d.confirmImg = true, im.ID, true
-		}
-	})
+	if d.imgSel < 0 {
+		panelNote(c, tok, m.DockerPickImage())
+	}
 }
 
 // dockerConfirm asks before a container or an image is removed.
