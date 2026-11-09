@@ -1,7 +1,6 @@
 package app
 
 import (
-	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -600,7 +599,9 @@ func (a *App) sendAI(cn *conn) {
 	if cn.ai.running || (strings.TrimSpace(cn.ai.input) == "" && len(cn.ai.attach) == 0) {
 		return
 	}
-	cn.ai.scroll.Y = math.MaxFloat32
+	// Not math.MaxFloat32: an offset that large swallows the end's place
+	// when the end is revealed in the same layout, and lands at the top.
+	cn.ai.scroll.Y = 1e9
 	a.SendAI(cn.id, cn.ai.input)
 }
 
@@ -690,11 +691,16 @@ func (a *App) aiCard(c *ui.Context, cn *conn, i int, tok theme.Tokens, m locales
 			}
 		})
 	case "think":
+		// Some models send thinking that is only blank lines: nothing to show.
+		text := strings.TrimSpace(it.text)
+		if text == "" {
+			return
+		}
 		ui.Column(key).FillWidth().Children(func() {
 			ui.Collapsible(c.Key("think"), m.AiThinking(), &it.open, func() {
 				ui.Row(c).Gap(theme.Space(2)).FillWidth().Children(func() {
 					ui.Box(c).Width(2).Shrink(0).AlignSelf(ui.Stretch).Radius(1).Background(tok.Line)
-					ui.Text(c, it.text).FontSize(theme.Footnote).TextColor(tok.TextMuted).Grow(1).Shrink(1)
+					ui.Text(c, text).FontSize(theme.Footnote).TextColor(tok.TextMuted).Grow(1).Shrink(1)
 				})
 			})
 		})

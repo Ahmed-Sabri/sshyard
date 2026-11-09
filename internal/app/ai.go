@@ -695,6 +695,11 @@ func appendChunk(items []aiItem, kind, text string) []aiItem {
 		items[n-1].text += text
 		return items
 	}
+	if kind == "think" && strings.TrimSpace(text) == "" {
+		// Blank lines some models send as thinking, between their text
+		// and their tool calls, start nothing.
+		return items
+	}
 	return append(items, aiItem{kind: kind, text: text})
 }
 

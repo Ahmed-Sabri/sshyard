@@ -1246,3 +1246,42 @@ func TestOneAIPanePerTab(t *testing.T) {
 		t.Fatal("the rail did not close the tab's AI pane")
 	}
 }
+
+// TestAIBlankThinking checks that thinking made only of blank lines starts
+// no item, so text around it stays one, while blank lines inside a thought
+// are kept, and that a saved conversation leaves out blank thinking.
+func TestAIBlankThinking(t *testing.T) {
+	var items []aiItem
+	items = appendChunk(items, "text", "checking:")
+	items = appendChunk(items, "think", "\n\n")
+	items = appendChunk(items, "text", " done")
+	if len(items) != 1 || items[0].text != "checking: done" {
+		t.Fatalf("blank thinking split the text: %+v", items)
+	}
+	items = appendChunk(items, "think", "plan")
+	items = appendChunk(items, "think", "\n\n")
+	items = appendChunk(items, "think", "more")
+	if len(items) != 2 || items[1].kind != "think" || items[1].text != "plan\n\nmore" {
+		t.Fatalf("thought: %+v", items)
+	}
+
+	a, _ := newTestApp(t)
+	h := savedHost(t, a, "web", "10.0.0.8")
+	id, err := a.OpenAI(h.ID, openAt{}, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := a.conns[id]
+	a.noteQuestion(c, "disk?", nil)
+	c.ai.items = []aiItem{{kind: "user", text: "disk?"}, {kind: "think", text: "\n\n"}, {kind: "text", text: "full"}}
+	if err := a.saveChat(c); err != nil {
+		t.Fatal(err)
+	}
+	conv, err := a.chatHistory().Load(h.ID, c.ai.conv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(conv.Items) != 2 || conv.Items[0].Kind != "user" || conv.Items[1].Kind != "text" {
+		t.Fatalf("saved items %+v", conv.Items)
+	}
+}
