@@ -641,6 +641,8 @@
   "aiMaxToolCalls": "Tool calls per turn",
   "aiMaxToolCallsNote": "Pauses for your go-ahead at the limit. Enter 0 for no limit; leave empty for the default",
   "aiAuditDays": "Audit retention (days)",
+  "aiRequestTimeout": "Request timeout (seconds)",
+  "aiRequestTimeoutNote": "How long to wait for a reply to start, or for its next part, before the request fails",
   "aiDismiss": "Dismiss",
   "aiRedact": "Redact secrets",
   "aiRedactNote": "Mask suspected private keys and tokens before they are sent to the model.",

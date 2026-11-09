@@ -175,6 +175,10 @@ type Settings struct {
 	AIContextLines int `json:"aiContextLines,omitempty"`
 	// AIAuditRetentionDays is how long audit files are kept.
 	AIAuditRetentionDays int `json:"aiAuditRetentionDays,omitempty"`
+	// AIRequestTimeout is how many seconds the built-in agent waits for a
+	// reply to start, and then between two pieces of it, before the turn
+	// fails, AIRequestTimeoutMin to AIRequestTimeoutMax.
+	AIRequestTimeout int `json:"aiRequestTimeout,omitempty"`
 	// AIMaxToolCalls caps the tool calls one AI turn runs before it pauses
 	// for the user. Unset takes DefaultMaxToolCalls; a pointer to 0 runs
 	// without a limit.
@@ -547,6 +551,13 @@ const (
 	AIMaxToolCallsMax   = 10_000
 )
 
+// The bounds of AIRequestTimeout, in seconds, and its default.
+const (
+	DefaultAIRequestTimeout = 120
+	AIRequestTimeoutMin     = 10
+	AIRequestTimeoutMax     = 1800
+)
+
 // MaxToolCalls is the cap on the tool calls one AI turn runs before it
 // pauses: the setting, DefaultMaxToolCalls when unset, and 0 for no limit.
 func (s Settings) MaxToolCalls() int {
@@ -648,7 +659,7 @@ const (
 // Default returns the defaults.
 func Default() Settings {
 	return Settings{Background: DefaultBackground(), Theme: theme.Auto, CloseBehavior: CloseToTray, TrayIcon: TrayIconColor, TrayClick: TrayClickPanel, TrayMaterial: MaterialTranslucent, TrayHeight: DefaultTrayHeight, CheckUpdates: true, UpdateIntervalHours: 1, TerminalFontSize: 13, TerminalLineHeight: 100, TerminalCharWidth: 100, TerminalCursorStyle: CursorBlock, TerminalCursorBlink: true, KeepAliveSeconds: 30, AutoReconnect: true, SidebarWidth: 240, ChromeMaterial: MaterialTranslucent, ContentMaterial: MaterialOpaque, MonospacedOnly: true, TransferConcurrency: 3, OpenConfirmMB: 10, FilesSplit: 50, FilesEdge: FilesRight, TerminalRightClick: RightClickMenu, EditorTreeWidth: 240, OSC52Write: OSC52Ask, OSC52MaxBytes: OSC52MaxDefault, MetricsEnabled: true, MetricsInterval: 2,
-		AIDefaultAgent: "builtin", AIDefaultMode: "ask", AIReviewStrictness: AIReviewStandard, AIContextLines: 200, AIAuditRetentionDays: 90, AIRedact: true, MCPPort: MCPPortDefault, LocalKeys: true, Highlight: Highlight{On: true}, RenewalNotify: true}
+		AIDefaultAgent: "builtin", AIDefaultMode: "ask", AIReviewStrictness: AIReviewStandard, AIContextLines: 200, AIAuditRetentionDays: 90, AIRequestTimeout: DefaultAIRequestTimeout, AIRedact: true, MCPPort: MCPPortDefault, LocalKeys: true, Highlight: Highlight{On: true}, RenewalNotify: true}
 }
 
 // ResolveOSC52Write is the write policy in effect. A host value of allow,
@@ -845,6 +856,14 @@ func (s *Settings) normalizeAI(d Settings) {
 		s.AIAuditRetentionDays = d.AIAuditRetentionDays
 	case s.AIAuditRetentionDays > 3650:
 		s.AIAuditRetentionDays = 3650
+	}
+	switch {
+	case s.AIRequestTimeout <= 0:
+		s.AIRequestTimeout = d.AIRequestTimeout
+	case s.AIRequestTimeout < AIRequestTimeoutMin:
+		s.AIRequestTimeout = AIRequestTimeoutMin
+	case s.AIRequestTimeout > AIRequestTimeoutMax:
+		s.AIRequestTimeout = AIRequestTimeoutMax
 	}
 	// Unset keeps the built-in default; 0 is a choice (no limit) and stays.
 	if s.AIMaxToolCalls != nil {

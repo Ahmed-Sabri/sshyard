@@ -1316,3 +1316,21 @@ func TestAIDismissError(t *testing.T) {
 		t.Fatalf("saved items %+v", conv.Items)
 	}
 }
+
+// TestAIRequestTimeoutSetting checks that the request timeout set in the
+// settings is the one the model's client waits for.
+func TestAIRequestTimeoutSetting(t *testing.T) {
+	a, _ := newTestApp(t)
+	p := settings.AIProvider{ID: "p1", Model: "m", BaseURL: "https://alpha.test/v1"}
+	if got := a.llmClient(p, "k").Timeout; got != settings.DefaultAIRequestTimeout*time.Second {
+		t.Fatalf("default timeout %v", got)
+	}
+	s := a.Settings()
+	s.AIRequestTimeout = 45
+	if err := a.ApplySettings(s); err != nil {
+		t.Fatal(err)
+	}
+	if got := a.llmClient(p, "k").Timeout; got != 45*time.Second {
+		t.Fatalf("timeout %v", got)
+	}
+}

@@ -6515,6 +6515,26 @@ func (msgs Messages) AiAuditDays() string {
 	return Catalog.Format(msgs.locale, "aiAuditDays", nil)
 }
 
+// AiRequestTimeout says "Request timeout (seconds)"
+// in the language the app shows.
+func AiRequestTimeout() string { return In(i18n.Locale()).AiRequestTimeout() }
+
+// AiRequestTimeout says "Request timeout (seconds)"
+// in the language of msgs.
+func (msgs Messages) AiRequestTimeout() string {
+	return Catalog.Format(msgs.locale, "aiRequestTimeout", nil)
+}
+
+// AiRequestTimeoutNote says "How long to wait for a reply to start, or for its next part, before the request fails"
+// in the language the app shows.
+func AiRequestTimeoutNote() string { return In(i18n.Locale()).AiRequestTimeoutNote() }
+
+// AiRequestTimeoutNote says "How long to wait for a reply to start, or for its next part, before the request fails"
+// in the language of msgs.
+func (msgs Messages) AiRequestTimeoutNote() string {
+	return Catalog.Format(msgs.locale, "aiRequestTimeoutNote", nil)
+}
+
 // AiDismiss says "Dismiss"
 // in the language the app shows.
 func AiDismiss() string { return In(i18n.Locale()).AiDismiss() }

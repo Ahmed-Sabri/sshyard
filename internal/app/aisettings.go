@@ -89,7 +89,8 @@ func (a *App) llmClient(p settings.AIProvider, key string) *llm.Client {
 		hdr[k] = v
 	}
 	cl := &llm.Client{Format: p.Format, BaseURL: p.BaseURL, APIKey: key, Model: p.Model, Headers: hdr,
-		Temperature: p.Temperature, TopP: p.TopP, LegacyMaxTokens: p.LegacyMaxTokens, HTTP: a.proxyClient(p.Proxy)}
+		Temperature: p.Temperature, TopP: p.TopP, LegacyMaxTokens: p.LegacyMaxTokens, HTTP: a.proxyClient(p.Proxy),
+		Timeout: time.Duration(a.settings.AIRequestTimeout) * time.Second}
 	if p.MaxTokens != nil {
 		cl.MaxTokens = *p.MaxTokens
 	}
@@ -147,6 +148,12 @@ func (a *App) aiSettings(c *ui.Context, m locales.Messages, tok theme.Tokens, s 
 					s.AIMaxToolCalls = v
 					*changed = true
 				}
+			}
+		})
+		g.row(m.AiRequestTimeout(), m.AiRequestTimeoutNote(), func() {
+			if ui.NumberInput(c.Key("aiwait"), &a.aiWait, settings.AIRequestTimeoutMin, settings.AIRequestTimeoutMax, 10).Label(m.AiRequestTimeout()).Changed() {
+				s.AIRequestTimeout = int(a.aiWait)
+				*changed = true
 			}
 		})
 		g.row(m.AiAuditDays(), "", func() {

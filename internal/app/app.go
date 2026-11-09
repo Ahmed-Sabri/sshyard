@@ -496,6 +496,8 @@ type App struct {
 	aiRecent map[string]int
 	aiLines  float64
 	aiDays   float64
+	// aiWait is the AI request timeout field, in seconds.
+	aiWait float64
 	// aiCalls is the tool-call limit field, empty for the default.
 	aiCalls   string
 	aiModeIdx int
@@ -669,6 +671,7 @@ func (a *App) syncChoices() {
 	a.metMount = a.settings.MetricsMount
 	a.aiLines = float64(a.settings.AIContextLines)
 	a.aiDays = float64(a.settings.AIAuditRetentionDays)
+	a.aiWait = float64(a.settings.AIRequestTimeout)
 	a.aiCalls = maxToolCallsText(a.settings.AIMaxToolCalls)
 	a.mcpPort = float64(a.settings.MCPPort)
 }
