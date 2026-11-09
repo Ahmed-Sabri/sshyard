@@ -314,6 +314,12 @@ type App struct {
 	// others in its menu of more tabs; tabRoom the width they had
 	tabStart int
 	tabRoom  float32
+	// tabWheeled is set once the wheel moves the tabs shown, which then
+	// stay where it left them until another tab than tabKept is active;
+	// tabWheel is what of a touchpad's scroll has yet to move them by one
+	tabWheeled bool
+	tabKept    int
+	tabWheel   float32
 	// tabsOpen shows the popover of the tabs that do not fit
 	tabsOpen bool
 	// menu is the drop-down or context menu open (menuButton,
