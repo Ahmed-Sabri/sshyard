@@ -1096,20 +1096,21 @@ func TestAIProviderRejectsBadURLAndHeader(t *testing.T) {
 	mustClick(t, tt, "Add Provider")
 	tt.Frame()
 	a.prov.name, a.prov.base, a.prov.model, a.prov.key = "fake", "ftp://example.test/v1", "m", "test-key-not-real"
-	mustClick(t, tt, "Save")
+	// The handler: Save may be below the fold of the sheet.
+	a.saveProvider(m)
 	tt.Frame()
 	if a.prov.err != m.AiBadURL() || len(a.Settings().AIProviders) != 0 {
 		t.Fatalf("providers %d error %q", len(a.Settings().AIProviders), a.prov.err)
 	}
 	a.prov.base = "http://example.test/v1"
 	a.prov.headers = "Authorization: Bearer test-key-not-real"
-	mustClick(t, tt, "Save")
+	a.saveProvider(m)
 	tt.Frame()
 	if a.prov.err != m.AiBadHeader() || len(a.Settings().AIProviders) != 0 {
 		t.Fatalf("header accepted, error %q", a.prov.err)
 	}
 	a.prov.headers = ""
-	mustClick(t, tt, "Save")
+	a.saveProvider(m)
 	tt.Frame()
 	if len(a.Settings().AIProviders) != 1 || a.prov == nil || a.prov.warn != m.AiHTTPWarn() {
 		t.Fatalf("warn missing, providers %d form %+v", len(a.Settings().AIProviders), a.prov)
