@@ -378,6 +378,9 @@ type App struct {
 	mkdirHold    focusHold
 	compressHold focusHold
 	prompting    bool
+	sudo         *sudoAsk // the sheet asking a files pane's sudo password
+	sudoAsking   bool
+	sudoHold     focusHold
 	hostKey      *hostKeyAsk
 	keyChange    *hostKeyChange
 	changingKey  bool

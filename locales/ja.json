@@ -1959,5 +1959,16 @@
   "historyTipCopy": "この設定をコピー",
   "historyBashTipTitle": "bash の履歴が不完全です",
   "filesZoom": "ファイル一覧の拡大率",
-  "filesZoomNote": "ファイルパネルの一覧の文字と行の高さ"
+  "filesZoomNote": "ファイルパネルの一覧の文字と行の高さ",
+  "sftpSudo": "ファイル (SFTP)",
+  "sftpSudoOn": "sudo で root に昇格してファイルを開く",
+  "sftpSudoHint": "ファイルパネルはサーバーの sftp-server を sudo で実行し、すべてのファイルを読み書きできます。sudo にはログインパスワードを使い、ない場合は入力を求め、今回の実行中のみメモリに保持します。",
+  "sudoPromptTitle": "{host} の sudo パスワード",
+  "sudoPasswordRefused": "sudo がパスワードを拒否しました。",
+  "sudoPasswordNeeded": "root としてファイルを開くには sudo パスワードが必要です。",
+  "sudoEnterPassword": "sudo パスワードを入力",
+  "sudoSubmit": "ファイルを開く",
+  "sudoFailed": "sudo で SFTP を開始できませんでした: {reason}",
+  "sudoNoServer": "サーバーに sftp-server が見つかりません",
+  "sudoRetry": "sudo を再試行"
 }

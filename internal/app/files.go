@@ -234,6 +234,9 @@ type remoteSide struct {
 	unfinished []sftpsvc.Unfinished
 	// fixing is a restore or discard under way.
 	fixing bool
+	// sudoHeld stops SFTP opening again on this connection after sudo
+	// failed (Host.SFTPSudo), until the user answers or retries.
+	sudoHeld bool
 }
 
 // localSide is the local half of a files pane.
@@ -412,7 +415,12 @@ func (a *App) transferClient(cn *conn) func(context.Context) (*sftpsvc.Client, e
 func (a *App) ensureSFTP(cn *conn) {
 	s := &cn.fs.remote
 	st := cn.s.Status()
-	if st.State != session.Connected || s.opening || (s.client != nil && s.connects == st.Connects) {
+	h := a.liveHost(cn.host)
+	sudo := h.SFTPSudo && h.SSH()
+	if st.State != session.Connected || s.opening || (s.client != nil && s.connects == st.Connects && s.client.Sudo() == sudo) {
+		return
+	}
+	if sudo && s.sudoHeld && s.client == nil && s.connects == st.Connects {
 		return
 	}
 	if s.client != nil {
@@ -428,7 +436,16 @@ func (a *App) ensureSFTP(cn *conn) {
 	connects := st.Connects
 	dir, start := s.dir, cn.host.RemoteDir
 	go func() {
-		c, err := sftpsvc.New(client)
+		var c *sftpsvc.Client
+		var err error
+		var pass string
+		var typed bool
+		if sudo {
+			pass, typed = a.sudoPassword(h)
+			c, err = sftpsvc.NewSudo(context.Background(), client, pass)
+		} else {
+			c, err = sftpsvc.New(client)
+		}
 		var home string
 		var es []sftpsvc.Entry
 		var un []sftpsvc.Unfinished
@@ -459,8 +476,12 @@ func (a *App) ensureSFTP(cn *conn) {
 					c.Close()
 				}
 				s.connects = connects
+				if errors.Is(err, sftpsvc.ErrSudo) || errors.Is(err, sftpsvc.ErrSudoPassword) {
+					a.sudoFailed(cn, h, err, pass != "", typed)
+				}
 				return
 			}
+			s.sudoHeld = false
 			s.client, s.connects, s.unfinished, s.home = c, connects, un, home
 			s.show(dir, es)
 			cn.fs.publish(c, connects)
@@ -1281,6 +1302,9 @@ func (a *App) filesBody(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn, 
 							}
 							if s.err != "" {
 								ui.Text(c, a.pv(m.ErrGeneric(securityText(m, s.err)))).TextColor(tok.Danger).FontSize(theme.Footnote)
+							}
+							if s.sudoHeld {
+								a.sudoHeldActions(c, cn, m)
 							}
 						})
 						return

@@ -17886,3 +17886,113 @@ func FilesZoomNote() string { return In(i18n.Locale()).FilesZoomNote() }
 func (msgs Messages) FilesZoomNote() string {
 	return Catalog.Format(msgs.locale, "filesZoomNote", nil)
 }
+
+// SftpSudo says "Files (SFTP)"
+// in the language the app shows.
+func SftpSudo() string { return In(i18n.Locale()).SftpSudo() }
+
+// SftpSudo says "Files (SFTP)"
+// in the language of msgs.
+func (msgs Messages) SftpSudo() string {
+	return Catalog.Format(msgs.locale, "sftpSudo", nil)
+}
+
+// SftpSudoOn says "Open files as root with sudo"
+// in the language the app shows.
+func SftpSudoOn() string { return In(i18n.Locale()).SftpSudoOn() }
+
+// SftpSudoOn says "Open files as root with sudo"
+// in the language of msgs.
+func (msgs Messages) SftpSudoOn() string {
+	return Catalog.Format(msgs.locale, "sftpSudoOn", nil)
+}
+
+// SftpSudoHint says "Files panes run the server's sftp-server through sudo and can change any file. sudo gets the login password, or asks …"
+// in the language the app shows.
+func SftpSudoHint() string { return In(i18n.Locale()).SftpSudoHint() }
+
+// SftpSudoHint says "Files panes run the server's sftp-server through sudo and can change any file. sudo gets the login password, or asks …"
+// in the language of msgs.
+func (msgs Messages) SftpSudoHint() string {
+	return Catalog.Format(msgs.locale, "sftpSudoHint", nil)
+}
+
+// SudoPromptTitle says "sudo password for {host}"
+// in the language the app shows.
+func SudoPromptTitle(host string) string { return In(i18n.Locale()).SudoPromptTitle(host) }
+
+// SudoPromptTitle says "sudo password for {host}"
+// in the language of msgs.
+func (msgs Messages) SudoPromptTitle(host string) string {
+	return Catalog.Format(msgs.locale, "sudoPromptTitle", map[string]any{"host": host})
+}
+
+// SudoPasswordRefused says "sudo refused the password."
+// in the language the app shows.
+func SudoPasswordRefused() string { return In(i18n.Locale()).SudoPasswordRefused() }
+
+// SudoPasswordRefused says "sudo refused the password."
+// in the language of msgs.
+func (msgs Messages) SudoPasswordRefused() string {
+	return Catalog.Format(msgs.locale, "sudoPasswordRefused", nil)
+}
+
+// SudoPasswordNeeded says "sudo needs a password to open the files as root."
+// in the language the app shows.
+func SudoPasswordNeeded() string { return In(i18n.Locale()).SudoPasswordNeeded() }
+
+// SudoPasswordNeeded says "sudo needs a password to open the files as root."
+// in the language of msgs.
+func (msgs Messages) SudoPasswordNeeded() string {
+	return Catalog.Format(msgs.locale, "sudoPasswordNeeded", nil)
+}
+
+// SudoEnterPassword says "Enter sudo password"
+// in the language the app shows.
+func SudoEnterPassword() string { return In(i18n.Locale()).SudoEnterPassword() }
+
+// SudoEnterPassword says "Enter sudo password"
+// in the language of msgs.
+func (msgs Messages) SudoEnterPassword() string {
+	return Catalog.Format(msgs.locale, "sudoEnterPassword", nil)
+}
+
+// SudoSubmit says "Open files"
+// in the language the app shows.
+func SudoSubmit() string { return In(i18n.Locale()).SudoSubmit() }
+
+// SudoSubmit says "Open files"
+// in the language of msgs.
+func (msgs Messages) SudoSubmit() string {
+	return Catalog.Format(msgs.locale, "sudoSubmit", nil)
+}
+
+// SudoFailed says "sudo could not start SFTP: {reason}"
+// in the language the app shows.
+func SudoFailed(reason string) string { return In(i18n.Locale()).SudoFailed(reason) }
+
+// SudoFailed says "sudo could not start SFTP: {reason}"
+// in the language of msgs.
+func (msgs Messages) SudoFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "sudoFailed", map[string]any{"reason": reason})
+}
+
+// SudoNoServer says "no sftp-server found on the server"
+// in the language the app shows.
+func SudoNoServer() string { return In(i18n.Locale()).SudoNoServer() }
+
+// SudoNoServer says "no sftp-server found on the server"
+// in the language of msgs.
+func (msgs Messages) SudoNoServer() string {
+	return Catalog.Format(msgs.locale, "sudoNoServer", nil)
+}
+
+// SudoRetry says "Try sudo again"
+// in the language the app shows.
+func SudoRetry() string { return In(i18n.Locale()).SudoRetry() }
+
+// SudoRetry says "Try sudo again"
+// in the language of msgs.
+func (msgs Messages) SudoRetry() string {
+	return Catalog.Format(msgs.locale, "sudoRetry", nil)
+}

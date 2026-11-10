@@ -2682,5 +2682,16 @@
   "historyTipCopy": "Copy these lines",
   "historyBashTipTitle": "Bash history is incomplete",
   "filesZoom": "Files zoom",
-  "filesZoomNote": "How large the names and rows of files panes show"
+  "filesZoomNote": "How large the names and rows of files panes show",
+  "sftpSudo": "Files (SFTP)",
+  "sftpSudoOn": "Open files as root with sudo",
+  "sftpSudoHint": "Files panes run the server's sftp-server through sudo and can change any file. sudo gets the login password, or asks for one kept in memory for this run only.",
+  "sudoPromptTitle": "sudo password for {host}",
+  "sudoPasswordRefused": "sudo refused the password.",
+  "sudoPasswordNeeded": "sudo needs a password to open the files as root.",
+  "sudoEnterPassword": "Enter sudo password",
+  "sudoSubmit": "Open files",
+  "sudoFailed": "sudo could not start SFTP: {reason}",
+  "sudoNoServer": "no sftp-server found on the server",
+  "sudoRetry": "Try sudo again"
 }

@@ -1959,5 +1959,16 @@
   "historyTipCopy": "複製這些設定",
   "historyBashTipTitle": "bash 歷史記錄不完整",
   "filesZoom": "檔案列表縮放",
-  "filesZoomNote": "檔案面板中檔案列表的文字與行高"
+  "filesZoomNote": "檔案面板中檔案列表的文字與行高",
+  "sftpSudo": "檔案 (SFTP)",
+  "sftpSudoOn": "使用 sudo 提權（以 root 身分）開啟檔案",
+  "sftpSudoHint": "檔案面板透過 sudo 執行伺服器的 sftp-server，可讀寫任何檔案。sudo 使用登入密碼回應，沒有時會詢問密碼，僅在本次執行中保存在記憶體。",
+  "sudoPromptTitle": "{host} 的 sudo 密碼",
+  "sudoPasswordRefused": "sudo 拒絕了此密碼。",
+  "sudoPasswordNeeded": "以 root 身分開啟檔案需要 sudo 密碼。",
+  "sudoEnterPassword": "輸入 sudo 密碼",
+  "sudoSubmit": "開啟檔案",
+  "sudoFailed": "sudo 無法啟動 SFTP：{reason}",
+  "sudoNoServer": "伺服器上找不到 sftp-server",
+  "sudoRetry": "重試 sudo"
 }
