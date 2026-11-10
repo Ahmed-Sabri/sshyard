@@ -29,6 +29,10 @@ type Settings struct {
 	CloseBehavior string `json:"closeBehavior"`
 	// RememberLayout restores window geometry and the workspace on next launch.
 	RememberLayout bool `json:"rememberLayout"`
+	// ToolPanes is how the right rail opens its tools: "", the default,
+	// beside the ones already open, or ToolPanesTabs in the place of the
+	// one open in the tab, one at a time.
+	ToolPanes string `json:"toolPanes,omitempty"`
 	// TrayIcon selects the monochrome or colorful application logo.
 	TrayIcon string `json:"trayIcon"`
 	// TrayClick selects the popup or the main window on a tray click.
@@ -612,6 +616,10 @@ const (
 	FilesBelow = "below"
 )
 
+// ToolPanesTabs opens a rail tool in the place of the one already open in
+// the tab, rather than beside it.
+const ToolPanesTabs = "tabs"
+
 // MCPPortDefault is the MCP endpoint's port unless the user picks one.
 const MCPPortDefault = 47320
 
@@ -767,6 +775,9 @@ func (s *Settings) Normalize() {
 	}
 	if s.FilesSplit < 10 || s.FilesSplit > 90 {
 		s.FilesSplit = d.FilesSplit
+	}
+	if s.ToolPanes != ToolPanesTabs {
+		s.ToolPanes = ""
 	}
 	if s.FilesEdge != FilesBelow {
 		s.FilesEdge = FilesRight

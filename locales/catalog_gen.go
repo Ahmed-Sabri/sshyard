@@ -15721,6 +15721,46 @@ func (msgs Messages) OpenFilesSplit() string {
 	return Catalog.Format(msgs.locale, "openFilesSplit", nil)
 }
 
+// ToolPanes says "Rail tools"
+// in the language the app shows.
+func ToolPanes() string { return In(i18n.Locale()).ToolPanes() }
+
+// ToolPanes says "Rail tools"
+// in the language of msgs.
+func (msgs Messages) ToolPanes() string {
+	return Catalog.Format(msgs.locale, "toolPanes", nil)
+}
+
+// ToolPanesNote says "Side by side keeps every tool you open; Replace shows one at a time in its place"
+// in the language the app shows.
+func ToolPanesNote() string { return In(i18n.Locale()).ToolPanesNote() }
+
+// ToolPanesNote says "Side by side keeps every tool you open; Replace shows one at a time in its place"
+// in the language of msgs.
+func (msgs Messages) ToolPanesNote() string {
+	return Catalog.Format(msgs.locale, "toolPanesNote", nil)
+}
+
+// ToolPanesSplit says "Side by side"
+// in the language the app shows.
+func ToolPanesSplit() string { return In(i18n.Locale()).ToolPanesSplit() }
+
+// ToolPanesSplit says "Side by side"
+// in the language of msgs.
+func (msgs Messages) ToolPanesSplit() string {
+	return Catalog.Format(msgs.locale, "toolPanesSplit", nil)
+}
+
+// ToolPanesTabs says "Replace"
+// in the language the app shows.
+func ToolPanesTabs() string { return In(i18n.Locale()).ToolPanesTabs() }
+
+// ToolPanesTabs says "Replace"
+// in the language of msgs.
+func (msgs Messages) ToolPanesTabs() string {
+	return Catalog.Format(msgs.locale, "toolPanesTabs", nil)
+}
+
 // FilesEdge says "Open files from a terminal"
 // in the language the app shows.
 func FilesEdge() string { return In(i18n.Locale()).FilesEdge() }

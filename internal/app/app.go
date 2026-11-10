@@ -405,6 +405,7 @@ type App struct {
 	concChoice, openMBChoice float64
 	osc52Choice              int
 	filesEdgeChoice          int // where a files pane opens, by index
+	toolPanesChoice          int // how the rail opens its tools, by index
 	rightClickChoice         int // what a terminal's right click does, by index
 	chromeMat, contentMat    int // the materials chosen, by materials' index
 	osc52KiB                 float64

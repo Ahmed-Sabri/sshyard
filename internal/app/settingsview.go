@@ -339,6 +339,15 @@ func (a *App) prefGeneral(c *ui.Context, m locales.Messages, tok theme.Tokens, s
 				*changed = true
 			}
 		})
+		g.row(m.ToolPanes(), m.ToolPanesNote(), func() {
+			modes := []string{"", settings.ToolPanesTabs}
+			a.toolPanesChoice = max(slices.Index(modes, s.ToolPanes), 0)
+			if formSegmented(c.Key("toolpanes"), &a.toolPanesChoice, false, m.ToolPanesSplit(), m.ToolPanesTabs()).Label(m.ToolPanes()).Changed() {
+				if a.toolPanesChoice < len(modes) {
+					s.ToolPanes, *changed = modes[a.toolPanesChoice], true
+				}
+			}
+		})
 		g.row(m.RenewalNotify(), m.RenewalNotifyNote(), func() {
 			if formSwitch(c.Key("renewalnotify"), &s.RenewalNotify).Label(m.RenewalNotify()).Changed() {
 				*changed = true
