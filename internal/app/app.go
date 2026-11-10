@@ -449,6 +449,9 @@ type App struct {
 	hlHold    focusHold
 	// paneBounds are where the panes were last frame, by session
 	paneBounds map[int]ui.Rect
+	// barWidths are how wide the actions an actionBar keeps drew last
+	// frame, by bar and action
+	barWidths map[string]float32
 	// dropPreview is where a drag in progress would land, nil for none
 	dropPreview *dropTarget
 	// temps are the temporary hosts of quick connect, by ID, kept while a
