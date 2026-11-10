@@ -90,6 +90,34 @@ SSHYardは、macOS、Windows、Linux向けのネイティブデスクトップSS
   - トレイに閉じて、トレイのポップオーバーからホストにすぐ接続
   - 英語、簡体字中国語、繁体字中国語、韓国語、日本語に対応
 
+## Linuxの認証情報と依存関係
+
+SSHYardはrootや`sudo`を使わず、通常のデスクトップユーザーとして実行してください。認証情報の保存とロック解除には、libsecret 0.19以降（`libsecret-1.so.0`）、現在のユーザーのセッションD-Bus、そして利用可能でロック解除された[Secret Service](https://specifications.freedesktop.org/secret-service/latest/)プロバイダー（デスクトップに設定済みのGNOME Keyringやその他の互換プロバイダーなど）が必要です。libsecretをインストールしただけでは、実行中のSecret Serviceは用意されません。システムのサービスにはSSHYardのマスターキーだけが保存され、認証情報はローカルの`secrets.enc`に暗号化されたまま残ります。
+
+- **Debian / Ubuntu：** `.deb`はGTKに加えて`libsecret-1-0 (>= 0.19)`を依存関係として宣言しています。`sudo apt install ./sshyard_<version>_amd64.deb`のように依存関係を解決できるパッケージマネージャーでインストールし、ファイル名は実際にダウンロードしたものに置き換えてください
+- **Arch Linux：** 生成される`PKGBUILD`は`libsecret`と`gtk3`を宣言します。MyGoのDebianからArchへの対応付けではバージョン制約が外れるため、libsecretが0.19以降であることを確認してください
+- **アーカイブ / `install.sh`：** ユーザーごとに`~/.local`へインストールし、libsecret、GTK、Secret Serviceプロバイダーは自動でインストールしません。先に依存関係を用意し、スクリプトをrootで実行しないでください
+
+システムパッケージが不足している場合や、テナントのポリシーでセッションD-Bus / Secret Serviceが無効になっている場合は、管理者による対応が必要になることがあります。コレクションのロック解除が必要なときは、デスクトップの既存のキーリングマネージャーを使ってください。SSHYardはネイティブUIを使うため、WebKitGTKは不要です。
+
+読み取り専用の接続確認は、SSHYardと**同じデスクトップのログインセッション**のターミナルから、`sudo`を付けずに実行してください（`gdbus`が必要です）。
+
+```sh
+gdbus call --session --dest org.freedesktop.secrets \
+  --object-path /org/freedesktop/secrets \
+  --method org.freedesktop.Secret.Service.ReadAlias default
+```
+
+コレクションのパスが返ればサービスに到達でき、`/`が返ればデフォルトのコレクションがありません。コレクションのパスが返った場合は、下の`/returned/collection/path`をそのパスに置き換えるとロック状態を確認できます。
+
+```sh
+gdbus call --session --dest org.freedesktop.secrets \
+  --object-path /returned/collection/path \
+  --method org.freedesktop.DBus.Properties.Get org.freedesktop.Secret.Collection Locked
+```
+
+`true`はロック中、`false`はロック解除済みを意味します。これらの呼び出しはセッションサービスを起動することがありますが、パスワードの読み取り、コレクションのロック解除、キーリング項目の変更・削除は行わず、接続とコレクションの状態を確認するだけです。コレクションがロック解除されていても、SSHYardがマスターキーを読み書きできるとは限りません。D-Busの接続エラーはログインセッションやアクセスポリシーの問題を示し、`ServiceUnknown`は通常、起動できるSecret Serviceプロバイダーがないことを意味します。戻り値については[ReadAlias API](https://specifications.freedesktop.org/secret-service/latest/org.freedesktop.Secret.Service.html#org.freedesktop.Secret.Service.ReadAlias)を参照してください。
+
 ## 開発
 
 [mygo](https://github.com/egoist/mygo)を使用しています。Go 1.27.3が必要です（`GOTOOLCHAIN`でダウンロード可能）。cgoは不要です。

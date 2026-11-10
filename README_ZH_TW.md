@@ -90,6 +90,34 @@ SSHYard 是一款原生桌面 SSH / SFTP 用戶端，支援 macOS、Windows 和 
   - 可關閉到系統匣，從系統匣彈出視窗快速連線主機
   - 支援英文、簡體中文、繁體中文、韓文和日文
 
+## Linux 憑證與相依套件
+
+請以一般桌面使用者執行 SSHYard，無需 root 或 `sudo`，儲存和解鎖憑證需要 libsecret 0.19 或更新版本（`libsecret-1.so.0`）、目前使用者工作階段的 D-Bus，以及可用且已解鎖的 [Secret Service](https://specifications.freedesktop.org/secret-service/latest/) 服務，例如桌面環境已設定的 GNOME Keyring 或其他相容服務，僅安裝 libsecret 不會提供執行中的 Secret Service；系統服務儲存 SSHYard 的主金鑰，憑證仍在本機 `secrets.enc` 中加密儲存
+
+- **Debian / Ubuntu：** `.deb` 在 GTK 之外宣告 `libsecret-1-0 (>= 0.19)`，請使用能夠處理相依性的套件管理員安裝，例如 `sudo apt install ./sshyard_<version>_amd64.deb`，檔名以實際下載為準
+- **Arch Linux：** 產生的 `PKGBUILD` 宣告 `libsecret` 和 `gtk3`，MyGo 的 Debian 到 Arch 對應會移除版本限制，請確保 libsecret 版本至少為 0.19
+- **壓縮檔 / `install.sh`：** 依使用者安裝到 `~/.local`，不會自動安裝 libsecret、GTK 或 Secret Service 服務，請先備齊相依套件，不要以 root 執行指令碼
+
+系統缺少套件，或租用戶原則停用工作階段 D-Bus / Secret Service 時，可能需要管理員處理，需要解鎖集合時請使用桌面環境現有的金鑰圈管理工具；SSHYard 使用原生介面，無需 WebKitGTK
+
+可在與 SSHYard **相同的桌面登入工作階段**中開啟終端機，不加 `sudo` 執行以下唯讀連通性檢查（需要 `gdbus`）：
+
+```sh
+gdbus call --session --dest org.freedesktop.secrets \
+  --object-path /org/freedesktop/secrets \
+  --method org.freedesktop.Secret.Service.ReadAlias default
+```
+
+傳回集合路徑表示服務可達，傳回 `/` 表示沒有預設集合；若傳回了集合路徑，可將下面的 `/returned/collection/path` 替換為該路徑，查看鎖定狀態：
+
+```sh
+gdbus call --session --dest org.freedesktop.secrets \
+  --object-path /returned/collection/path \
+  --method org.freedesktop.DBus.Properties.Get org.freedesktop.Secret.Collection Locked
+```
+
+`true` 表示已鎖定，`false` 表示已解鎖；這些呼叫可能啟動工作階段服務，但不會讀取密碼、解鎖集合或修改、刪除金鑰圈項目，僅檢查連通性和集合狀態，即使集合已解鎖，也不能保證 SSHYard 能讀取或儲存主金鑰；D-Bus 連線錯誤指向登入工作階段或存取原則問題，`ServiceUnknown` 通常表示沒有可啟動的 Secret Service 服務，傳回值定義請參閱 [ReadAlias API](https://specifications.freedesktop.org/secret-service/latest/org.freedesktop.Secret.Service.html#org.freedesktop.Secret.Service.ReadAlias)
+
 ## 開發
 
 基於 [mygo](https://github.com/egoist/mygo) 建置，需要 Go 1.27.3（可藉助 `GOTOOLCHAIN` 自動下載），不需要 cgo。

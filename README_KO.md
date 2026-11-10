@@ -90,6 +90,34 @@ SSHYard는 macOS, Windows 및 Linux용 네이티브 데스크톱 SSH / SFTP 클�
   - 트레이로 닫고 트레이 팝업에서 호스트에 바로 연결
   - 영어, 중국어 간체, 중국어 번체, 한국어 및 일본어 지원
 
+## Linux 자격 증명과 의존성
+
+SSHYard는 root나 `sudo` 없이 일반 데스크톱 사용자로 실행하세요. 자격 증명을 저장하고 잠금 해제하려면 libsecret 0.19 이상(`libsecret-1.so.0`), 현재 사용자의 세션 D-Bus, 그리고 사용 가능하고 잠금 해제된 [Secret Service](https://specifications.freedesktop.org/secret-service/latest/) 제공자(데스크톱에 설정된 GNOME Keyring 또는 다른 호환 제공자 등)가 필요합니다. libsecret만 설치해서는 실행 중인 Secret Service가 제공되지 않습니다. 시스템 서비스에는 SSHYard의 마스터 키만 저장되며, 자격 증명은 로컬 `secrets.enc`에 암호화된 채로 남습니다.
+
+- **Debian / Ubuntu:** `.deb`는 GTK와 함께 `libsecret-1-0 (>= 0.19)`를 의존성으로 선언합니다. `sudo apt install ./sshyard_<version>_amd64.deb`처럼 의존성을 처리하는 패키지 관리자로 설치하고, 파일 이름은 실제로 내려받은 이름을 사용하세요
+- **Arch Linux:** 생성된 `PKGBUILD`는 `libsecret`과 `gtk3`를 선언합니다. MyGo의 Debian→Arch 매핑은 버전 제약을 없애므로 libsecret이 0.19 이상인지 직접 확인하세요
+- **압축 파일 / `install.sh`:** 사용자별로 `~/.local`에 설치하며 libsecret, GTK, Secret Service 제공자를 자동으로 설치하지 않습니다. 의존성을 먼저 준비하고 스크립트를 root로 실행하지 마세요
+
+시스템 패키지가 없거나 테넌트 정책으로 세션 D-Bus / Secret Service가 비활성화된 경우 관리자의 조치가 필요할 수 있습니다. 컬렉션 잠금 해제가 필요하면 데스크톱의 기존 키링 관리자를 사용하세요. SSHYard는 네이티브 UI를 사용하므로 WebKitGTK가 필요하지 않습니다.
+
+읽기 전용 연결 확인은 SSHYard와 **같은 데스크톱 로그인 세션**의 터미널에서 `sudo` 없이 실행하세요(`gdbus` 필요).
+
+```sh
+gdbus call --session --dest org.freedesktop.secrets \
+  --object-path /org/freedesktop/secrets \
+  --method org.freedesktop.Secret.Service.ReadAlias default
+```
+
+컬렉션 경로가 반환되면 서비스에 연결할 수 있다는 뜻이고, `/`가 반환되면 기본 컬렉션이 없다는 뜻입니다. 컬렉션 경로가 반환되었다면 아래의 `/returned/collection/path`를 그 경로로 바꿔 잠금 상태를 확인할 수 있습니다.
+
+```sh
+gdbus call --session --dest org.freedesktop.secrets \
+  --object-path /returned/collection/path \
+  --method org.freedesktop.DBus.Properties.Get org.freedesktop.Secret.Collection Locked
+```
+
+`true`는 잠김, `false`는 잠금 해제를 뜻합니다. 이 호출은 세션 서비스를 활성화할 수 있지만 비밀번호를 읽거나 컬렉션을 잠금 해제하거나 키링 항목을 수정·삭제하지 않으며, 연결과 컬렉션 상태만 확인합니다. 컬렉션이 잠금 해제되어 있어도 SSHYard가 마스터 키를 읽거나 저장할 수 있다고 보장되지는 않습니다. D-Bus 연결 오류는 로그인 세션이나 접근 정책 문제를 가리키며, `ServiceUnknown`은 대개 활성화할 수 있는 Secret Service 제공자가 없다는 뜻입니다. 반환 값은 [ReadAlias API](https://specifications.freedesktop.org/secret-service/latest/org.freedesktop.Secret.Service.html#org.freedesktop.Secret.Service.ReadAlias)를 참고하세요.
+
 ## 개발
 
 [mygo](https://github.com/egoist/mygo)로 개발했습니다. Go 1.27.3이 필요하며 `GOTOOLCHAIN`으로 다운로드할 수 있습니다. cgo는 필요하지 않습니다.
