@@ -13,8 +13,8 @@ import (
 // system monitor, the process usage, the host's details, Docker and
 // tmux), work on the sessions, not on one of their own. They are panes as the others are, dragged by their
 // header to any edge of a pane or another tab, but on no host, and one of
-// each in the whole workspace, which the rail opens and closes. They are
-// not saved with the layout. A tool pane never keeps a tab's focus: the
+// each in the whole workspace, which the rail opens and closes. The layout
+// saves where they are, never what they show. A tool pane never keeps a tab's focus: the
 // focused pane stays the session the panels and the shortcuts work on.
 
 // isTool reports a tool pane's kind.
