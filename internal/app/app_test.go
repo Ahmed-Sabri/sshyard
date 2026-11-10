@@ -461,7 +461,7 @@ func TestFilesPaneFromHost(t *testing.T) {
 func TestSettingsToggle(t *testing.T) {
 	a, tt := newTestApp(t)
 	mustClick(t, tt, "Settings")
-	if a.page != pageSettings || a.prefNow() != prefAppearance {
+	if a.page != pageSettings || a.prefNow() != prefGeneral {
 		t.Fatal("settings did not open")
 	}
 	mustClick(t, tt, "Close Settings")

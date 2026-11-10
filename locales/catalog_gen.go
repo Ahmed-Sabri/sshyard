@@ -7045,14 +7045,34 @@ func (msgs Messages) AboutSection() string {
 	return Catalog.Format(msgs.locale, "aboutSection", nil)
 }
 
-// AppearanceDesc says "How SSHYard looks: theme, language, translucency, zoom and the interface font."
+// AppearanceDesc says "How SSHYard looks: theme, zoom, background, translucency and the interface font."
 // in the language the app shows.
 func AppearanceDesc() string { return In(i18n.Locale()).AppearanceDesc() }
 
-// AppearanceDesc says "How SSHYard looks: theme, language, translucency, zoom and the interface font."
+// AppearanceDesc says "How SSHYard looks: theme, zoom, background, translucency and the interface font."
 // in the language of msgs.
 func (msgs Messages) AppearanceDesc() string {
 	return Catalog.Format(msgs.locale, "appearanceDesc", nil)
+}
+
+// GeneralDesc says "What applies to all of SSHYard: language, layout, reminders, the window and tray, and updates."
+// in the language the app shows.
+func GeneralDesc() string { return In(i18n.Locale()).GeneralDesc() }
+
+// GeneralDesc says "What applies to all of SSHYard: language, layout, reminders, the window and tray, and updates."
+// in the language of msgs.
+func (msgs Messages) GeneralDesc() string {
+	return Catalog.Format(msgs.locale, "generalDesc", nil)
+}
+
+// WindowTraySection says "Window & Tray"
+// in the language the app shows.
+func WindowTraySection() string { return In(i18n.Locale()).WindowTraySection() }
+
+// WindowTraySection says "Window & Tray"
+// in the language of msgs.
+func (msgs Messages) WindowTraySection() string {
+	return Catalog.Format(msgs.locale, "windowTraySection", nil)
 }
 
 // TerminalDesc says "Fonts, keyword highlighting, connection behaviour and the remote clipboard of terminal panes."
