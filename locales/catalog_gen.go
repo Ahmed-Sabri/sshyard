@@ -15639,6 +15639,26 @@ func (msgs Messages) MigrationTextChooseFile() string {
 	return Catalog.Format(msgs.locale, "migrationTextChooseFile", nil)
 }
 
+// MigrationCSV says "CSV import"
+// in the language the app shows.
+func MigrationCSV() string { return In(i18n.Locale()).MigrationCSV() }
+
+// MigrationCSV says "CSV import"
+// in the language of msgs.
+func (msgs Messages) MigrationCSV() string {
+	return Catalog.Format(msgs.locale, "migrationCSV", nil)
+}
+
+// MigrationCSVChooseFile says "Choose CSV file"
+// in the language the app shows.
+func MigrationCSVChooseFile() string { return In(i18n.Locale()).MigrationCSVChooseFile() }
+
+// MigrationCSVChooseFile says "Choose CSV file"
+// in the language of msgs.
+func (msgs Messages) MigrationCSVChooseFile() string {
+	return Catalog.Format(msgs.locale, "migrationCSVChooseFile", nil)
+}
+
 // MigrationTextHelp says "One host per line, as key=value fields separated by spaces: host or ip, port, user or username, password, and title, …"
 // in the language the app shows.
 func MigrationTextHelp() string { return In(i18n.Locale()).MigrationTextHelp() }

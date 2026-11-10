@@ -1737,6 +1737,8 @@
   "migrationText": "文本批量导入",
   "migrationTextInput": "输入或粘贴主机列表",
   "migrationTextChooseFile": "选择文本文件",
+  "migrationCSV": "CSV 导入",
+  "migrationCSVChooseFile": "选择 CSV 文件",
   "migrationTextHelp": "每行一台主机，字段为以空格分隔的 key=value：host 或 ip、port、user 或 username、password，以及作为名称的 title、name 或 label。authType 会被忽略，未提供密码则留空。值中含空格时用引号包裹，例如 title=\"web 01\"。",
   "migrationTextLabel": "主机列表",
   "migrationTextPreview": "预览",

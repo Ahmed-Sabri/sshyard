@@ -1737,6 +1737,8 @@
   "migrationText": "テキスト一括インポート",
   "migrationTextInput": "ホスト一覧を入力または貼り付け",
   "migrationTextChooseFile": "テキストファイルを選択",
+  "migrationCSV": "CSV インポート",
+  "migrationCSVChooseFile": "CSV ファイルを選択",
   "migrationTextHelp": "1 行に 1 ホストを、空白で区切った key=value 形式で記述します：host または ip、port、user または username、password、名前として title、name または label。authType は無視され、パスワードがなければ空のままです。値に空白を含む場合は title=\"web 01\" のように引用符で囲んでください。",
   "migrationTextLabel": "ホスト一覧",
   "migrationTextPreview": "プレビュー",

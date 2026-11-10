@@ -2460,6 +2460,8 @@
   "migrationText": "Text batch import",
   "migrationTextInput": "Enter or paste a host list",
   "migrationTextChooseFile": "Choose text file",
+  "migrationCSV": "CSV import",
+  "migrationCSVChooseFile": "Choose CSV file",
   "migrationTextHelp": "One host per line, as key=value fields separated by spaces: host or ip, port, user or username, password, and title, name or label for the name. authType is ignored and a missing password stays blank. Quote a value with spaces, as in title=\"web 01\".",
   "migrationTextLabel": "Host list",
   "migrationTextPreview": "Preview",

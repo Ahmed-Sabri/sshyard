@@ -1737,6 +1737,8 @@
   "migrationText": "文字批次匯入",
   "migrationTextInput": "輸入或貼上主機清單",
   "migrationTextChooseFile": "選擇文字檔案",
+  "migrationCSV": "CSV 匯入",
+  "migrationCSVChooseFile": "選擇 CSV 檔案",
   "migrationTextHelp": "每行一台主機，欄位為以空格分隔的 key=value：host 或 ip、port、user 或 username、password，以及作為名稱的 title、name 或 label。authType 會被忽略，未提供密碼則留空。值中含有空格時請用引號包住，例如 title=\"web 01\"。",
   "migrationTextLabel": "主機清單",
   "migrationTextPreview": "預覽",

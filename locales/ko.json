@@ -2460,6 +2460,8 @@
   "migrationText": "텍스트 일괄 가져오기",
   "migrationTextInput": "호스트 목록 입력 또는 붙여넣기",
   "migrationTextChooseFile": "텍스트 파일 선택",
+  "migrationCSV": "CSV 가져오기",
+  "migrationCSVChooseFile": "CSV 파일 선택",
   "migrationTextHelp": "한 줄에 호스트 하나를 공백으로 구분한 key=value 필드로 적습니다: host 또는 ip, port, user 또는 username, password, 이름으로 쓰는 title, name 또는 label. authType은 무시되며 비밀번호가 없으면 비워 둡니다. 값에 공백이 있으면 title=\"web 01\"처럼 따옴표로 감싸세요.",
   "migrationTextLabel": "호스트 목록",
   "migrationTextPreview": "미리 보기",
