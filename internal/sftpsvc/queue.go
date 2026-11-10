@@ -298,7 +298,7 @@ func (ts *Transfers) attempts(ctx context.Context, t *Transfer) error {
 			return ctx.Err()
 		}
 		ts.mu.Lock()
-		if t.Attempt >= MaxRetries || errors.Is(err, fs.ErrNotExist) || errors.Is(err, fs.ErrPermission) || errors.Is(err, ErrUnsafeName) || errors.Is(err, ErrDstIsDir) {
+		if t.Attempt >= MaxRetries || permanent(err) {
 			ts.mu.Unlock()
 			return err
 		}
@@ -315,6 +315,17 @@ func (ts *Transfers) attempts(ctx context.Context, t *Transfer) error {
 		case <-time.After(d):
 		}
 	}
+}
+
+// permanent reports a failure that trying again cannot change: a missing
+// file, a refusal, or a path or folder the safety checks reject.
+func permanent(err error) bool {
+	for _, e := range []error{fs.ErrNotExist, fs.ErrPermission, ErrUnsafeName, ErrDstIsDir, ErrUnsafePath, ErrUnsafeDestination, ErrPartChanged} {
+		if errors.Is(err, e) {
+			return true
+		}
+	}
+	return false
 }
 
 // ErrDstIsDir is a transfer to where a folder is.

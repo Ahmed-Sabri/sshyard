@@ -262,7 +262,7 @@ func TestQueueUploadKeepsModeAndTime(t *testing.T) {
 
 // Uploads go into group-writable (umask 002, shared) and sticky (/tmp)
 // folders; only a folder anyone may write to without the sticky bit is
-// refused.
+// refused, at once rather than after retries.
 func TestQueueUploadDestinationFolderModes(t *testing.T) {
 	r, root := queueServer(t)
 	src := filepath.Join(t.TempDir(), "install.txt")
@@ -295,8 +295,8 @@ func TestQueueUploadDestinationFolderModes(t *testing.T) {
 		if tc.ok && (tr.State != Done || statErr != nil) {
 			t.Errorf("%s: %v %v, upload refused", tc.name, tr.State, tr.Err)
 		}
-		if !tc.ok && (tr.State != Failed || !errors.Is(tr.Err, ErrUnsafeDestination) || statErr == nil) {
-			t.Errorf("%s: %v %v, want ErrUnsafeDestination", tc.name, tr.State, tr.Err)
+		if !tc.ok && (tr.State != Failed || !errors.Is(tr.Err, ErrUnsafeDestination) || tr.Attempt != 0 || statErr == nil) {
+			t.Errorf("%s: %v %v after %d retries, want ErrUnsafeDestination at once", tc.name, tr.State, tr.Err, tr.Attempt)
 		}
 	}
 }
