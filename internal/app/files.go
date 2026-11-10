@@ -871,8 +871,12 @@ func (a *App) fileTable(c *ui.Context, cn *conn, remote bool, m locales.Messages
 	}
 	extend := -1
 	sd.rows = sd.rows[:0]
-	// The rows are dense, in the Footnote size, so that a pane shows many.
-	ui.Themed(c.Key(key+":dense"), theme.Dense(*c.Theme())).Background(ui.Transparent).Grow(1).FillWidth().MinHeight(0).Children(func() {
+	// The rows are dense, in the Footnote size, so that a pane shows many,
+	// both as large as the files zoom says.
+	zoom := a.settings.FilesScale()
+	dense := theme.Dense(*c.Theme())
+	dense.FontSize, dense.Spacing = dense.FontSize*zoom, dense.Spacing*zoom
+	ui.Themed(c.Key(key+":dense"), dense).Background(ui.Transparent).Grow(1).FillWidth().MinHeight(0).Children(func() {
 		tb = ui.Table(c.Key(key), list, cols, len(es), func(row, col int) {
 			e := es[row]
 			on := sd.chosen.Has(e.Name)
@@ -884,7 +888,7 @@ func (a *App) fileTable(c *ui.Context, cn *conn, remote bool, m locales.Messages
 			case colName:
 				ui.Row(c).Grow(1).MinWidth(0).AlignItems(ui.Center).Children(func() {
 					name := ui.Row(c).Gap(6).Shrink(1).MinWidth(0).AlignItems(ui.Center).Children(func() {
-						fileImage(c, entryIcon(e), 14)
+						fileImage(c, entryIcon(e), 14*zoom)
 						ui.Text(c, e.Name).SingleLine().Shrink(1)
 					})
 					nb := name.Bounds()

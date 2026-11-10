@@ -2680,5 +2680,7 @@
   "historyShowWhole": "Show the whole command",
   "historyBashTip": "Bash writes its history only when a shell exits, without times. To see commands at once, with the time they ran, add these lines to ~/.bashrc:",
   "historyTipCopy": "Copy these lines",
-  "historyBashTipTitle": "Bash history is incomplete"
+  "historyBashTipTitle": "Bash history is incomplete",
+  "filesZoom": "Files zoom",
+  "filesZoomNote": "How large the names and rows of files panes show"
 }

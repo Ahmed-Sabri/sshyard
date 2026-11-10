@@ -1957,5 +1957,7 @@
   "historyShowWhole": "コマンド全体を表示",
   "historyBashTip": "bash は既定でシェルの終了時にしか履歴を書き込まず、時刻も記録しません。次の行を ~/.bashrc に追加すると、コマンドと実行時刻がすぐに表示されます：",
   "historyTipCopy": "この設定をコピー",
-  "historyBashTipTitle": "bash の履歴が不完全です"
+  "historyBashTipTitle": "bash の履歴が不完全です",
+  "filesZoom": "ファイル一覧の拡大率",
+  "filesZoomNote": "ファイルパネルの一覧の文字と行の高さ"
 }

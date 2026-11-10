@@ -17866,3 +17866,23 @@ func HistoryBashTipTitle() string { return In(i18n.Locale()).HistoryBashTipTitle
 func (msgs Messages) HistoryBashTipTitle() string {
 	return Catalog.Format(msgs.locale, "historyBashTipTitle", nil)
 }
+
+// FilesZoom says "Files zoom"
+// in the language the app shows.
+func FilesZoom() string { return In(i18n.Locale()).FilesZoom() }
+
+// FilesZoom says "Files zoom"
+// in the language of msgs.
+func (msgs Messages) FilesZoom() string {
+	return Catalog.Format(msgs.locale, "filesZoom", nil)
+}
+
+// FilesZoomNote says "How large the names and rows of files panes show"
+// in the language the app shows.
+func FilesZoomNote() string { return In(i18n.Locale()).FilesZoomNote() }
+
+// FilesZoomNote says "How large the names and rows of files panes show"
+// in the language of msgs.
+func (msgs Messages) FilesZoomNote() string {
+	return Catalog.Format(msgs.locale, "filesZoomNote", nil)
+}

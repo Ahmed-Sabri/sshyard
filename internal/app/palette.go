@@ -90,6 +90,7 @@ var paletteSettings = []paletteSetting{
 	{prefMonitoring, locales.Messages.MetricsMount},
 	{prefFiles, locales.Messages.TransferConcurrency},
 	{prefFiles, locales.Messages.OpenConfirmMB},
+	{prefFiles, locales.Messages.FilesZoom},
 	{prefAI, locales.Messages.AiContextLines},
 	{prefAI, locales.Messages.AiAuditDays},
 	{prefAI, locales.Messages.AiRedact},

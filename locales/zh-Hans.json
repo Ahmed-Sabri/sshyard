@@ -1957,5 +1957,7 @@
   "historyShowWhole": "展开完整命令",
   "historyBashTip": "bash 默认在 shell 退出时才写入历史，且不记录时间。在 ~/.bashrc 中加入以下内容，即可立即看到命令及其执行时间：",
   "historyTipCopy": "复制这些配置",
-  "historyBashTipTitle": "bash 历史记录不完整"
+  "historyBashTipTitle": "bash 历史记录不完整",
+  "filesZoom": "文件列表缩放",
+  "filesZoomNote": "文件面板中文件列表的文字与行高"
 }

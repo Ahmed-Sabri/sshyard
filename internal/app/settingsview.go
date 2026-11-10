@@ -642,6 +642,18 @@ func (a *App) prefFiles(c *ui.Context, m locales.Messages, tok theme.Tokens, s *
 				}
 			}
 		})
+		g.row(m.FilesZoom(), m.FilesZoomNote(), func() {
+			opts := make([]string, len(settings.FilesZooms))
+			for i, z := range settings.FilesZooms {
+				opts[i] = zoomLabel(m, z)
+			}
+			cur := zoomLabel(m, int(s.FilesScale()*100+0.5))
+			if formSelect(c.Key("fileszoom"), &cur, opts).Label(m.FilesZoom()).Width(180).Changed() {
+				if i := slices.Index(opts, cur); i >= 0 {
+					s.FilesZoom, *changed = settings.FilesZooms[i], true
+				}
+			}
+		})
 	})
 }
 

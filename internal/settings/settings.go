@@ -121,6 +121,9 @@ type Settings struct {
 	// FilesEdge is where a files pane opened from a terminal goes:
 	// FilesRight, the default, or FilesBelow.
 	FilesEdge string `json:"filesEdge,omitempty"`
+	// FilesZoom is how large the rows of files panes show, in percent,
+	// one of FilesZooms; 0 is 100.
+	FilesZoom int `json:"filesZoom,omitempty"`
 	// EditorTreeWidth is the width, in DIPs, of the folders beside the
 	// text in an editor window, 140 to 600; EditorTreeHidden hides them.
 	EditorTreeWidth  float32 `json:"editorTreeWidth,omitempty"`
@@ -620,6 +623,18 @@ var UpdateIntervals = []int{1, 2, 6, 12, 24}
 // besides following the system, smallest first.
 var UIZooms = []int{80, 90, 100, 110, 125, 150, 175, 200}
 
+// FilesZooms are the zooms of files panes' rows, in percent, the user
+// can choose, smallest first.
+var FilesZooms = []int{80, 90, 100, 110, 125, 150, 175, 200}
+
+// FilesScale is FilesZoom as a factor, 1 for 100%.
+func (s Settings) FilesScale() float32 {
+	if s.FilesZoom == 0 {
+		return 1
+	}
+	return float32(s.FilesZoom) / 100
+}
+
 // Languages are the languages SSHYard ships, besides following the system.
 var Languages = []string{"en", "zh-Hans", "zh-Hant", "ko", "ja"}
 
@@ -755,6 +770,9 @@ func (s *Settings) Normalize() {
 	}
 	if s.FilesEdge != FilesBelow {
 		s.FilesEdge = FilesRight
+	}
+	if s.FilesZoom == 100 || !slices.Contains(FilesZooms, s.FilesZoom) {
+		s.FilesZoom = 0
 	}
 	if s.EditorTreeWidth < 140 || s.EditorTreeWidth > 600 {
 		s.EditorTreeWidth = d.EditorTreeWidth
