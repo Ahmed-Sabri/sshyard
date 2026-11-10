@@ -100,6 +100,8 @@ Run SSHYard as your normal desktop user, without root or `sudo`. Saving and unlo
 
 Missing system packages or a tenant policy disabling session D-Bus / Secret Service may require an administrator to resolve. Use your desktop's existing keyring manager to unlock its collection when needed. SSHYard uses native UI and does not require WebKitGTK.
 
+Without a usable Secret Service, for example on a tenant account without administrator rights, SSHYard can protect the master key with a local master password instead: when unlocking fails and nothing is saved yet, choose **Use local master password…** in the error dialog. The master key is then sealed under that password (Argon2id) in `master.enc` beside `secrets.enc`, nothing is written to the system keychain, and you enter the password the first time saved secrets are needed after each launch. SSHYard never stores the password; if you forget it, saved secrets can only be recovered from a backup. **Settings → About → Secret storage** changes it, or moves the master key back to the system keychain once one is available. **Copy diagnostics** in the same dialog copies the credential service's own error message for a bug report; it contains no secrets.
+
 For a read-only connectivity check, run this from a terminal in the **same desktop login session** as SSHYard, without `sudo` (requires `gdbus`):
 
 ```sh

@@ -583,6 +583,11 @@ type App struct {
 	defaultPw        *passwordForm
 	settingDefaultPw bool
 	defaultPwHold    focusHold
+	// masterPw is the local master password sheet: to unlock, set it up
+	// in place of an unusable system keychain, change it or leave it
+	masterPw     *masterPwForm
+	masterPwOpen bool
+	masterPwHold focusHold
 	// cloud is what this device knows of the places it backs up to, read
 	// once; cloudCtx ends their requests when the app closes. target is
 	// the backup location sheet open, remotes the sheet of a place's
