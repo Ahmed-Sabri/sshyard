@@ -2037,6 +2037,46 @@ func (msgs Messages) TerminalCursorBlinkNote() string {
 	return Catalog.Format(msgs.locale, "terminalCursorBlinkNote", nil)
 }
 
+// TerminalLineNumbers says "Line numbers"
+// in the language the app shows.
+func TerminalLineNumbers() string { return In(i18n.Locale()).TerminalLineNumbers() }
+
+// TerminalLineNumbers says "Line numbers"
+// in the language of msgs.
+func (msgs Messages) TerminalLineNumbers() string {
+	return Catalog.Format(msgs.locale, "terminalLineNumbers", nil)
+}
+
+// TerminalLineNumbersNote says "Show each line's number left of the terminal"
+// in the language the app shows.
+func TerminalLineNumbersNote() string { return In(i18n.Locale()).TerminalLineNumbersNote() }
+
+// TerminalLineNumbersNote says "Show each line's number left of the terminal"
+// in the language of msgs.
+func (msgs Messages) TerminalLineNumbersNote() string {
+	return Catalog.Format(msgs.locale, "terminalLineNumbersNote", nil)
+}
+
+// TerminalTimestamps says "Timestamps"
+// in the language the app shows.
+func TerminalTimestamps() string { return In(i18n.Locale()).TerminalTimestamps() }
+
+// TerminalTimestamps says "Timestamps"
+// in the language of msgs.
+func (msgs Messages) TerminalTimestamps() string {
+	return Catalog.Format(msgs.locale, "terminalTimestamps", nil)
+}
+
+// TerminalTimestampsNote says "Show when output reached each line, left of the terminal"
+// in the language the app shows.
+func TerminalTimestampsNote() string { return In(i18n.Locale()).TerminalTimestampsNote() }
+
+// TerminalTimestampsNote says "Show when output reached each line, left of the terminal"
+// in the language of msgs.
+func (msgs Messages) TerminalTimestampsNote() string {
+	return Catalog.Format(msgs.locale, "terminalTimestampsNote", nil)
+}
+
 // CursorBlock says "Block"
 // in the language the app shows.
 func CursorBlock() string { return In(i18n.Locale()).CursorBlock() }

@@ -459,6 +459,16 @@ func (a *App) prefTerminal(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 				*changed = true
 			}
 		})
+		g.row(m.TerminalLineNumbers(), m.TerminalLineNumbersNote(), func() {
+			if formSwitch(c.Key("linenumbers"), &s.TerminalLineNumbers).Label(m.TerminalLineNumbers()).Changed() {
+				*changed = true
+			}
+		})
+		g.row(m.TerminalTimestamps(), m.TerminalTimestampsNote(), func() {
+			if formSwitch(c.Key("timestamps"), &s.TerminalTimestamps).Label(m.TerminalTimestamps()).Changed() {
+				*changed = true
+			}
+		})
 		g.row(m.TerminalFont(), "", func() {
 			if f, ok := a.fontPicker(c, "termfont", m.TerminalFont(), m.SystemDefault(), &a.fonts.termSel, s.TerminalFont, fonts.ForTerminal(a.fonts.list, s.MonospacedOnly)); ok {
 				s.TerminalFont, *changed = f, true

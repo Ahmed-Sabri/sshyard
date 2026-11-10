@@ -74,6 +74,11 @@ type Settings struct {
 	TerminalCursorStyle string `json:"terminalCursorStyle"`
 	// TerminalCursorBlink allows the terminal cursor to blink.
 	TerminalCursorBlink bool `json:"terminalCursorBlink"`
+	// TerminalLineNumbers and TerminalTimestamps show, left of the
+	// terminal's lines, their number and the time output reached them;
+	// both off by default.
+	TerminalLineNumbers bool `json:"terminalLineNumbers,omitempty"`
+	TerminalTimestamps  bool `json:"terminalTimestamps,omitempty"`
 	// TerminalFont is the terminal's font family, "" for the system's
 	// monospaced font.
 	TerminalFont string `json:"terminalFont,omitempty"`
