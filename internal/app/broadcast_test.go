@@ -323,12 +323,13 @@ func TestToolPanes(t *testing.T) {
 	if a.focused() != cs[0] {
 		t.Fatalf("focused %v once the tool pane was clicked", a.focused())
 	}
-	// None is saved with the layout, nor takes the focus.
+	// None takes the focus; the layout saves where each is, on no host.
 	a.ToggleTool(layout.Snippets)
 	a.ToggleTool(layout.History)
 	if a.focused() != cs[0] || a.snippetTarget() != cs[0] {
 		t.Fatalf("focused %v once the snippets and history opened", a.focused())
 	}
+	saved := map[string]int{}
 	for _, tb := range a.layoutSnapshot().Tabs {
 		var walk func(n *nodeSnap)
 		walk = func(n *nodeSnap) {
@@ -336,12 +337,18 @@ func TestToolPanes(t *testing.T) {
 				return
 			}
 			if n.Kind == "logs" || n.Kind == "broadcast" || n.Kind == "snippets" || n.Kind == "history" {
-				t.Fatalf("tool pane saved: %+v", n)
+				if n.Host != "" {
+					t.Fatalf("tool pane saved with a host: %+v", n)
+				}
+				saved[n.Kind]++
 			}
 			walk(n.A)
 			walk(n.B)
 		}
 		walk(tb.Root)
+	}
+	if saved["logs"] != 1 || saved["snippets"] != 1 || saved["history"] != 1 {
+		t.Fatalf("tool panes saved %v, want logs, snippets and history once", saved)
 	}
 	a.ToggleTool(layout.Logs)
 	if a.toolPane(layout.Logs) != nil {

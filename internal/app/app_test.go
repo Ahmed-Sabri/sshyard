@@ -236,7 +236,7 @@ func TestSettingsLanguageAndTheme(t *testing.T) {
 	var locs []string
 	a.p.SetTheme = func(m theme.Mode) { themes = append(themes, string(m)) }
 	a.p.SetLocale = func(l string) { locs = append(locs, l); tt.SetLocale(l) }
-	a.page = pageSettings
+	a.openSettings(prefAppearance)
 	tt.Frame()
 	mustClick(t, tt, "Dark")
 	if a.Settings().Theme != "dark" || len(themes) == 0 {
