@@ -141,7 +141,7 @@ type Settings struct {
 	// terminal.
 	CopyOnSelect bool `json:"copyOnSelect,omitempty"`
 	// OSC52Write is whether a remote program may copy to the local
-	// clipboard: allow (the default), ask or deny.
+	// clipboard: allow, ask (the default) or deny.
 	OSC52Write string `json:"osc52Write"`
 	// OSC52MaxBytes is the largest decoded OSC 52 paste to keep,
 	// from 64 KiB to 8 MiB.
