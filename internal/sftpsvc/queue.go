@@ -798,7 +798,10 @@ func (r remoteFS) create(p string, keep bool) (writeSeekCloser, error) {
 	if err != nil {
 		return nil, err
 	}
-	if parent.Mode().Perm()&0o022 != 0 {
+	// Only a folder anyone may write to without the sticky bit lets
+	// strangers replace the part file; group-writable folders (umask 002,
+	// shared team folders) and /tmp are fine.
+	if parent.Mode().Perm()&0o002 != 0 && parent.Mode()&fs.ModeSticky == 0 {
 		return nil, ErrUnsafeDestination
 	}
 	if _, err := r.c.ResolvePath(context.Background(), p); err != nil {
