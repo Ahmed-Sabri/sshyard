@@ -14301,6 +14301,26 @@ func (msgs Messages) AiHTTPFailedDetail(status string, detail string) string {
 	return Catalog.Format(msgs.locale, "aiHTTPFailedDetail", map[string]any{"status": status, "detail": detail})
 }
 
+// AiAuditUnavailable says "The AI audit log is unavailable, so the command was not run: {reason}"
+// in the language the app shows.
+func AiAuditUnavailable(reason string) string { return In(i18n.Locale()).AiAuditUnavailable(reason) }
+
+// AiAuditUnavailable says "The AI audit log is unavailable, so the command was not run: {reason}"
+// in the language of msgs.
+func (msgs Messages) AiAuditUnavailable(reason string) string {
+	return Catalog.Format(msgs.locale, "aiAuditUnavailable", map[string]any{"reason": reason})
+}
+
+// AiAuditRecordFailed says "The command ran, but its audit record could not be saved: {reason}"
+// in the language the app shows.
+func AiAuditRecordFailed(reason string) string { return In(i18n.Locale()).AiAuditRecordFailed(reason) }
+
+// AiAuditRecordFailed says "The command ran, but its audit record could not be saved: {reason}"
+// in the language of msgs.
+func (msgs Messages) AiAuditRecordFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "aiAuditRecordFailed", map[string]any{"reason": reason})
+}
+
 // AiReviewProviderNote says "In Review mode, read-only operations run, critical ones always ask you, and the selected model checks the rest agains…"
 // in the language the app shows.
 func AiReviewProviderNote() string { return In(i18n.Locale()).AiReviewProviderNote() }

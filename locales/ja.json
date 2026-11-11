@@ -1415,6 +1415,8 @@
   "aiAttachTotal": "添付ファイルの合計サイズは{limit}までです。",
   "aiDropFiles": "ファイルをドロップして添付",
   "aiHTTPFailedDetail": "プロバイダーの応答でエラーが発生しました（HTTP {status}）：{detail}",
+  "aiAuditUnavailable": "AI監査ログを利用できないため、コマンドは実行されませんでした：{reason}",
+  "aiAuditRecordFailed": "コマンドは実行されましたが、監査記録を保存できませんでした：{reason}",
   "aiReviewProviderNote": "審査モードでは、読み取り専用の操作はそのまま実行し、致命的な操作は常にあなたに確認し、それ以外は選択したモデルが依頼内容に照らして確認します。明示的に承認した操作のみ実行し、それ以外はあなたに確認します。",
   "aiReviewCustom": "カスタム…",
   "aiReviewWith": "審査用プロバイダー",

@@ -1415,6 +1415,8 @@
   "aiAttachTotal": "첨부 파일의 총 크기는 최대 {limit}입니다.",
   "aiDropFiles": "첨부할 파일을 놓으세요",
   "aiHTTPFailedDetail": "제공자 응답 실패(HTTP {status}): {detail}",
+  "aiAuditUnavailable": "AI 감사 로그를 사용할 수 없어 명령을 실행하지 않았습니다: {reason}",
+  "aiAuditRecordFailed": "명령은 실행되었지만 감사 기록을 저장하지 못했습니다: {reason}",
   "aiReviewProviderNote": "검토 모드에서는 읽기 전용 작업은 바로 실행하고, 치명적인 작업은 항상 사용자에게 묻고, 나머지는 선택한 모델이 요청에 비추어 확인합니다. 명시적으로 승인된 작업만 실행하고 그렇지 않으면 사용자에게 묻습니다.",
   "aiReviewCustom": "사용자 지정…",
   "aiReviewWith": "검토 제공자",
