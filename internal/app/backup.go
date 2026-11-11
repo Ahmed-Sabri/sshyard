@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Licoy/sshyard/internal/assets"
@@ -196,8 +199,9 @@ var errBadBackup = errors.New("app: invalid backup entries")
 // under this device's master key, then entries are saved, with compensating
 // rollback on failure (not crash atomicity across files); host keys and preferences
 // follow, whose
-// failures are told but undo nothing. Only the secrets of the backup's
-// own entries are taken.
+// failures are told but undo nothing, except that AI keys dropped for a
+// moved endpoint are put back when the preferences that move it fail.
+// Only the secrets of the backup's own entries are taken.
 func (a *App) restoreBackup(m locales.Messages, p backupPayload) error {
 	snap := p.Assets
 	for _, id := range backupIDs(snap, p.Settings.AIProviders) {
@@ -242,6 +246,25 @@ func (a *App) restoreBackup(m locales.Messages, p backupPayload) error {
 			changes = append(changes, keychain.Change{Key: key, Delete: true})
 		}
 	}
+	// An AI provider moved to another endpoint without a key of its own
+	// loses the key it has here, so that key never reaches the new one.
+	var dropped []keychain.Change
+	defer func() {
+		for _, c := range dropped {
+			clear(c.Value)
+		}
+	}()
+	for _, key := range a.movedAIKeys(p.Settings.AIProviders, p.Secrets) {
+		old, err := a.kc.Get(key)
+		if errors.Is(err, keychain.ErrNotFound) {
+			continue
+		}
+		if err != nil {
+			return errors.New(m.ErrKeychainSave(secretStoreErrorText(m, err)))
+		}
+		dropped = append(dropped, keychain.Change{Key: key, Value: old})
+		changes = append(changes, keychain.Change{Key: key, Delete: true})
+	}
 	if err := tx.setBatch(changes); err != nil {
 		msg := m.ErrKeychainSave(secretStoreErrorText(m, err))
 		if rerr := tx.rollback(); rerr != nil {
@@ -268,9 +291,62 @@ func (a *App) restoreBackup(m locales.Messages, p backupPayload) error {
 		}
 	}
 	if err := a.ApplySettings(mergeSettings(a.settings, p.Settings)); err != nil {
+		// The providers keep the endpoints their keys belong to.
+		if len(dropped) > 0 {
+			err = errors.Join(err, a.kc.Apply(dropped))
+		}
 		a.toastError(m.ErrGeneric(err.Error()))
 	}
 	return nil
+}
+
+// movedAIKeys are the keys of this device's AI providers that in moves to
+// another endpoint without bringing a key of its own.
+func (a *App) movedAIKeys(in []settings.AIProvider, secrets map[string][]byte) []string {
+	var out []string
+	for _, p := range in {
+		key := keychain.AIKey(p.ID)
+		if len(secrets[key]) > 0 || slices.Contains(out, key) {
+			continue
+		}
+		if cur := a.providerByID(p.ID); cur != nil && !sameAIEndpoint(cur.BaseURL, p.BaseURL) {
+			out = append(out, key)
+		}
+	}
+	return out
+}
+
+// sameAIEndpoint reports whether requests to the base URLs a and b reach
+// the same service: the same scheme, host and port, whatever the path. A
+// URL the AI client would not dial differs from any other, unless both are
+// written alike.
+func sameAIEndpoint(a, b string) bool {
+	a, b = strings.TrimSpace(a), strings.TrimSpace(b)
+	if a == b {
+		return true
+	}
+	ea, oka := aiEndpoint(a)
+	eb, okb := aiEndpoint(b)
+	return oka && okb && ea == eb
+}
+
+// aiEndpoint is the scheme, host and port the AI client sends requests to
+// for a base URL, false when it would not dial it.
+func aiEndpoint(raw string) (string, bool) {
+	u, err := url.Parse(raw)
+	if err != nil || u.User != nil || u.Hostname() == "" {
+		return "", false
+	}
+	scheme, port := strings.ToLower(u.Scheme), u.Port()
+	switch {
+	case scheme != "http" && scheme != "https":
+		return "", false
+	case port == "" && scheme == "http":
+		port = "80"
+	case port == "":
+		port = "443"
+	}
+	return scheme + "://" + net.JoinHostPort(strings.ToLower(u.Hostname()), port), true
 }
 
 // backupIDs are the IDs the backup's secrets are stored under.
@@ -562,7 +638,8 @@ func (a *App) backupNeedsSecrets(p backupPayload) bool {
 			return true
 		}
 	}
-	return false
+	// Dropping the key of a provider that moves needs the store open.
+	return len(a.movedAIKeys(p.Settings.AIProviders, p.Secrets)) > 0
 }
 
 func (a *App) restoreDone(m locales.Messages, f *backupForm, p backupPayload, err error) {
