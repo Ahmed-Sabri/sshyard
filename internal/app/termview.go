@@ -17,6 +17,7 @@ import (
 	"github.com/Licoy/sshyard/internal/settings"
 	"github.com/Licoy/sshyard/internal/theme"
 	"github.com/Licoy/sshyard/internal/vt"
+	"github.com/egoist/mygo/transfer"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -46,6 +47,9 @@ type termView struct {
 	// set then too, takes a paste to send once asked, when it reports so.
 	fanout    func(encode func(vt.Modes) []byte)
 	holdPaste func(text string) bool
+	// local is a terminal on this computer, whose programs can read its
+	// clipboard themselves (see pasteClipboard).
+	local bool
 	// shortcuts are the shortcuts recorded (settings.Shortcuts), whose
 	// keys the terminal leaves to the app
 	shortcuts map[string]string
@@ -794,6 +798,28 @@ func (v *termView) Paste(text string) {
 	v.pasteNow(text)
 }
 
+// pasteClipboard pastes the clipboard's text. A local terminal given a
+// clipboard with an image and no text sends Ctrl+V instead, as the key
+// a program such as Codex CLI or Claude Code takes to read the image
+// from the system clipboard itself; it goes to this terminal alone. A
+// remote one has nothing to send: its programs cannot read this
+// computer's clipboard.
+func (v *termView) pasteClipboard(cb clipboard) {
+	text := cb.ReadClipboard()
+	if text == "" && v.local && clipboardHasImage(cb) {
+		v.send([]byte{0x16})
+		return
+	}
+	v.Paste(text)
+}
+
+// clipboardHasImage reports an image on the clipboard, which only a
+// clipboard that lists its formats (ui.Services) can tell.
+func clipboardHasImage(cb clipboard) bool {
+	f, ok := cb.(interface{ ClipboardFormats() []transfer.Format })
+	return ok && slices.Contains(f.ClipboardFormats(), transfer.PNG)
+}
+
 // pasteNow sends text as pasted, without holding it.
 func (v *termView) pasteNow(text string) {
 	v.send(pasteBytes(text, v.target.Terminal().Modes()))
@@ -846,7 +872,7 @@ func (v *termView) input(ev ui.InputEvent, cb clipboard) bool {
 				v.swallow = true
 				return true
 			case ui.KeyV:
-				v.Paste(cb.ReadClipboard())
+				v.pasteClipboard(cb)
 				v.swallow = true
 				return true
 			}
@@ -860,7 +886,7 @@ func (v *termView) input(ev ui.InputEvent, cb clipboard) bool {
 				v.offset = max(v.offset-max(v.rows-1, 1), 0)
 				return true
 			case ui.KeyInsert:
-				v.Paste(cb.ReadClipboard())
+				v.pasteClipboard(cb)
 				return true
 			}
 		}
@@ -906,7 +932,7 @@ func (v *termView) input(ev ui.InputEvent, cb clipboard) bool {
 			}
 			return true
 		case "paste", "pasteAndMatchStyle":
-			v.Paste(cb.ReadClipboard())
+			v.pasteClipboard(cb)
 			return true
 		case "selectAll":
 			snap := t.Snapshot(0)
@@ -943,7 +969,7 @@ func (v *termView) input(ev ui.InputEvent, cb clipboard) bool {
 			return v.rightPress(ev.Mods, cb)
 		}
 		if ev.Button == 2 {
-			v.Paste(cb.ReadClipboard())
+			v.pasteClipboard(cb)
 			return true
 		}
 		p := v.cellAt(ev.X, ev.Y)
@@ -1185,14 +1211,14 @@ func (v *termView) rightPress(mods ui.Modifiers, cb clipboard) bool {
 	}
 	switch v.rightClick {
 	case settings.RightClickPaste:
-		v.Paste(cb.ReadClipboard())
+		v.pasteClipboard(cb)
 		return true
 	case settings.RightClickCopyPaste:
 		if s := v.SelectedText(); v.selected && s != "" {
 			cb.WriteClipboard(s)
 			v.selected = false
 		} else {
-			v.Paste(cb.ReadClipboard())
+			v.pasteClipboard(cb)
 		}
 		return true
 	}
