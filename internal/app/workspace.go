@@ -1,6 +1,7 @@
 package app
 
 import (
+	"runtime"
 	"strconv"
 	"time"
 
@@ -601,6 +602,19 @@ func (a *App) termElement(c *ui.Context, t *layout.Tab, n *layout.Node, cn *conn
 		tv.blink.at = time.Time{}
 		term.Focus()
 		a.focusReq = 0
+	}
+	// Files dropped on a local terminal type their paths at its prompt,
+	// as macOS Terminal does; a remote one takes none.
+	if isLocal(cn.host.ID) {
+		if files := term.DroppedFiles(); len(files) > 0 {
+			// pasteNow writes to this terminal alone, never to those typed
+			// into with it: the paths name this computer's files.
+			if s := dropText(files, runtime.GOOS, a.shell(cn.host.ID).ID); s != "" {
+				tv.pasteNow(s)
+			}
+			t.Focus = n.ID
+			a.focusReq = cn.id
+		}
 	}
 	has := term.Focused()
 	tv.focusChanged(has)
