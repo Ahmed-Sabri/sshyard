@@ -2725,5 +2725,11 @@
   "sudoSubmit": "Open files",
   "sudoFailed": "sudo could not start SFTP: {reason}",
   "sudoNoServer": "no sftp-server found on the server",
-  "sudoRetry": "Try sudo again"
+  "sudoRetry": "Try sudo again",
+  "challengeTitle": "Login verification for {target}",
+  "challengeAnswer": "Answer to “{question}”",
+  "challengeHint": "Sent to the server for this login only, never saved.",
+  "challengeSubmit": "Continue",
+  "errChallengeCanceled": "Login to {host} was canceled: its verification questions were not answered.",
+  "errChallengeUnattended": "{host} asks for a verification code or other input to log in, which this connection cannot ask. Connect from a terminal or files pane to enter it."
 }

@@ -18318,3 +18318,65 @@ func SudoRetry() string { return In(i18n.Locale()).SudoRetry() }
 func (msgs Messages) SudoRetry() string {
 	return Catalog.Format(msgs.locale, "sudoRetry", nil)
 }
+
+// ChallengeTitle says "Login verification for {target}"
+// in the language the app shows.
+func ChallengeTitle(target string) string { return In(i18n.Locale()).ChallengeTitle(target) }
+
+// ChallengeTitle says "Login verification for {target}"
+// in the language of msgs.
+func (msgs Messages) ChallengeTitle(target string) string {
+	return Catalog.Format(msgs.locale, "challengeTitle", map[string]any{"target": target})
+}
+
+// ChallengeAnswer says "Answer to “{question}”"
+// in the language the app shows.
+func ChallengeAnswer(question string) string { return In(i18n.Locale()).ChallengeAnswer(question) }
+
+// ChallengeAnswer says "Answer to “{question}”"
+// in the language of msgs.
+func (msgs Messages) ChallengeAnswer(question string) string {
+	return Catalog.Format(msgs.locale, "challengeAnswer", map[string]any{"question": question})
+}
+
+// ChallengeHint says "Sent to the server for this login only, never saved."
+// in the language the app shows.
+func ChallengeHint() string { return In(i18n.Locale()).ChallengeHint() }
+
+// ChallengeHint says "Sent to the server for this login only, never saved."
+// in the language of msgs.
+func (msgs Messages) ChallengeHint() string {
+	return Catalog.Format(msgs.locale, "challengeHint", nil)
+}
+
+// ChallengeSubmit says "Continue"
+// in the language the app shows.
+func ChallengeSubmit() string { return In(i18n.Locale()).ChallengeSubmit() }
+
+// ChallengeSubmit says "Continue"
+// in the language of msgs.
+func (msgs Messages) ChallengeSubmit() string {
+	return Catalog.Format(msgs.locale, "challengeSubmit", nil)
+}
+
+// ErrChallengeCanceled says "Login to {host} was canceled: its verification questions were not answered."
+// in the language the app shows.
+func ErrChallengeCanceled(host string) string { return In(i18n.Locale()).ErrChallengeCanceled(host) }
+
+// ErrChallengeCanceled says "Login to {host} was canceled: its verification questions were not answered."
+// in the language of msgs.
+func (msgs Messages) ErrChallengeCanceled(host string) string {
+	return Catalog.Format(msgs.locale, "errChallengeCanceled", map[string]any{"host": host})
+}
+
+// ErrChallengeUnattended says "{host} asks for a verification code or other input to log in, which this connection cannot ask. Connect from a termin…"
+// in the language the app shows.
+func ErrChallengeUnattended(host string) string {
+	return In(i18n.Locale()).ErrChallengeUnattended(host)
+}
+
+// ErrChallengeUnattended says "{host} asks for a verification code or other input to log in, which this connection cannot ask. Connect from a termin…"
+// in the language of msgs.
+func (msgs Messages) ErrChallengeUnattended(host string) string {
+	return Catalog.Format(msgs.locale, "errChallengeUnattended", map[string]any{"host": host})
+}

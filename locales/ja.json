@@ -2002,5 +2002,11 @@
   "sudoSubmit": "ファイルを開く",
   "sudoFailed": "sudo で SFTP を開始できませんでした: {reason}",
   "sudoNoServer": "サーバーに sftp-server が見つかりません",
-  "sudoRetry": "sudo を再試行"
+  "sudoRetry": "sudo を再試行",
+  "challengeTitle": "{target} のログイン認証",
+  "challengeAnswer": "「{question}」への回答",
+  "challengeHint": "このログインでのみサーバーに送信され、保存されません。",
+  "challengeSubmit": "続行",
+  "errChallengeCanceled": "{host} へのログインはキャンセルされました。サーバーの認証の質問に回答していません。",
+  "errChallengeUnattended": "{host} はログインに確認コードなどの入力を求めていますが、この接続では入力を求められません。ターミナルまたはファイルペインから接続して入力してください。"
 }

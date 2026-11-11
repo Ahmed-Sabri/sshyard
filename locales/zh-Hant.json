@@ -2002,5 +2002,11 @@
   "sudoSubmit": "開啟檔案",
   "sudoFailed": "sudo 無法啟動 SFTP：{reason}",
   "sudoNoServer": "伺服器上找不到 sftp-server",
-  "sudoRetry": "重試 sudo"
+  "sudoRetry": "重試 sudo",
+  "challengeTitle": "{target} 的登入驗證",
+  "challengeAnswer": "回答「{question}」",
+  "challengeHint": "僅在本次登入中傳送給伺服器，不會儲存。",
+  "challengeSubmit": "繼續",
+  "errChallengeCanceled": "已取消登入 {host}：未回答伺服器的驗證問題。",
+  "errChallengeUnattended": "{host} 登入時要求輸入驗證碼等資訊，此連線無法詢問。請從終端機或檔案面板連線以輸入。"
 }

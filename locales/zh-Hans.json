@@ -2002,5 +2002,11 @@
   "sudoSubmit": "打开文件",
   "sudoFailed": "sudo 无法启动 SFTP：{reason}",
   "sudoNoServer": "服务器上找不到 sftp-server",
-  "sudoRetry": "重试 sudo"
+  "sudoRetry": "重试 sudo",
+  "challengeTitle": "{target} 的登录验证",
+  "challengeAnswer": "回答“{question}”",
+  "challengeHint": "仅在本次登录中发送给服务器，不会保存。",
+  "challengeSubmit": "继续",
+  "errChallengeCanceled": "已取消登录 {host}：未回答服务器的验证问题。",
+  "errChallengeUnattended": "{host} 登录时要求输入验证码等信息，此连接无法询问。请从终端或文件面板连接以输入。"
 }

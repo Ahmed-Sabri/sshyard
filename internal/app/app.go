@@ -145,6 +145,7 @@ type conn struct {
 	waitingSecrets bool
 	restorePending bool
 	restoredQuiet  bool
+	unattended     bool // no one watches it start: a login asking questions fails
 	id             int
 	kind           layout.Kind
 	host           assets.Host
@@ -359,6 +360,12 @@ type App struct {
 	credHold    focusHold
 	proxyHold   focusHold
 	installHold focusHold
+	// challenges are the rounds of login questions (one-time passwords)
+	// waiting for the user, the first in the sheet; see challenge.go
+	challenges    []*challengeAsk
+	challenging   bool
+	challengeHold focusHold
+	challengeSeq  int
 	// credForm is the credential sheet's fields; credDelete the
 	// credential the delete dialog is for, and rebindChoice where its
 	// hosts go
@@ -1149,6 +1156,7 @@ func (a *App) hostConfig(h assets.Host, c *conn, creds func(context.Context) (se
 		HostKey:     a.known.Callback(),
 		Dial:        a.p.Dial,
 		Credentials: creds,
+		Ask:         a.challengeAsker(c),
 	}
 	path, err := a.store.JumpPath(h.ID)
 	if err != nil && !errors.Is(err, assets.ErrNotFound) {
@@ -1321,6 +1329,7 @@ func (a *App) credentials(c *conn, h assets.Host) (session.Credentials, error) {
 	default:
 		// The password typed for it, else the keys of this computer, and
 		// the password is asked when none of them logs in.
+		out.PasswordPrompt = true
 		out.Password = typed("ask/" + h.ID)
 		if out.Password == "" {
 			// A Telnet or serial host has no keys to offer.
