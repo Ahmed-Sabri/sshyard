@@ -124,6 +124,8 @@
   "updateIntervalNote": "重启 SSHYard 后生效。",
   "viewUpdate": "查看更新",
   "fontSize": "字号",
+  "fontSizeNote": "在终端上按住 Ctrl（macOS 上为 ⌘）滚动鼠标滚轮也可调整",
+  "fontSizeNow": "终端字号：{size}",
   "terminalLineHeight": "行高",
   "terminalLineHeightNote": "相对字体自身行高的百分比",
   "terminalCharWidth": "字宽",

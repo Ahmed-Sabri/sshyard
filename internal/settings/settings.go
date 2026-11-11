@@ -674,8 +674,10 @@ func ClampTrayHeight(height int) int {
 	return min(max(height, MinTrayHeight), MaxTrayHeight)
 }
 
-// The bounds of TerminalLineHeight and TerminalCharWidth, in percent.
+// The bounds of TerminalFontSize, in points, and of TerminalLineHeight
+// and TerminalCharWidth, in percent.
 const (
+	MinFontSize, MaxFontSize     = 8, 32
 	MinLineHeight, MaxLineHeight = 80, 200
 	MinCharWidth, MaxCharWidth   = 80, 150
 )
@@ -747,7 +749,7 @@ func (s *Settings) Normalize() {
 	default:
 		s.TerminalCursorStyle = d.TerminalCursorStyle
 	}
-	if s.TerminalFontSize < 8 || s.TerminalFontSize > 32 {
+	if s.TerminalFontSize < MinFontSize || s.TerminalFontSize > MaxFontSize {
 		s.TerminalFontSize = d.TerminalFontSize
 	}
 	if s.TerminalLineHeight < MinLineHeight || s.TerminalLineHeight > MaxLineHeight {

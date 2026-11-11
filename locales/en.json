@@ -124,6 +124,8 @@
   "updateIntervalNote": "Takes effect after SSHYard relaunches.",
   "viewUpdate": "View Update",
   "fontSize": "Font size",
+  "fontSizeNote": "Hold Ctrl (⌘ on macOS) and scroll over a terminal to change it",
+  "fontSizeNow": "Terminal font size: {size}",
   "terminalLineHeight": "Line height",
   "terminalLineHeightNote": "Percent of the font's own line height",
   "terminalCharWidth": "Character width",

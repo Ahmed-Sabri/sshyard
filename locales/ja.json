@@ -124,6 +124,8 @@
   "updateIntervalNote": "SSHYardの再起動後に反映されます。",
   "viewUpdate": "アップデートを表示",
   "fontSize": "フォントサイズ",
+  "fontSizeNote": "ターミナル上で Ctrl（macOS では ⌘）を押しながらスクロールしても変更できます",
+  "fontSizeNow": "ターミナルのフォントサイズ：{size}",
   "terminalLineHeight": "行の高さ",
   "terminalLineHeightNote": "フォント本来の行の高さに対する割合（%）",
   "terminalCharWidth": "文字幅",

@@ -124,6 +124,8 @@
   "updateIntervalNote": "SSHYard를 다시 실행하면 적용됩니다.",
   "viewUpdate": "업데이트 보기",
   "fontSize": "글꼴 크기",
+  "fontSizeNote": "터미널 위에서 Ctrl(macOS에서는 ⌘)을 누른 채 스크롤해도 바꿀 수 있습니다",
+  "fontSizeNow": "터미널 글꼴 크기: {size}",
   "terminalLineHeight": "줄 높이",
   "terminalLineHeightNote": "글꼴 자체 줄 높이에 대한 백분율",
   "terminalCharWidth": "문자 폭",

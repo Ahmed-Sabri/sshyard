@@ -494,8 +494,8 @@ func (a *App) prefTerminal(c *ui.Context, m locales.Messages, tok theme.Tokens, 
 				s.MonospacedOnly, *changed = mono, true
 			}
 		})
-		g.row(m.FontSize(), "", func() {
-			if ui.NumberInput(c.Key("font"), &a.fontChoice, 8, 32, 1).Changed() {
+		g.row(m.FontSize(), m.FontSizeNote(), func() {
+			if ui.NumberInput(c.Key("font"), &a.fontChoice, settings.MinFontSize, settings.MaxFontSize, 1).Changed() {
 				s.TerminalFontSize = int(a.fontChoice)
 				*changed = true
 			}
