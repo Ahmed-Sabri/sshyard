@@ -166,6 +166,9 @@ func (a *App) collectBackup(secrets bool) (backupPayload, error) {
 	p := backupPayload{Assets: a.store.Snapshot(), Settings: a.settings}
 	p.Settings.BackupTargets, p.Settings.DefaultBackupPassword = nil, false
 	p.Settings.Background = settings.DefaultBackground()
+	// What starts a program on this computer is not taken by a restore,
+	// so it is not put in a backup either.
+	p.Settings.AIACPAgents, p.Settings.AIACP, p.Settings.AIDefaultAgent = nil, nil, ""
 	if b, err := a.known.Contents(); err == nil {
 		p.KnownHosts = string(b)
 	}
@@ -298,8 +301,9 @@ func backupIDs(snap assets.Snapshot, provs []settings.AIProvider) []string {
 // device, cur: what belongs to this device stays (the window's layout and
 // materials, the layout of its files panes and editor windows, the fonts
 // installed here, the MCP endpoint, the places it backs up to and its
-// default backup password, the folder of its session logs), AI providers
-// are merged by ID and the hosts that confirmed AI use are joined.
+// default backup password, the folder of its session logs, the external
+// ACP agents it starts and its default agent), AI providers are merged by
+// ID and the hosts that confirmed AI use are joined.
 func mergeSettings(cur, in settings.Settings) settings.Settings {
 	out := in
 	out.Background = cur.Background
@@ -317,6 +321,11 @@ func mergeSettings(cur, in settings.Settings) settings.Settings {
 	// keeps its session logs.
 	out.BackupTargets, out.DefaultBackupPassword = slices.Clone(cur.BackupTargets), cur.DefaultBackupPassword
 	out.SessionLog = cur.SessionLog
+	// Nor does it add or change a program this computer starts: an ACP
+	// agent's executable and arguments, and the default agent that may
+	// name one, stay as they are here. A legacy single agent in the
+	// backup is dropped too, or Normalize would take it in.
+	out.AIACPAgents, out.AIACP, out.AIDefaultAgent = slices.Clone(cur.AIACPAgents), cur.AIACP, cur.AIDefaultAgent
 	out.AIProviders = slices.Clone(cur.AIProviders)
 	for _, p := range in.AIProviders {
 		if i := slices.IndexFunc(out.AIProviders, func(o settings.AIProvider) bool { return o.ID == p.ID }); i >= 0 {
