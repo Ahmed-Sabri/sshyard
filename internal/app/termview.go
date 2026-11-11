@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bytes"
 	"errors"
 	"math"
 	"runtime"
@@ -100,6 +101,9 @@ type termView struct {
 	selecting, selected bool
 	preedit             string
 	swallow             bool
+	// altClick is a plain left click with ⌥ (Alt elsewhere) being held:
+	// let go where it was pressed, it moves the shell's cursor there.
+	altClick bool
 
 	// mouse reports
 	held      bool // a button press was reported, its release not yet
@@ -735,6 +739,32 @@ func (v *termView) report(m vt.Modes, btn vt.MouseBtn, act vt.MouseAction, p vt.
 	}
 }
 
+// moveCursorTo moves the shell's cursor to the cell p, as ⌥-click
+// (Alt-click elsewhere) does: the arrows that take it there along the
+// line it is on. Only on the main screen of a program that does not read
+// the mouse, and only within the cursor's line, lines that wrapped
+// counting as one; up and down would page through a shell's history.
+func (v *termView) moveCursorTo(p vt.Pos) {
+	snap := v.target.Terminal().Snapshot(0)
+	if snap.Modes.AltScreen || snap.Modes.Mouse != vt.MouseOff {
+		return
+	}
+	if steps, ok := snap.CursorSteps(p.Line-snap.First, p.Col); ok {
+		v.send(cursorMoveBytes(steps, snap.Modes))
+	}
+}
+
+// cursorMoveBytes are the arrows that move the cursor steps characters
+// right, left when negative, in the cursor key mode of m (DECCKM).
+func cursorMoveBytes(steps int, m vt.Modes) []byte {
+	k := ui.KeyRight
+	if steps < 0 {
+		k = ui.KeyLeft
+	}
+	b, _ := EncodeKey(k, 0, m)
+	return bytes.Repeat(b, abs(steps))
+}
+
 // focusChanged reports the focus coming to or leaving the pane to a
 // program that asked for it (1004).
 func (v *termView) focusChanged(focused bool) {
@@ -917,6 +947,7 @@ func (v *termView) input(ev ui.InputEvent, cb clipboard) bool {
 			return true
 		}
 		p := v.cellAt(ev.X, ev.Y)
+		v.altClick = ev.Button == 0 && ev.Clicks == 1 && ev.Mods&(ui.Alt|ui.Shift|ui.Ctrl|ui.Super) == ui.Alt
 		switch {
 		case ev.Clicks == 2:
 			v.selA, v.selB = t.WordAt(p)
@@ -985,6 +1016,10 @@ func (v *termView) input(ev ui.InputEvent, cb clipboard) bool {
 		}
 		if v.selecting {
 			v.selecting = false
+			if v.altClick && !v.selected {
+				v.moveCursorTo(v.selA)
+			}
+			v.altClick = false
 			if v.copyOnSelect && v.selected {
 				if s := v.SelectedText(); s != "" {
 					cb.WriteClipboard(s)
