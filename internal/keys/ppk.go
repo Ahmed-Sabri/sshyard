@@ -53,8 +53,10 @@ func parsePPK(data []byte) (*ppk, error) {
 		return name, strings.TrimRight(value, " \t\r"), ok
 	}
 	blob := func(n string) ([]byte, error) {
+		// Compare against the lines left, never i+count: a huge count
+		// would overflow the sum and slice past the end.
 		count, err := strconv.Atoi(n)
-		if err != nil || count < 0 || i+count > len(lines) {
+		if err != nil || count < 0 || count > len(lines)-i {
 			return nil, ErrNotAKey
 		}
 		var b strings.Builder
@@ -241,8 +243,9 @@ func (r *reader) str() []byte {
 		r.err = true
 		return nil
 	}
-	s := r.b[4 : 4+n]
-	r.b = r.b[4+n:]
+	end := 4 + int(n) // in int: 4+n in uint32 wraps near 4 GiB
+	s := r.b[4:end]
+	r.b = r.b[end:]
 	return s
 }
 
