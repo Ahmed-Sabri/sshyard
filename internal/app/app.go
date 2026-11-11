@@ -589,6 +589,14 @@ type App struct {
 	backingUp  bool
 	backupHold focusHold
 	kdf        vault.Params
+	// cost is the sheet asking whether to derive a backup's or a PuTTY
+	// key's password whose derivation costs more than usual; costKeys
+	// the keys derived once agreed, by costlyID under costSalt
+	cost     *costAsk
+	costOpen bool
+	costHold focusHold
+	costKeys map[[32]byte]costlyKey
+	costSalt []byte
 	// defaultPw is the sheet setting the default backup password
 	defaultPw        *passwordForm
 	settingDefaultPw bool

@@ -10879,6 +10879,100 @@ func (msgs Messages) BackupDamaged() string {
 	return Catalog.Format(msgs.locale, "backupDamaged", nil)
 }
 
+// BackupTooCostly says "This backup needs more memory or time to open than SSHYard allows, so it can’t be opened."
+// in the language the app shows.
+func BackupTooCostly() string { return In(i18n.Locale()).BackupTooCostly() }
+
+// BackupTooCostly says "This backup needs more memory or time to open than SSHYard allows, so it can’t be opened."
+// in the language of msgs.
+func (msgs Messages) BackupTooCostly() string {
+	return Catalog.Format(msgs.locale, "backupTooCostly", nil)
+}
+
+// CostlyTitle says "This May Take a While"
+// in the language the app shows.
+func CostlyTitle() string { return In(i18n.Locale()).CostlyTitle() }
+
+// CostlyTitle says "This May Take a While"
+// in the language of msgs.
+func (msgs Messages) CostlyTitle() string {
+	return Catalog.Format(msgs.locale, "costlyTitle", nil)
+}
+
+// CostlyBackup says "This backup’s password is protected with stronger settings than usual: opening it can use up to {memory} of memory …"
+// in the language the app shows.
+func CostlyBackup(memory string, passes string) string {
+	return In(i18n.Locale()).CostlyBackup(memory, passes)
+}
+
+// CostlyBackup says "This backup’s password is protected with stronger settings than usual: opening it can use up to {memory} of memory …"
+// in the language of msgs.
+func (msgs Messages) CostlyBackup(memory string, passes string) string {
+	return Catalog.Format(msgs.locale, "costlyBackup", map[string]any{"memory": memory, "passes": passes})
+}
+
+// CostlyKey says "This key’s passphrase is protected with stronger settings than usual: opening it can use up to {memory} of memory o…"
+// in the language the app shows.
+func CostlyKey(memory string, passes string) string {
+	return In(i18n.Locale()).CostlyKey(memory, passes)
+}
+
+// CostlyKey says "This key’s passphrase is protected with stronger settings than usual: opening it can use up to {memory} of memory o…"
+// in the language of msgs.
+func (msgs Messages) CostlyKey(memory string, passes string) string {
+	return Catalog.Format(msgs.locale, "costlyKey", map[string]any{"memory": memory, "passes": passes})
+}
+
+// CostlyContinue says "Continue"
+// in the language the app shows.
+func CostlyContinue() string { return In(i18n.Locale()).CostlyContinue() }
+
+// CostlyContinue says "Continue"
+// in the language of msgs.
+func (msgs Messages) CostlyContinue() string {
+	return Catalog.Format(msgs.locale, "costlyContinue", nil)
+}
+
+// CostlyOpening says "Opening…"
+// in the language the app shows.
+func CostlyOpening() string { return In(i18n.Locale()).CostlyOpening() }
+
+// CostlyOpening says "Opening…"
+// in the language of msgs.
+func (msgs Messages) CostlyOpening() string {
+	return Catalog.Format(msgs.locale, "costlyOpening", nil)
+}
+
+// CostlyBusyNote says "Cancelling stops here, but the computation already under way finishes in the background and its result is discarded."
+// in the language the app shows.
+func CostlyBusyNote() string { return In(i18n.Locale()).CostlyBusyNote() }
+
+// CostlyBusyNote says "Cancelling stops here, but the computation already under way finishes in the background and its result is discarded."
+// in the language of msgs.
+func (msgs Messages) CostlyBusyNote() string {
+	return Catalog.Format(msgs.locale, "costlyBusyNote", nil)
+}
+
+// ErrKeyTooCostly says "This key needs more memory or time to open than SSHYard allows. Save it again in PuTTYgen with lower Argon2 settings."
+// in the language the app shows.
+func ErrKeyTooCostly() string { return In(i18n.Locale()).ErrKeyTooCostly() }
+
+// ErrKeyTooCostly says "This key needs more memory or time to open than SSHYard allows. Save it again in PuTTYgen with lower Argon2 settings."
+// in the language of msgs.
+func (msgs Messages) ErrKeyTooCostly() string {
+	return Catalog.Format(msgs.locale, "errKeyTooCostly", nil)
+}
+
+// ErrKeyCostly says "This key needs more memory or time to open than usual."
+// in the language the app shows.
+func ErrKeyCostly() string { return In(i18n.Locale()).ErrKeyCostly() }
+
+// ErrKeyCostly says "This key needs more memory or time to open than usual."
+// in the language of msgs.
+func (msgs Messages) ErrKeyCostly() string {
+	return Catalog.Format(msgs.locale, "errKeyCostly", nil)
+}
+
 // CloudBackupSection says "Cloud Backup"
 // in the language the app shows.
 func CloudBackupSection() string { return In(i18n.Locale()).CloudBackupSection() }

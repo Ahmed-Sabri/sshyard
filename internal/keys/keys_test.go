@@ -91,19 +91,19 @@ func writePPK(t *testing.T, priv any, version int, passphrase, kdf string) []byt
 			private = append(private, make([]byte, aes.BlockSize-pad)...)
 		}
 		if version == 3 {
-			k.header = map[string]string{"Key-Derivation": kdf, "Argon2-Memory": "8192", "Argon2-Passes": "8", "Argon2-Parallelism": "1", "Argon2-Salt": "0123456789abcdef0123456789abcdef"}
+			k.header = map[string]string{"Key-Derivation": kdf, "Argon2-Memory": testArgon.mem, "Argon2-Passes": testArgon.passes, "Argon2-Parallelism": "1", "Argon2-Salt": "0123456789abcdef0123456789abcdef"}
 		}
 	}
 	var kdfLines string
 	if version == 3 && passphrase != "" {
-		kdfLines = fmt.Sprintf("Key-Derivation: %s\nArgon2-Memory: 8192\nArgon2-Passes: 8\nArgon2-Parallelism: 1\nArgon2-Salt: 0123456789abcdef0123456789abcdef\n", kdf)
+		kdfLines = fmt.Sprintf("Key-Derivation: %s\nArgon2-Memory: %s\nArgon2-Passes: %s\nArgon2-Parallelism: 1\nArgon2-Salt: 0123456789abcdef0123456789abcdef\n", kdf, testArgon.mem, testArgon.passes)
 	}
 	var mac []byte
 	enc := private
 	if kdf == "Argon2d" {
 		mac = make([]byte, 32)
 	} else {
-		ck, iv, mk, err := k.keys([]byte(passphrase))
+		ck, iv, mk, err := k.keys([]byte(passphrase), true)
 		if err != nil {
 			t.Fatal(err)
 		}

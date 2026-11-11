@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -125,9 +126,11 @@ type backupForm struct {
 	data    []byte
 	created time.Time
 	// busy is set while the password is derived and the file sealed or
-	// opened, off the UI thread
-	busy bool
-	err  string
+	// opened, off the UI thread; cancel stops a restore's opening before
+	// its next derivation, when the sheet closes
+	busy   bool
+	cancel context.CancelFunc
+	err    string
 }
 
 // backupSecretKeys are the allowed secret keys of the entries of snap and of
@@ -429,6 +432,8 @@ func backupErrText(m locales.Messages, err error) string {
 		return m.BackupNewer()
 	case errors.Is(err, vault.ErrPassword):
 		return m.BackupWrongPassword()
+	case errors.Is(err, vault.ErrTooCostly):
+		return m.BackupTooCostly()
 	case errors.Is(err, vault.ErrCorrupt), errors.Is(err, errBadBackup), errors.Is(err, backup.ErrArchive):
 		return m.BackupDamaged()
 	case errors.Is(err, backup.ErrTooLarge):
@@ -461,6 +466,9 @@ func (a *App) openExport() {
 }
 
 func (a *App) closeBackup() {
+	if f := a.backup; f != nil && f.cancel != nil {
+		f.cancel()
+	}
 	a.backup, a.backingUp = nil, false
 }
 
@@ -599,8 +607,16 @@ func (a *App) openRestore(m locales.Messages, path string, data []byte, err erro
 }
 
 // RestoreBackup opens the sheet's backup with its password, off the UI
-// thread, then merges it in.
+// thread, then merges it in. A backup whose password derivation costs
+// more than usual is opened only once the user agrees.
 func (a *App) RestoreBackup(m locales.Messages) bool {
+	return a.openBackup(m, false)
+}
+
+// openBackup is RestoreBackup, with costly once the user agreed to the
+// cost. Closing the sheet cancels it: no derivation starts after that,
+// though one under way runs to its end, as Argon2 can not be interrupted.
+func (a *App) openBackup(m locales.Messages, costly bool) bool {
 	f := a.backup
 	if f == nil || !f.restore || f.busy {
 		return false
@@ -611,9 +627,12 @@ func (a *App) RestoreBackup(m locales.Messages) bool {
 	}
 	f.err, f.busy = "", true
 	data, pw := f.data, []byte(f.password)
+	ctx, cancel := context.WithCancel(context.Background())
+	f.cancel = cancel
 	go func() {
+		defer cancel()
 		p := backupPayload{Settings: settings.Default()}
-		plain, err := vault.Open(data, pw)
+		plain, err := openVault(ctx, data, pw, costly)
 		if err == nil {
 			p, err = unpackBackup(plain)
 		}
@@ -648,6 +667,16 @@ func (a *App) restoreDone(m locales.Messages, f *backupForm, p backupPayload, er
 		return
 	}
 	f.busy = false
+	var ce *vault.CostError
+	if errors.As(err, &ce) {
+		a.askCost(&costAsk{backup: true, memory: ce.Cost.Memory, passes: ce.Cost.Passes, run: func() {
+			a.closeCost()
+			if a.backup == f {
+				a.openBackup(m, true)
+			}
+		}})
+		return
+	}
 	if err == nil && !a.unlocked() && a.backupNeedsSecrets(p) {
 		a.withSecrets(func() { a.restoreDone(m, f, p, nil) })
 		return
