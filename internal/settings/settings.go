@@ -30,8 +30,8 @@ type Settings struct {
 	// RememberLayout restores window geometry and the workspace on next launch.
 	RememberLayout bool `json:"rememberLayout"`
 	// ToolPanes is how the right rail opens its tools: "", the default,
-	// beside the ones already open, or ToolPanesTabs in the place of the
-	// one open in the tab, one at a time.
+	// in the place of the one open in the tab, one at a time, or
+	// ToolPanesSplit beside the ones already open.
 	ToolPanes string `json:"toolPanes,omitempty"`
 	// TrayIcon selects the monochrome or colorful application logo.
 	TrayIcon string `json:"trayIcon"`
@@ -619,9 +619,9 @@ const (
 	FilesBelow = "below"
 )
 
-// ToolPanesTabs opens a rail tool in the place of the one already open in
-// the tab, rather than beside it.
-const ToolPanesTabs = "tabs"
+// ToolPanesSplit opens a rail tool beside the ones already open in the
+// tab, rather than in the place of the one it shows.
+const ToolPanesSplit = "split"
 
 // MCPPortDefault is the MCP endpoint's port unless the user picks one.
 const MCPPortDefault = 47320
@@ -781,7 +781,7 @@ func (s *Settings) Normalize() {
 	if s.FilesSplit < 10 || s.FilesSplit > 90 {
 		s.FilesSplit = d.FilesSplit
 	}
-	if s.ToolPanes != ToolPanesTabs {
+	if s.ToolPanes != ToolPanesSplit {
 		s.ToolPanes = ""
 	}
 	if s.FilesEdge != FilesBelow {

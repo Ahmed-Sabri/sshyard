@@ -49,13 +49,14 @@ func TestRailPaneKeepsWidth(t *testing.T) {
 	if w := a.railWidths[layout.Monitor]; w != 296 {
 		t.Fatalf("remembered %v from a pane alone in its tab", w)
 	}
-	// Never more than most of a narrow room.
-	a.railWidths[layout.Usage] = 2000
+	// Never more than most of the room.
+	a.paneBounds[term.id] = ui.Rect{W: 2396}
+	a.railWidths[layout.Usage] = 5000
 	a.ToggleTool(layout.Usage)
 	if r := a.ws.ActiveTab().Root; math.Abs(float64(r.Ratio)-0.15) > 1e-4 {
 		t.Fatalf("opened at %v in a narrow room", r.Ratio)
 	}
-	if got := a.layoutSnapshot().Widths; got["monitor"] != 296 || got["usage"] != 2000 {
+	if got := a.layoutSnapshot().Widths; got["monitor"] != 296 || got["usage"] != 5000 {
 		t.Fatalf("saved widths %v", got)
 	}
 	a.Close()

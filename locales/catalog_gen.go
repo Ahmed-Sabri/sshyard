@@ -16013,11 +16013,11 @@ func (msgs Messages) ToolPanes() string {
 	return Catalog.Format(msgs.locale, "toolPanes", nil)
 }
 
-// ToolPanesNote says "Side by side keeps every tool you open; Replace shows one at a time in its place"
+// ToolPanesNote says "Replace shows one tool at a time in its place; Side by side keeps every tool you open, opening the ones past three, o…"
 // in the language the app shows.
 func ToolPanesNote() string { return In(i18n.Locale()).ToolPanesNote() }
 
-// ToolPanesNote says "Side by side keeps every tool you open; Replace shows one at a time in its place"
+// ToolPanesNote says "Replace shows one tool at a time in its place; Side by side keeps every tool you open, opening the ones past three, o…"
 // in the language of msgs.
 func (msgs Messages) ToolPanesNote() string {
 	return Catalog.Format(msgs.locale, "toolPanesNote", nil)
