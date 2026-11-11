@@ -482,7 +482,8 @@ func TestQueueStopStalledServer(t *testing.T) {
 			if _, err := shared.Home(); err != nil {
 				t.Fatalf("shared client closed: %v", err)
 			}
-			ts.onWrite = nil
+			// onWrite stays: the transfer goroutine reads it, and once
+			// keeps it from stopping the server again.
 			if tc.stop == "pause" {
 				ts.Resume(big)
 			}
