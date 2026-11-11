@@ -160,7 +160,11 @@ func (a *App) prefNavItem(c *ui.Context, tok theme.Tokens, it prefItem, on bool)
 		b.Background(tok.Hover)
 	}
 	b.Children(func() {
-		tile(c, it.icon, it.tint, 22)
+		col := tok.TextMuted
+		if on {
+			col = tok.Accent
+		}
+		glyph(c, it.icon, col, 22)
 		tx := ui.Text(c, it.title).FontSize(theme.Body).SingleLine().Shrink(1)
 		if on {
 			tx.FontWeight(600).TextColor(tok.Accent)
@@ -213,7 +217,7 @@ func (a *App) settingsSection(c *ui.Context, tok theme.Tokens, ic *icons.Icon, t
 	ui.Column(c).Gap(8).FillWidth().Children(func() {
 		if title != "" {
 			ui.Row(c).Gap(8).AlignItems(ui.Center).Padding(0, 4).Children(func() {
-				tile(c, ic, tint, 20)
+				glyph(c, ic, tok.Accent, 20)
 				ui.Text(c, title).FontSize(theme.Body).FontWeight(600)
 			})
 		}
@@ -244,7 +248,7 @@ func (a *App) settingsPage(c *ui.Context, m locales.Messages, tok theme.Tokens) 
 	ui.Scroll(c.Key("prefpage:" + string(cur))).Fill().Children(func() {
 		ui.Column(c).Padding(theme.Space(7), theme.Space(8), theme.Space(10), theme.Space(8)).Gap(theme.Space(6)).MaxWidth(720).FillWidth().Children(func() {
 			ui.Row(c).Gap(14).AlignItems(ui.Center).Children(func() {
-				tile(c, item.icon, item.tint, 40)
+				glyph(c, item.icon, tok.Accent, 40)
 				ui.Column(c).Gap(3).Shrink(1).Children(func() {
 					ui.Text(c, item.title).FontWeight(700).FontSize(theme.Title1)
 					ui.Text(c, item.desc).FontSize(theme.Body).TextColor(tok.TextMuted)
