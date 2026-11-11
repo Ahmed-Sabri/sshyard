@@ -93,7 +93,10 @@ func (a *App) ToggleTool(k layout.Kind) {
 			a.CloseSession(c.id)
 			return
 		}
-		a.ws.Move(c.id, t.Focus, layout.Right)
+		a.keepRailWidth(c)
+		if a.ws.Move(c.id, t.Focus, layout.Right) {
+			a.fitRailWidth(c)
+		}
 		a.replaceRail(c, old)
 		a.focusReq = c.id
 		a.page = pageWorkspace
@@ -108,6 +111,8 @@ func (a *App) ToggleTool(k layout.Kind) {
 	a.conns[c.id] = c
 	if t == nil || !a.ws.Place(c.item(), t.Focus, layout.Right) {
 		a.ws.Open(c.item())
+	} else {
+		a.fitRailWidth(c)
 	}
 	a.replaceRail(c, old)
 	a.focusReq = c.id
@@ -153,6 +158,57 @@ func (a *App) replaceRail(c, old *conn) {
 	}
 	if _, p := a.ws.Locate(old.id); p != nil && a.ws.Move(c.id, p.ID, layout.Center) {
 		a.CloseSession(old.id)
+	}
+}
+
+// keepRailWidth remembers how wide pane c is, when the rail opens its
+// kind and it sits beside another pane: alone in its tab, or only above
+// or below others, its width is the tab's, not one the user chose.
+func (a *App) keepRailWidth(c *conn) {
+	t, p := a.ws.Locate(c.id)
+	w := a.paneBounds[c.id].W
+	if !railPane(c.kind) || t == nil || w <= 0 {
+		return
+	}
+	for n := t.Parent(p); n != nil; n = t.Parent(n) {
+		if n.Axis == layout.Row {
+			if a.railWidths == nil {
+				a.railWidths = map[layout.Kind]float32{}
+			}
+			a.railWidths[c.kind] = w
+			return
+		}
+	}
+}
+
+// fitRailWidth gives pane c, just opened at the left or right edge of a
+// pane, the width remembered for its kind instead of half the room, and
+// never more than most of it nor less than a sliver.
+func (a *App) fitRailWidth(c *conn) {
+	w, ok := a.railWidths[c.kind]
+	t, p := a.ws.Locate(c.id)
+	if !ok || t == nil {
+		return
+	}
+	split := t.Parent(p)
+	if split == nil || split.Axis != layout.Row || !split.A.Leaf() || !split.B.Leaf() {
+		return
+	}
+	other := split.A
+	if other == p {
+		other = split.B
+	}
+	// The split shares what the other pane had last frame: each cell is a
+	// card and its gutter, with a one-DIP line between the two.
+	room := a.paneBounds[other.Item.ID].W + paneGap - 1
+	if room <= 0 {
+		return
+	}
+	share := min(max((w+paneGap)/room, 0.15), 0.85)
+	if split.A == p {
+		split.Ratio = share
+	} else {
+		split.Ratio = 1 - share
 	}
 }
 
