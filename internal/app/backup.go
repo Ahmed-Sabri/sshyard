@@ -583,7 +583,7 @@ func (a *App) restoreDone(m locales.Messages, f *backupForm, p backupPayload, er
 // backupSection is the settings' backup page.
 func (a *App) backupSection(c *ui.Context, m locales.Messages, tok theme.Tokens) {
 	a.defaultPasswordSection(c, m, tok)
-	a.settingsSection(c, tok, nil, ui.Color{}, "", func(g *settingsGroup) {
+	a.settingsSection(c, tok, nil, "", func(g *settingsGroup) {
 		g.row(m.ExportBackup(), m.ExportBackupNote(), func() {
 			if pill(c, m.ExportEllipsis(), false, false, a.p.SaveFile == nil) {
 				a.openExport()
